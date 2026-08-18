@@ -13,8 +13,8 @@ namespace SOR.Permisos
         {
             if (HttpContext.Current.Session["usuario"] == null)
             {
-
                 filterContext.Result = new RedirectResult("~/Acceso/Login");
+                return;
             }
 
             base.OnActionExecuting(filterContext);

@@ -78,35 +78,53 @@ namespace SOR.Controllers
         [HttpPost]
         public ActionResult Login(Usuario oUsuario)
         {
+            // Validar correo
+            if (string.IsNullOrWhiteSpace(oUsuario.Correo))
+            {
+                ViewData["Mensaje"] = "Debe ingresar el correo.";
+                return View();
+            }
+
+            // Validar contraseña
+            if (string.IsNullOrWhiteSpace(oUsuario.Clave))
+            {
+                ViewData["Mensaje"] = "Debe ingresar la contraseña.";
+                return View();
+            }
+
+            // Ambos campos están completos, continúa el proceso
             oUsuario.Clave = ConvertirSha256(oUsuario.Clave);
 
             using (SqlConnection cn = new SqlConnection(cadena))
             {
-
                 SqlCommand cmd = new SqlCommand("sp_ValidarUsuario", cn);
+
                 cmd.Parameters.AddWithValue("Correo", oUsuario.Correo);
                 cmd.Parameters.AddWithValue("Clave", oUsuario.Clave);
                 cmd.CommandType = CommandType.StoredProcedure;
 
                 cn.Open();
 
-                oUsuario.IdUsuario = Convert.ToInt32(cmd.ExecuteScalar().ToString());
+                object resultado = cmd.ExecuteScalar();
 
+                if (resultado != null)
+                {
+                    oUsuario.IdUsuario = Convert.ToInt32(resultado);
+                }
+                else
+                {
+                    oUsuario.IdUsuario = 0;
+                }
             }
 
             if (oUsuario.IdUsuario != 0)
             {
-
                 Session["usuario"] = oUsuario;
                 return RedirectToAction("Index", "Home");
             }
-            else
-            {
-                ViewData["Mensaje"] = "Usuario o Contraseña Invalida";
-                return View();
-            }
 
-
+            ViewData["Mensaje"] = "Usuario o contraseña incorrectos.";
+            return View();
         }
 
         public static string ConvertirSha256(string texto)
