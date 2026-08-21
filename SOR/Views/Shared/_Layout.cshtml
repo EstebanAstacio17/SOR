@@ -24,6 +24,29 @@
             margin-top: 40px;
             color: #64748b;
         }
+        .floating-info-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: white !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+            z-index: 9999;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .floating-info-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.6);
+        }
     </style>
 </head>
 <body>
@@ -64,9 +87,7 @@
                             <li class="nav-item">
                                 <a class="nav-link fw-semibold" href="@Url.Action("Index", "Reporte")"><i class="bi bi-bar-chart-line me-1"></i> Reportes</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="@Url.Action("RegistroPerfil", "Coordinador")"><i class="bi bi-person-vcard me-1"></i> Mi Perfil</a>
-                            </li>
+
                             if (uSesion.IdRolSeguridad == 1 || uSesion.IdRolSeguridad == 2)
                             {
                                 <li class="nav-item">
@@ -94,26 +115,13 @@
                         }
                         else
                         {
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="@Url.Action("RegistroPerfil", "Coordinador")"><i class="bi bi-person-vcard me-1"></i> Completar Mi Perfil</a>
-                            </li>
+
                             <li class="nav-item">
                                 <a class="nav-link fw-semibold" href="@Url.Action("EstadoSolicitud", "Coordinador")"><i class="bi bi-info-circle me-1"></i> Estado de Solicitud</a>
                             </li>
                         }
                     }
 
-                    else
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link active fw-semibold" href="@Url.Action("Landing", "Home")"><i class="bi bi-house-door me-1"></i> Inicio</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fw-semibold" href="@Url.Action("About", "Home")"><i class="bi bi-info-circle me-1"></i> Acerca de</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fw-semibold" href="@Url.Action("Contact", "Home")"><i class="bi bi-envelope me-1"></i> Contacto</a>
-                        </li>
                     }
                 </ul>
 
@@ -121,14 +129,26 @@
                     @if (Session["usuario"] != null)
                     {
                         var usuarioSesion = (SOR.Models.Usuario)Session["usuario"];
-                        <li class="nav-item me-3 text-light">
-                            <span class="badge bg-primary me-1">@(usuarioSesion.NombreRol ?? "Coordinador")</span>
-                            <small class="text-slate-300">@usuarioSesion.Correo</small>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-outline-light btn-sm" href="@Url.Action("CerrarSesion", "Acceso")">
-                                <i class="bi bi-box-arrow-right me-1"></i> Salir
+                        <li class="nav-item dropdown me-2">
+                            <a class="nav-link dropdown-toggle text-light d-flex align-items-center py-1" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="line-height: 1.2;">
+                                <div class="d-flex flex-column align-items-start me-2">
+                                    <span class="text-slate-300 fw-semibold" style="font-size: 0.85rem;">@usuarioSesion.Correo</span>
+                                    <span class="badge bg-primary mt-1" style="font-size: 0.7rem; padding: 0.25em 0.5em;">@(usuarioSesion.NombreRol ?? "Coordinador")</span>
+                                </div>
                             </a>
+                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark bg-slate-900 border-slate-800 shadow" aria-labelledby="navbarUserDropdown">
+                                <li>
+                                    <a class="dropdown-item text-light font-semibold py-2" href="@Url.Action("RegistroPerfil", "Coordinador")">
+                                        <i class="bi bi-person-vcard me-2 text-info"></i>Mi Perfil
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider border-slate-800"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger font-semibold py-2" href="@Url.Action("CerrarSesion", "Acceso")">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión (Salir)
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     }
                     else
@@ -155,10 +175,6 @@
 
     <footer class="footer-sor text-center">
         <div class="container">
-            <div class="mb-2">
-                <a href="@Url.Action("About", "Home")" class="text-decoration-none text-muted me-3 small"><i class="bi bi-info-circle me-1"></i>Acerca de SOR</a>
-                <a href="@Url.Action("Contact", "Home")" class="text-decoration-none text-muted small"><i class="bi bi-envelope me-1"></i>Contacto y Soporte</a>
-            </div>
             <p class="mb-1 fw-semibold">&copy; @DateTime.Now.Year - Sistema de Gestión Interna OCC República Dominicana (SOR)</p>
             <small class="text-muted">Operation Christmas Child RD — Plataforma de Gestión Operativa, Voluntariado e Iglesias</small>
         </div>
@@ -192,6 +208,121 @@
                                 <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Session["usuario"] != null && ViewContext.RouteData.Values["controller"]?.ToString() != "Acceso")
+    {
+        <!-- BOTÓN FLOTANTE DE INFORMACIÓN -->
+        <button type="button" class="floating-info-btn" data-bs-toggle="modal" data-bs-target="#modalInfoSistema" title="Información y Soporte de SOR">
+            <i class="bi bi-info-circle-fill"></i>
+        </button>
+
+        <!-- MODAL DE INFORMACIÓN Y CONTACTO -->
+        <div class="modal fade" id="modalInfoSistema" tabindex="-1" aria-labelledby="modalInfoLabel" aria-hidden="true" style="z-index: 99990;">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="modal-header bg-dark text-white py-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h5 class="modal-title font-bold" id="modalInfoLabel">
+                            <i class="bi bi-info-circle-fill text-sky-400 me-2"></i>Información y Soporte de SOR
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <!-- TABS NAVBAR -->
+                        <ul class="nav nav-tabs bg-light px-3 pt-2 border-bottom-0" id="infoTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-semibold text-slate-700 py-2.5 px-4 border-bottom-0" id="about-tab" data-bs-toggle="tab" data-bs-target="#about-pane" type="button" role="tab" aria-controls="about-pane" aria-selected="true">
+                                    <i class="bi bi-box-seam-fill me-2 text-primary"></i>Acerca de SOR
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-semibold text-slate-700 py-2.5 px-4 border-bottom-0" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-pane" type="button" role="tab" aria-controls="contact-pane" aria-selected="false">
+                                    <i class="bi bi-envelope-paper-heart-fill me-2 text-success"></i>Contacto y Soporte
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- TABS CONTENT -->
+                        <div class="tab-content p-4" id="infoTabsContent" style="background: #ffffff;">
+                            <!-- TAB ACERCA DE -->
+                            <div class="tab-pane fade show active" id="about-pane" role="tabpanel" aria-labelledby="about-tab" tabindex="0">
+                                <div class="mb-4">
+                                    <h4 class="h5 font-bold text-slate-800 border-bottom pb-2">Propósito del Sistema</h4>
+                                    <p class="text-muted leading-relaxed">
+                                        El <strong>SOR</strong> (Sistema de Operaciones Regionales) es la plataforma integral diseñada para optimizar, coordinar y acompañar toda la labor de los Equipos de Liderazgo Nacional (ENL), Estratégicos (ERLE) y Regionales (ERL) de <em>Operation Christmas Child</em> en la República Dominicana.
+                                    </p>
+                                </div>
+
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <div class="p-3 bg-light rounded-3 h-100 border">
+                                            <h5 class="h6 font-bold text-slate-800"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Jerarquía y Equipos</h5>
+                                            <p class="text-muted small mb-0">
+                                                Gestión estructurada de voluntarios por niveles (ENL, ERLE, ERL) y 6 roles clave (Coordinador, Movilización, Discipulado, Logística, Oración y Recursos).
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 bg-light rounded-3 h-100 border">
+                                            <h5 class="h6 font-bold text-slate-800"><i class="bi bi-building-fill text-success me-2"></i>Gestión de Iglesias</h5>
+                                            <p class="text-muted small mb-0">
+                                                Expediente completo de iglesias socias, pastores, líderes de discipulado, maestros capacitados y seguimiento por temporadas.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 bg-light rounded-3 h-100 border">
+                                            <h5 class="h6 font-bold text-slate-800"><i class="bi bi-book-fill text-warning me-2"></i>La Gran Aventura</h5>
+                                            <p class="text-muted small mb-0">
+                                                Control de despachos de materiales de discipulado, eventos evangelísticos y reportes de vidas transformadas por el Evangelio.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info border-0 rounded-3 mb-0">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                                        <div>
+                                            <strong>Compromiso y Transparencia:</strong> Todos los datos administrados en esta plataforma están protegidos y destinados exclusivamente al cumplimiento de la Gran Comisión.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB CONTACTO -->
+                            <div class="tab-pane fade" id="contact-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <div class="p-4 bg-light rounded-4 h-100 border text-center">
+                                            <div class="info-icon-wrapper mx-auto mb-3" style="width: 50px; height: 50px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                                <i class="bi bi-geo-alt-fill"></i>
+                                            </div>
+                                            <h5 class="h6 font-bold text-slate-800 mb-2">Oficina Nacional OCC</h5>
+                                            <p class="text-muted small mb-1">Santo Domingo, República Dominicana</p>
+                                            <p class="text-muted small mb-0 fw-semibold">Samaritan's Purse</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-4 bg-light rounded-4 h-100 border text-center">
+                                            <div class="info-icon-wrapper mx-auto mb-3" style="width: 50px; height: 50px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                                <i class="bi bi-envelope-fill"></i>
+                                            </div>
+                                            <h5 class="h6 font-bold text-slate-800 mb-2">Soporte Técnico</h5>
+                                            <p class="text-slate-700 small mb-1 fw-bold"><a href="mailto:soporte@occrepdom.org" class="text-decoration-none text-sky-600">soporte@occrepdom.org</a></p>
+                                            <p class="text-muted small mb-0">Lunes a Viernes (8:00 AM - 5:00 PM)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 py-3">
+                        <button type="button" class="btn btn-secondary px-4 font-semibold" data-bs-dismiss="modal">Cerrar</button>
                     </div>
                 </div>
             </div>
