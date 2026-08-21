@@ -36,6 +36,21 @@ namespace SOR.Controllers
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
+                cn.Open();
+
+                // Saneamiento preventivo: inactivar registros de asignación cuyos usuarios estén inactivos o suspendidos
+                // Estados válidos que conservan su asignación: 3 (Perfil Pendiente), 4 (Activo), 7 (Pend. Restablecimiento), 8 (Apro. Restablecimiento)
+                string sqlSaneamiento = @"
+                    UPDATE a
+                    SET a.Activo = 0
+                    FROM dbo.AsignacionesEquipo a
+                    INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                    WHERE a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
+                using (SqlCommand cmdSanear = new SqlCommand(sqlSaneamiento, cn))
+                {
+                    cmdSanear.ExecuteNonQuery();
+                }
+
                 string sql = @"
                     SELECT 
                         u.IdUsuario, u.Correo, u.IdRolSeguridad, r.NombreRol, 
@@ -50,7 +65,6 @@ namespace SOR.Controllers
                     ORDER BY u.FechaRegistro DESC;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cn.Open();
 
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -159,12 +173,32 @@ namespace SOR.Controllers
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                string sql = "UPDATE dbo.Usuarios SET IdEstado = 5 WHERE IdUsuario = @IdUsuario;";
-                SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
-
                 cn.Open();
-                cmd.ExecuteNonQuery();
+                SqlTransaction tran = cn.BeginTransaction();
+                try
+                {
+                    string sql = "UPDATE dbo.Usuarios SET IdEstado = 5 WHERE IdUsuario = @IdUsuario;";
+                    using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                    {
+                        cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
+                    using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                    {
+                        cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                        cmdDis.ExecuteNonQuery();
+                    }
+
+                    tran.Commit();
+                }
+                catch (Exception ex)
+                {
+                    tran.Rollback();
+                    TempData["MensajeError"] = "Error al rechazar usuario: " + ex.Message;
+                    return RedirectToAction("Usuarios");
+                }
             }
 
             TempData["MensajeExito"] = "La solicitud de usuario ha sido rechazada.";
@@ -207,7 +241,11 @@ namespace SOR.Controllers
                     // Verificar unicidad de posición si fue seleccionada
                     if (idEquipo.HasValue && idPosicion.HasValue)
                     {
-                        string sqlCheck = "SELECT COUNT(1) FROM dbo.AsignacionesEquipo WHERE IdEquipo = @IdEquipo AND IdPosicion = @IdPosicion AND Activo = 1 AND IdUsuario <> @IdUsuario;";
+                        string sqlCheck = @"
+                            SELECT COUNT(1) 
+                            FROM dbo.AsignacionesEquipo a
+                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
                         using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
                         {
                             cmdCheck.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
@@ -229,6 +267,20 @@ namespace SOR.Controllers
                         {
                             cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
                             cmdDis.ExecuteNonQuery();
+                        }
+
+                        // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
+                        string sqlDisableInactive = @"
+                            UPDATE a
+                            SET a.Activo = 0
+                            FROM dbo.AsignacionesEquipo a
+                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
+                        using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
+                        {
+                            cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                            cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                            cmdDisInactive.ExecuteNonQuery();
                         }
 
                         string sqlInsAsig = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
@@ -298,10 +350,25 @@ namespace SOR.Controllers
                         cmdU.ExecuteNonQuery();
                     }
 
+                    // Si el estado es Suspendido (6) o Rechazado (5), inactivar todas sus asignaciones en el equipo
+                    if (idEstado == 5 || idEstado == 6)
+                    {
+                        string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                        {
+                            cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdDis.ExecuteNonQuery();
+                        }
+                    }
+
                     // 2. Si se especificó equipo y posición, validar y actualizar
                     if (idEquipo.HasValue && idPosicion.HasValue)
                     {
-                        string sqlCheck = "SELECT COUNT(1) FROM dbo.AsignacionesEquipo WHERE IdEquipo = @IdEquipo AND IdPosicion = @IdPosicion AND Activo = 1 AND IdUsuario <> @IdUsuario;";
+                        string sqlCheck = @"
+                            SELECT COUNT(1) 
+                            FROM dbo.AsignacionesEquipo a
+                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
                         using (SqlCommand cmdC = new SqlCommand(sqlCheck, cn, tran))
                         {
                             cmdC.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
@@ -333,6 +400,20 @@ namespace SOR.Controllers
                         {
                             cmdD.Parameters.AddWithValue("@IdUsuario", idUsuario);
                             cmdD.ExecuteNonQuery();
+                        }
+
+                        // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
+                        string sqlDisableInactive = @"
+                            UPDATE a
+                            SET a.Activo = 0
+                            FROM dbo.AsignacionesEquipo a
+                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
+                        using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
+                        {
+                            cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                            cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                            cmdDisInactive.ExecuteNonQuery();
                         }
 
                         string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
@@ -401,6 +482,114 @@ namespace SOR.Controllers
             ViewBag.ListaEstadosAdmin = listaEstados;
             ViewBag.ListaEquiposAdmin = listaEquipos;
             ViewBag.ListaPosicionesAdmin = listaPosiciones;
+        }
+
+        [HttpPost]
+        public ActionResult AprobarRestablecimiento(int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Cambiar estado a Aprobado Restablecimiento (8)
+                        string sql = "UPDATE dbo.Usuarios SET IdEstado = 8 WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Auto-restaurar asignación de equipo si fue desactivada durante el proceso
+                        string sqlRestoreCheck = @"
+                            SELECT p.IdEquipo, p.IdPosicion
+                            FROM dbo.PerfilesCoordinador p
+                            WHERE p.IdUsuario = @IdUsuario 
+                              AND p.IdEquipo IS NOT NULL 
+                              AND p.IdPosicion IS NOT NULL
+                              AND NOT EXISTS (
+                                  SELECT 1 FROM dbo.AsignacionesEquipo a 
+                                  WHERE a.IdUsuario = @IdUsuario AND a.Activo = 1
+                              );";
+                        using (SqlCommand cmdRestore = new SqlCommand(sqlRestoreCheck, cn, tran))
+                        {
+                            cmdRestore.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            using (SqlDataReader dr = cmdRestore.ExecuteReader())
+                            {
+                                if (dr.Read())
+                                {
+                                    int idEquipo = Convert.ToInt32(dr["IdEquipo"]);
+                                    int idPosicion = Convert.ToInt32(dr["IdPosicion"]);
+                                    dr.Close();
+
+                                    string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
+                                    using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
+                                    {
+                                        cmdIns.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                        cmdIns.Parameters.AddWithValue("@IdEquipo", idEquipo);
+                                        cmdIns.Parameters.AddWithValue("@IdPosicion", idPosicion);
+                                        cmdIns.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+                        }
+
+                        tran.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Ocurrió un error al aprobar el restablecimiento.";
+                        return RedirectToAction("Usuarios");
+                    }
+                }
+            }
+
+            TempData["MensajeExito"] = "La solicitud de restablecimiento ha sido aprobada. El usuario podrá colocar su nueva clave al ingresar su correo.";
+            return RedirectToAction("Usuarios");
+        }
+
+        [HttpPost]
+        public ActionResult RechazarRestablecimiento(int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Cambiar estado a Suspendido (6)
+                        string sqlUser = "UPDATE dbo.Usuarios SET IdEstado = 6 WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmdUser = new SqlCommand(sqlUser, cn, tran))
+                        {
+                            cmdUser.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdUser.ExecuteNonQuery();
+                        }
+
+                        // 2. Liberar su posición/rol en el equipo (Activo = 0 en AsignacionesEquipo)
+                        string sqlAsig = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario AND Activo = 1;";
+                        using (SqlCommand cmdAsig = new SqlCommand(sqlAsig, cn, tran))
+                        {
+                            cmdAsig.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdAsig.ExecuteNonQuery();
+                        }
+
+                        tran.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Ocurrió un error al procesar el rechazo de restablecimiento.";
+                        return RedirectToAction("Usuarios");
+                    }
+                }
+            }
+
+            TempData["MensajeExito"] = "La solicitud de restablecimiento fue rechazada. La cuenta del usuario ha sido suspendida y su rol ha sido liberado.";
+            return RedirectToAction("Usuarios");
         }
     }
 }

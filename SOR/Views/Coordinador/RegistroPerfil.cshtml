@@ -70,6 +70,14 @@
                         <span id="badge-err-occ" class="badge bg-danger ms-1 rounded-pill d-none"><i class="bi bi-exclamation-circle"></i> Faltan datos</span>
                     </button>
                 </li>
+                @if (Model.IdPerfil > 0)
+                {
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold position-relative" id="tab-seguridad" data-bs-toggle="tab" data-bs-target="#sec-seguridad" type="button" role="tab">
+                            <i class="bi bi-shield-lock-fill me-2"></i>4. Seguridad / Clave
+                        </button>
+                    </li>
+                }
             </ul>
         </div>
 
@@ -262,7 +270,7 @@
                     {
                         <div class="alert alert-warning border-0 rounded-3 mb-4 shadow-sm">
                             <i class="bi bi-shield-lock-fill me-2 text-warning fs-5"></i>
-                            <strong>Asignación Protegida:</strong> Tu cuenta se encuentra activa y aprobada. Por motivos de seguridad y control organizacional, solo un <strong>Administrador o SuperAdmin</strong> puede reasignarte a otro equipo o modificar tu posición.
+                            <strong>Asignación Protegida:</strong> Tu cuenta se encuentra activa y aprobada. Por motivos de seguridad y control organizacional, solo un <strong>Administrador</strong> puede reasignarte a otro equipo o modificar tu posición.
                         </div>
                     }
                     else
@@ -317,6 +325,57 @@
                     </div>
                 </div>
 
+                @if (Model.IdPerfil > 0)
+                {
+                    <!-- SECCIÓN 4: SEGURIDAD / CAMBIAR CONTRASEÑA -->
+                    <div class="tab-pane fade" id="sec-seguridad" role="tabpanel">
+                        <h4 class="h5 font-bold mb-3 text-primary border-bottom pb-2">Cambiar mi Contraseña</h4>
+                        <p class="text-muted small">Por tu seguridad, asegúrate de utilizar una contraseña robusta. Los cambios se aplicarán de inmediato tras la validación.</p>
+                        
+                        <div class="row g-3" style="max-width: 500px;">
+                            @if (TempData["ErrorClave"] != null)
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-danger py-2 small shadow-sm mb-2">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorClave"]
+                                    </div>
+                                </div>
+                            }
+                            
+                            @if (TempData["ExitoClave"] != null)
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-success py-2 small shadow-sm mb-2">
+                                        <i class="bi bi-check-circle-fill me-2"></i> @TempData["ExitoClave"]
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="col-12">
+                                <label class="form-label font-semibold">Contraseña Actual <span class="text-danger">*</span></label>
+                                <input type="password" name="claveActual" form="formCambiarClavePerfil" class="form-control" placeholder="Ingresa tu contraseña actual" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label font-semibold">Nueva Contraseña <span class="text-danger">*</span></label>
+                                <input type="password" name="nuevaClave" id="txtNuevaClavePerfil" form="formCambiarClavePerfil" class="form-control" placeholder="Nueva contraseña (mínimo 6 caracteres)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label font-semibold">Confirmar Nueva Contraseña <span class="text-danger">*</span></label>
+                                <input type="password" name="confirmarClave" id="txtConfirmarClavePerfil" form="formCambiarClavePerfil" class="form-control" placeholder="Confirma la nueva contraseña" />
+                                <div class="invalid-feedback" id="feedbackCoincideClavePerfil">Las contraseñas no coinciden.</div>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <button type="submit" form="formCambiarClavePerfil" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                                    <i class="bi bi-key-fill me-2"></i> Actualizar Contraseña
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
             </div>
         </div>
 
@@ -327,6 +386,8 @@
         </div>
     </div>
 </form>
+
+<form action="@Url.Action("CambiarClavePerfil", "Coordinador")" method="post" id="formCambiarClavePerfil"></form>
 
 @section scripts {
 <script>
@@ -488,6 +549,73 @@
 
             $('#alertValidacionPerfil').addClass('d-none');
             return true;
+        });
+
+        // 4. Control de visibilidad del card-footer según pestaña activa
+        $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            var targetId = $(e.target).attr('id');
+            if (targetId === 'tab-seguridad') {
+                $('.card-footer').addClass('d-none');
+            } else {
+                $('.card-footer').removeClass('d-none');
+            }
+        });
+
+        // Activar la pestaña de seguridad directamente si se redirecciona por clave
+        var tabActiva = '@TempData["TabActiva"]';
+        if (tabActiva === 'seguridad') {
+            var tabTrigger = document.querySelector('#tab-seguridad');
+            if (tabTrigger) {
+                var tabInstance = new bootstrap.Tab(tabTrigger);
+                tabInstance.show();
+                $('.card-footer').addClass('d-none');
+            }
+        }
+
+        // Validación interactiva del lado del cliente para el cambio de clave
+        $('#formCambiarClavePerfil').on('submit', function (e) {
+            var actual = $('input[name="claveActual"]').val();
+            var nueva = $('#txtNuevaClavePerfil').val();
+            var confirmar = $('#txtConfirmarClavePerfil').val();
+            var esValido = true;
+
+            // Limpiar errores visuales
+            $('input[name="claveActual"], #txtNuevaClavePerfil, #txtConfirmarClavePerfil').removeClass('is-invalid');
+
+            if (!actual || actual.trim() === '') {
+                $('input[name="claveActual"]').addClass('is-invalid');
+                esValido = false;
+            }
+            if (!nueva || nueva.trim() === '') {
+                $('#txtNuevaClavePerfil').addClass('is-invalid');
+                esValido = false;
+            } else if (nueva.length < 6) {
+                $('#txtNuevaClavePerfil').addClass('is-invalid');
+                alert("La nueva contraseña debe tener al menos 6 caracteres.");
+                esValido = false;
+            }
+            if (nueva !== confirmar) {
+                $('#txtConfirmarClavePerfil').addClass('is-invalid');
+                $('#feedbackCoincideClavePerfil').show();
+                esValido = false;
+            } else {
+                $('#feedbackCoincideClavePerfil').hide();
+            }
+
+            if (!esValido) {
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        });
+
+        $('#txtConfirmarClavePerfil, #txtNuevaClavePerfil').on('input', function () {
+            var nueva = $('#txtNuevaClavePerfil').val();
+            var confirmar = $('#txtConfirmarClavePerfil').val();
+            if (nueva === confirmar) {
+                $('#txtConfirmarClavePerfil').removeClass('is-invalid');
+                $('#feedbackCoincideClavePerfil').hide();
+            }
         });
     });
 </script>

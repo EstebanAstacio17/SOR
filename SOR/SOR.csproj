@@ -215,6 +215,8 @@
     <Content Include="Views\Home\SolicitudVoluntario.cshtml" />
     <Content Include="Views\Acceso\Login.cshtml" />
     <Content Include="Views\Acceso\Registrar.cshtml" />
+    <Content Include="Views\Acceso\RecuperarClave.cshtml" />
+    <Content Include="Views\Acceso\CambiarClave.cshtml" />
     <Content Include="Views\Admin\Usuarios.cshtml" />
     <Content Include="Views\Coordinador\RegistroPerfil.cshtml" />
     <Content Include="Views\Coordinador\EstadoSolicitud.cshtml" />

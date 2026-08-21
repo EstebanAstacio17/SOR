@@ -1,0 +1,71 @@
+@{
+    Layout = null;
+    string correo = ViewBag.Correo as string;
+}
+
+<!doctype html>
+<html lang="es" data-bs-theme="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nueva Contraseña | SOR</title>
+
+    <!-- Bootstrap 5 (local) -->
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- CSS propio -->
+    <link href="~/Content/css/Login.css" rel="stylesheet" />
+</head>
+
+<body class="d-flex align-items-center py-4 bg-body-tertiary">
+    <main class="form-signin w-100 m-auto">
+        <form action="@Url.Action("CambiarClave", "Acceso")" method="post">
+            <input type="hidden" name="correo" value="@correo" />
+
+            <!-- LOGO -->
+            <img src="~/Content/css/Imgs/OCC-logo.png" class="logo-login" alt="Logo">
+
+            <!-- TITULO -->
+            <h1 class="h3 mb-2 fw-normal text-center">
+                Nueva Contraseña
+            </h1>
+            <p class="text-muted text-center small mb-4">
+                Tu solicitud de restablecimiento fue aprobada por el administrador. Ingresa tu nueva contraseña a continuación.
+            </p>
+
+            <!-- NUEVA CLAVE -->
+            <div class="form-floating mb-3">
+                <input type="password" name="nuevaClave" class="form-control" id="floatingPassword" placeholder="Nueva Contraseña" required minlength="6">
+                <label for="floatingPassword">Nueva Contraseña</label>
+            </div>
+
+            <!-- CONFIRMAR CLAVE -->
+            <div class="form-floating mb-3">
+                <input type="password" name="confirmarClave" class="form-control" id="floatingConfirmPassword" placeholder="Confirmar Nueva Contraseña" required minlength="6">
+                <label for="floatingConfirmPassword">Confirmar Nueva Contraseña</label>
+            </div>
+
+            <!-- MENSAJES -->
+            @if (ViewData["Mensaje"] != null)
+            {
+                <div class="alert alert-danger mt-3 small">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> @ViewData["Mensaje"]
+                </div>
+            }
+
+            <!-- BOTONES -->
+            <button class="btn btn-primary w-100 py-2 mt-2" type="submit">
+                <i class="bi bi-check-circle-fill me-1"></i> Guardar y Restablecer
+            </button>
+
+            <p class="mt-5 mb-3 text-body-secondary text-center">
+                &copy; @DateTime.Now.Year - SOR | Powered by PortaForza
+            </p>
+        </form>
+    </main>
+
+    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+</body>
+</html>

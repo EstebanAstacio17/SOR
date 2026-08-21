@@ -135,8 +135,8 @@ namespace SOR.Controllers
                 SqlCommand cmd;
                 if (existe > 0)
                 {
-                    // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado (IdEstado == 4)
-                    if (usuarioActual.IdEstado == 4)
+                    // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado o está en proceso de restablecimiento
+                    if (usuarioActual.IdEstado == 4 || usuarioActual.IdEstado == 7 || usuarioActual.IdEstado == 8)
                     {
                         string sqlGetPrev = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdPrev = new SqlCommand(sqlGetPrev, cn))
@@ -264,7 +264,8 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
 
                 // 4. Actualizar Estado de Usuario a PerfilPendienteAprobacion (3) si no está activo aún
-                if (usuarioActual.IdEstado != 4)
+                // No cambiar el estado si está en proceso de restablecimiento de contraseña (7 u 8)
+                if (usuarioActual.IdEstado != 4 && usuarioActual.IdEstado != 7 && usuarioActual.IdEstado != 8)
                 {
                     string sqlUpdEstado = "UPDATE dbo.Usuarios SET IdEstado = 3 WHERE IdUsuario = @IdUsuario;";
                     SqlCommand cmdEstado = new SqlCommand(sqlUpdEstado, cn);
@@ -294,12 +295,13 @@ namespace SOR.Controllers
                     SELECT DISTINCT IdPosicion FROM (
                         SELECT a.IdPosicion 
                         FROM dbo.AsignacionesEquipo a 
-                        WHERE a.IdEquipo = @IdEquipo AND a.Activo = 1 AND a.IdUsuario <> @IdUsuario
+                        INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                        WHERE a.IdEquipo = @IdEquipo AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario
                         UNION
                         SELECT p.IdPosicion 
                         FROM dbo.PerfilesCoordinador p 
                         INNER JOIN dbo.Usuarios u ON p.IdUsuario = u.IdUsuario 
-                        WHERE p.IdEquipo = @IdEquipo AND p.IdPosicion IS NOT NULL AND u.IdEstado IN (3, 4) AND p.IdUsuario <> @IdUsuario
+                        WHERE p.IdEquipo = @IdEquipo AND p.IdPosicion IS NOT NULL AND u.IdEstado IN (3, 4, 7, 8) AND p.IdUsuario <> @IdUsuario
                     ) AS Ocupados;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -390,12 +392,13 @@ namespace SOR.Controllers
                     SELECT COUNT(1) FROM (
                         SELECT a.IdPosicion 
                         FROM dbo.AsignacionesEquipo a 
-                        WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND a.IdUsuario <> @IdUsuario
+                        INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                        WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario
                         UNION
                         SELECT p.IdPosicion 
                         FROM dbo.PerfilesCoordinador p 
                         INNER JOIN dbo.Usuarios u ON p.IdUsuario = u.IdUsuario 
-                        WHERE p.IdEquipo = @IdEquipo AND p.IdPosicion = @IdPosicion AND u.IdEstado IN (3, 4) AND p.IdUsuario <> @IdUsuario
+                        WHERE p.IdEquipo = @IdEquipo AND p.IdPosicion = @IdPosicion AND u.IdEstado IN (3, 4, 7, 8) AND p.IdUsuario <> @IdUsuario
                     ) AS CheckOcupado;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -453,6 +456,63 @@ namespace SOR.Controllers
 
             ViewBag.ListaEquipos = listaEquipos;
             ViewBag.ListaPosiciones = listaPosiciones;
+        }
+
+        [HttpPost]
+        [ValidarSesion]
+        public ActionResult CambiarClavePerfil(string claveActual, string nuevaClave, string confirmarClave)
+        {
+            Usuario usuarioActual = (Usuario)Session["usuario"];
+
+            if (string.IsNullOrWhiteSpace(claveActual) || string.IsNullOrWhiteSpace(nuevaClave) || string.IsNullOrWhiteSpace(confirmarClave))
+            {
+                TempData["ErrorClave"] = "Todos los campos de contraseña son obligatorios.";
+                TempData["TabActiva"] = "seguridad";
+                return RedirectToAction("RegistroPerfil");
+            }
+
+            if (nuevaClave != confirmarClave)
+            {
+                TempData["ErrorClave"] = "Las nuevas contraseñas no coinciden.";
+                TempData["TabActiva"] = "seguridad";
+                return RedirectToAction("RegistroPerfil");
+            }
+
+            string claveGuardada = null;
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "SELECT Clave FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+
+                cn.Open();
+                claveGuardada = cmd.ExecuteScalar()?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(claveGuardada) || !Helpers.Criptografia.VerificarClave(claveActual, claveGuardada))
+            {
+                TempData["ErrorClave"] = "La contraseña actual es incorrecta.";
+                TempData["TabActiva"] = "seguridad";
+                return RedirectToAction("RegistroPerfil");
+            }
+
+            // Hashear nueva contraseña
+            string nuevaClaveFormateada = Helpers.Criptografia.CrearClaveFormateada(nuevaClave);
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "UPDATE dbo.Usuarios SET Clave = @Clave WHERE IdUsuario = @IdUsuario;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Clave", nuevaClaveFormateada);
+                cmd.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            TempData["ExitoClave"] = "Su contraseña ha sido cambiada exitosamente.";
+            TempData["TabActiva"] = "seguridad";
+            return RedirectToAction("RegistroPerfil");
         }
     }
 }
