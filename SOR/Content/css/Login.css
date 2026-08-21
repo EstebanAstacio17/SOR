@@ -17,7 +17,7 @@ body {
     object-fit: contain;
     margin: 0 auto 2rem auto;
 }
-
+ 
 /* Mantiene los campos unidos */
 .form-signin .form-floating:focus-within {
     z-index: 2;
