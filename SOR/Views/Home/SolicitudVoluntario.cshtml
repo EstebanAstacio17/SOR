@@ -1,0 +1,253 @@
+@{
+    ViewBag.Title = "Solicitud de Nuevo Voluntario | SOR";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%);
+        color: #ffffff;
+        padding: 50px 20px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        margin-top: 20px;
+        margin-bottom: 30px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    .page-title {
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        background: linear-gradient(90deg, #ffffff, #7dd3fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .page-subtitle {
+        color: #cbd5e1;
+        font-size: 1.1rem;
+        max-width: 700px;
+        margin: 0 auto;
+        line-height: 1.5;
+    }
+
+    .info-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        height: 100%;
+        transition: transform 0.3s ease;
+    }
+
+    .info-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .info-icon-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: #e0f2fe;
+        color: #0284c7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .step-badge {
+        width: 28px;
+        height: 28px;
+        background: #0284c7;
+        color: white;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+        margin-right: 10px;
+    }
+
+    .btn-download-pdf {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff !important;
+        font-weight: 600;
+        padding: 14px 24px;
+        font-size: 1.05rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+        border: none;
+    }
+
+    .btn-download-pdf:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.5);
+    }
+
+    .pdf-viewer-container {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+
+    .contact-icon {
+        color: #0284c7;
+        font-size: 1.2rem;
+        margin-right: 12px;
+        margin-top: 2px;
+    }
+
+    .contact-text strong {
+        display: block;
+        color: #334155;
+        font-size: 0.95rem;
+    }
+
+    .contact-text span {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="container mb-5">
+    
+    <div class="page-header">
+        <h1 class="page-title">Solicitud de Nuevo Voluntario</h1>
+        <p class="page-subtitle">
+            Únete a la misión de Samaritan's Purse y comparte el amor de Dios de una manera tangible con los niños necesitados.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Columna de Información y Contacto -->
+        <div class="col-lg-5">
+            <div class="info-card d-flex flex-column justify-content-between">
+                <div>
+                    <div class="info-icon-wrapper">
+                        <i class="bi bi-file-earmark-person"></i>
+                    </div>
+                    
+                    <h3 class="h5 font-bold text-slate-800 mb-3">¿Cómo postularse como voluntario?</h3>
+                    <p class="text-muted leading-relaxed mb-4">
+                        Para postularte, por favor sigue estos sencillos pasos:
+                    </p>
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="step-badge">1</span>
+                            <span class="text-slate-700 font-semibold">Descarga el formulario PDF</span>
+                        </div>
+                        <p class="text-muted small ps-5">
+                            Haz clic en el botón de descarga a continuación para obtener el formulario oficial en tu dispositivo.
+                        </p>
+
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="step-badge">2</span>
+                            <span class="text-slate-700 font-semibold">Completa la información</span>
+                        </div>
+                        <p class="text-muted small ps-5">
+                            Llena todos los campos solicitados con letra clara, firma el documento y adjunta los requisitos solicitados.
+                        </p>
+
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="step-badge">3</span>
+                            <span class="text-slate-700 font-semibold">Envía tu postulación</span>
+                        </div>
+                        <p class="text-muted small ps-5">
+                            Haz llegar tu solicitud firmada a nuestra oficina nacional por correo electrónico o de forma presencial.
+                        </p>
+                    </div>
+
+                    <hr class="my-4 border-slate-200" />
+
+                    <h3 class="h5 font-bold text-slate-800 mb-3">Contacto de la Oficina Nacional</h3>
+                    <div class="mb-4">
+                        <div class="contact-item">
+                            <i class="bi bi-geo-alt-fill contact-icon"></i>
+                            <div class="contact-text">
+                                <strong>Dirección de Oficina</strong>
+                                <span>Santo Domingo, República Dominicana</span>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <i class="bi bi-envelope-fill contact-icon"></i>
+                            <div class="contact-text">
+                                <strong>Correo Electrónico</strong>
+                                <a href="mailto:oficina@occrd.org" class="text-decoration-none text-sky-600">oficina@occrd.org</a>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <i class="bi bi-telephone-fill contact-icon"></i>
+                            <div class="contact-text">
+                                <strong>Teléfono de Contacto</strong>
+                                <span>(809) 567-0010</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <a href="@Url.Content("~/Documentos Descargables/Solicitud de Voluntario para Descargar.pdf")" download class="btn-download-pdf mb-3">
+                        <i class="bi bi-cloud-arrow-down-fill me-2"></i>Descargar Formulario PDF
+                    </a>
+                    <a href="@Url.Action("Landing", "Home")" class="btn btn-outline-secondary w-100 py-2.5 rounded-3">
+                        <i class="bi bi-arrow-left me-1"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna del Visor de PDF -->
+        <div class="col-lg-7">
+            <div class="pdf-viewer-container">
+                <div class="d-flex align-items-center justify-content-between mb-3 px-2">
+                    <span class="text-slate-800 font-semibold"><i class="bi bi-eye-fill me-1"></i>Previsualización del Formulario</span>
+                    <a href="@Url.Content("~/Documentos Descargables/Solicitud de Voluntario para Descargar.pdf")" target="_blank" class="text-sky-600 text-decoration-none small font-semibold">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en pestaña nueva
+                    </a>
+                </div>
+                <div class="flex-grow-1" style="min-height: 550px;">
+                    <iframe src="@Url.Content("~/Documentos Descargables/Solicitud de Voluntario para Descargar.pdf")" width="100%" height="100%" style="border: none; border-radius: 8px;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

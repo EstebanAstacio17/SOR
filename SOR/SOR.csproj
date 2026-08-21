@@ -179,6 +179,7 @@
     <Content Include="Content\css\Imgs\zoom logo.jpg" />
     <Content Include="Content\css\Login.css" />
     <Content Include="favicon.ico" />
+    <Content Include="Documentos Descargables\Solicitud de Voluntario para Descargar.pdf" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
     <Content Include="Scripts\bootstrap.bundle.js" />
@@ -211,6 +212,7 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\Landing.cshtml" />
+    <Content Include="Views\Home\SolicitudVoluntario.cshtml" />
     <Content Include="Views\Acceso\Login.cshtml" />
     <Content Include="Views\Acceso\Registrar.cshtml" />
     <Content Include="Views\Admin\Usuarios.cshtml" />
@@ -222,12 +224,9 @@
     <Content Include="Views\Reporte\Index.cshtml" />
     <Content Include="Views\Equipos\Index.cshtml" />
   </ItemGroup>
-
-
   <ItemGroup>
     <Content Include="App_Data\DB_SOR_Schema.sql" />
   </ItemGroup>
-
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />
     <Content Include="Content\bootstrap.rtl.css.map" />

@@ -33,6 +33,11 @@ namespace SOR.Controllers
             return View();
         }
 
+        public ActionResult SolicitudVoluntario()
+        {
+            return View();
+        }
+
         public ActionResult CerrarSesion()
         {
             Session.Clear();
