@@ -1,0 +1,413 @@
+@model SOR.Models.Iglesia
+@{
+    ViewBag.Title = "Expediente: " + Model.NombreIglesia;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool puedeEditar = (bool)(ViewBag.PuedeEditar ?? false);
+    var uActual = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <a href="@Url.Action("Index", "Iglesia")" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i> Volver a la lista</a>
+        <h2 class="h3 font-bold text-slate-800 mb-0 mt-1">@Model.NombreIglesia</h2>
+        <span class="badge bg-primary mt-1"><i class="bi bi-diagram-3 me-1"></i>@Model.NombreEquipo</span>
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- COLUMNA IZQUIERDA: DATOS INSTITUCIÓN Y PERSONAS -->
+    <div class="col-md-7">
+        <!-- DETALLES DE INSTITUCIÓN -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-light border-0 p-3">
+                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-building me-2 text-primary"></i>Datos de la Institución</h3>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <small class="text-muted d-block">RNC / Cédula</small>
+                        <strong class="text-dark">@(string.IsNullOrEmpty(Model.RNC_Cedula) ? "N/D" : Model.RNC_Cedula)</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block">Teléfono</small>
+                        <strong class="text-dark">@(string.IsNullOrEmpty(Model.Telefono) ? "N/D" : Model.Telefono)</strong>
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted d-block">Dirección Física</small>
+                        <strong class="text-dark">@Model.Calle #@Model.Numero, @Model.Sector, @Model.Ciudad (@Model.Provincia)</strong>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Referencia))
+                    {
+                        <div class="col-12">
+                            <small class="text-muted d-block">Referencia</small>
+                            <span class="text-slate-600">@Model.Referencia</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- PASTOR PRINCIPAL -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-light border-0 p-3">
+                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-person-badge me-2 text-primary"></i>Pastor Principal</h3>
+            </div>
+            <div class="card-body p-4">
+                @if (string.IsNullOrEmpty(Model.Pastor.Nombres))
+                {
+                    <p class="text-muted mb-0">Sin datos de Pastor registrados.</p>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Nombre Completo</small>
+                            <strong class="text-dark">@Model.Pastor.Nombres @Model.Pastor.Apellidos</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Cédula / Documento</small>
+                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.Pastor.DocumentoIdentidad) ? "N/D" : Model.Pastor.DocumentoIdentidad)</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Celular / WhatsApp</small>
+                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.Pastor.Celular) ? "N/D" : Model.Pastor.Celular)</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Documento Adjunto</small>
+                            @if (!string.IsNullOrEmpty(Model.Pastor.DocumentoAdjuntoRuta))
+                            {
+                                <a href="@Model.Pastor.DocumentoAdjuntoRuta" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Ver Cédula / Documento
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Sin adjunto</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- LÍDER MINISTERIAL -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-light border-0 p-3">
+                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-person-workspace me-2 text-primary"></i>Líder Ministerial</h3>
+            </div>
+            <div class="card-body p-4">
+                @if (string.IsNullOrEmpty(Model.LiderMinisterial.Nombres))
+                {
+                    <p class="text-muted mb-0">Sin datos de Líder Ministerial registrados.</p>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Nombre Completo</small>
+                            <strong class="text-dark">@Model.LiderMinisterial.Nombres @Model.LiderMinisterial.Apellidos</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Cédula / Documento</small>
+                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.LiderMinisterial.DocumentoIdentidad) ? "N/D" : Model.LiderMinisterial.DocumentoIdentidad)</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Celular / WhatsApp</small>
+                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.LiderMinisterial.Celular) ? "N/D" : Model.LiderMinisterial.Celular)</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Documento Adjunto</small>
+                            @if (!string.IsNullOrEmpty(Model.LiderMinisterial.DocumentoAdjuntoRuta))
+                            {
+                                <a href="@Model.LiderMinisterial.DocumentoAdjuntoRuta" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Ver Documento
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Sin adjunto</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: TEMPORADA, RECURSOS Y HISTORIAL DE OBSERVACIONES -->
+    <div class="col-md-5">
+        <!-- PARTICIPACIÓN EN TEMPORADA -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between">
+                <h3 class="h5 font-bold mb-0"><i class="bi bi-calendar-check me-2"></i>Temporada 2026</h3>
+                @if (Model.ParticipacionActual != null && Model.ParticipacionActual.Participara)
+                {
+                    <span class="badge bg-success">Participará</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">NO Participará</span>
+                }
+            </div>
+            <div class="card-body p-4">
+                @if (Model.ParticipacionActual != null)
+                {
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Estado de Evaluación / Etapa:</small>
+                        <span class="badge bg-info text-dark fs-6 mt-1">@Model.ParticipacionActual.EstadoEvaluacion</span>
+                    </div>
+
+                    if (!Model.ParticipacionActual.Participara)
+                    {
+                        <div class="alert alert-warning border-0 rounded-3 mb-3">
+                            <strong><i class="bi bi-exclamation-triangle me-1"></i>Justificación de No Participación:</strong>
+                            <p class="mb-0 mt-1 text-dark">@Model.ParticipacionActual.JustificacionNoParticipacion</p>
+                        </div>
+                    }
+
+                    if (puedeEditar)
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalEvaluarParticipacion">
+                            <i class="bi bi-pencil-square me-1"></i>Evaluar / Cambiar Etapa
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- RECURSOS DESPACHADOS (LOGÍSTICA) -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-light border-0 p-3 d-flex align-items-center justify-content-between">
+                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Recursos Despachados</h3>
+                @if (puedeEditar)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalRecursos">
+                        <i class="bi bi-pencil me-1"></i>Editar Despacho
+                    </button>
+                }
+            </div>
+            <div class="card-body p-4">
+                @if (Model.RecursosActuales != null)
+                {
+                    <div class="row g-2 text-center">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <small class="text-muted d-block">Oportunidades Evangelísticas</small>
+                                <strong class="fs-5 text-primary">@Model.RecursosActuales.OportunidadesEvangelisticas</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <small class="text-muted d-block">Libros Mejor Regalo</small>
+                                <strong class="fs-5 text-success">@Model.RecursosActuales.LibrosMejorRegalo</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <small class="text-muted d-block">Libros Maestros</small>
+                                <strong class="fs-5 text-info">@Model.RecursosActuales.LibrosMaestros</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <small class="text-muted d-block">Libros Alumno</small>
+                                <strong class="fs-5 text-warning">@Model.RecursosActuales.LibrosAlumno</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <small class="text-muted d-block">Posters</small>
+                                <strong class="fs-5 text-secondary">@Model.RecursosActuales.Posters</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <small class="text-muted d-block">Nuevos Testamentos</small>
+                                <strong class="fs-5 text-dark">@Model.RecursosActuales.NuevosTestamentos</strong>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- TIMELINE DE OBSERVACIONES Y COMENTARIOS -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-light border-0 p-3">
+                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-chat-left-text me-2 text-primary"></i>Historial de Observaciones</h3>
+            </div>
+            <div class="card-body p-4">
+                <form action="@Url.Action("AgregarComentario", "Iglesia")" method="post" class="mb-4">
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <div class="mb-2">
+                        <textarea name="comentario" class="form-control" rows="2" placeholder="Escribe una observación o comentario..." required></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-sm btn-primary font-semibold">
+                            <i class="bi bi-send me-1"></i>Publicar Observación
+                        </button>
+                    </div>
+                </form>
+
+                <div class="timeline">
+                    @if (!Model.Comentarios.Any())
+                    {
+                        <p class="text-muted small text-center my-3">No hay observaciones registradas en este expediente.</p>
+                    }
+                    else
+                    {
+                        foreach (var c in Model.Comentarios)
+                        {
+                            <div class="p-3 bg-light rounded-3 border mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="small text-primary">@c.CorreoUsuario</strong>
+                                    <small class="text-muted" style="font-size: 0.75rem;">@(c.FechaCreacion.HasValue ? c.FechaCreacion.Value.ToString("dd/MM/yyyy hh:mm tt") : "")</small>
+                                </div>
+                                <p class="mb-0 text-dark small">@c.Comentario</p>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EVALUAR PARTICIPACIÓN -->
+@if (Model.ParticipacionActual != null && puedeEditar)
+{
+    <div class="modal fade" id="modalEvaluarParticipacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="@Url.Action("EvaluarParticipacion", "Iglesia")" method="post">
+                <input type="hidden" name="idParticipacion" value="@Model.ParticipacionActual.IdParticipacion" />
+                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title font-bold">Evaluar / Cambiar Etapa de la Iglesia</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label font-semibold">¿Participará esta temporada?</label>
+                            <select name="participara" id="selectParticipara" class="form-select">
+                                <option value="true" @(Model.ParticipacionActual.Participara ? "selected" : "")>SÍ, Participará</option>
+                                <option value="false" @(!Model.ParticipacionActual.Participara ? "selected" : "")>NO Participará</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="groupJustificacion">
+                            <label class="form-label font-semibold">Justificación / Motivo <span class="text-danger">*</span></label>
+                            <textarea name="justificacionNoParticipacion" id="txtJustificacion" class="form-control" rows="3" placeholder="Explique por qué no participará esta temporada...">@Model.ParticipacionActual.JustificacionNoParticipacion</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label font-semibold">Estado de Evaluación / Etapa</label>
+                            <select name="estadoEvaluacion" class="form-select">
+                                <option value="Pendiente" @(Model.ParticipacionActual.EstadoEvaluacion == "Pendiente" ? "selected" : "")>Pendiente</option>
+                                <option value="Evaluada" @(Model.ParticipacionActual.EstadoEvaluacion == "Evaluada" ? "selected" : "")>Evaluada</option>
+                                <option value="Aprobada" @(Model.ParticipacionActual.EstadoEvaluacion == "Aprobada" ? "selected" : "")>Aprobada</option>
+                                <option value="NoAprobada" @(Model.ParticipacionActual.EstadoEvaluacion == "NoAprobada" ? "selected" : "")>No Aprobada</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- MODAL EDITAR RECURSOS (LOGÍSTICA) -->
+@if (Model.RecursosActuales != null && puedeEditar)
+{
+    <div class="modal fade" id="modalRecursos" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="@Url.Action("DespacharRecursos", "Iglesia")" method="post">
+                <input type="hidden" name="IdParticipacion" value="@Model.RecursosActuales.IdParticipacion" />
+                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title font-bold">Registrar Despacho de Recursos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">Oportunidades Evangelísticas</label>
+                                <input type="number" name="OportunidadesEvangelisticas" class="form-control" value="@Model.RecursosActuales.OportunidadesEvangelisticas" min="0" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Libros Mejor Regalo</label>
+                                <input type="number" name="LibrosMejorRegalo" class="form-control" value="@Model.RecursosActuales.LibrosMejorRegalo" min="0" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Libros Maestros</label>
+                                <input type="number" name="LibrosMaestros" class="form-control" value="@Model.RecursosActuales.LibrosMaestros" min="0" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Libros Alumno</label>
+                                <input type="number" name="LibrosAlumno" class="form-control" value="@Model.RecursosActuales.LibrosAlumno" min="0" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Posters</label>
+                                <input type="number" name="Posters" class="form-control" value="@Model.RecursosActuales.Posters" min="0" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Nuevos Testamentos</label>
+                                <input type="number" name="NuevosTestamentos" class="form-control" value="@Model.RecursosActuales.NuevosTestamentos" min="0" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar Despacho</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section scripts {
+<script>
+    $(document).ready(function () {
+        function toggleJustificacion() {
+            var val = $('#selectParticipara').val();
+            if (val === 'false') {
+                $('#groupJustificacion').show();
+                $('#txtJustificacion').prop('required', true);
+            } else {
+                $('#groupJustificacion').hide();
+                $('#txtJustificacion').prop('required', false);
+            }
+        }
+
+        $('#selectParticipara').change(function () {
+            toggleJustificacion();
+        });
+
+        toggleJustificacion();
+    });
+</script>
+}

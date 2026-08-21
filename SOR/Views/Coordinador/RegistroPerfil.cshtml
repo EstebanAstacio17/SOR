@@ -1,0 +1,494 @@
+@model SOR.Models.PerfilCoordinador
+@{
+    ViewBag.Title = "Formulario de Registro de Coordinador";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var listaEquipos = (List<SelectListItem>)ViewBag.ListaEquipos ?? new List<SelectListItem>();
+    var listaPosiciones = (List<SelectListItem>)ViewBag.ListaPosiciones ?? new List<SelectListItem>();
+    var usuarioActual = (SOR.Models.Usuario)Session["usuario"];
+    bool esUsuarioAprobado = usuarioActual != null && usuarioActual.IdEstado == 4;
+}
+
+<div class="mb-4">
+    <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-person-vcard text-primary me-2"></i>Formulario de Perfil de Coordinador</h2>
+    <p class="text-muted mb-0">Por favor completa todas las secciones con tus datos personales, ministeriales y tu asignación dentro de OCC RD.</p>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (ViewData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-4 text-danger"></i>
+            <div>
+                <strong>Atención:</strong>
+                <div>@Html.Raw(ViewData["MensajeError"])</div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- ALERTA DINÁMICA DE VALIDACIÓN DE CAMPOS POR PESTAÑA -->
+<div id="alertValidacionPerfil" class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm d-none" role="alert">
+    <div class="d-flex align-items-start">
+        <i class="bi bi-exclamation-circle-fill me-2 fs-4 text-danger"></i>
+        <div class="w-100">
+            <h5 class="alert-heading font-bold mb-1 fs-6">Por favor completa la información obligatoria antes de guardar:</h5>
+            <div id="listaErroresValidacion" class="small mb-0 mt-2"></div>
+        </div>
+    </div>
+    <button type="button" class="btn-close" onclick="$('#alertValidacionPerfil').addClass('d-none');" aria-label="Close"></button>
+</div>
+
+<form action="@Url.Action("RegistroPerfil", "Coordinador")" method="post" enctype="multipart/form-data" id="formPerfilCoordinador" novalidate>
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <!-- Navegación por pestañas/secciones -->
+        <div class="card-header bg-light border-0 p-3">
+            <ul class="nav nav-pills nav-fill gap-2" id="perfilTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-semibold position-relative" id="tab-personales" data-bs-toggle="tab" data-bs-target="#sec-personales" type="button" role="tab">
+                        <i class="bi bi-person-fill me-2"></i>1. Datos Personales
+                        <span id="badge-err-personales" class="badge bg-danger ms-1 rounded-pill d-none"><i class="bi bi-exclamation-circle"></i> Faltan datos</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold position-relative" id="tab-ministeriales" data-bs-toggle="tab" data-bs-target="#sec-ministeriales" type="button" role="tab">
+                        <i class="bi bi-briefcase-fill me-2"></i>2. Ministerial / Educativo / Laboral
+                        <span id="badge-err-ministeriales" class="badge bg-danger ms-1 rounded-pill d-none"><i class="bi bi-exclamation-circle"></i> Faltan datos</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold position-relative" id="tab-occ" data-bs-toggle="tab" data-bs-target="#sec-occ" type="button" role="tab">
+                        <i class="bi bi-diagram-3-fill me-2"></i>3. Datos OCC y Equipo
+                        <span id="badge-err-occ" class="badge bg-danger ms-1 rounded-pill d-none"><i class="bi bi-exclamation-circle"></i> Faltan datos</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="tab-content" id="perfilTabsContent">
+
+                <!-- SECCIÓN 1: DATOS PERSONALES -->
+                <div class="tab-pane fade show active" id="sec-personales" role="tabpanel">
+                    <h4 class="h5 font-bold mb-3 text-primary border-bottom pb-2">Información de Identidad y Contacto</h4>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold" for="txtPrimerNombre">Primer Nombre <span class="text-danger">*</span></label>
+                            <input type="text" id="txtPrimerNombre" name="PrimerNombre" class="form-control" value="@Model.PrimerNombre" data-nombre-campo="Primer Nombre" data-tab="tab-personales" required />
+                            <div class="invalid-feedback">El primer nombre es obligatorio.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Otros Nombres</label>
+                            <input type="text" name="OtrosNombres" class="form-control" value="@Model.OtrosNombres" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold" for="txtPrimerApellido">Primer Apellido <span class="text-danger">*</span></label>
+                            <input type="text" id="txtPrimerApellido" name="PrimerApellido" class="form-control" value="@Model.PrimerApellido" data-nombre-campo="Primer Apellido" data-tab="tab-personales" required />
+                            <div class="invalid-feedback">El primer apellido es obligatorio.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Otros Apellidos</label>
+                            <input type="text" name="OtrosApellidos" class="form-control" value="@Model.OtrosApellidos" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Fecha de Nacimiento</label>
+                            <input type="date" name="FechaNacimiento" class="form-control" value="@(Model.FechaNacimiento.HasValue ? Model.FechaNacimiento.Value.ToString("yyyy-MM-dd") : "")" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Nacionalidad</label>
+                            <input type="text" name="Nacionalidad" class="form-control" value="@(string.IsNullOrEmpty(Model.Nacionalidad) ? "Dominicana" : Model.Nacionalidad)" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Talla de Camisa / Ropa</label>
+                            <select name="Talla" class="form-select">
+                                <option value="">-- Seleccionar --</option>
+                                <option value="XS" @(Model.Talla == "XS" ? "selected" : "")>XS</option>
+                                <option value="S" @(Model.Talla == "S" ? "selected" : "")>S</option>
+                                <option value="M" @(Model.Talla == "M" ? "selected" : "")>M</option>
+                                <option value="L" @(Model.Talla == "L" ? "selected" : "")>L</option>
+                                <option value="XL" @(Model.Talla == "XL" ? "selected" : "")>XL</option>
+                                <option value="2XL" @(Model.Talla == "2XL" ? "selected" : "")>2XL</option>
+                                <option value="3XL" @(Model.Talla == "3XL" ? "selected" : "")>3XL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Correo Electrónico (No editable)</label>
+                            <input type="email" class="form-control bg-light" value="@Model.Correo" readonly />
+                        </div>
+
+                        <h5 class="h6 font-bold mt-4 mb-2 text-dark">Dirección Actual</h5>
+                        <div class="col-md-4">
+                            <label class="form-label">Calle</label>
+                            <input type="text" name="Calle" class="form-control" value="@Model.Calle" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Número</label>
+                            <input type="text" name="Numero" class="form-control" value="@Model.Numero" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sector</label>
+                            <input type="text" name="Sector" class="form-control" value="@Model.Sector" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ciudad / Provincia</label>
+                            <input type="text" name="Ciudad" class="form-control" value="@Model.Ciudad" placeholder="Ej: Santo Domingo" />
+                        </div>
+
+                        <h5 class="h6 font-bold mt-4 mb-2 text-dark">Documentos y Teléfonos</h5>
+                        <div class="col-md-3">
+                            <label class="form-label">Número de Cédula / Documento</label>
+                            <input type="text" name="NumeroDocumento" class="form-control" value="@Model.NumeroDocumento" placeholder="001-0000000-0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Adjuntar Cédula (Imagen o PDF)</label>
+                            <input type="file" name="docAdjunto" class="form-control" accept="image/*,.pdf" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Número de Pasaporte</label>
+                            <input type="text" name="NumeroPasaporte" class="form-control" value="@Model.NumeroPasaporte" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Adjuntar Pasaporte (Imagen o PDF)</label>
+                            <input type="file" name="pasaporteAdjunto" class="form-control" accept="image/*,.pdf" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Teléfono Fijo</label>
+                            <input type="text" name="TelefonoFijo" class="form-control" value="@Model.TelefonoFijo" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold" for="txtCelular">Celular / WhatsApp <span class="text-danger">*</span></label>
+                            <input type="text" id="txtCelular" name="TelefonoCelularWhatsApp" class="form-control" value="@Model.TelefonoCelularWhatsApp" data-nombre-campo="Celular / WhatsApp" data-tab="tab-personales" required />
+                            <div class="invalid-feedback">El número de Celular/WhatsApp es obligatorio.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Foto de Perfil del Coordinador</label>
+                            <input type="file" name="fotoPerfil" class="form-control" accept="image/*" />
+                        </div>
+
+                        <h5 class="h6 font-bold mt-4 mb-2 text-dark">Cónyuge y Contacto de Emergencia</h5>
+                        <div class="col-md-6">
+                            <label class="form-label">Datos del Cónyuge</label>
+                            <textarea name="DatosConyugue" class="form-control" rows="2" placeholder="Nombre completo, teléfono...">@Model.DatosConyugue</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Contacto de Emergencia</label>
+                            <textarea name="ContactoEmergencia" class="form-control" rows="2" placeholder="Nombre contacto, parentesco, teléfono...">@Model.ContactoEmergencia</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: DATOS MINISTERIALES / EDUCATIVOS / LABORALES DETALLADOS -->
+                <div class="tab-pane fade" id="sec-ministeriales" role="tabpanel">
+                    <h4 class="h5 font-bold mb-3 text-primary border-bottom pb-2">Trayectoria Ministerial, Formación Educativa y Antecedentes Laborales</h4>
+                    <div class="row g-3">
+                        <!-- Ministerial -->
+                        <h5 class="h6 font-bold text-dark mb-0">1. Antecedentes Ministeriales</h5>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold" for="txtIglesiaLocal">Iglesia Local <span class="text-danger">*</span></label>
+                            <input type="text" id="txtIglesiaLocal" name="IglesiaLocal" class="form-control" value="@Model.IglesiaLocal" placeholder="Ej: Iglesia Evangélica Central" data-nombre-campo="Iglesia Local" data-tab="tab-ministeriales" required />
+                            <div class="invalid-feedback">La iglesia local es obligatoria.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Pastor Principal de la Iglesia</label>
+                            <input type="text" name="PastorIglesiaLocal" class="form-control" value="@Model.PastorIglesiaLocal" placeholder="Nombre del pastor" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Cargo / Función en la Iglesia Local</label>
+                            <input type="text" name="CargoIglesiaLocal" class="form-control" value="@Model.CargoIglesiaLocal" placeholder="Ej: Líder de Jóvenes, Diácono" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Años de Servicio Ministerial</label>
+                            <input type="number" name="AniosServicioMinisterial" class="form-control" value="@Model.AniosServicioMinisterial" min="0" />
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label font-semibold">Resumen de Experiencia Ministerial</label>
+                            <textarea name="InfoMinisterial" class="form-control" rows="2" placeholder="Ministerios en los que ha servido, responsabilidades previas...">@Model.InfoMinisterial</textarea>
+                        </div>
+
+                        <!-- Educativo -->
+                        <h5 class="h6 font-bold text-dark mt-4 mb-0">2. Nivel Educativo y Profesión</h5>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Nivel Educativo Alcanzado</label>
+                            <select name="NivelEducativo" class="form-select">
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Secundaria" @(Model.NivelEducativo == "Secundaria" ? "selected" : "")>Secundaria / Bachillerato</option>
+                                <option value="Técnico" @(Model.NivelEducativo == "Técnico" ? "selected" : "")>Técnico Superior</option>
+                                <option value="Licenciatura" @(Model.NivelEducativo == "Licenciatura" ? "selected" : "")>Licenciatura / Grado</option>
+                                <option value="Maestría" @(Model.NivelEducativo == "Maestría" ? "selected" : "")>Maestría / Posgrado</option>
+                                <option value="Doctorado" @(Model.NivelEducativo == "Doctorado" ? "selected" : "")>Doctorado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Profesión / Carrera</label>
+                            <input type="text" name="ProfesionCarrera" class="form-control" value="@Model.ProfesionCarrera" placeholder="Ej: Educación, Administración, Teología" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Estudios Adicionales / Capacitaciones</label>
+                            <textarea name="InfoEducativa" class="form-control" rows="1" placeholder="Diplomados, talleres...">@Model.InfoEducativa</textarea>
+                        </div>
+
+                        <!-- Laboral -->
+                        <h5 class="h6 font-bold text-dark mt-4 mb-0">3. Situación Laboral Actual</h5>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Ocupación / Empresa / Trabajo</label>
+                            <input type="text" name="OcupacionEmpresaLaboral" class="form-control" value="@Model.OcupacionEmpresaLaboral" placeholder="Ej: Ministerio de Educación, Independiente" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Teléfono del Trabajo</label>
+                            <input type="text" name="TelefonoTrabajo" class="form-control" value="@Model.TelefonoTrabajo" placeholder="809-000-0000" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-semibold">Capacitaciones / Talleres OCC Completados</label>
+                            <textarea name="CapacitacionesOCC" class="form-control" rows="1" placeholder="Ej: Taller La Gran Aventura 2025">@Model.CapacitacionesOCC</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: DATOS OCC Y EQUIPO -->
+                <div class="tab-pane fade" id="sec-occ" role="tabpanel">
+                    <h4 class="h5 font-bold mb-3 text-primary border-bottom pb-2">Asignación de Equipo y Rol en OCC Rep Dom</h4>
+
+                    @if (esUsuarioAprobado)
+                    {
+                        <div class="alert alert-warning border-0 rounded-3 mb-4 shadow-sm">
+                            <i class="bi bi-shield-lock-fill me-2 text-warning fs-5"></i>
+                            <strong>Asignación Protegida:</strong> Tu cuenta se encuentra activa y aprobada. Por motivos de seguridad y control organizacional, solo un <strong>Administrador o SuperAdmin</strong> puede reasignarte a otro equipo o modificar tu posición.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info border-0 rounded-3 mb-4">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            Selecciona tu equipo y puesto iniciales. El sistema verificará que el rol no esté ocupado por otro coordinador activo dentro del mismo equipo.
+                        </div>
+                    }
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label font-semibold" for="ddlEquipo">Equipo OCC <span class="text-danger">*</span></label>
+                            @if (esUsuarioAprobado)
+                            {
+                                @Html.DropDownListFor(m => m.IdEquipo, listaEquipos, "-- Seleccionar Equipo --", new { @class = "form-select bg-light", id = "ddlEquipo", disabled = "disabled" })
+                                <input type="hidden" name="IdEquipo" value="@Model.IdEquipo" />
+                            }
+                            else
+                            {
+                                @Html.DropDownListFor(m => m.IdEquipo, listaEquipos, "-- Seleccionar Equipo --", new { @class = "form-select", id = "ddlEquipo", data_nombre_campo = "Equipo OCC", data_tab = "tab-occ", required = "required" })
+                                <div class="invalid-feedback">Debe seleccionar un equipo OCC.</div>
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label font-semibold" for="ddlPosicion">Posición / Rol en el Equipo <span class="text-danger">*</span></label>
+                            @if (esUsuarioAprobado)
+                            {
+                                @Html.DropDownListFor(m => m.IdPosicion, listaPosiciones, "-- Seleccionar Posición --", new { @class = "form-select bg-light", id = "ddlPosicion", disabled = "disabled" })
+                                <input type="hidden" name="IdPosicion" value="@Model.IdPosicion" />
+                            }
+                            else
+                            {
+                                @Html.DropDownListFor(m => m.IdPosicion, listaPosiciones, "-- Seleccionar Posición --", new { @class = "form-select", id = "ddlPosicion", data_nombre_campo = "Posición / Rol", data_tab = "tab-occ", required = "required" })
+                                <div class="invalid-feedback">Debe seleccionar una posición o rol.</div>
+                            }
+                            <div id="msgOcupado" class="text-danger small mt-1 d-none">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>Esta posición ya se encuentra ocupada por otro coordinador en este equipo.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label font-semibold">Ministerio / Área</label>
+                            <input type="text" name="Ministerio" class="form-control" value="@Model.Ministerio" placeholder="Ej: Operación Niño de la Navidad" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label font-semibold">Fecha de Ingreso a OCC</label>
+                            <input type="date" name="FechaIngreso" class="form-control" value="@(Model.FechaIngreso.HasValue ? Model.FechaIngreso.Value.ToString("yyyy-MM-dd") : "")" />
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card-footer bg-light p-3 text-end">
+            <button type="submit" class="btn btn-primary px-4 font-semibold shadow-sm" id="btnGuardar">
+                <i class="bi bi-check-circle-fill me-2"></i>Guardar Cambios
+            </button>
+        </div>
+    </div>
+</form>
+
+@section scripts {
+<script>
+    $(document).ready(function () {
+        // 1. Verificación de posiciones ocupadas por equipo
+        function verificarOcupacion() {
+            var equipoId = $('#ddlEquipo').val();
+            if (!equipoId) return;
+
+            $.getJSON('@Url.Action("ObtenerPosicionesOcupadas", "Coordinador")', { idEquipo: equipoId }, function (posicionesOcupadas) {
+                $('#ddlPosicion option').each(function () {
+                    var posId = parseInt($(this).val());
+                    if (posicionesOcupadas.includes(posId)) {
+                        $(this).text($(this).text().replace(' (OCUPADO)', '') + ' (OCUPADO)');
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).text($(this).text().replace(' (OCUPADO)', ''));
+                        $(this).prop('disabled', false);
+                    }
+                });
+
+                var posSeleccionada = parseInt($('#ddlPosicion').val());
+                if (posicionesOcupadas.includes(posSeleccionada)) {
+                    $('#msgOcupado').removeClass('d-none');
+                    $('#ddlPosicion').addClass('is-invalid');
+                } else {
+                    $('#msgOcupado').addClass('d-none');
+                    if ($('#ddlPosicion').val()) {
+                        $('#ddlPosicion').removeClass('is-invalid');
+                    }
+                }
+            });
+        }
+
+        $('#ddlEquipo, #ddlPosicion').change(function () {
+            verificarOcupacion();
+        });
+
+        if ($('#ddlEquipo').val()) {
+            verificarOcupacion();
+        }
+
+        // 2. Limpieza dinámica de estado de error al escribir/interactuar
+        $('input, select, textarea').on('input change', function () {
+            if ($(this).val() && $(this).val().toString().trim() !== '') {
+                $(this).removeClass('is-invalid');
+            }
+            actualizarBadgesPestanas();
+        });
+
+        function actualizarBadgesPestanas() {
+            var tabs = [
+                { id: 'tab-personales', pane: '#sec-personales', badge: '#badge-err-personales' },
+                { id: 'tab-ministeriales', pane: '#sec-ministeriales', badge: '#badge-err-ministeriales' },
+                { id: 'tab-occ', pane: '#sec-occ', badge: '#badge-err-occ' }
+            ];
+
+            tabs.forEach(function (tab) {
+                var tieneInvalido = $(tab.pane).find('.is-invalid').length > 0;
+                if (tieneInvalido) {
+                    $(tab.badge).removeClass('d-none');
+                } else {
+                    $(tab.badge).addClass('d-none');
+                }
+            });
+        }
+
+        // 3. Validación interactiva al enviar el formulario con guía de pestaña
+        $('#formPerfilCoordinador').on('submit', function (e) {
+            var erroresPorPestana = {
+                'tab-personales': { nombrePestana: 'Pestaña 1 (Datos Personales)', campos: [] },
+                'tab-ministeriales': { nombrePestana: 'Pestaña 2 (Ministerial / Educativo / Laboral)', campos: [] },
+                'tab-occ': { nombrePestana: 'Pestaña 3 (Datos OCC y Equipo)', campos: [] }
+            };
+
+            var primerElementoInvalido = null;
+            var primeraPestanaInvalida = null;
+            var hayErrores = false;
+
+            // Limpiar errores visuales previos
+            $('.is-invalid').removeClass('is-invalid');
+            $('.badge-tab-err').addClass('d-none');
+
+            // Validar campos requeridos
+            $(this).find('input[required], select[required]').each(function () {
+                var valor = $(this).val();
+                if (!valor || valor.toString().trim() === '') {
+                    hayErrores = true;
+                    $(this).addClass('is-invalid');
+
+                    var nombreCampo = $(this).attr('data-nombre-campo') || $(this).prev('label').text().replace('*', '').trim() || 'Campo requerido';
+                    var tabId = $(this).attr('data-tab') || $(this).closest('.tab-pane').attr('id');
+
+                    if (tabId.indexOf('sec-') === 0) {
+                        tabId = 'tab-' + tabId.replace('sec-', '');
+                    }
+
+                    if (erroresPorPestana[tabId]) {
+                        erroresPorPestana[tabId].campos.push(nombreCampo);
+                    }
+
+                    if (!primerElementoInvalido) {
+                        primerElementoInvalido = $(this);
+                        primeraPestanaInvalida = tabId;
+                    }
+                }
+            });
+
+            // Verificar si la posición seleccionada está marcada como ocupada
+            if (!$('#msgOcupado').hasClass('d-none')) {
+                hayErrores = true;
+                $('#ddlPosicion').addClass('is-invalid');
+                erroresPorPestana['tab-occ'].campos.push('Posición / Rol (La posición ya está ocupada en este equipo)');
+                if (!primeraPestanaInvalida) {
+                    primeraPestanaInvalida = 'tab-occ';
+                    primerElementoInvalido = $('#ddlPosicion');
+                }
+            }
+
+            if (hayErrores) {
+                e.preventDefault();
+
+                // Construir mensaje detallado indicando pestaña y campos
+                var htmlErrores = '<ul class="mb-0 ps-3">';
+                for (var key in erroresPorPestana) {
+                    var grupo = erroresPorPestana[key];
+                    if (grupo.campos.length > 0) {
+                        htmlErrores += '<li class="mb-1"><strong>' + grupo.nombrePestana + ':</strong> Faltan: <span class="text-danger fw-semibold">' + grupo.campos.join(', ') + '</span>.</li>';
+                    }
+                }
+                htmlErrores += '</ul>';
+
+                $('#listaErroresValidacion').html(htmlErrores);
+                $('#alertValidacionPerfil').removeClass('d-none');
+
+                actualizarBadgesPestanas();
+
+                // Cambiar automáticamente a la primera pestaña con error y enfocar
+                if (primeraPestanaInvalida) {
+                    var tabTrigger = document.querySelector('#' + primeraPestanaInvalida);
+                    if (tabTrigger) {
+                        var tabInstance = new bootstrap.Tab(tabTrigger);
+                        tabInstance.show();
+                    }
+                }
+
+                $('html, body').animate({
+                    scrollTop: $('#alertValidacionPerfil').offset().top - 80
+                }, 400);
+
+                if (primerElementoInvalido) {
+                    setTimeout(function () {
+                        primerElementoInvalido.focus();
+                    }, 300);
+                }
+
+                return false;
+            }
+
+            $('#alertValidacionPerfil').addClass('d-none');
+            return true;
+        });
+    });
+</script>
+}

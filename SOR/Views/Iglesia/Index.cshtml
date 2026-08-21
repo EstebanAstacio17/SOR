@@ -1,0 +1,91 @@
+@model IEnumerable<SOR.Models.Iglesia>
+@{
+    ViewBag.Title = "Registro de Iglesias";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var u = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-building-fill text-primary me-2"></i>Gestión de Iglesias Beneficiadas</h2>
+        <p class="text-muted mb-0">Listado e historia de iglesias socias de OCC en República Dominicana.</p>
+    </div>
+    <div>
+        <a href="@Url.Action("Crear", "Iglesia")" class="btn btn-primary font-semibold px-4 shadow-sm">
+            <i class="bi bi-plus-circle me-2"></i>Registrar Nueva Iglesia
+        </a>
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Nombre de la Iglesia</th>
+                        <th>RNC / Cédula</th>
+                        <th>Teléfono</th>
+                        <th>Ubicación</th>
+                        <th>Equipo Asignado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay iglesias registradas aún. Haz clic en <strong>"Registrar Nueva Iglesia"</strong> para añadir la primera.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.NombreIglesia</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@(string.IsNullOrEmpty(item.RNC_Cedula) ? "N/D" : item.RNC_Cedula)</span>
+                                </td>
+                                <td><i class="bi bi-telephone me-1 text-muted"></i>@(string.IsNullOrEmpty(item.Telefono) ? "N/D" : item.Telefono)</td>
+                                <td>
+                                    <div>@item.Ciudad</div>
+                                    <small class="text-muted">@item.Provincia</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@item.NombreEquipo</span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="@Url.Action("Detalle", "Iglesia", new { id = item.IdIglesia })" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-folder2-open me-1"></i>Ver Expediente
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

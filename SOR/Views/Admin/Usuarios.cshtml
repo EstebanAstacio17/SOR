@@ -1,0 +1,298 @@
+@model IEnumerable<SOR.Models.SolicitudUsuarioViewModel>
+@{
+    ViewBag.Title = "Gestión de Usuarios y Permisos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var listaRoles = (List<SelectListItem>)ViewBag.ListaRolesAdmin ?? new List<SelectListItem>();
+    var listaEstados = (List<SelectListItem>)ViewBag.ListaEstadosAdmin ?? new List<SelectListItem>();
+    var listaEquipos = (List<SelectListItem>)ViewBag.ListaEquiposAdmin ?? new List<SelectListItem>();
+    var listaPosiciones = (List<SelectListItem>)ViewBag.ListaPosicionesAdmin ?? new List<SelectListItem>();
+    var uActual = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="h3 font-bold mb-1 text-slate-800"><i class="bi bi-people-fill text-primary me-2"></i>Gestión de Usuarios, Jerarquía y Permisos</h2>
+        <p class="text-muted mb-0">Revisa expedientes, aprueba solicitudes, administra estados y asigna roles/posiciones en los equipos OCC RD.</p>
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Usuario / Correo</th>
+                        <th>Coordinador</th>
+                        <th>Equipo y Rol OCC</th>
+                        <th>Estado de Cuenta</th>
+                        <th>Rol Seguridad</th>
+                        <th class="text-end pe-4">Acciones y Permisos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                No se encontraron registros de usuario en el sistema.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var u in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">@u.Correo</div>
+                                    <small class="text-muted">Registrado: @(u.FechaRegistro.HasValue ? u.FechaRegistro.Value.ToString("dd/MM/yyyy") : "-")</small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(u.Perfil.PrimerNombre))
+                                    {
+                                        <div class="fw-semibold text-slate-800">@u.Perfil.PrimerNombre @u.Perfil.PrimerApellido</div>
+                                        <small class="text-muted"><i class="bi bi-whatsapp me-1"></i>@(u.Perfil.TelefonoCelularWhatsApp ?? "N/D")</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted italic">Sin expediente completado</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(u.Perfil.NombreEquipo))
+                                    {
+                                        <span class="badge bg-light text-dark border">@u.Perfil.NombreEquipo</span>
+                                        <div class="small text-sky-700 font-semibold" style="color: #0369a1;">@u.Perfil.NombrePosicion</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Sin asignación</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (u.IdEstado == 1) // PendienteCorreo
+                                    {
+                                        <span class="badge bg-warning text-dark px-3 py-2"><i class="bi bi-envelope-exclamation me-1"></i>Pendiente Correo</span>
+                                    }
+                                    else if (u.IdEstado == 2) // CorreoAprobado
+                                    {
+                                        <span class="badge bg-info text-dark px-3 py-2"><i class="bi bi-file-earmark-text me-1"></i>Formulario Pendiente</span>
+                                    }
+                                    else if (u.IdEstado == 3) // PerfilPendiente
+                                    {
+                                        <span class="badge bg-primary px-3 py-2"><i class="bi bi-person-lines-fill me-1"></i>Perfil a Revisar</span>
+                                    }
+                                    else if (u.IdEstado == 4) // Activo
+                                    {
+                                        <span class="badge bg-success px-3 py-2"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                                    }
+                                    else if (u.IdEstado == 5) // Rechazado
+                                    {
+                                        <span class="badge bg-danger px-3 py-2"><i class="bi bi-x-circle me-1"></i>Rechazado</span>
+                                    }
+                                    else if (u.IdEstado == 6) // Suspendido
+                                    {
+                                        <span class="badge bg-secondary px-3 py-2"><i class="bi bi-slash-circle me-1"></i>Suspendido</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(u.NombreRol == "SuperAdmin" ? "bg-danger" : u.NombreRol == "Administrador" ? "bg-warning text-dark" : "bg-secondary")">
+                                        @u.NombreRol
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <!-- Botón para ver Expediente Completo -->
+                                    <button type="button" class="btn btn-sm btn-outline-info me-1" data-bs-toggle="modal" data-bs-target="#modalVerExpediente_@u.IdUsuario" title="Ver Expediente Completo">
+                                        <i class="bi bi-eye-fill"></i> Ver Perfil
+                                    </button>
+
+                                    <!-- Botón para Editar Rol/Estado/Equipo (Admin & SuperAdmin) -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarUsuario_@u.IdUsuario" title="Editar Permisos y Puesto">
+                                        <i class="bi bi-gear-fill"></i> Editar
+                                    </button>
+
+                                    @if (u.IdEstado == 1)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#modalAprobarCorreo_@u.IdUsuario">
+                                            <i class="bi bi-check-lg"></i> Aprobar Correo
+                                        </button>
+                                    }
+                                    else if (u.IdEstado == 3)
+                                    {
+                                        <form action="@Url.Action("AprobarPerfil", "Admin")" method="post" class="d-inline me-1">
+                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Aprobar Perfil
+                                            </button>
+                                        </form>
+                                        <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-inline">
+                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Está seguro de rechazar este perfil?');">
+                                                <i class="bi bi-x-circle"></i> Rechazar
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <!-- MODAL VER EXPEDIENTE COMPLETO -->
+                                    <div class="modal fade text-start" id="modalVerExpediente_@u.IdUsuario" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-dark text-white">
+                                                    <h5 class="modal-title font-bold"><i class="bi bi-person-vcard me-2"></i>Expediente de Coordinador: @u.Correo</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <!-- Pestaña 1: Datos Personales -->
+                                                    <h6 class="font-bold text-primary border-bottom pb-2 mb-3">1. Datos Personales e Identidad</h6>
+                                                    <div class="row g-2 mb-3 small">
+                                                        <div class="col-6"><strong>Nombre Completo:</strong> @u.Perfil.PrimerNombre @u.Perfil.OtrosNombres @u.Perfil.PrimerApellido @u.Perfil.OtrosApellidos</div>
+                                                        <div class="col-6"><strong>Cédula:</strong> @(string.IsNullOrEmpty(u.Perfil.NumeroDocumento) ? "N/D" : u.Perfil.NumeroDocumento)</div>
+                                                        <div class="col-6"><strong>Celular / WhatsApp:</strong> @(string.IsNullOrEmpty(u.Perfil.TelefonoCelularWhatsApp) ? "N/D" : u.Perfil.TelefonoCelularWhatsApp)</div>
+                                                        <div class="col-6"><strong>Teléfono Fijo:</strong> @(string.IsNullOrEmpty(u.Perfil.TelefonoFijo) ? "N/D" : u.Perfil.TelefonoFijo)</div>
+                                                        <div class="col-6"><strong>Dirección:</strong> @u.Perfil.Calle #@u.Perfil.Numero, @u.Perfil.Sector, @u.Perfil.Ciudad</div>
+                                                        <div class="col-6"><strong>Talla de Camisa:</strong> @(string.IsNullOrEmpty(u.Perfil.Talla) ? "N/D" : u.Perfil.Talla)</div>
+                                                        <div class="col-6"><strong>Contacto Emergencia:</strong> @(string.IsNullOrEmpty(u.Perfil.ContactoEmergencia) ? "N/D" : u.Perfil.ContactoEmergencia)</div>
+                                                        <div class="col-6"><strong>Datos Cónyuge:</strong> @(string.IsNullOrEmpty(u.Perfil.DatosConyugue) ? "N/D" : u.Perfil.DatosConyugue)</div>
+                                                    </div>
+
+                                                    <!-- Pestaña 2: Ministerial, Educativo y Laboral -->
+                                                    <h6 class="font-bold text-primary border-bottom pb-2 mb-3">2. Trayectoria Ministerial, Educación y Trabajo</h6>
+                                                    <div class="row g-2 mb-3 small">
+                                                        <div class="col-6"><strong>Iglesia Local:</strong> @(string.IsNullOrEmpty(u.Perfil.IglesiaLocal) ? "N/D" : u.Perfil.IglesiaLocal)</div>
+                                                        <div class="col-6"><strong>Pastor de Iglesia:</strong> @(string.IsNullOrEmpty(u.Perfil.PastorIglesiaLocal) ? "N/D" : u.Perfil.PastorIglesiaLocal)</div>
+                                                        <div class="col-6"><strong>Cargo en Iglesia:</strong> @(string.IsNullOrEmpty(u.Perfil.CargoIglesiaLocal) ? "N/D" : u.Perfil.CargoIglesiaLocal)</div>
+                                                        <div class="col-6"><strong>Nivel Educativo:</strong> @(string.IsNullOrEmpty(u.Perfil.NivelEducativo) ? "N/D" : u.Perfil.NivelEducativo)</div>
+                                                        <div class="col-6"><strong>Profesion / Carrera:</strong> @(string.IsNullOrEmpty(u.Perfil.ProfesionCarrera) ? "N/D" : u.Perfil.ProfesionCarrera)</div>
+                                                        <div class="col-6"><strong>Ocupación Laboral:</strong> @(string.IsNullOrEmpty(u.Perfil.OcupacionEmpresaLaboral) ? "N/D" : u.Perfil.OcupacionEmpresaLaboral)</div>
+                                                        <div class="col-12"><strong>Capacitaciones OCC:</strong> @(string.IsNullOrEmpty(u.Perfil.CapacitacionesOCC) ? "N/D" : u.Perfil.CapacitacionesOCC)</div>
+                                                    </div>
+
+                                                    <!-- Pestaña 3: Asignación OCC -->
+                                                    <h6 class="font-bold text-primary border-bottom pb-2 mb-3">3. Asignación OCC y Adjuntos</h6>
+                                                    <div class="row g-2 small">
+                                                        <div class="col-6"><strong>Equipo Solicitado:</strong> @(string.IsNullOrEmpty(u.Perfil.NombreEquipo) ? "Sin Asignar" : u.Perfil.NombreEquipo)</div>
+                                                        <div class="col-6"><strong>Posición Solicitada:</strong> @(string.IsNullOrEmpty(u.Perfil.NombrePosicion) ? "Sin Asignar" : u.Perfil.NombrePosicion)</div>
+                                                        <div class="col-6">
+                                                            <strong>Documento Cédula:</strong> 
+                                                            @if (!string.IsNullOrEmpty(u.Perfil.DocumentoAdjuntoRuta))
+                                                            {
+                                                                <a href="@u.Perfil.DocumentoAdjuntoRuta" target="_blank" class="btn btn-xs btn-outline-primary ms-1"><i class="bi bi-download"></i> Ver Cédula</a>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">Sin adjunto</span>
+                                                            }
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <strong>Pasaporte:</strong> 
+                                                            @if (!string.IsNullOrEmpty(u.Perfil.PasaporteAdjuntoRuta))
+                                                            {
+                                                                <a href="@u.Perfil.PasaporteAdjuntoRuta" target="_blank" class="btn btn-xs btn-outline-primary ms-1"><i class="bi bi-download"></i> Ver Pasaporte</a>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">Sin adjunto</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- MODAL EDITAR PERMISOS Y ROLES -->
+                                    <div class="modal fade text-start" id="modalEditarUsuario_@u.IdUsuario" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <form action="@Url.Action("EditarUsuarioAdmin", "Admin")" method="post">
+                                                <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-primary text-white">
+                                                        <h5 class="modal-title font-bold"><i class="bi bi-gear-fill me-2"></i>Editar Permisos y Puesto de Usuario</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label class="form-label font-semibold">Correo:</label>
+                                                            <input type="text" class="form-control bg-light" value="@u.Correo" readonly />
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label font-semibold">Rol de Seguridad:</label>
+                                                            @Html.DropDownList("idRolSeguridad", new SelectList(listaRoles, "Value", "Text", u.IdRolSeguridad), new { @class = "form-select" })
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label font-semibold">Estado de Cuenta:</label>
+                                                            @Html.DropDownList("idEstado", new SelectList(listaEstados, "Value", "Text", u.IdEstado), new { @class = "form-select" })
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label font-semibold">Equipo Asignado:</label>
+                                                            @Html.DropDownList("idEquipo", new SelectList(listaEquipos, "Value", "Text", u.Perfil.IdEquipo), "-- Sin Equipo --", new { @class = "form-select" })
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label font-semibold">Posición en el Equipo:</label>
+                                                            @Html.DropDownList("idPosicion", new SelectList(listaPosiciones, "Value", "Text", u.Perfil.IdPosicion), "-- Sin Posición --", new { @class = "form-select" })
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <!-- MODAL APROBAR CORREO -->
+                                    <div class="modal fade text-start" id="modalAprobarCorreo_@u.IdUsuario" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <form action="@Url.Action("AprobarCorreo", "Admin")" method="post">
+                                                <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Aprobar Registro de Correo</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p class="text-muted small">Puedes corregir el correo si hubo alguna errata antes de enviar la aprobación.</p>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Correo Electrónico:</label>
+                                                            <input type="email" name="correoCorregido" class="form-control" value="@u.Correo" required />
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-success">Confirmar y Aprobar</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

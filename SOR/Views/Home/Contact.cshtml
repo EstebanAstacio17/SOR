@@ -1,0 +1,40 @@
+@{
+    ViewBag.Title = "Contacto | OCC Rep Dom";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-dark text-white p-4 text-center">
+                <i class="bi bi-envelope-paper-heart-fill fs-1 text-sky-400 mb-2" style="color: #38bdf8;"></i>
+                <h1 class="h3 font-bold mb-1">Contacto y Soporte</h1>
+                <p class="text-slate-300 mb-0">Operation Christmas Child República Dominicana</p>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 h-100 border">
+                            <h4 class="h6 font-bold text-dark mb-2"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Oficina Nacional OCC</h4>
+                            <p class="text-muted small mb-1">Santo Domingo, República Dominicana</p>
+                            <p class="text-muted small mb-0">Samaritan's Purse</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 h-100 border">
+                            <h4 class="h6 font-bold text-dark mb-2"><i class="bi bi-envelope-fill text-primary me-2"></i>Soporte Técnico y Consultas</h4>
+                            <p class="text-muted small mb-1">soporte@occrepdom.org</p>
+                            <p class="text-muted small mb-0">Atención de Lunes a Viernes (8:00 AM - 5:00 PM)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <a href="@Url.Action("Landing", "Home")" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
