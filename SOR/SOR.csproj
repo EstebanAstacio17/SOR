@@ -126,14 +126,22 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\IglesiaController.cs" />
     <Compile Include="Controllers\ReporteController.cs" />
+    <Compile Include="Controllers\EquiposController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\Criptografia.cs" />
     <Compile Include="Models\IglesiaModel.cs" />
     <Compile Include="Models\PerfilCoordinador.cs" />
     <Compile Include="Models\Usuario.cs" />
-
-
+    <Compile Include="Models\EquipoConDetalles.cs" />
+    <Compile Include="Repositories\BaseRepository.cs" />
+    <Compile Include="Repositories\UsuarioRepository.cs" />
+    <Compile Include="Repositories\IglesiaRepository.cs" />
+    <Compile Include="Repositories\EquipoRepository.cs" />
+    <Compile Include="Services\UsuarioService.cs" />
+    <Compile Include="Services\IglesiaService.cs" />
+    <Compile Include="Services\EquipoService.cs" />
     <Compile Include="Permisos\ValidarSesionAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -212,6 +220,7 @@
     <Content Include="Views\Iglesia\Crear.cshtml" />
     <Content Include="Views\Iglesia\Detalle.cshtml" />
     <Content Include="Views\Reporte\Index.cshtml" />
+    <Content Include="Views\Equipos\Index.cshtml" />
   </ItemGroup>
 
 

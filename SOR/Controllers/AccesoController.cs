@@ -24,6 +24,8 @@ namespace SOR.Controllers
             return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
         }
 
+        private readonly Services.UsuarioService _usuarioService = new Services.UsuarioService();
+
         // GET: Acceso/Login
         public ActionResult Login(string mensaje)
         {
@@ -55,34 +57,14 @@ namespace SOR.Controllers
         [HttpPost]
         public ActionResult Registrar(Usuario oUsuario)
         {
-            bool registrado;
-            string mensaje;
-
-            if (oUsuario.Clave == oUsuario.ConfirmarClave)
-            {
-                oUsuario.Clave = ConvertirSha256(oUsuario.Clave);
-            }
-            else
+            if (oUsuario.Clave != oUsuario.ConfirmarClave)
             {
                 ViewData["Mensaje"] = "Las Contraseñas no coinciden";
                 return View();
             }
 
-            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
-            {
-                SqlCommand cmd = new SqlCommand("sp_RegistrarUsuario", cn);
-                cmd.Parameters.AddWithValue("Correo", oUsuario.Correo);
-                cmd.Parameters.AddWithValue("Clave", oUsuario.Clave);
-                cmd.Parameters.Add("Registrado", SqlDbType.Bit).Direction = ParameterDirection.Output;
-                cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 100).Direction = ParameterDirection.Output;
-                cmd.CommandType = CommandType.StoredProcedure;
-
-                cn.Open();
-                cmd.ExecuteNonQuery();
-
-                registrado = Convert.ToBoolean(cmd.Parameters["Registrado"].Value);
-                mensaje = cmd.Parameters["Mensaje"].Value.ToString();
-            }
+            string mensaje;
+            bool registrado = _usuarioService.RegistrarUsuario(oUsuario, out mensaje);
 
             ViewData["Mensaje"] = mensaje;
 
@@ -113,54 +95,7 @@ namespace SOR.Controllers
                 return View();
             }
 
-            oUsuario.Clave = ConvertirSha256(oUsuario.Clave);
-            Usuario usuarioValidador = null;
-
-            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
-            {
-                SqlCommand cmd = new SqlCommand("sp_ValidarUsuario", cn);
-                cmd.Parameters.AddWithValue("Correo", oUsuario.Correo);
-                cmd.Parameters.AddWithValue("Clave", oUsuario.Clave);
-                cmd.CommandType = CommandType.StoredProcedure;
-
-                cn.Open();
-                using (SqlDataReader dr = cmd.ExecuteReader())
-                {
-                    if (dr.Read())
-                    {
-                        int idUsuario = Convert.ToInt32(dr[0]);
-                        string correo = TieneColumna(dr, "Correo") ? dr["Correo"].ToString() : oUsuario.Correo;
-                        int idRol = TieneColumna(dr, "IdRolSeguridad") ? Convert.ToInt32(dr["IdRolSeguridad"]) : 3;
-                        string nombreRol = TieneColumna(dr, "NombreRol") ? dr["NombreRol"].ToString() : "Coordinador";
-                        int idEstado = TieneColumna(dr, "IdEstado") ? Convert.ToInt32(dr["IdEstado"]) : 4; // Activo por defecto si es SP antiguo
-                        string nombreEstado = TieneColumna(dr, "NombreEstado") ? dr["NombreEstado"].ToString() : "Activo";
-                        int? idEquipo = TieneColumna(dr, "IdEquipo") && dr["IdEquipo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipo"]) : null;
-                        string nombreEquipo = TieneColumna(dr, "NombreEquipo") && dr["NombreEquipo"] != DBNull.Value ? dr["NombreEquipo"].ToString() : null;
-                        string nombreNivel = TieneColumna(dr, "NombreNivel") && dr["NombreNivel"] != DBNull.Value ? dr["NombreNivel"].ToString() : null;
-                        int? rangoJerarquico = TieneColumna(dr, "RangoJerarquico") && dr["RangoJerarquico"] != DBNull.Value ? (int?)Convert.ToInt32(dr["RangoJerarquico"]) : null;
-                        int? idPosicion = TieneColumna(dr, "IdPosicion") && dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null;
-                        string nombrePosicion = TieneColumna(dr, "NombrePosicion") && dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString() : null;
-
-                        usuarioValidador = new Usuario
-                        {
-                            IdUsuario = idUsuario,
-                            Correo = correo,
-                            IdRolSeguridad = idRol,
-                            NombreRol = nombreRol,
-                            IdEstado = idEstado,
-                            NombreEstado = nombreEstado,
-                            IdEquipo = idEquipo,
-                            NombreEquipo = nombreEquipo,
-                            NombreNivel = nombreNivel,
-                            RangoJerarquico = rangoJerarquico,
-                            IdPosicion = idPosicion,
-                            NombrePosicion = nombrePosicion
-                        };
-
-                    }
-                }
-            }
-
+            Usuario usuarioValidador = _usuarioService.ValidarUsuario(oUsuario.Correo, oUsuario.Clave);
 
             if (usuarioValidador != null)
             {
@@ -188,6 +123,7 @@ namespace SOR.Controllers
 
                 Session["usuario"] = usuarioValidador;
                 Session["UltimoAcceso"] = DateTime.Now;
+                Session["RecienLogueado"] = true;
                 return RedirectToAction("Index", "Home");
             }
 

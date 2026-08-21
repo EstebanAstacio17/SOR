@@ -70,7 +70,25 @@
                             if (uSesion.IdRolSeguridad == 1 || uSesion.IdRolSeguridad == 2)
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-warning font-semibold" href="@Url.Action("Usuarios", "Admin")"><i class="bi bi-people-fill me-1"></i> Gestión de Usuarios</a>
+                                    <a class="nav-link text-warning fw-semibold" href="@Url.Action("Usuarios", "Admin")"><i class="bi bi-people-fill me-1"></i> Usuarios</a>
+                                </li>
+                            }
+                            if (uSesion.IdRolSeguridad == 1)
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-info fw-semibold" href="#" id="navbarDropdownMantenimiento" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear-wide-connected me-1"></i> Mantenedores
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-dark bg-slate-900 border-slate-800" aria-labelledby="navbarDropdownMantenimiento">
+                                        <li>
+                                            <a class="dropdown-item text-info font-semibold" href="@Url.Action("Index", "Equipos")">
+                                                <i class="bi bi-diagram-3 me-2"></i>Equipos y Estructura
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider border-slate-800"></li>
+                                        <li><a class="dropdown-item disabled text-muted" href="#"><i class="bi bi-calendar-event me-2"></i>Temporadas (Próximamente)</a></li>
+                                        <li><a class="dropdown-item disabled text-muted" href="#"><i class="bi bi-award me-2"></i>Posiciones OCC (Próximamente)</a></li>
+                                    </ul>
                                 </li>
                             }
                         }
@@ -146,7 +164,7 @@
         </div>
     </footer>
 
-    @if (Session["usuario"] != null)
+    @if (Session["usuario"] != null && ViewContext.RouteData.Values["controller"]?.ToString() != "Acceso")
     {
         var uActualSesion = (SOR.Models.Usuario)Session["usuario"];
         <!-- MODAL BLOQUEO DE PESTAÑA DUPLICADA -->
@@ -170,8 +188,8 @@
                             <button type="button" class="btn btn-primary btn-lg fw-semibold" id="btnTomarControlPestana">
                                 <i class="bi bi-arrow-repeat me-2"></i>Continuar en esta pestaña
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="window.close();">
-                                <i class="bi bi-x-circle me-2"></i>Cerrar esta pestaña
+                            <button type="button" class="btn btn-outline-secondary btn-lg fw-semibold" id="btnCerrarSesionPestana">
+                                <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
                             </button>
                         </div>
                     </div>
@@ -183,15 +201,21 @@
     @Scripts.Render("~/bundles/jquery")
     @Scripts.Render("~/bundles/bootstrap")
 
-    @if (Session["usuario"] != null)
+    @if (Session["usuario"] != null && ViewContext.RouteData.Values["controller"]?.ToString() != "Acceso")
     {
         var uActualSesion = (SOR.Models.Usuario)Session["usuario"];
+        bool recienLogueado = false;
+        if (Session["RecienLogueado"] != null)
+        {
+            recienLogueado = (bool)Session["RecienLogueado"];
+            Session["RecienLogueado"] = null;
+        }
         <script>
             (function () {
                 var userId = '@uActualSesion.IdUsuario';
                 var keyActiveTab = 'SOR_ACTIVE_TAB_USER_' + userId;
+                var isFreshLogin = '@(recienLogueado ? "true" : "false")' === 'true';
 
-                // Identificador único de esta pestaña en sessionStorage
                 var myTabId = sessionStorage.getItem('SOR_MY_TAB_ID');
                 if (!myTabId) {
                     myTabId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
@@ -200,24 +224,28 @@
 
                 var modalInstance = null;
 
-                function getModal() {
-                    if (!modalInstance) {
-                        var el = document.getElementById('modalPestanaDuplicada');
-                        if (el && typeof bootstrap !== 'undefined') {
-                            modalInstance = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
-                        }
+                function initModal() {
+                    var el = document.getElementById('modalPestanaDuplicada');
+                    if (el && !modalInstance) {
+                        modalInstance = new bootstrap.Modal(el, {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
                     }
-                    return modalInstance;
                 }
 
                 function mostrarBloqueo() {
-                    var m = getModal();
-                    if (m) m.show();
+                    initModal();
+                    if (modalInstance) {
+                        modalInstance.show();
+                    }
                 }
 
                 function ocultarBloqueo() {
-                    var m = getModal();
-                    if (m) m.hide();
+                    initModal();
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
                 }
 
                 function reclamarControl() {
@@ -228,20 +256,17 @@
                     ocultarBloqueo();
                 }
 
-                // Escuchar cambios de pestaña en localStorage
-                window.addEventListener('storage', function (e) {
-                    if (e.key === keyActiveTab && e.newValue) {
-                        try {
-                            var data = JSON.parse(e.newValue);
-                            if (data.tabId !== myTabId) {
-                                // Otra pestaña tomó el control
-                                mostrarBloqueo();
-                            }
-                        } catch (err) {}
-                    }
-                });
-
                 function verificarEstadoPestana() {
+                    if (sessionStorage.getItem('SOR_TAB_LOGGED_OUT') === 'true') {
+                        window.location.href = '@Url.Action("Login", "Acceso")';
+                        return;
+                    }
+
+                    if (isFreshLogin) {
+                        reclamarControl();
+                        return;
+                    }
+
                     var rawActive = localStorage.getItem(keyActiveTab);
                     if (!rawActive) {
                         reclamarControl();
@@ -259,9 +284,24 @@
                     }
                 }
 
+                window.addEventListener('storage', function (e) {
+                    if (e.key === keyActiveTab && e.newValue) {
+                        try {
+                            var data = JSON.parse(e.newValue);
+                            if (data.tabId !== myTabId) {
+                                mostrarBloqueo();
+                            }
+                        } catch (err) {}
+                    }
+                });
+
                 $(document).ready(function () {
                     $('#btnTomarControlPestana').on('click', function () {
                         reclamarControl();
+                    });
+                    $('#btnCerrarSesionPestana').on('click', function () {
+                        sessionStorage.setItem('SOR_TAB_LOGGED_OUT', 'true');
+                        window.location.href = '@Url.Action("Login", "Acceso")';
                     });
                     verificarEstadoPestana();
                 });

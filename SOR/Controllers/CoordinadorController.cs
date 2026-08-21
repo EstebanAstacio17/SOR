@@ -418,7 +418,7 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-                string sqlEquipos = "SELECT e.IdEquipo, e.NombreEquipo, n.NombreNivel FROM dbo.Equipos e INNER JOIN dbo.NivelesEquipo n ON e.IdNivelEquipo = n.IdNivelEquipo ORDER BY n.RangoJerarquico, e.NombreEquipo;";
+                string sqlEquipos = "SELECT e.IdEquipo, e.NombreEquipo, n.NombreNivel FROM dbo.Equipos e INNER JOIN dbo.NivelesEquipo n ON e.IdNivelEquipo = n.IdNivelEquipo WHERE e.Activo = 1 ORDER BY n.RangoJerarquico, e.NombreEquipo;";
                 using (SqlCommand cmd = new SqlCommand(sqlEquipos, cn))
                 {
                     using (SqlDataReader dr = cmd.ExecuteReader())

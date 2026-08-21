@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
 }
 
@@ -26,7 +26,7 @@
 
     <main class="form-signin w-100 m-auto">
 
-        <form action="@Url.Action("Login", "Acceso")" method="post">
+        <form action="@Url.Action("Login", "Acceso")" method="post" onsubmit="sessionStorage.removeItem('SOR_TAB_LOGGED_OUT');">
 
             <!-- LOGO -->
             <img src="~/Content/css/Imgs/OCC-logo.png"
