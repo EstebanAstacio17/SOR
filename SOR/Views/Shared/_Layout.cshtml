@@ -50,6 +50,21 @@
     </style>
 </head>
 <body>
+    @if (Session["usuario"] != null)
+    {
+        <script type="text/javascript">
+            if (!sessionStorage.getItem("user_tab_session")) {
+                sessionStorage.setItem("user_tab_session", "active");
+                window.location.href = '@Url.Action("CerrarSesion", "Acceso")';
+            }
+        </script>
+    }
+    else
+    {
+        <script type="text/javascript">
+            sessionStorage.removeItem("user_tab_session");
+        </script>
+    }
     <nav class="navbar navbar-expand-lg navbar-dark navbar-sor py-3">
         <div class="container">
             @if (Session["usuario"] != null)
@@ -81,8 +96,32 @@
                             <li class="nav-item">
                                 <a class="nav-link fw-semibold" href="@Url.Action("Index", "Home")"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="@Url.Action("Index", "Iglesia")"><i class="bi bi-building me-1"></i> Iglesias</a>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle fw-semibold" href="#" id="navbarDropdownGestionTemp" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-folder2-open me-1"></i> GESTIÓN TEMP
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark bg-slate-900 border-slate-800" aria-labelledby="navbarDropdownGestionTemp">
+                                    <li>
+                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "Iglesia")">
+                                            <i class="bi bi-building me-2"></i>Iglesias
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "Maestros")">
+                                            <i class="bi bi-people me-2"></i>Maestros
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "Eventos")">
+                                            <i class="bi bi-calendar-event me-2"></i>Eventos y Asistencia
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "CompanerosOracion")">
+                                            <i class="bi bi-heart me-2"></i>Compañeros de Oración
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link fw-semibold" href="@Url.Action("Index", "Reporte")"><i class="bi bi-bar-chart-line me-1"></i> Reportes</a>
@@ -94,7 +133,7 @@
                                     <a class="nav-link text-warning fw-semibold" href="@Url.Action("Usuarios", "Admin")"><i class="bi bi-people-fill me-1"></i> Usuarios</a>
                                 </li>
                             }
-                            if (uSesion.IdRolSeguridad == 1)
+                            if (uSesion.IdRolSeguridad == 1 || uSesion.IdRolSeguridad == 2)
                             {
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle text-info fw-semibold" href="#" id="navbarDropdownMantenimiento" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -107,8 +146,17 @@
                                             </a>
                                         </li>
                                         <li><hr class="dropdown-divider border-slate-800"></li>
-                                        <li><a class="dropdown-item disabled text-muted" href="#"><i class="bi bi-calendar-event me-2"></i>Temporadas (Próximamente)</a></li>
-                                        <li><a class="dropdown-item disabled text-muted" href="#"><i class="bi bi-award me-2"></i>Posiciones OCC (Próximamente)</a></li>
+                                        <li>
+                                            <a class="dropdown-item text-info font-semibold" href="@Url.Action("Index", "Temporadas")">
+                                                <i class="bi bi-calendar-event me-2"></i>Temporadas OCC
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider border-slate-800"></li>
+                                        <li>
+                                            <a class="dropdown-item text-info font-semibold" href="@Url.Action("Catalogos", "Admin")">
+                                                <i class="bi bi-tags me-2"></i>Catálogos (Denominación / Tipo)
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                             }
@@ -170,6 +218,22 @@
     </nav>
 
     <div class="container body-content mt-4 mb-5">
+        @if (TempData["MensajeExito"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-4 border-0 mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <span>@TempData["MensajeExito"]</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["MensajeError"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-4 border-0 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <span>@TempData["MensajeError"]</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
         @RenderBody()
     </div>
 

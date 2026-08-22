@@ -1,0 +1,186 @@
+@model IEnumerable<SOR.Models.Temporada>
+@{
+    ViewBag.Title = "Gestión de Temporadas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-calendar-event-fill text-primary me-2"></i>Gestión de Temporadas</h2>
+        <p class="text-muted mb-0">Controla el ciclo temporal operativo para iglesias, eventos y asignaciones en OCC Rep Dom.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearTemporada">
+            <i class="bi bi-plus-circle me-2"></i>Crear Nueva Temporada
+        </button>
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Temporada</th>
+                        <th>Fecha de Inicio</th>
+                        <th>Fecha de Finalización</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4" style="width: 250px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay temporadas registradas aún.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr class="@(item.Activa ? "table-info table-active-season" : "")">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.NombreTemporada</div>
+                                </td>
+                                <td><i class="bi bi-calendar-check me-1 text-muted"></i>@(item.FechaInicio.HasValue ? item.FechaInicio.Value.ToString("dd/MM/yyyy") : "N/D")</td>
+                                <td><i class="bi bi-calendar-x me-1 text-muted"></i>@(item.FechaFin.HasValue ? item.FechaFin.Value.ToString("dd/MM/yyyy") : "N/D")</td>
+                                <td>
+                                    @if (item.Activa)
+                                    {
+                                        <span class="badge bg-success px-3 py-2"><i class="bi bi-check-circle-fill me-1"></i>ACTIVA</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary px-3 py-2">Inactiva</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex align-items-center justify-content-end gap-2">
+                                        @if (!item.Activa)
+                                        {
+                                            <form action="@Url.Action("Activar", "Temporadas")" method="post" class="m-0">
+                                                <input type="hidden" name="idTemporada" value="@item.IdTemporada" />
+                                                <button type="submit" class="btn btn-sm btn-success font-semibold" onclick="return confirm('¿Seguro que deseas establecer esta temporada como ACTIVA? Se desactivarán las demás.');">
+                                                    <i class="bi bi-check2-circle me-1"></i>Habilitar / Activar
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form action="@Url.Action("Inactivar", "Temporadas")" method="post" class="m-0">
+                                                <input type="hidden" name="idTemporada" value="@item.IdTemporada" />
+                                                <button type="submit" class="btn btn-sm btn-danger font-semibold" onclick="return confirm('¿Seguro que deseas DESACTIVAR esta temporada?');">
+                                                    <i class="bi bi-slash-circle me-1"></i>Inhabilitar
+                                                </button>
+                                            </form>
+                                        }
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarTemporada_@item.IdTemporada">
+                                            <i class="bi bi-pencil me-1"></i>Editar
+                                        </button>
+                                    </div>
+
+                                    <!-- MODAL EDITAR TEMPORADA -->
+                                    <div class="modal fade text-start" id="modalEditarTemporada_@item.IdTemporada" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content border-0 rounded-4 shadow">
+                                                <form action="@Url.Action("Editar", "Temporadas")" method="post">
+                                                    <input type="hidden" name="idTemporada" value="@item.IdTemporada" />
+                                                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                                                        <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2 text-info"></i>Editar Temporada</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Nombre de la Temporada</label>
+                                                            <input type="text" name="nombreTemporada" value="@item.NombreTemporada" class="form-control" placeholder="Ej: Temporada 2026" required />
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Fecha Inicio</label>
+                                                                <input type="date" name="fechaInicio" value="@(item.FechaInicio.HasValue ? item.FechaInicio.Value.ToString("yyyy-MM-dd") : "")" class="form-control" />
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Fecha Fin</label>
+                                                                <input type="date" name="fechaFin" value="@(item.FechaFin.HasValue ? item.FechaFin.Value.ToString("yyyy-MM-dd") : "")" class="form-control" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar Cambios</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR TEMPORADA -->
+<div class="modal fade text-start" id="modalCrearTemporada" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("Crear", "Temporadas")" method="post">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>Crear Nueva Temporada</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre de la Temporada</label>
+                        <input type="text" name="nombreTemporada" class="form-control" placeholder="Ej: Temporada 2026" required />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Fecha Inicio</label>
+                            <input type="date" name="fechaInicio" class="form-control" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Fecha Fin</label>
+                            <input type="date" name="fechaFin" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Crear Temporada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-active-season {
+        background-color: rgba(207, 244, 252, 0.25) !important;
+    }
+</style>

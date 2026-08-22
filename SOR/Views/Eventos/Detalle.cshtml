@@ -1,0 +1,445 @@
+@{
+    ViewBag.Title = "Detalle del Evento y Asistencias";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var evento = (SOR.Models.Evento)ViewBag.Evento;
+    var iglesias = (List<SOR.Controllers.IglesiaParticipacionViewModel>)ViewBag.Iglesias;
+    var maestros = (List<SOR.Controllers.MaestroAsistenciaViewModel>)ViewBag.Maestros;
+    bool puedeEditar = ViewBag.PuedeEditar != null && (bool)ViewBag.PuedeEditar;
+}
+
+<div class="mb-4">
+    <a href="@Url.Action("Index", "Eventos")" class="btn btn-sm btn-outline-secondary font-semibold">
+        <i class="bi bi-arrow-left me-1"></i>Volver a Eventos
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Panel Izquierdo: Ficha del Evento -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-header bg-dark text-white rounded-top-4 py-3 border-0">
+                <h5 class="card-title mb-0 font-bold"><i class="bi bi-calendar-event me-2"></i>Ficha del Evento</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4 text-center">
+                    @if (evento.TipoEvento == "Vision")
+                    {
+                        <span class="fs-1 text-purple"><i class="bi bi-eye"></i></span>
+                        <h4 class="font-bold text-slate-800 mt-2">@evento.NombreEvento</h4>
+                        <span class="badge bg-purple-soft text-purple px-3 py-1.5 rounded-pill mt-1">Presentación de la Visión</span>
+                    }
+                    else if (evento.TipoEvento == "Taller")
+                    {
+                        <span class="fs-1 text-info"><i class="bi bi-book"></i></span>
+                        <h4 class="font-bold text-slate-800 mt-2">@evento.NombreEvento</h4>
+                        <span class="badge bg-info-soft text-info px-3 py-1.5 rounded-pill mt-1">Taller OCC</span>
+                    }
+                    else if (evento.TipoEvento == "Evangelistico")
+                    {
+                        <span class="fs-1 text-success"><i class="bi bi-heart-pulse"></i></span>
+                        <h4 class="font-bold text-slate-800 mt-2">@evento.NombreEvento</h4>
+                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill mt-1">Evento Evangelístico</span>
+                    }
+                    else if (evento.TipoEvento == "GranAventura")
+                    {
+                        <span class="fs-1 text-warning"><i class="bi bi-compass"></i></span>
+                        <h4 class="font-bold text-slate-800 mt-2">@evento.NombreEvento</h4>
+                        <span class="badge bg-warning-soft text-warning px-3 py-1.5 rounded-pill mt-1">La Gran Aventura</span>
+                    }
+                </div>
+
+                <hr class="border-slate-200">
+
+                <div class="d-flex flex-column gap-3 mt-3">
+                    <div>
+                        <small class="text-muted d-block uppercase tracking-wider text-xxs font-semibold">Temporada</small>
+                        <strong class="text-slate-800">@evento.NombreTemporada</strong>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block uppercase tracking-wider text-xxs font-semibold">Fecha del Evento</small>
+                        <strong class="text-slate-800"><i class="bi bi-calendar3 me-1"></i>@evento.Fecha.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))</strong>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block uppercase tracking-wider text-xxs font-semibold">Lugar</small>
+                        <strong class="text-slate-800"><i class="bi bi-geo-alt me-1"></i>@(string.IsNullOrEmpty(evento.Lugar) ? "No especificado" : evento.Lugar)</strong>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block uppercase tracking-wider text-xxs font-semibold">Responsable</small>
+                        <strong class="text-slate-800"><i class="bi bi-person me-1"></i>@(string.IsNullOrEmpty(evento.Responsable) ? "Sin responsable" : evento.Responsable)</strong>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block uppercase tracking-wider text-xxs font-semibold">Creado Por</small>
+                        <strong class="text-slate-800">@evento.CorreoCreador</strong>
+                        <small class="text-muted d-block font-monospace">@evento.FechaCreacion.ToString("dd/MM/yyyy hh:mm tt")</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Iglesias y Asistencia de Maestros -->
+    <div class="col-lg-8">
+        @if (!puedeEditar)
+        {
+            <div class="alert alert-info border-0 shadow-sm rounded-4 mb-4">
+                <i class="bi bi-info-circle-fill me-2"></i>Modo <strong>Solo Lectura</strong>: Este evento pertenece a otro equipo u otra jurisdicción. Puedes consultar los detalles y la asistencia, pero no realizar modificaciones.
+            </div>
+        }
+
+        @if (TempData["MensajeExito"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["MensajeError"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <!-- Pestañas de Gestión -->
+        <ul class="nav nav-tabs border-bottom-0 mb-3" id="tabEvento" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active font-semibold px-4 border-0 rounded-top-4 shadow-sm" id="iglesias-tab" data-bs-toggle="tab" data-bs-target="#tab-iglesias" type="button" role="tab" aria-selected="true">
+                    <i class="bi bi-building me-1"></i>Iglesias Aprobadas (@iglesias.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link font-semibold px-4 border-0 rounded-top-4 ms-2 shadow-sm" id="maestros-tab" data-bs-toggle="tab" data-bs-target="#tab-maestros" type="button" role="tab" aria-selected="false">
+                    <i class="bi bi-people me-1"></i>Maestros / Asistencia (@maestros.Count)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="tabEventoContent">
+            <!-- Pestaña 1: Iglesias Participantes -->
+            <div class="tab-pane fade show active" id="tab-iglesias" role="tabpanel" aria-labelledby="iglesias-tab">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Iglesia</th>
+                                        <th>Equipo Asignado</th>
+                                        <th>Asistencia al Evento</th>
+                                        <th class="text-end pe-4" style="width: 200px;">Acción / Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!iglesias.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="4" class="text-center py-5 text-muted">
+                                                <i class="bi bi-info-circle fs-2 d-block mb-2 text-slate-300"></i>
+                                                No hay iglesias con perfiles aprobados activos para esta temporada.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var ig in iglesias)
+                                        {
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <div class="fw-bold text-slate-800">@ig.NombreIglesia</div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-slate-700 border">@ig.NombreEquipo</span>
+                                                </td>
+                                                <td>
+                                                    @if (ig.Asistio)
+                                                    {
+                                                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Asistió</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i>No Asistió / Pendiente</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                                                        <button type="button" class="btn btn-sm btn-outline-info font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAsistentes_@ig.IdParticipacion">
+                                                            <i class="bi bi-people me-1"></i>Asistentes (@ig.AsistentesDetalle.Count)
+                                                        </button>
+                                                        @if (puedeEditar)
+                                                        {
+                                                            <form action="@Url.Action("RegistrarAsistenciaIglesia", "Eventos")" method="post" class="m-0">
+                                                                <input type="hidden" name="idEvento" value="@evento.IdEvento" />
+                                                                <input type="hidden" name="idParticipacion" value="@ig.IdParticipacion" />
+                                                                <input type="hidden" name="asistio" value="@(ig.Asistio ? "false" : "true")" />
+                                                                <button type="submit" class="btn btn-sm @(ig.Asistio ? "btn-outline-danger" : "btn-primary") font-semibold">
+                                                                    @if (ig.Asistio)
+                                                                    {
+                                                                        <span><i class="bi bi-x-circle me-1"></i>Marcar Ausente</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span><i class="bi bi-check-circle me-1"></i>Marcar Asistente</span>
+                                                                    }
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                    </div>
+
+                                                    <!-- MODAL GESTIONAR ASISTENTES DE LA IGLESIA -->
+                                                    <div class="modal fade text-start" id="modalAsistentes_@ig.IdParticipacion" tabindex="-1" aria-hidden="true">
+                                                        <div class="modal-dialog modal-lg">
+                                                            <div class="modal-content border-0 rounded-4 shadow">
+                                                                <form action="@Url.Action("GuardarAsistentes", "Eventos")" method="post">
+                                                                    <input type="hidden" name="idEvento" value="@evento.IdEvento" />
+                                                                    <input type="hidden" name="idParticipacion" value="@ig.IdParticipacion" />
+                                                                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                                                                        <h5 class="modal-title font-bold"><i class="bi bi-people-fill me-2 text-info"></i>Asistentes: @ig.NombreIglesia</h5>
+                                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                    </div>
+                                                                    <div class="modal-body p-4">
+                                                                        <p class="text-muted small mb-3">Registra o edita los datos de las personas que asistieron por parte de esta iglesia (pastores, líderes, voluntarios).</p>
+                                                                        
+                                                                        <div id="contenedorAsistentes_@ig.IdParticipacion" class="d-flex flex-column gap-3 mb-3">
+                                                                            @if (ig.AsistentesDetalle.Any())
+                                                                            {
+                                                                                for (int idx = 0; idx < ig.AsistentesDetalle.Count; idx++)
+                                                                                {
+                                                                                    var a = ig.AsistentesDetalle[idx];
+                                                                                    <div class="card bg-light border p-3 rounded-3 item-asistente">
+                                                                                        <div class="row g-2">
+                                                                                            <div class="col-md-4">
+                                                                                                <label class="form-label small fw-semibold">Nombre Completo <span class="text-danger">*</span></label>
+                                                                                                <input type="text" name="asistentes[@idx].NombreCompleto" class="form-control form-control-sm" value="@a.NombreCompleto" required @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                            </div>
+                                                                                            <div class="col-md-3">
+                                                                                                <label class="form-label small fw-semibold">Cédula / Identidad</label>
+                                                                                                <input type="text" name="asistentes[@idx].Identificacion" class="form-control form-control-sm" value="@a.Identificacion" placeholder="001-0000000-0" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                            </div>
+                                                                                            <div class="col-md-2">
+                                                                                                <label class="form-label small fw-semibold">Teléfono</label>
+                                                                                                <input type="text" name="asistentes[@idx].Telefono" class="form-control form-control-sm" value="@a.Telefono" placeholder="809-555-5555" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                            </div>
+                                                                                            <div class="col-md-3">
+                                                                                                <label class="form-label small fw-semibold">Correo Electrónico</label>
+                                                                                                <div class="d-flex gap-1">
+                                                                                                    <input type="email" name="asistentes[@idx].Correo" class="form-control form-control-sm" value="@a.Correo" placeholder="correo@ejemplo.com" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                                    @if (puedeEditar)
+                                                                                                    {
+                                                                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.item-asistente').remove();"><i class="bi bi-trash"></i></button>
+                                                                                                    }
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                }
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <div class="card bg-light border p-3 rounded-3 item-asistente">
+                                                                                    <div class="row g-2">
+                                                                                        <div class="col-md-4">
+                                                                                            <label class="form-label small fw-semibold">Nombre Completo <span class="text-danger">*</span></label>
+                                                                                            <input type="text" name="asistentes[0].NombreCompleto" class="form-control form-control-sm" required placeholder="Ej: Juan Pérez" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                        </div>
+                                                                                        <div class="col-md-3">
+                                                                                            <label class="form-label small fw-semibold">Cédula / Identidad</label>
+                                                                                            <input type="text" name="asistentes[0].Identificacion" class="form-control form-control-sm" placeholder="001-0000000-0" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                        </div>
+                                                                                        <div class="col-md-2">
+                                                                                            <label class="form-label small fw-semibold">Teléfono</label>
+                                                                                            <input type="text" name="asistentes[0].Telefono" class="form-control form-control-sm" placeholder="809-555-5555" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                        </div>
+                                                                                        <div class="col-md-3">
+                                                                                            <label class="form-label small fw-semibold">Correo Electrónico</label>
+                                                                                            <div class="d-flex gap-1">
+                                                                                                <input type="email" name="asistentes[0].Correo" class="form-control form-control-sm" placeholder="correo@ejemplo.com" @(!puedeEditar ? "readonly=\"readonly\"" : "") />
+                                                                                                @if (puedeEditar)
+                                                                                                {
+                                                                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.item-asistente').remove();"><i class="bi bi-trash"></i></button>
+                                                                                                }
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+
+                                                                        @if (puedeEditar)
+                                                                        {
+                                                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="agregarFilaAsistente('contenedorAsistentes_@ig.IdParticipacion')">
+                                                                                <i class="bi bi-plus-circle me-1"></i>Agregar Asistente
+                                                                            </button>
+                                                                        }
+                                                                    </div>
+                                                                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                                        @if (puedeEditar)
+                                                                        {
+                                                                            <button type="submit" class="btn btn-primary font-semibold"><i class="bi bi-save me-1"></i>Guardar y Confirmar Asistencia</button>
+                                                                        }
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pestaña 2: Asistencia de Maestros -->
+            <div class="tab-pane fade" id="tab-maestros" role="tabpanel" aria-labelledby="maestros-tab">
+                <form action="@Url.Action("RegistrarAsistenciaMaestros", "Eventos")" method="post">
+                    <input type="hidden" name="idEvento" value="@evento.IdEvento" />
+                    
+                    <div class="card border-0 shadow-sm rounded-4 bg-white mb-3">
+                        <div class="card-header bg-light py-3 d-flex align-items-center justify-content-between border-bottom">
+                            <h6 class="mb-0 fw-bold text-slate-800"><i class="bi bi-person-check me-2 text-primary"></i>Listado de Maestros en la Temporada</h6>
+                            @if (puedeEditar)
+                            {
+                                <button type="submit" class="btn btn-primary btn-sm font-semibold px-3 shadow-sm">
+                                    <i class="bi bi-save me-1"></i>Guardar Asistencia de Maestros
+                                </button>
+                            }
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4" style="width: 50px;">
+                                                <input type="checkbox" class="form-check-input" id="checkAllMaestros" @(!puedeEditar ? "disabled=\"disabled\"" : "") />
+                                            </th>
+                                            <th>Maestro</th>
+                                            <th>Iglesia</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (!maestros.Any())
+                                        {
+                                            <tr>
+                                                <td colspan="4" class="text-center py-5 text-muted">
+                                                    <i class="bi bi-people fs-2 d-block mb-2 text-slate-300"></i>
+                                                    No hay maestros registrados de iglesias participantes aprobadas.
+                                                </td>
+                                            </tr>
+                                        }
+                                        else
+                                        {
+                                            foreach (var m in maestros)
+                                            {
+                                                <tr>
+                                                    <td class="ps-4">
+                                                        <input type="checkbox" name="maestrosAsistentes" value="@m.IdMaestro" class="form-check-input check-maestro" @(m.Asistio ? "checked" : "") @(!puedeEditar ? "disabled=\"disabled\"" : "") />
+                                                    </td>
+                                                    <td>
+                                                        <div class="fw-bold text-slate-800">@m.NombreCompleto</div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-slate-100 text-slate-700 border">@m.NombreIglesia</span>
+                                                    </td>
+                                                    <td>
+                                                        @if (m.Asistio)
+                                                        {
+                                                            <span class="badge bg-success-soft text-success"><i class="bi bi-check me-1"></i>Asistencia Confirmada</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary-soft text-slate-600">No Registrada / Ausente</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var checkAll = document.getElementById("checkAllMaestros");
+        if(checkAll) {
+            checkAll.addEventListener("change", function() {
+                var checkboxes = document.querySelectorAll(".check-maestro");
+                for (var checkbox of checkboxes) {
+                    checkbox.checked = this.checked;
+                }
+            });
+        }
+    });
+
+    function agregarFilaAsistente(contenedorId) {
+        var cont = document.getElementById(contenedorId);
+        if (!cont) return;
+        var total = cont.querySelectorAll('.item-asistente').length;
+        var nuevaFila = document.createElement('div');
+        nuevaFila.className = 'card bg-light border p-3 rounded-3 item-asistente';
+        nuevaFila.innerHTML = `
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Nombre Completo <span class="text-danger">*</span></label>
+                    <input type="text" name="asistentes[${total}].NombreCompleto" class="form-control form-control-sm" required placeholder="Ej: Persona ${total + 1}" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Cédula / Identidad</label>
+                    <input type="text" name="asistentes[${total}].Identificacion" class="form-control form-control-sm" placeholder="001-0000000-0" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold">Teléfono</label>
+                    <input type="text" name="asistentes[${total}].Telefono" class="form-control form-control-sm" placeholder="809-555-5555" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Correo Electrónico</label>
+                    <div class="d-flex gap-1">
+                        <input type="email" name="asistentes[${total}].Correo" class="form-control form-control-sm" placeholder="correo@ejemplo.com" />
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.item-asistente').remove();"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+        cont.appendChild(nuevaFila);
+    }
+</script>
+
+<style>
+    .bg-purple-soft {
+        background-color: rgba(111, 66, 193, 0.15) !important;
+        color: #6f42c1 !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.15) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #198754 !important;
+    }
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+        color: #dc3545 !important;
+    }
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.15) !important;
+        color: #6c757d !important;
+    }
+</style>

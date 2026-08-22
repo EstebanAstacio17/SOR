@@ -1,0 +1,189 @@
+@{
+    ViewBag.Title = "Mantenedor de Catálogos (Denominaciones y Tipos)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var denominaciones = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.Denominaciones;
+    var tiposOrg = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.TiposOrg;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-tags-fill text-primary me-2"></i>Mantenedor de Catálogos</h2>
+        <p class="text-muted mb-0">Administra las opciones de Denominaciones y Tipos de Organización utilizadas en el registro de iglesias.</p>
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- PANEL 1: DENOMINACIONES -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 bg-white">
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between">
+                <h5 class="card-title font-bold mb-0"><i class="bi bi-building me-2 text-info"></i>Denominaciones</h5>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearDenominacion">
+                    <i class="bi bi-plus-circle me-1"></i>Agregar
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Denominación</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!denominaciones.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">No hay denominaciones registradas.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in denominaciones)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-semibold text-slate-800">@item.Nombre</td>
+                                        <td>
+                                            @if (item.Activo)
+                                            {
+                                                <span class="badge bg-success-soft text-success">Activo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger">Inactivo</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <form action="@Url.Action("ToggleDenominacion", "Admin")" method="post" class="d-inline m-0">
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
+                                                <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
+                                                    @(item.Activo ? "Inhabilitar" : "Habilitar")
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 2: TIPOS DE ORGANIZACIÓN -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 bg-white">
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between">
+                <h5 class="card-title font-bold mb-0"><i class="bi bi-diagram-3 me-2 text-warning"></i>Tipos de Organización</h5>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearTipoOrg">
+                    <i class="bi bi-plus-circle me-1"></i>Agregar
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Tipo</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!tiposOrg.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">No hay tipos registrados.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in tiposOrg)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-semibold text-slate-800">@item.Nombre</td>
+                                        <td>
+                                            @if (item.Activo)
+                                            {
+                                                <span class="badge bg-success-soft text-success">Activo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger">Inactivo</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <form action="@Url.Action("ToggleTipoOrg", "Admin")" method="post" class="d-inline m-0">
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
+                                                <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
+                                                    @(item.Activo ? "Inhabilitar" : "Habilitar")
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR DENOMINACION -->
+<div class="modal fade text-start" id="modalCrearDenominacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("CrearDenominacion", "Admin")" method="post">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Nueva Denominación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <label class="form-label fw-semibold">Nombre de la Denominación <span class="text-danger">*</span></label>
+                    <input type="text" name="nombre" class="form-control" placeholder="Ej: Bautista Fundamental" required />
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Guardar Denominación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR TIPO ORG -->
+<div class="modal fade text-start" id="modalCrearTipoOrg" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("CrearTipoOrg", "Admin")" method="post">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo Tipo de Organización</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <label class="form-label fw-semibold">Nombre del Tipo <span class="text-danger">*</span></label>
+                    <input type="text" name="nombre" class="form-control" placeholder="Ej: Fundación Comunitaria" required />
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Guardar Tipo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

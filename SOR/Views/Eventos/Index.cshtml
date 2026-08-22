@@ -1,0 +1,316 @@
+@model IEnumerable<SOR.Models.Evento>
+@{
+    ViewBag.Title = "Eventos y Asistencia";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var temporadas = (List<SelectListItem>)ViewBag.ListaTemporadas;
+    var tipos = (List<SelectListItem>)ViewBag.ListaTipos;
+    var uEv = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var equiposPermitidosEv = (HashSet<int>)ViewBag.EquiposPermitidos ?? new HashSet<int>();
+    bool esAdminEv = uEv != null && (uEv.IdRolSeguridad == 1 || uEv.IdRolSeguridad == 2);
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-calendar3 text-primary me-2"></i>Eventos y Participación</h2>
+        <p class="text-muted mb-0">Control de asistencia y capacitaciones de iglesias y maestros por temporada.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
+            <i class="bi bi-plus-circle me-2"></i>Crear Nuevo Evento
+        </button>
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Evento</th>
+                        <th>Tipo de Evento</th>
+                        <th>Temporada</th>
+                        <th>Fecha</th>
+                        <th>Lugar / Responsable</th>
+                        <th class="text-end pe-4" style="width: 200px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay eventos registrados aún.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            bool puedeEditarEvento = esAdminEv || (uEv != null && uEv.IdUsuario == item.IdUsuarioCreacion) || (item.IdEquipoCreador.HasValue && equiposPermitidosEv.Contains(item.IdEquipoCreador.Value));
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.NombreEvento</div>
+                                    <small class="text-muted">Creado por: @item.CorreoCreador</small>
+                                </td>
+                                <td>
+                                    @if (item.TipoEvento == "Vision")
+                                    {
+                                        <span class="badge bg-purple-soft text-purple px-3 py-1.5 rounded-pill"><i class="bi bi-eye me-1"></i>Visión</span>
+                                    }
+                                    else if (item.TipoEvento == "Taller")
+                                    {
+                                        <span class="badge bg-info-soft text-info px-3 py-1.5 rounded-pill"><i class="bi bi-book me-1"></i>Taller OCC</span>
+                                    }
+                                    else if (item.TipoEvento == "Evangelistico")
+                                    {
+                                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-heart-pulse me-1"></i>Evangelístico</span>
+                                    }
+                                    else if (item.TipoEvento == "GranAventura")
+                                    {
+                                        <span class="badge bg-warning-soft text-warning px-3 py-1.5 rounded-pill"><i class="bi bi-compass me-1"></i>La Gran Aventura</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-soft text-secondary px-3 py-1.5 rounded-pill">@item.TipoEvento</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-slate-700">@item.NombreTemporada</span>
+                                </td>
+                                <td>
+                                    <i class="bi bi-calendar-check me-1 text-muted"></i>@item.Fecha.ToString("dd/MM/yyyy")
+                                </td>
+                                <td>
+                                    <div>
+                                        <i class="bi bi-geo-alt me-1 text-muted"></i>@(string.IsNullOrEmpty(item.Lugar) ? "N/D" : item.Lugar)
+                                        @if (!string.IsNullOrEmpty(item.TipoLugar))
+                                        {
+                                            <span class="text-muted small">(@item.TipoLugar)</span>
+                                        }
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        <i class="bi bi-clock me-1"></i>Hora: @(string.IsNullOrEmpty(item.Hora) ? "N/D" : item.Hora) | 
+                                        <i class="bi bi-people me-1"></i>Asistentes: @item.CantidadAsistentes
+                                    </div>
+                                    <div class="small text-muted"><i class="bi bi-person me-1"></i>Resp: @(string.IsNullOrEmpty(item.Responsable) ? "N/D" : item.Responsable)</div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                                        <a href="@Url.Action("Detalle", "Eventos", new { id = item.IdEvento })" class="btn btn-sm btn-outline-primary font-semibold">
+                                            <i class="bi bi-check2-square me-1"></i>Ver / Asistencia
+                                        </a>
+                                        @if (puedeEditarEvento)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditarEvento_@item.IdEvento">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form action="@Url.Action("Eliminar", "Eventos")" method="post" class="d-inline m-0" onsubmit="return confirm('¿Está seguro de eliminar este evento? Solo se podrá eliminar si no tiene asistencias confirmadas.');">
+                                                <input type="hidden" name="idEvento" value="@item.IdEvento" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+
+                                    <!-- MODAL EDITAR EVENTO -->
+                                    <div class="modal fade text-start" id="modalEditarEvento_@item.IdEvento" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content border-0 rounded-4 shadow">
+                                                <form action="@Url.Action("Editar", "Eventos")" method="post">
+                                                    <input type="hidden" name="IdEvento" value="@item.IdEvento" />
+                                                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                                                        <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2 text-info"></i>Editar Evento</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Nombre del Evento</label>
+                                                            <input type="text" name="NombreEvento" class="form-control" value="@item.NombreEvento" required />
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Tipo de Evento</label>
+                                                                <select name="TipoEvento" class="form-select" required>
+                                                                    @foreach (var type in tipos)
+                                                                    {
+                                                                        <option value="@type.Value" @(type.Value == item.TipoEvento ? "selected" : "")>@type.Text</option>
+                                                                    }
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Fecha</label>
+                                                                <input type="date" name="Fecha" class="form-control" value="@item.Fecha.ToString("yyyy-MM-dd")" required />
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Tipo de Lugar</label>
+                                                                <select name="TipoLugar" class="form-select">
+                                                                    <option value="Templo" @(item.TipoLugar == "Templo" ? "selected" : "")>Templo</option>
+                                                                    <option value="Salón" @(item.TipoLugar == "Salón" ? "selected" : "")>Salón</option>
+                                                                    <option value="Parque" @(item.TipoLugar == "Parque" ? "selected" : "")>Parque</option>
+                                                                    <option value="Casa/Hogar" @(item.TipoLugar == "Casa/Hogar" ? "selected" : "")>Casa / Hogar</option>
+                                                                    <option value="Otros" @(item.TipoLugar == "Otros" ? "selected" : "")>Otros</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Hora</label>
+                                                                <input type="text" name="Hora" class="form-control" value="@item.Hora" placeholder="Ej: 10:00 AM" />
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Lugar Físico</label>
+                                                                <input type="text" name="Lugar" class="form-control" value="@item.Lugar" placeholder="Dirección o punto de encuentro" />
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Cantidad de Asistentes</label>
+                                                                <input type="number" name="CantidadAsistentes" class="form-control" value="@item.CantidadAsistentes" min="0" />
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Responsable</label>
+                                                            <input type="text" name="Responsable" class="form-control" value="@item.Responsable" placeholder="Nombre del facilitador o encargado" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar Cambios</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR EVENTO -->
+<div class="modal fade text-start" id="modalCrearEvento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("Crear", "Eventos")" method="post">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>Crear Nuevo Evento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Evento</label>
+                        <input type="text" name="NombreEvento" class="form-control" placeholder="Ej: Presentación de la Visión Santo Domingo" required />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo de Evento</label>
+                            <select name="TipoEvento" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                                @foreach (var type in tipos)
+                                {
+                                    <option value="@type.Value">@type.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Fecha</label>
+                            <input type="date" name="Fecha" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Temporada</label>
+                        <select name="IdTemporada" class="form-select">
+                            <option value="">-- Temporada Activa Actual --</option>
+                            @foreach (var temp in temporadas)
+                            {
+                                <option value="@temp.Value">@temp.Text</option>
+                            }
+                        </select>
+                    </div>
+                     <div class="mb-3">
+                        <label class="form-label fw-semibold">Lugar</label>
+                        <input type="text" name="Lugar" class="form-control" placeholder="Ej: Salón Multiusos Iglesia Central" required />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo de Lugar</label>
+                            <select name="TipoLugar" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                                <option value="Templo">Templo</option>
+                                <option value="Salón">Salón</option>
+                                <option value="Parque">Parque</option>
+                                <option value="Casa/Hogar">Casa/Hogar</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Hora del Evento</label>
+                            <input type="text" name="Hora" class="form-control" placeholder="Ej: 10:00 AM o 14:00" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Cantidad de Asistentes</label>
+                            <input type="number" name="CantidadAsistentes" class="form-control" min="0" value="0" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Responsable del Evento</label>
+                            <input type="text" name="Responsable" class="form-control" placeholder="Ej: Pedro Martínez" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Crear Evento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple-soft {
+        background-color: rgba(111, 66, 193, 0.15) !important;
+        color: #6f42c1 !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.15) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #198754 !important;
+    }
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.15) !important;
+        color: #6c757d !important;
+    }
+</style>

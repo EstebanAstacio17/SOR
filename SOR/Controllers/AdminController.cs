@@ -591,5 +591,181 @@ namespace SOR.Controllers
             TempData["MensajeExito"] = "La solicitud de restablecimiento fue rechazada. La cuenta del usuario ha sido suspendida y su rol ha sido liberado.";
             return RedirectToAction("Usuarios");
         }
+
+        // ============================================================================
+        // MANTENEDOR DE CATÁLOGOS: DENOMINACIONES Y TIPOS DE ORGANIZACIÓN
+        // ============================================================================
+
+        private void AsegurarTablasCatalogos()
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    IF OBJECT_ID('dbo.Denominaciones', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.Denominaciones (
+                            IdDenominacion INT IDENTITY(1,1) PRIMARY KEY,
+                            Nombre NVARCHAR(255) NOT NULL,
+                            Activo BIT NOT NULL DEFAULT 1
+                        );
+                        INSERT INTO dbo.Denominaciones (Nombre, Activo) VALUES 
+                        ('Asambleas de Dios', 1),
+                        ('Bautista', 1),
+                        ('Metodista', 1),
+                        ('Iglesia de Dios', 1),
+                        ('Pentecostal', 1),
+                        ('Independiente / No Denominacional', 1),
+                        ('Alianza Cristiana y Misionera', 1);
+                    END
+
+                    IF OBJECT_ID('dbo.TiposOrganizacion', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.TiposOrganizacion (
+                            IdTipoOrg INT IDENTITY(1,1) PRIMARY KEY,
+                            Nombre NVARCHAR(255) NOT NULL,
+                            Activo BIT NOT NULL DEFAULT 1
+                        );
+                        INSERT INTO dbo.TiposOrganizacion (Nombre, Activo) VALUES 
+                        ('Iglesia Local', 1),
+                        ('Misión / Extensión', 1),
+                        ('Ministerio Paraeclesiástico', 1),
+                        ('Fundación / ONG', 1),
+                        ('Colegio Cristiano', 1);
+                    END";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // GET: Admin/Catalogos
+        public ActionResult Catalogos()
+        {
+            Usuario usuarioActual = (Usuario)Session["usuario"];
+            if (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            AsegurarTablasCatalogos();
+
+            List<CatalogoItemViewModel> denominaciones = new List<CatalogoItemViewModel>();
+            List<CatalogoItemViewModel> tiposOrg = new List<CatalogoItemViewModel>();
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlD = "SELECT IdDenominacion AS Id, Nombre, Activo FROM dbo.Denominaciones ORDER BY Nombre;";
+                using (SqlCommand cmdD = new SqlCommand(sqlD, cn))
+                using (SqlDataReader drD = cmdD.ExecuteReader())
+                {
+                    while (drD.Read())
+                    {
+                        denominaciones.Add(new CatalogoItemViewModel
+                        {
+                            Id = Convert.ToInt32(drD["Id"]),
+                            Nombre = drD["Nombre"].ToString(),
+                            Activo = Convert.ToBoolean(drD["Activo"])
+                        });
+                    }
+                }
+
+                string sqlT = "SELECT IdTipoOrg AS Id, Nombre, Activo FROM dbo.TiposOrganizacion ORDER BY Nombre;";
+                using (SqlCommand cmdT = new SqlCommand(sqlT, cn))
+                using (SqlDataReader drT = cmdT.ExecuteReader())
+                {
+                    while (drT.Read())
+                    {
+                        tiposOrg.Add(new CatalogoItemViewModel
+                        {
+                            Id = Convert.ToInt32(drT["Id"]),
+                            Nombre = drT["Nombre"].ToString(),
+                            Activo = Convert.ToBoolean(drT["Activo"])
+                        });
+                    }
+                }
+            }
+
+            ViewBag.Denominaciones = denominaciones;
+            ViewBag.TiposOrg = tiposOrg;
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult CrearDenominacion(string nombre)
+        {
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                AsegurarTablasCatalogos();
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "INSERT INTO dbo.Denominaciones (Nombre, Activo) VALUES (@Nombre, 1);";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Denominación agregada correctamente.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        public ActionResult ToggleDenominacion(int id, bool activo)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "UPDATE dbo.Denominaciones SET Activo = @Activo WHERE IdDenominacion = @Id;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Activo", activo);
+                cmd.Parameters.AddWithValue("@Id", id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            TempData["MensajeExito"] = "Estado de denominación actualizado.";
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        public ActionResult CrearTipoOrg(string nombre)
+        {
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                AsegurarTablasCatalogos();
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "INSERT INTO dbo.TiposOrganizacion (Nombre, Activo) VALUES (@Nombre, 1);";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Tipo de organización agregado correctamente.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        public ActionResult ToggleTipoOrg(int id, bool activo)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "UPDATE dbo.TiposOrganizacion SET Activo = @Activo WHERE IdTipoOrg = @Id;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Activo", activo);
+                cmd.Parameters.AddWithValue("@Id", id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            TempData["MensajeExito"] = "Estado de tipo de organización actualizado.";
+            return RedirectToAction("Catalogos");
+        }
+    }
+
+    public class CatalogoItemViewModel
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public bool Activo { get; set; }
     }
 }

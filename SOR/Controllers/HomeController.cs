@@ -10,6 +10,10 @@ namespace SOR.Controllers
         // Acción pública: Pantalla de Bienvenida / Landing Page para Voluntarios
         public ActionResult Landing()
         {
+            if (Session["usuario"] != null)
+            {
+                return RedirectToAction("Index");
+            }
             return View();
         }
 

@@ -1,26 +1,34 @@
 @model SOR.Models.Iglesia
 @{
-    ViewBag.Title = "Registrar Iglesia Beneficiada";
+    ViewBag.Title = "Editar Expediente de Iglesia";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var listaEquipos = (List<SelectListItem>)ViewBag.ListaEquipos ?? new List<SelectListItem>();
-    var u = (SOR.Models.Usuario)Session["usuario"];
+    var u = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var puedeCambiarEquipo = (bool)ViewBag.PuedeCambiarEquipo;
 }
 
-<div class="mb-4">
-    <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-plus-circle-fill text-primary me-2"></i>Registrar Nueva Iglesia</h2>
-    <p class="text-muted mb-0">Ingresa los datos de la institución, del Pastor principal y del Líder Ministerial.</p>
+<div class="mb-4 d-flex align-items-center justify-content-between">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-pencil-square text-warning me-2"></i>Editar Expediente de la Iglesia</h2>
+        <p class="text-muted mb-0">Actualiza los datos de la institución, pastor principal, líder ministerial y referencias.</p>
+    </div>
+    <a href="@Url.Action("Detalle", "Iglesia", new { id = Model.IdIglesia })" class="btn btn-outline-secondary font-semibold btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Volver al Expediente
+    </a>
 </div>
 
-@if (ViewData["MensajeError"] != null)
+@if (TempData["MensajeError"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@ViewData["MensajeError"]
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 
-<form action="@Url.Action("Crear", "Iglesia")" method="post" enctype="multipart/form-data">
-    <!-- DATOS DE LA INSTITUCIÓN -->
+<form action="@Url.Action("Editar", "Iglesia")" method="post" enctype="multipart/form-data">
+    @Html.HiddenFor(m => m.IdIglesia)
+
+    <!-- 1. DATOS DE LA INSTITUCIÓN -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-dark text-white p-3">
             <h3 class="h5 font-bold mb-0"><i class="bi bi-building me-2"></i>1. Datos de la Institución / Iglesia</h3>
@@ -28,7 +36,7 @@
         <div class="card-body p-4">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label font-semibold">Nombre Completo de la Iglesia o Institución <span class="text-danger">*</span></label>
+                    <label class="form-label font-semibold">Nombre de la Iglesia <span class="text-danger">*</span></label>
                     <input type="text" name="NombreIglesia" class="form-control" value="@Model.NombreIglesia" required placeholder="Ej: Iglesia Evangélica Central" />
                 </div>
                 <div class="col-md-3">
@@ -40,44 +48,46 @@
                     <input type="text" name="Telefono" class="form-control" value="@Model.Telefono" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 809-555-1234" />
                 </div>
 
-                <h5 class="h6 font-bold mt-4 mb-2 text-dark">Dirección Física Completa</h5>
+                <h5 class="h6 font-bold mt-4 mb-2 text-dark">Dirección Física</h5>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Calle <span class="text-danger">*</span></label>
-                    <input type="text" name="Calle" class="form-control" value="@Model.Calle" required placeholder="Ej: Calle Duarte" />
+                    <input type="text" name="Calle" class="form-control" value="@Model.Calle" required placeholder="Calle Duarte" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label font-semibold">Número <span class="text-danger">*</span></label>
-                    <input type="text" name="Numero" class="form-control" value="@Model.Numero" required placeholder="Ej: 12" />
+                    <input type="text" name="Numero" class="form-control" value="@Model.Numero" required placeholder="12" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label font-semibold">Sector <span class="text-danger">*</span></label>
-                    <input type="text" name="Sector" class="form-control" value="@Model.Sector" required placeholder="Ej: El Ensanche" />
+                    <input type="text" name="Sector" class="form-control" value="@Model.Sector" required placeholder="El Ensanche" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label font-semibold">Ciudad / Provincia <span class="text-danger">*</span></label>
-                    <input type="text" name="Ciudad" class="form-control" value="@Model.Ciudad" required placeholder="Ej: Santiago" />
+                    <input type="text" name="Ciudad" class="form-control" value="@Model.Ciudad" required placeholder="Santiago" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Referencia de Ubicación <span class="text-danger">*</span></label>
-                    <input type="text" name="Referencia" class="form-control" value="@Model.Referencia" required placeholder="Ej: Frente al Parque Central" />
+                    <input type="text" name="Referencia" class="form-control" value="@Model.Referencia" required placeholder="Frente al Parque Central" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Equipo OCC Asignado <span class="text-danger">*</span></label>
-                    @if (u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2))
+                    @if (puedeCambiarEquipo)
                     {
                         @Html.DropDownListFor(m => m.IdEquipo, listaEquipos, "-- Seleccionar Equipo --", new { @class = "form-select", required = "required" })
+                        <small class="text-info text-xxs d-block mt-1"><i class="bi bi-info-circle me-1"></i>Tienes privilegios para reasignar el equipo de esta iglesia.</small>
                     }
                     else
                     {
-                        <input type="text" class="form-control" value="@(u != null && !string.IsNullOrEmpty(u.NombreEquipo) ? u.NombreEquipo : "Sin Equipo Asignado")" readonly />
-                        <input type="hidden" name="IdEquipo" value="@(u != null ? u.IdEquipo ?? 1 : 1)" />
+                        <input type="text" class="form-control text-muted" value="@Model.NombreEquipo" readonly />
+                        <input type="hidden" name="IdEquipo" value="@Model.IdEquipo" />
+                        <small class="text-muted text-xxs d-block mt-1"><i class="bi bi-lock me-1"></i>Solo un Administrador o ERLE puede cambiar el equipo asignado.</small>
                     }
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- DATOS DEL PASTOR -->
+    <!-- 2. DATOS DEL PASTOR -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-secondary text-white p-3">
             <h3 class="h5 font-bold mb-0"><i class="bi bi-person-badge me-2"></i>2. Datos del Pastor Principal</h3>
@@ -86,33 +96,37 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Nombres del Pastor <span class="text-danger">*</span></label>
-                    <input type="text" name="Pastor.Nombres" class="form-control" value="@Model.Pastor.Nombres" required placeholder="Ej: Juan" />
+                    <input type="text" name="Pastor.Nombres" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.Nombres : "")" required />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Apellidos del Pastor <span class="text-danger">*</span></label>
-                    <input type="text" name="Pastor.Apellidos" class="form-control" value="@Model.Pastor.Apellidos" required placeholder="Ej: Pérez" />
+                    <input type="text" name="Pastor.Apellidos" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.Apellidos : "")" required />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Cédula del Pastor <span class="text-danger">*</span></label>
-                    <input type="text" name="Pastor.DocumentoIdentidad" class="form-control" value="@Model.Pastor.DocumentoIdentidad" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 001-1234567-8" />
+                    <input type="text" name="Pastor.DocumentoIdentidad" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.DocumentoIdentidad : "")" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="001-1234567-8" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label font-semibold">Adjuntar Cédula / Documento (Foto o PDF)</label>
+                    <label class="form-label font-semibold">Adjuntar Cédula / Documento (Nueva foto/PDF para reemplazar)</label>
                     <input type="file" name="docPastor" class="form-control" accept="image/*,.pdf" />
+                    @if (Model.Pastor != null && !string.IsNullOrEmpty(Model.Pastor.DocumentoAdjuntoRuta))
+                    {
+                        <a href="@Model.Pastor.DocumentoAdjuntoRuta" target="_blank" class="small text-primary d-block mt-1"><i class="bi bi-file-earmark-pdf me-1"></i>Ver documento actual</a>
+                    }
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Celular del Pastor <span class="text-danger">*</span></label>
-                    <input type="text" name="Pastor.Celular" class="form-control" value="@Model.Pastor.Celular" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 829-555-4321" />
+                    <input type="text" name="Pastor.Celular" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.Celular : "")" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="829-555-4321" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Correo Electrónico del Pastor <span class="text-danger">*</span></label>
-                    <input type="email" name="Pastor.Correo" class="form-control" value="@Model.Pastor.Correo" required placeholder="juan.perez@example.com" />
+                    <input type="email" name="Pastor.Correo" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.Correo : "")" required />
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- DATOS DEL LÍDER MINISTERIAL -->
+    <!-- 3. DATOS DEL LÍDER MINISTERIAL -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-dark text-white p-3">
             <h3 class="h5 font-bold mb-0"><i class="bi bi-person-workspace me-2"></i>3. Datos del Líder Ministerial</h3>
@@ -121,33 +135,37 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Nombres del Líder <span class="text-danger">*</span></label>
-                    <input type="text" name="LiderMinisterial.Nombres" class="form-control" value="@Model.LiderMinisterial.Nombres" required placeholder="Ej: Pedro" />
+                    <input type="text" name="LiderMinisterial.Nombres" class="form-control" value="@(Model.LiderMinisterial != null ? Model.LiderMinisterial.Nombres : "")" required />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Apellidos del Líder <span class="text-danger">*</span></label>
-                    <input type="text" name="LiderMinisterial.Apellidos" class="form-control" value="@Model.LiderMinisterial.Apellidos" required placeholder="Ej: Gómez" />
+                    <input type="text" name="LiderMinisterial.Apellidos" class="form-control" value="@(Model.LiderMinisterial != null ? Model.LiderMinisterial.Apellidos : "")" required />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Cédula del Líder <span class="text-danger">*</span></label>
-                    <input type="text" name="LiderMinisterial.DocumentoIdentidad" class="form-control" value="@Model.LiderMinisterial.DocumentoIdentidad" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 001-1234567-8" />
+                    <input type="text" name="LiderMinisterial.DocumentoIdentidad" class="form-control" value="@(Model.LiderMinisterial != null ? Model.LiderMinisterial.DocumentoIdentidad : "")" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="001-1234567-8" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label font-semibold">Adjuntar Cédula / Documento (Foto o PDF)</label>
+                    <label class="form-label font-semibold">Adjuntar Cédula / Documento (Nueva foto/PDF para reemplazar)</label>
                     <input type="file" name="docLider" class="form-control" accept="image/*,.pdf" />
+                    @if (Model.LiderMinisterial != null && !string.IsNullOrEmpty(Model.LiderMinisterial.DocumentoAdjuntoRuta))
+                    {
+                        <a href="@Model.LiderMinisterial.DocumentoAdjuntoRuta" target="_blank" class="small text-primary d-block mt-1"><i class="bi bi-file-earmark-pdf me-1"></i>Ver documento actual</a>
+                    }
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Celular del Líder <span class="text-danger">*</span></label>
-                    <input type="text" name="LiderMinisterial.Celular" class="form-control" value="@Model.LiderMinisterial.Celular" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 849-555-9876" />
+                    <input type="text" name="LiderMinisterial.Celular" class="form-control" value="@(Model.LiderMinisterial != null ? Model.LiderMinisterial.Celular : "")" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="849-555-9876" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label font-semibold">Correo Electrónico del Líder <span class="text-danger">*</span></label>
-                    <input type="email" name="LiderMinisterial.Correo" class="form-control" value="@Model.LiderMinisterial.Correo" required placeholder="pedro.gomez@example.com" />
+                    <input type="email" name="LiderMinisterial.Correo" class="form-control" value="@(Model.LiderMinisterial != null ? Model.LiderMinisterial.Correo : "")" required />
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN 2: INFORMACIÓN MINISTERIAL Y REFERENCIAS -->
+    <!-- 4. INFORMACIÓN MINISTERIAL Y REFERENCIAS -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-slate-900 text-white p-3">
             <h3 class="h5 font-bold mb-0"><i class="bi bi-file-earmark-medical me-2 text-warning"></i>4. Información Ministerial y Referencias</h3>
@@ -156,11 +174,11 @@
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label font-semibold">Cantidad de Maestros <span class="text-danger">*</span></label>
-                    <input type="number" name="CantidadMaestros" class="form-control" value="@Model.CantidadMaestros" min="0" required placeholder="Ej: 5" />
+                    <input type="number" name="CantidadMaestros" class="form-control" value="@Model.CantidadMaestros" min="0" required />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label font-semibold">Cantidad de Niños <span class="text-danger">*</span></label>
-                    <input type="number" name="CantidadNinos" class="form-control" value="@Model.CantidadNinos" min="0" required placeholder="Ej: 150" />
+                    <input type="number" name="CantidadNinos" class="form-control" value="@Model.CantidadNinos" min="0" required />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label font-semibold">Denominación <span class="text-danger">*</span></label>
@@ -186,28 +204,28 @@
                 <h5 class="h6 font-bold mt-4 mb-2 text-dark">Referencias Ministeriales</h5>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Nombre de Referencia 1 <span class="text-danger">*</span></label>
-                    <input type="text" name="Ref1Nombre" class="form-control" value="@Model.Ref1Nombre" required placeholder="Ej: Reverendo Ramón Ramos" />
+                    <input type="text" name="Ref1Nombre" class="form-control" value="@Model.Ref1Nombre" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Contacto de Referencia 1 <span class="text-danger">*</span></label>
-                    <input type="text" name="Ref1Contacto" class="form-control" value="@Model.Ref1Contacto" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 809-555-1122" />
+                    <input type="text" name="Ref1Contacto" class="form-control" value="@Model.Ref1Contacto" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="809-555-1122" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Nombre de Referencia 2 <span class="text-danger">*</span></label>
-                    <input type="text" name="Ref2Nombre" class="form-control" value="@Model.Ref2Nombre" required placeholder="Ej: Obispo Rafael Reyes" />
+                    <input type="text" name="Ref2Nombre" class="form-control" value="@Model.Ref2Nombre" required />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Contacto de Referencia 2 <span class="text-danger">*</span></label>
-                    <input type="text" name="Ref2Contacto" class="form-control" value="@Model.Ref2Contacto" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 829-555-3344" />
+                    <input type="text" name="Ref2Contacto" class="form-control" value="@Model.Ref2Contacto" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="829-555-3344" />
                 </div>
             </div>
         </div>
     </div>
 
     <div class="text-end mb-5">
-        <a href="@Url.Action("Index", "Iglesia")" class="btn btn-secondary me-2">Cancelar</a>
-        <button type="submit" class="btn btn-primary px-5 font-semibold">
-            <i class="bi bi-check-circle-fill me-2"></i>Guardar Expediente de Iglesia
+        <a href="@Url.Action("Detalle", "Iglesia", new { id = Model.IdIglesia })" class="btn btn-secondary me-2">Cancelar</a>
+        <button type="submit" class="btn btn-warning px-5 font-semibold">
+            <i class="bi bi-save2 me-2"></i>Guardar Cambios
         </button>
     </div>
 </form>

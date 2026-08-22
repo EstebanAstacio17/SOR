@@ -127,6 +127,10 @@
     <Compile Include="Controllers\IglesiaController.cs" />
     <Compile Include="Controllers\ReporteController.cs" />
     <Compile Include="Controllers\EquiposController.cs" />
+    <Compile Include="Controllers\TemporadasController.cs" />
+    <Compile Include="Controllers\MaestrosController.cs" />
+    <Compile Include="Controllers\EventosController.cs" />
+    <Compile Include="Controllers\CompanerosOracionController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -223,8 +227,14 @@
     <Content Include="Views\Iglesia\Index.cshtml" />
     <Content Include="Views\Iglesia\Crear.cshtml" />
     <Content Include="Views\Iglesia\Detalle.cshtml" />
+    <Content Include="Views\Iglesia\Editar.cshtml" />
     <Content Include="Views\Reporte\Index.cshtml" />
     <Content Include="Views\Equipos\Index.cshtml" />
+    <Content Include="Views\Temporadas\Index.cshtml" />
+    <Content Include="Views\Maestros\Index.cshtml" />
+    <Content Include="Views\Eventos\Index.cshtml" />
+    <Content Include="Views\Eventos\Detalle.cshtml" />
+    <Content Include="Views\CompanerosOracion\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\DB_SOR_Schema.sql" />

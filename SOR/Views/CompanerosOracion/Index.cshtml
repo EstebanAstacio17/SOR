@@ -1,0 +1,203 @@
+@model IEnumerable<SOR.Models.CompaneroOracion>
+@{
+    ViewBag.Title = "Compañeros de Oración";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var iglesias = (List<SelectListItem>)ViewBag.ListaIglesias;
+    var temporadas = (List<SelectListItem>)ViewBag.ListaTemporadas;
+    var puedeRegistrar = (bool)ViewBag.PuedeRegistrar;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-heart-fill text-danger me-2"></i>Compañeros de Oración</h2>
+        <p class="text-muted mb-0">Red de intercesores y compañeros de oración vinculados a las iglesias y temporadas OCC.</p>
+    </div>
+    <div>
+        @if (puedeRegistrar)
+        {
+            <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearCompanero">
+                <i class="bi bi-plus-circle me-2"></i>Registrar Intercesor
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-secondary font-semibold px-4 shadow-sm disabled" disabled title="Permisos restringidos para Coordinadores de Oración (CO)">
+                <i class="bi bi-lock me-2"></i>Solo Escritura CO
+            </button>
+        }
+    </div>
+</div>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Nombre del Compañero</th>
+                        <th>Contacto</th>
+                        <th>Rango de Edad</th>
+                        <th>Iglesia Asociada</th>
+                        <th>Temporada / Registro</th>
+                        @if (puedeRegistrar)
+                        {
+                            <th class="text-end pe-4" style="width: 150px;">Acciones</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="@(puedeRegistrar ? 6 : 5)" class="text-center py-5 text-muted">
+                                <i class="bi bi-envelope-heart fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay compañeros de oración registrados aún.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.NombreCompleto</div>
+                                    <small class="text-muted">ID: #@item.IdCompanero</small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.ContactoWhatsApp))
+                                    {
+                                        <a href="https://wa.me/@item.ContactoWhatsApp.Replace("-","").Replace(" ","")" target="_blank" class="text-decoration-none text-success fw-semibold">
+                                            <i class="bi bi-whatsapp me-1"></i>@item.ContactoWhatsApp
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted text-xs">Sin WhatsApp</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.EsMayorEdad)
+                                    {
+                                        <span class="badge bg-light text-slate-800 border">Mayor de edad</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-soft text-warning">Menor de edad</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-slate-100 text-slate-700 border fw-semibold"><i class="bi bi-building me-1"></i>@item.NombreIglesia</span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-slate-700">@item.NombreTemporada</div>
+                                    <small class="text-muted">Por: @item.CorreoRegistrador</small>
+                                </td>
+                                @if (puedeRegistrar)
+                                {
+                                    <td class="text-end pe-4">
+                                        <form action="@Url.Action("Eliminar", "CompanerosOracion")" method="post" class="m-0" onsubmit="return confirm('¿Seguro que deseas eliminar a este compañero de oración?');">
+                                            <input type="hidden" name="idCompanero" value="@item.IdCompanero" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger font-semibold">
+                                                <i class="bi bi-trash me-1"></i>Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR COMPAÑERO -->
+@if (puedeRegistrar)
+{
+    <div class="modal fade text-start" id="modalCrearCompanero" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("Crear", "CompanerosOracion")" method="post">
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-heart-pulse me-2 text-danger"></i>Registrar Compañero de Oración</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nombre Completo del Intercesor</label>
+                            <input type="text" name="NombreCompleto" class="form-control" placeholder="Ej: María Altagracia" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Contacto WhatsApp</label>
+                            <input type="text" name="ContactoWhatsApp" class="form-control" placeholder="Ej: 809-555-0199" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Rango de Edad</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="EsMayorEdad" id="edadMayor" value="true" checked>
+                                <label class="form-check-label" for="edadMayor">
+                                    Mayor de Edad
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="EsMayorEdad" id="edadMenor" value="false">
+                                <label class="form-check-label" for="edadMenor">
+                                    Menor de Edad
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Iglesia Asociada</label>
+                            <select name="IdIglesia" class="form-select" required>
+                                <option value="">Selecciona una Iglesia...</option>
+                                @foreach (var ig in iglesias)
+                                {
+                                    <option value="@ig.Value">@ig.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Temporada</label>
+                            <select name="IdTemporada" class="form-select">
+                                <option value="">-- Temporada Activa Actual --</option>
+                                @foreach (var temp in temporadas)
+                                {
+                                    <option value="@temp.Value">@temp.Text</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-heart-fill me-1 text-danger"></i>Registrar Intercesor</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+</style>

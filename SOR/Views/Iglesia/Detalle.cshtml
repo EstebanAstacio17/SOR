@@ -1,413 +1,889 @@
 @model SOR.Models.Iglesia
 @{
-    ViewBag.Title = "Expediente: " + Model.NombreIglesia;
+    ViewBag.Title = "Expediente de la Iglesia";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    bool puedeEditar = (bool)(ViewBag.PuedeEditar ?? false);
-    var uActual = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var u = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var puedeEditar = (bool)ViewBag.PuedeEditar;
 }
 
-<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
-    <div>
-        <a href="@Url.Action("Index", "Iglesia")" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i> Volver a la lista</a>
-        <h2 class="h3 font-bold text-slate-800 mb-0 mt-1">@Model.NombreIglesia</h2>
-        <span class="badge bg-primary mt-1"><i class="bi bi-diagram-3 me-1"></i>@Model.NombreEquipo</span>
+<div class="mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <a href="@Url.Action("Index", "Iglesia")" class="btn btn-sm btn-outline-secondary font-semibold">
+        <i class="bi bi-arrow-left me-1"></i>Volver a la Lista
+    </a>
+    <div class="d-flex align-items-center gap-2">
+        <h3 class="h4 font-bold text-slate-800 m-0">Expediente de la Iglesia</h3>
+        @if (puedeEditar)
+        {
+            <a href="@Url.Action("Editar", "Iglesia", new { id = Model.IdIglesia })" class="btn btn-sm btn-warning font-semibold shadow-sm">
+                <i class="bi bi-pencil-square me-1"></i>Editar Expediente
+            </a>
+        }
     </div>
 </div>
 
-@if (TempData["MensajeExito"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["MensajeError"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
 <div class="row g-4">
-    <!-- COLUMNA IZQUIERDA: DATOS INSTITUCIÓN Y PERSONAS -->
-    <div class="col-md-7">
-        <!-- DETALLES DE INSTITUCIÓN -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-light border-0 p-3">
-                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-building me-2 text-primary"></i>Datos de la Institución</h3>
+    <!-- PANEL IZQUIERDO: FICHA FÍSICA E IDENTIDAD -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+            <div class="card-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="card-title mb-0 font-bold"><i class="bi bi-building me-2"></i>Ficha de Identidad</h5>
             </div>
             <div class="card-body p-4">
-                <div class="row g-3">
-                    <div class="col-6">
-                        <small class="text-muted d-block">RNC / Cédula</small>
-                        <strong class="text-dark">@(string.IsNullOrEmpty(Model.RNC_Cedula) ? "N/D" : Model.RNC_Cedula)</strong>
+                <h4 class="font-bold text-primary mb-1">@Model.NombreIglesia</h4>
+                <span class="badge bg-dark text-white border border-secondary mb-3 px-3 py-2 fw-bold"><i class="bi bi-diagram-3 me-1"></i>@Model.NombreEquipo</span>
+                
+                <div class="d-flex flex-column gap-3 text-sm mt-2">
+                    <div>
+                        <small class="text-muted d-block text-xxs font-semibold uppercase">Denominación</small>
+                        <span class="fw-bold text-slate-800">@(string.IsNullOrEmpty(Model.Denominacion) ? "No especificado" : Model.Denominacion)</span>
                     </div>
-                    <div class="col-6">
-                        <small class="text-muted d-block">Teléfono</small>
-                        <strong class="text-dark">@(string.IsNullOrEmpty(Model.Telefono) ? "N/D" : Model.Telefono)</strong>
+                    <div>
+                        <small class="text-muted d-block text-xxs font-semibold uppercase">Tipo de Organización</small>
+                        <span class="fw-bold text-slate-800">@(string.IsNullOrEmpty(Model.TipoOrganizacion) ? "No especificado" : Model.TipoOrganizacion)</span>
                     </div>
-                    <div class="col-12">
-                        <small class="text-muted d-block">Dirección Física</small>
-                        <strong class="text-dark">@Model.Calle #@Model.Numero, @Model.Sector, @Model.Ciudad (@Model.Provincia)</strong>
+                    <div>
+                        <small class="text-muted d-block text-xxs font-semibold uppercase">RNC / Cédula</small>
+                        <span class="font-monospace text-slate-700">@(string.IsNullOrEmpty(Model.RNC_Cedula) ? "N/D" : Model.RNC_Cedula)</span>
                     </div>
-                    @if (!string.IsNullOrEmpty(Model.Referencia))
+                    <div>
+                        <small class="text-muted d-block text-xxs font-semibold uppercase">Teléfono Fijo</small>
+                        <span>@(string.IsNullOrEmpty(Model.Telefono) ? "N/D" : Model.Telefono)</span>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block text-xxs font-semibold uppercase">Dirección Física</small>
+                        <span class="text-slate-700">@Model.Calle #@Model.Numero, @Model.Sector, @Model.Ciudad, @Model.Provincia</span>
+                        @if (!string.IsNullOrEmpty(Model.Referencia))
+                        {
+                            <div class="small text-muted mt-1"><i class="bi bi-pin-map me-1"></i>Ref: @Model.Referencia</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PASTORES Y LÍDERES -->
+        <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+            <div class="card-header bg-slate-900 text-white rounded-top-4 py-3 border-0">
+                <h5 class="card-title mb-0 font-bold"><i class="bi bi-people me-2"></i>Contactos Clave</h5>
+            </div>
+            <div class="card-body p-4 d-flex flex-column gap-4">
+                <!-- Pastor -->
+                <div>
+                    <span class="badge bg-primary-soft text-primary px-3 py-1 mb-2 rounded-pill fw-semibold">Pastor General</span>
+                    @if (Model.Pastor != null && !string.IsNullOrEmpty(Model.Pastor.Nombres))
                     {
-                        <div class="col-12">
-                            <small class="text-muted d-block">Referencia</small>
-                            <span class="text-slate-600">@Model.Referencia</span>
-                        </div>
+                        <h6 class="font-bold text-slate-800 mb-1">@Model.Pastor.Nombres @Model.Pastor.Apellidos</h6>
+                        <div class="text-slate-600 text-xs"><i class="bi bi-telephone me-1"></i>@Model.Pastor.Celular</div>
+                        <div class="text-slate-600 text-xs"><i class="bi bi-envelope me-1"></i>@Model.Pastor.Correo</div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-0">No se registraron datos del Pastor.</p>
+                    }
+                </div>
+
+                <!-- Líder Ministerial -->
+                <div>
+                    <span class="badge bg-info-soft text-info px-3 py-1 mb-2 rounded-pill fw-semibold">Líder de Discipulado / Ministerial</span>
+                    @if (Model.LiderMinisterial != null && !string.IsNullOrEmpty(Model.LiderMinisterial.Nombres))
+                    {
+                        <h6 class="font-bold text-slate-800 mb-1">@Model.LiderMinisterial.Nombres @Model.LiderMinisterial.Apellidos</h6>
+                        <div class="text-slate-600 text-xs"><i class="bi bi-telephone me-1"></i>@Model.LiderMinisterial.Celular</div>
+                        <div class="text-slate-600 text-xs"><i class="bi bi-envelope me-1"></i>@Model.LiderMinisterial.Correo</div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-0">No se registraron datos del Líder.</p>
                     }
                 </div>
             </div>
         </div>
 
-        <!-- PASTOR PRINCIPAL -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-light border-0 p-3">
-                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-person-badge me-2 text-primary"></i>Pastor Principal</h3>
-            </div>
-            <div class="card-body p-4">
-                @if (string.IsNullOrEmpty(Model.Pastor.Nombres))
-                {
-                    <p class="text-muted mb-0">Sin datos de Pastor registrados.</p>
-                }
-                else
-                {
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <small class="text-muted d-block">Nombre Completo</small>
-                            <strong class="text-dark">@Model.Pastor.Nombres @Model.Pastor.Apellidos</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Cédula / Documento</small>
-                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.Pastor.DocumentoIdentidad) ? "N/D" : Model.Pastor.DocumentoIdentidad)</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Celular / WhatsApp</small>
-                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.Pastor.Celular) ? "N/D" : Model.Pastor.Celular)</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Documento Adjunto</small>
-                            @if (!string.IsNullOrEmpty(Model.Pastor.DocumentoAdjuntoRuta))
-                            {
-                                <a href="@Model.Pastor.DocumentoAdjuntoRuta" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
-                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Ver Cédula / Documento
-                                </a>
-                            }
-                            else
-                            {
-                                <span class="text-muted small">Sin adjunto</span>
-                            }
+        <!-- RECURSOS ASIGNADOS -->
+        @if (Model.RecursosActuales != null)
+        {
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="h6 font-bold text-slate-800 mb-3 border-bottom pb-2"><i class="bi bi-box-seam me-2 text-warning"></i>Asignación de Recursos</h5>
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div class="p-2 border rounded bg-slate-50">
+                            <span class="d-block h4 mb-0 text-slate-800">@Model.RecursosActuales.OportunidadesEvangelisticas</span>
+                            <small class="text-slate-500 text-xxs font-semibold uppercase">Oportunidades</small>
                         </div>
                     </div>
-                }
-            </div>
-        </div>
-
-        <!-- LÍDER MINISTERIAL -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-light border-0 p-3">
-                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-person-workspace me-2 text-primary"></i>Líder Ministerial</h3>
-            </div>
-            <div class="card-body p-4">
-                @if (string.IsNullOrEmpty(Model.LiderMinisterial.Nombres))
-                {
-                    <p class="text-muted mb-0">Sin datos de Líder Ministerial registrados.</p>
-                }
-                else
-                {
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <small class="text-muted d-block">Nombre Completo</small>
-                            <strong class="text-dark">@Model.LiderMinisterial.Nombres @Model.LiderMinisterial.Apellidos</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Cédula / Documento</small>
-                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.LiderMinisterial.DocumentoIdentidad) ? "N/D" : Model.LiderMinisterial.DocumentoIdentidad)</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Celular / WhatsApp</small>
-                            <strong class="text-dark">@(string.IsNullOrEmpty(Model.LiderMinisterial.Celular) ? "N/D" : Model.LiderMinisterial.Celular)</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Documento Adjunto</small>
-                            @if (!string.IsNullOrEmpty(Model.LiderMinisterial.DocumentoAdjuntoRuta))
-                            {
-                                <a href="@Model.LiderMinisterial.DocumentoAdjuntoRuta" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
-                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Ver Documento
-                                </a>
-                            }
-                            else
-                            {
-                                <span class="text-muted small">Sin adjunto</span>
-                            }
+                    <div class="col-6">
+                        <div class="p-2 border rounded bg-slate-50">
+                            <span class="d-block h4 mb-0 text-slate-800">@Model.RecursosActuales.LibrosMejorRegalo</span>
+                            <small class="text-slate-500 text-xxs font-semibold uppercase">Mejor Regalo</small>
                         </div>
                     </div>
-                }
+                    <div class="col-6">
+                        <div class="p-2 border rounded bg-slate-50">
+                            <span class="d-block h4 mb-0 text-slate-800">@Model.RecursosActuales.LibrosMaestros</span>
+                            <small class="text-slate-500 text-xxs font-semibold uppercase">Libros Maestros</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 border rounded bg-slate-50">
+                            <span class="d-block h4 mb-0 text-slate-800">@Model.RecursosActuales.LibrosAlumno</span>
+                            <small class="text-slate-500 text-xxs font-semibold uppercase">Libros Alumno</small>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        }
     </div>
 
-    <!-- COLUMNA DERECHA: TEMPORADA, RECURSOS Y HISTORIAL DE OBSERVACIONES -->
-    <div class="col-md-5">
-        <!-- PARTICIPACIÓN EN TEMPORADA -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between">
-                <h3 class="h5 font-bold mb-0"><i class="bi bi-calendar-check me-2"></i>Temporada 2026</h3>
-                @if (Model.ParticipacionActual != null && Model.ParticipacionActual.Participara)
-                {
-                    <span class="badge bg-success">Participará</span>
-                }
-                else
-                {
-                    <span class="badge bg-danger">NO Participará</span>
-                }
-            </div>
-            <div class="card-body p-4">
-                @if (Model.ParticipacionActual != null)
-                {
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Estado de Evaluación / Etapa:</small>
-                        <span class="badge bg-info text-dark fs-6 mt-1">@Model.ParticipacionActual.EstadoEvaluacion</span>
+    <!-- PANEL DERECHO: CICLO DE PROCESO Y ETAPAS GESTIÓN TEMP -->
+    <div class="col-lg-8">
+        <!-- 1. LÍNEA DE TIEMPO INTERACTIVA DE LAS 5 ETAPAS -->
+        @if (Model.ParticipacionActual != null)
+        {
+            var part = Model.ParticipacionActual;
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <h5 class="h6 font-bold text-slate-800 mb-4 border-bottom pb-2"><i class="bi bi-signpost-split me-2 text-primary"></i>Etapas de la Temporada Activa: @part.NombreTemporada</h5>
+                
+                <!-- Timeline SVG / Steps -->
+                <div class="d-flex align-items-center justify-content-between position-relative px-2 flex-wrap gap-3">
+                    <!-- Progress line container -->
+                    <div class="position-absolute start-0 end-0" style="left: 20px !important; right: 20px !important; top: 20px; height: 4px; z-index: 1;">
+                        <div class="w-100 h-100 bg-light"></div>
+                        <div class="bg-primary position-absolute top-0 start-0 h-100" style="width: @((part.EtapaActual - 1) * 25)%; transition: width 0.3s ease; z-index: 2;"></div>
                     </div>
 
-                    if (!Model.ParticipacionActual.Participara)
+                    <!-- Step 1: Inscrita -->
+                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 1 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">1</div>
+                        <span class="small font-semibold text-slate-700 mt-2">Inscrita</span>
+                    </div>
+
+                    <!-- Step 2: Evaluada -->
+                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 2 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">2</div>
+                        <span class="small font-semibold text-slate-700 mt-2">Evaluada</span>
+                    </div>
+
+                    <!-- Step 3: Visión -->
+                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 3 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">3</div>
+                        <span class="small font-semibold text-slate-700 mt-2">Visión</span>
+                    </div>
+
+                    <!-- Step 4: Elegibilidad -->
+                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 4 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">4</div>
+                        <span class="small font-semibold text-slate-700 mt-2">Elegible Taller</span>
+                    </div>
+
+                    <!-- Step 5: Taller OCC -->
+                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 5 ? "bg-success text-white border-success" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">5</div>
+                        <span class="small font-semibold text-slate-700 mt-2">Taller OCC</span>
+                    </div>
+                </div>
+
+                <!-- ACCIONES Y PANELES DE TRANSICIÓN SEGÚN ETAPA ACTUAL -->
+                <div class="bg-light p-4 rounded-4 mt-4 border border-slate-200">
+                    <h6 class="font-bold text-slate-800 mb-3"><i class="bi bi-sliders me-2 text-slate-600"></i>Panel de Control de la Etapa @part.EtapaActual</h6>
+
+                    @if (part.EstadoEvaluacion == "Rechazado")
                     {
-                        <div class="alert alert-warning border-0 rounded-3 mb-3">
-                            <strong><i class="bi bi-exclamation-triangle me-1"></i>Justificación de No Participación:</strong>
-                            <p class="mb-0 mt-1 text-dark">@Model.ParticipacionActual.JustificacionNoParticipacion</p>
+                        <div class="alert alert-danger mb-3 py-3 shadow-sm rounded-3">
+                            <h6 class="font-bold mb-1"><i class="bi bi-x-octagon-fill me-2"></i>El proceso de participación ha sido RECHAZADO / CANCELADO</h6>
+                            <p class="small mb-0 mt-1">
+                                <strong>Razón o Justificación:</strong> @(string.IsNullOrEmpty(part.EvalInicialMotivo) ? (string.IsNullOrEmpty(part.EvalTallerMotivo) ? "No especificado" : part.EvalTallerMotivo) : part.EvalInicialMotivo)
+                            </p>
                         </div>
-                    }
-
-                    if (puedeEditar)
-                    {
-                        <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalEvaluarParticipacion">
-                            <i class="bi bi-pencil-square me-1"></i>Evaluar / Cambiar Etapa
-                        </button>
-                    }
-                }
-            </div>
-        </div>
-
-        <!-- RECURSOS DESPACHADOS (LOGÍSTICA) -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-light border-0 p-3 d-flex align-items-center justify-content-between">
-                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Recursos Despachados</h3>
-                @if (puedeEditar)
-                {
-                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalRecursos">
-                        <i class="bi bi-pencil me-1"></i>Editar Despacho
-                    </button>
-                }
-            </div>
-            <div class="card-body p-4">
-                @if (Model.RecursosActuales != null)
-                {
-                    <div class="row g-2 text-center">
-                        <div class="col-6">
-                            <div class="p-2 bg-light rounded-3 border">
-                                <small class="text-muted d-block">Oportunidades Evangelísticas</small>
-                                <strong class="fs-5 text-primary">@Model.RecursosActuales.OportunidadesEvangelisticas</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 bg-light rounded-3 border">
-                                <small class="text-muted d-block">Libros Mejor Regalo</small>
-                                <strong class="fs-5 text-success">@Model.RecursosActuales.LibrosMejorRegalo</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 bg-light rounded-3 border">
-                                <small class="text-muted d-block">Libros Maestros</small>
-                                <strong class="fs-5 text-info">@Model.RecursosActuales.LibrosMaestros</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 bg-light rounded-3 border">
-                                <small class="text-muted d-block">Libros Alumno</small>
-                                <strong class="fs-5 text-warning">@Model.RecursosActuales.LibrosAlumno</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 bg-light rounded-3 border">
-                                <small class="text-muted d-block">Posters</small>
-                                <strong class="fs-5 text-secondary">@Model.RecursosActuales.Posters</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 bg-light rounded-3 border">
-                                <small class="text-muted d-block">Nuevos Testamentos</small>
-                                <strong class="fs-5 text-dark">@Model.RecursosActuales.NuevosTestamentos</strong>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- TIMELINE DE OBSERVACIONES Y COMENTARIOS -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-light border-0 p-3">
-                <h3 class="h5 font-bold mb-0 text-slate-800"><i class="bi bi-chat-left-text me-2 text-primary"></i>Historial de Observaciones</h3>
-            </div>
-            <div class="card-body p-4">
-                <form action="@Url.Action("AgregarComentario", "Iglesia")" method="post" class="mb-4">
-                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
-                    <div class="mb-2">
-                        <textarea name="comentario" class="form-control" rows="2" placeholder="Escribe una observación o comentario..." required></textarea>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-sm btn-primary font-semibold">
-                            <i class="bi bi-send me-1"></i>Publicar Observación
-                        </button>
-                    </div>
-                </form>
-
-                <div class="timeline">
-                    @if (!Model.Comentarios.Any())
-                    {
-                        <p class="text-muted small text-center my-3">No hay observaciones registradas en este expediente.</p>
+                        if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3)
+                        {
+                            <form action="@Url.Action("ReabrirProceso", "Iglesia")" method="post" class="m-0">
+                                <input type="hidden" name="idParticipacion" value="@part.IdParticipacion" />
+                                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                                <button type="submit" class="btn btn-outline-warning btn-sm font-semibold shadow-sm" onclick="return confirm('¿Seguro que deseas revertir el rechazo y reabrir el proceso al estado anterior?');">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Proceso / Cambiar Decisión
+                                </button>
+                            </form>
+                        }
                     }
                     else
                     {
-                        foreach (var c in Model.Comentarios)
+                        if (part.EtapaActual == 1) // INSCRITA - Requiere Evaluación Inicial
                         {
-                            <div class="p-3 bg-light rounded-3 border mb-2">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="small text-primary">@c.CorreoUsuario</strong>
-                                    <small class="text-muted" style="font-size: 0.75rem;">@(c.FechaCreacion.HasValue ? c.FechaCreacion.Value.ToString("dd/MM/yyyy hh:mm tt") : "")</small>
+                            <p class="small text-slate-600 mb-3">La iglesia está inscrita. Requiere que un Coordinador de Movilización (CMI) o Coordinador de Equipo (CE) realice la **Evaluación Inicial**.</p>
+                            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2)
+                            {
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarEvalInicial">Aprobar Evaluación</button>
+                                    <button class="btn btn-danger font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRechazarEvalInicial">Rechazar Iglesia</button>
                                 </div>
-                                <p class="mb-0 text-dark small">@c.Comentario</p>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning-soft text-warning px-3 py-2"><i class="bi bi-lock me-1"></i>Requiere rol de CMI o CE para evaluar</span>
+                            }
+                        }
+                        else if (part.EtapaActual == 2) // EVALUADA - Avanzar a Visión
+                        {
+                            <p class="small text-slate-600 mb-3">La evaluación inicial ha sido aprobada. El siguiente paso es invitar a la iglesia y registrar los detalles y la asistencia al evento **Presentación de la Visión**.</p>
+                            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2)
+                            {
+                                <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarVision"><i class="bi bi-eye me-2"></i>Registrar Presentación de la Visión</button>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning-soft text-warning px-3 py-2"><i class="bi bi-lock me-1"></i>Requiere rol de CMI o CE para registrar Visión</span>
+                            }
+                        }
+                        else if (part.EtapaActual == 3) // VISIÓN - Evaluar Elegibilidad para Taller
+                        {
+                            <p class="small text-slate-600 mb-3">La iglesia participó en la Presentación de la Visión. Se debe evaluar su **Elegibilidad para recibir el Taller OCC**.</p>
+                            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3) // CD, CE, Admin
+                            {
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarElegibilidad">Aprobar para Taller OCC</button>
+                                    <button class="btn btn-danger font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRechazarElegibilidad">No Aprobar</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning-soft text-warning px-3 py-2"><i class="bi bi-lock me-1"></i>Requiere rol de CD o CE para evaluar elegibilidad de Taller</span>
+                            }
+                        }
+                        else if (part.EtapaActual == 4) // ELEGIBLE TALLER - Registrar Taller OCC
+                        {
+                            <p class="small text-slate-600 mb-3">La iglesia es elegible. Registra la realización y los datos de asistencia generales del **Taller OCC** para finalizar el proceso con éxito.</p>
+                            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
+                            {
+                                <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCompletarTaller"><i class="bi bi-book me-2"></i>Completar y Registrar Taller OCC</button>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning-soft text-warning px-3 py-2"><i class="bi bi-lock me-1"></i>Requiere rol de CD o CE para completar Taller</span>
+                            }
+                        }
+                        else if (part.EtapaActual == 5) // TALLER COMPLETADO
+                        {
+                            <div class="alert alert-success mb-0 py-3 shadow-sm rounded-3">
+                                <h6 class="font-bold mb-1"><i class="bi bi-check-circle-fill me-2"></i>¡Proceso Completado con éxito!</h6>
+                                <p class="small mb-0 mt-1">
+                                    La iglesia asistió al taller <strong>@part.TallerNombre</strong> el <strong>@(part.TallerFecha.HasValue ? part.TallerFecha.Value.ToString("dd/MM/yyyy") : "N/D")</strong> en <strong>@part.TallerLugar</strong>.
+                                    <br />Asistencia: <strong>@part.TallerCantMaestrosAsist de @part.TallerCantMaestrosReg maestros registrados</strong> (Ausentes: @part.TallerCantMaestrosAus). Niños proyectados: @part.TallerCantNinos.
+                                </p>
                             </div>
                         }
                     }
                 </div>
             </div>
+        }
+        else
+        {
+            <div class="alert alert-warning mb-4">
+                <i class="bi bi-exclamation-triangle me-1"></i> Esta iglesia no tiene una participación registrada en la temporada activa actual.
+            </div>
+        }
+
+        <!-- PESTAÑAS SECUNDARIAS DE GESTIÓN (MAESTROS, ORACIÓN, HISTORIAL, COMENTARIOS) -->
+        <ul class="nav nav-tabs border-bottom-0 mb-3" id="tabExpediente" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active font-semibold border-0 rounded-top-4 shadow-sm px-4" id="maestros-tab" data-bs-toggle="tab" data-bs-target="#panel-maestros" type="button" role="tab"><i class="bi bi-people me-1"></i>Maestros (@Model.Maestros.Count)</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2" id="oracion-tab" data-bs-toggle="tab" data-bs-target="#panel-oracion" type="button" role="tab"><i class="bi bi-heart me-1"></i>Intercesores (@Model.CompanerosOracion.Count)</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2" id="historial-tab" data-bs-toggle="tab" data-bs-target="#panel-historial" type="button" role="tab"><i class="bi bi-clock-history me-1"></i>Línea de Tiempo / Historial</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2" id="comentarios-tab" data-bs-toggle="tab" data-bs-target="#panel-comentarios" type="button" role="tab"><i class="bi bi-chat-text me-1"></i>Observaciones (@Model.Comentarios.Count)</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="tabExpedienteContent">
+            <!-- Panel Maestros -->
+            <div class="tab-pane fade show active" id="panel-maestros" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="font-bold text-slate-800 m-0">Maestros de Discipulado Asociados</h6>
+                        <a href="@Url.Action("Index", "Maestros", new { idIglesia = Model.IdIglesia })" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle me-1"></i>Registrar / Gestionar Maestros</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre del Maestro</th>
+                                    <th>Contacto</th>
+                                    <th>Cédula / Identidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!Model.Maestros.Any())
+                                {
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted small">No hay maestros registrados para esta iglesia.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var m in Model.Maestros)
+                                    {
+                                        <tr>
+                                            <td><strong>@m.Nombres @m.Apellidos</strong></td>
+                                            <td>
+                                                <div><i class="bi bi-telephone text-muted me-1"></i>@m.Celular</div>
+                                                <div class="text-xs text-muted"><i class="bi bi-envelope text-muted me-1"></i>@m.Correo</div>
+                                            </td>
+                                            <td><span class="font-monospace">@m.DocumentoIdentidad</span></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Oración -->
+            <div class="tab-pane fade" id="panel-oracion" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="font-bold text-slate-800 m-0">Compañeros de Oración (Intercesores)</h6>
+                        <a href="@Url.Action("Index", "CompanerosOracion")" class="btn btn-sm btn-outline-danger"><i class="bi bi-heart me-1"></i>Gestionar Intercesores</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre Completo</th>
+                                    <th>WhatsApp</th>
+                                    <th>Rango Edad</th>
+                                    <th>Registrado por</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!Model.CompanerosOracion.Any())
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted small">No hay compañeros de oración registrados en esta temporada.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var co in Model.CompanerosOracion)
+                                    {
+                                        <tr>
+                                            <td><strong>@co.NombreCompleto</strong></td>
+                                            <td><i class="bi bi-whatsapp text-success me-1"></i>@co.ContactoWhatsApp</td>
+                                            <td>@(co.EsMayorEdad ? "Mayor de edad" : "Menor de edad")</td>
+                                            <td>@co.CorreoRegistrador</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Historial / Línea de Tiempo -->
+            <div class="tab-pane fade" id="panel-historial" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                    <h6 class="font-bold text-slate-800 mb-3 border-bottom pb-2">Línea de Tiempo del Proceso de la Iglesia</h6>
+                    @if (!Model.Historial.Any())
+                    {
+                        <p class="text-muted small text-center py-4">No hay eventos ni transiciones de estado registradas aún.</p>
+                    }
+                    else
+                    {
+                        <div class="position-relative ps-4 border-start border-2 border-slate-200 mt-2 ms-2">
+                            @foreach (var h in Model.Historial)
+                            {
+                                <div class="position-relative mb-4">
+                                    <!-- Timeline circle -->
+                                    <div class="position-absolute bg-primary rounded-circle border border-white border-2" style="width: 14px; height: 14px; left: -28px; top: 4px;"></div>
+                                    
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                                        <div class="text-xs text-muted">
+                                            <i class="bi bi-clock me-1"></i>@h.FechaHora.ToString("dd/MM/yyyy hh:mm tt")
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(h.NombreTemporada))
+                                        {
+                                            <span class="badge bg-dark text-white text-xxs font-monospace"><i class="bi bi-calendar3 me-1"></i>@h.NombreTemporada</span>
+                                        }
+                                    </div>
+                                    <div class="small mb-1 text-dark">
+                                        <i class="bi bi-person-badge text-primary me-1"></i><strong>@h.NombreCoordinador</strong> 
+                                        <span class="badge bg-info text-dark text-xxs ms-1">@h.PosicionCoordinador</span>
+                                        <span class="badge bg-secondary text-white text-xxs ms-1">@h.EquipoCoordinador</span>
+                                    </div>
+                                    <h6 class="font-bold text-slate-800 mb-1">@h.AccionRealizada</h6>
+                                    @if (!string.IsNullOrEmpty(h.EstadoAnterior) || !string.IsNullOrEmpty(h.EstadoNuevo))
+                                    {
+                                        <div class="text-xs mb-2">
+                                            <span class="badge bg-light text-dark border">@h.EstadoAnterior</span>
+                                            <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                                            <span class="badge bg-success text-white">@h.EstadoNuevo</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(h.Razon))
+                                    {
+                                        <div class="small text-danger mb-1"><i class="bi bi-exclamation-octagon me-1"></i><strong>Razón:</strong> @h.Razon</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(h.Comentario))
+                                    {
+                                        <p class="small text-slate-600 mb-0 italic bg-light p-2 rounded">"@h.Comentario"</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Panel Comentarios -->
+            <div class="tab-pane fade" id="panel-comentarios" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                    <h6 class="font-bold text-slate-800 mb-3 border-bottom pb-2">Observaciones y Comentarios</h6>
+                    
+                    <!-- Write Comment form -->
+                    <form action="@Url.Action("AgregarComentario", "Iglesia")" method="post" class="mb-4">
+                        <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                        <div class="mb-3">
+                            <textarea name="comentario" class="form-control" rows="3" placeholder="Escribe una observación importante..." required></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-sm font-semibold px-3 shadow-sm"><i class="bi bi-chat-left-text me-1"></i>Guardar Observación</button>
+                        </div>
+                    </form>
+
+                    <!-- Comments List -->
+                    <div class="d-flex flex-column gap-3">
+                        @if (!Model.Comentarios.Any())
+                        {
+                            <p class="text-muted small text-center py-3">No hay observaciones registradas aún.</p>
+                        }
+                        else
+                        {
+                            foreach (var c in Model.Comentarios)
+                            {
+                                <div class="p-3 border rounded bg-light mb-2 shadow-sm">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 border-bottom pb-2">
+                                        <div>
+                                            <i class="bi bi-person-badge text-primary me-1"></i><strong>@c.NombreCoordinador</strong> 
+                                            <span class="badge bg-info text-dark text-xxs ms-1">@c.PosicionCoordinador</span>
+                                            <span class="badge bg-secondary text-white text-xxs ms-1">@c.EquipoCoordinador</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (!string.IsNullOrEmpty(c.NombreTemporada))
+                                            {
+                                                <span class="badge bg-dark text-white text-xxs font-monospace"><i class="bi bi-calendar3 me-1"></i>@c.NombreTemporada</span>
+                                            }
+                                            <small class="text-muted"><i class="bi bi-clock me-1"></i>@(c.FechaCreacion.HasValue ? c.FechaCreacion.Value.ToString("dd/MM/yyyy hh:mm tt") : "N/D")</small>
+                                        </div>
+                                    </div>
+                                    <p class="small text-dark mb-0">@c.Comentario</p>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL EVALUAR PARTICIPACIÓN -->
-@if (Model.ParticipacionActual != null && puedeEditar)
+<!-- ============================================================================
+     MODALES PARA TRANSICIONES DE ETAPAS (APROBACIONES/RECHAZOS)
+     ============================================================================ -->
+
+@if (Model.ParticipacionActual != null)
 {
-    <div class="modal fade" id="modalEvaluarParticipacion" tabindex="-1" aria-hidden="true">
+    var p = Model.ParticipacionActual;
+
+    <!-- MODAL 2.A: APROBAR EVALUACIÓN INICIAL -->
+    <div class="modal fade" id="modalAprobarEvalInicial" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="@Url.Action("EvaluarParticipacion", "Iglesia")" method="post">
-                <input type="hidden" name="idParticipacion" value="@Model.ParticipacionActual.IdParticipacion" />
-                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
-
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title font-bold">Evaluar / Cambiar Etapa de la Iglesia</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("EvaluarInicial", "Iglesia")" method="post">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <input type="hidden" name="estado" value="Aprobada" />
+                    
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-check-circle me-2 text-success"></i>Aprobar Evaluación Inicial</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body p-4">
                         <div class="mb-3">
-                            <label class="form-label font-semibold">¿Participará esta temporada?</label>
-                            <select name="participara" id="selectParticipara" class="form-select">
-                                <option value="true" @(Model.ParticipacionActual.Participara ? "selected" : "")>SÍ, Participará</option>
-                                <option value="false" @(!Model.ParticipacionActual.Participara ? "selected" : "")>NO Participará</option>
-                            </select>
+                            <label class="form-label fw-semibold">Seleccionar Evento de Presentación de la Visión <span class="text-danger">*</span></label>
+                            @Html.DropDownList("idEventoVision", (List<SelectListItem>)ViewBag.EventosVision, "-- Seleccionar Evento --", new { @class = "form-select", required = "required" })
                         </div>
-
-                        <div class="mb-3" id="groupJustificacion">
-                            <label class="form-label font-semibold">Justificación / Motivo <span class="text-danger">*</span></label>
-                            <textarea name="justificacionNoParticipacion" id="txtJustificacion" class="form-control" rows="3" placeholder="Explique por qué no participará esta temporada...">@Model.ParticipacionActual.JustificacionNoParticipacion</textarea>
-                        </div>
-
                         <div class="mb-3">
-                            <label class="form-label font-semibold">Estado de Evaluación / Etapa</label>
-                            <select name="estadoEvaluacion" class="form-select">
-                                <option value="Pendiente" @(Model.ParticipacionActual.EstadoEvaluacion == "Pendiente" ? "selected" : "")>Pendiente</option>
-                                <option value="Evaluada" @(Model.ParticipacionActual.EstadoEvaluacion == "Evaluada" ? "selected" : "")>Evaluada</option>
-                                <option value="Aprobada" @(Model.ParticipacionActual.EstadoEvaluacion == "Aprobada" ? "selected" : "")>Aprobada</option>
-                                <option value="NoAprobada" @(Model.ParticipacionActual.EstadoEvaluacion == "NoAprobada" ? "selected" : "")>No Aprobada</option>
-                            </select>
+                            <label class="form-label fw-semibold">Comentarios de Aprobación</label>
+                            <textarea name="comentario" class="form-control" rows="3" placeholder="Comentarios o notas de la evaluación de la iglesia..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        <button type="submit" class="btn btn-success font-semibold">Aprobar e Invitar a Visión</button>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2.B: RECHAZAR EVALUACIÓN INICIAL -->
+    <div class="modal fade" id="modalRechazarEvalInicial" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("EvaluarInicial", "Iglesia")" method="post">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <input type="hidden" name="estado" value="Rechazada" />
+
+                    <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-x-octagon me-2"></i>Rechazar Solicitud de Iglesia</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Motivo del Rechazo (Obligatorio)</label>
+                            <input type="text" name="motivo" class="form-control" placeholder="Ej: No cumple con los requisitos doctrinales/ministeriales" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Comentarios Adicionales</label>
+                            <textarea name="comentario" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger font-semibold">Confirmar Rechazo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: REGISTRAR PRESENTACIÓN DE LA VISIÓN -->
+    <div class="modal fade" id="modalRegistrarVision" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("RegistrarVision", "Iglesia")" method="post">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-eye me-2 text-primary"></i>Registrar Presentación de la Visión</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="invitada" value="true" class="form-check-input" id="chkInvitada" checked />
+                            <label class="form-check-label fw-semibold" for="chkInvitada">¿Fue Invitada al Evento?</label>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Fecha del Evento</label>
+                                <input type="date" name="fecha" class="form-control" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Lugar</label>
+                                <input type="text" name="lugar" class="form-control" placeholder="Ej: Salón A, ERLE SD" />
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="asistio" value="true" class="form-check-input" id="chkAsistio" checked />
+                            <label class="form-check-label fw-semibold" for="chkAsistio">¿Asistió la Iglesia?</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Resultado de la Presentación</label>
+                            <select name="resultado" class="form-select" required>
+                                <option value="">Selecciona...</option>
+                                <option value="Continua">Continúa en el Proceso</option>
+                                <option value="No Continua">No Continúa / Rechazada</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="divEventoTaller" style="display: none;">
+                            <label class="form-label fw-semibold">Seleccionar Evento de Taller OCC <span class="text-danger">*</span></label>
+                            @Html.DropDownList("idEventoTaller", (List<SelectListItem>)ViewBag.EventosTaller, "-- Seleccionar Taller --", new { @class = "form-select", id = "ddlEventoTaller" })
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar Presentación</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            var selResultado = document.querySelector('select[name="resultado"]');
+            var divTaller = document.getElementById('divEventoTaller');
+            var ddlTaller = document.getElementById('ddlEventoTaller');
+            var chkAsistio = document.getElementById('chkAsistio');
+
+            function toggleTaller() {
+                if (selResultado && selResultado.value === "Continua") {
+                    if (divTaller) divTaller.style.display = "block";
+                    if (ddlTaller) ddlTaller.required = true;
+                    if (chkAsistio) {
+                        chkAsistio.checked = true;
+                    }
+                } else {
+                    if (divTaller) divTaller.style.display = "none";
+                    if (ddlTaller) {
+                        ddlTaller.required = false;
+                        ddlTaller.value = "";
+                    }
+                }
+            }
+
+            if (selResultado) {
+                selResultado.addEventListener("change", toggleTaller);
+            }
+        });
+
+        function generarFilasMaestrosElegibilidad(cantidad) {
+            var cont = document.getElementById('contenedorMaestrosElegibilidad');
+            if (!cont) return;
+            var cant = parseInt(cantidad) || 1;
+            if (cant < 1) cant = 1;
+            if (cant > 20) cant = 20;
+
+            var html = '';
+            for (var i = 0; i < cant; i++) {
+                html += `
+                    <div class="card bg-light border p-2 rounded-3 item-maestro-eleg">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold mb-1">Nombres Maestro ${i + 1} <span class="text-danger">*</span></label>
+                                <input type="text" name="maestrosNuevos[${i}].Nombres" class="form-control form-control-sm" required placeholder="Ej: Maestro ${i + 1}" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold mb-1">Apellidos <span class="text-danger">*</span></label>
+                                <input type="text" name="maestrosNuevos[${i}].Apellidos" class="form-control form-control-sm" required placeholder="Ej: Apellido" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold mb-1">Cédula / Identidad</label>
+                                <input type="text" name="maestrosNuevos[${i}].DocumentoIdentidad" class="form-control form-control-sm" placeholder="001-0000000-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold mb-1">Celular</label>
+                                <input type="text" name="maestrosNuevos[${i}].Celular" class="form-control form-control-sm" placeholder="809-555-1234" />
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            cont.innerHTML = html;
+        }
+    </script>
+
+    <!-- MODAL 4.A: APROBAR ELEGIBILIDAD TALLER OCC -->
+    <div class="modal fade" id="modalAprobarElegibilidad" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("EvaluarTallerOCC", "Iglesia")" method="post">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <input type="hidden" name="estado" value="Aprobada para Taller OCC" />
+
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-check-circle me-2 text-success"></i>Aprobar Elegibilidad para Taller OCC</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Evento de Taller OCC al que se asignará <span class="text-danger">*</span></label>
+                            <select name="idEventoTaller" class="form-select" required>
+                                <option value="">-- Seleccione un Taller OCC --</option>
+                                @foreach (var ev in (List<SelectListItem>)ViewBag.EventosTaller)
+                                {
+                                    <option value="@ev.Value">@ev.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Cantidad de Maestros Asistentes Previstos <span class="text-danger">*</span></label>
+                            <input type="number" name="cantidadAsistentes" id="cantMaestrosElegibilidad" class="form-control" min="1" value="@(Model.Maestros.Any() ? Model.Maestros.Count.ToString() : "1")" required placeholder="Ej: 3" onchange="generarFilasMaestrosElegibilidad(this.value)" />
+                        </div>
+
+                        @if (!Model.Maestros.Any())
+                        {
+                            <div class="alert alert-info py-2 small mb-3">
+                                <i class="bi bi-info-circle me-1"></i>Esta iglesia no tiene maestros registrados. Ingresa a continuación los datos de los maestros para crearlos y asignarlos al taller:
+                            </div>
+                            <div id="contenedorMaestrosElegibilidad" class="d-flex flex-column gap-2 mb-3">
+                                <div class="card bg-light border p-2 rounded-3 item-maestro-eleg">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold mb-1">Nombres Maestro 1 <span class="text-danger">*</span></label>
+                                            <input type="text" name="maestrosNuevos[0].Nombres" class="form-control form-control-sm" required placeholder="Ej: Juan" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold mb-1">Apellidos <span class="text-danger">*</span></label>
+                                            <input type="text" name="maestrosNuevos[0].Apellidos" class="form-control form-control-sm" required placeholder="Ej: Pérez" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold mb-1">Cédula / Identidad</label>
+                                            <input type="text" name="maestrosNuevos[0].DocumentoIdentidad" class="form-control form-control-sm" placeholder="001-0000000-0" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold mb-1">Celular</label>
+                                            <input type="text" name="maestrosNuevos[0].Celular" class="form-control form-control-sm" placeholder="809-555-1234" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Comentarios / Observaciones de Elegibilidad</label>
+                            <textarea name="comentario" class="form-control" rows="2" placeholder="Ingresa notas o comentarios de la evaluación..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success font-semibold">Aprobar y Habilitar Taller</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4.B: RECHAZAR ELEGIBILIDAD TALLER OCC -->
+    <div class="modal fade" id="modalRechazarElegibilidad" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("EvaluarTallerOCC", "Iglesia")" method="post">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <input type="hidden" name="estado" value="No Aprobada" />
+
+                    <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-x-octagon me-2"></i>No Aprobar Elegibilidad para Taller</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Motivo de Rechazo de Elegibilidad (Obligatorio)</label>
+                            <input type="text" name="motivo" class="form-control" placeholder="Ej: Falta de compromiso con el discipulado" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Comentarios Adicionales</label>
+                            <textarea name="comentario" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger font-semibold">Confirmar Rechazo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: REGISTRAR Y COMPLETAR TALLER OCC -->
+    <div class="modal fade" id="modalCompletarTaller" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("CompletarTallerOCC", "Iglesia")" method="post">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-book me-2 text-info"></i>Registrar Datos del Taller OCC</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nombre del Taller</label>
+                            <input type="text" name="tallerNombre" class="form-control" placeholder="Ej: Taller OCC - Santo Domingo Norte" required />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Fecha del Taller</label>
+                                <input type="date" name="tallerFecha" class="form-control" required />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Lugar</label>
+                                <input type="text" name="tallerLugar" class="form-control" placeholder="Ej: Iglesia Central" required />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Cantidad de Niños</label>
+                                <input type="number" name="cantNinos" class="form-control" min="0" value="0" required />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Maestros Registrados</label>
+                                <input type="number" name="cantMaestrosReg" class="form-control" min="0" value="0" required />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Maestros Asistentes</label>
+                                <input type="number" name="cantMaestrosAsist" class="form-control" min="0" value="0" required />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Maestros Ausentes</label>
+                                <input type="number" name="cantMaestrosAus" class="form-control" min="0" value="0" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Completar Taller OCC</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 }
 
-<!-- MODAL EDITAR RECURSOS (LOGÍSTICA) -->
-@if (Model.RecursosActuales != null && puedeEditar)
-{
-    <div class="modal fade" id="modalRecursos" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <form action="@Url.Action("DespacharRecursos", "Iglesia")" method="post">
-                <input type="hidden" name="IdParticipacion" value="@Model.RecursosActuales.IdParticipacion" />
-                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+<style>
+    .bg-primary-soft {
+        background-color: rgba(2, 132, 199, 0.15) !important;
+        color: #0284c7 !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.15) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #198754 !important;
+    }
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+        color: #dc3545 !important;
+    }
+</style>
 
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title font-bold">Registrar Despacho de Recursos</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <label class="form-label">Oportunidades Evangelísticas</label>
-                                <input type="number" name="OportunidadesEvangelisticas" class="form-control" value="@Model.RecursosActuales.OportunidadesEvangelisticas" min="0" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Libros Mejor Regalo</label>
-                                <input type="number" name="LibrosMejorRegalo" class="form-control" value="@Model.RecursosActuales.LibrosMejorRegalo" min="0" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Libros Maestros</label>
-                                <input type="number" name="LibrosMaestros" class="form-control" value="@Model.RecursosActuales.LibrosMaestros" min="0" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Libros Alumno</label>
-                                <input type="number" name="LibrosAlumno" class="form-control" value="@Model.RecursosActuales.LibrosAlumno" min="0" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Posters</label>
-                                <input type="number" name="Posters" class="form-control" value="@Model.RecursosActuales.Posters" min="0" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Nuevos Testamentos</label>
-                                <input type="number" name="NuevosTestamentos" class="form-control" value="@Model.RecursosActuales.NuevosTestamentos" min="0" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">Guardar Despacho</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-}
-
-@section scripts {
-<script>
-    $(document).ready(function () {
-        function toggleJustificacion() {
-            var val = $('#selectParticipara').val();
-            if (val === 'false') {
-                $('#groupJustificacion').show();
-                $('#txtJustificacion').prop('required', true);
-            } else {
-                $('#groupJustificacion').hide();
-                $('#txtJustificacion').prop('required', false);
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        // Restaurar pestaña activa anterior
+        var iglesiaId = '@Model.IdIglesia';
+        var storedTabId = localStorage.getItem('activeIglesiaTab_' + iglesiaId);
+        if (storedTabId) {
+            var tabBtn = document.getElementById(storedTabId);
+            if (tabBtn) {
+                var tab = new bootstrap.Tab(tabBtn);
+                tab.show();
             }
         }
 
-        $('#selectParticipara').change(function () {
-            toggleJustificacion();
+        // Guardar pestaña seleccionada
+        var tabElements = document.querySelectorAll('#tabExpediente button[data-bs-toggle="tab"]');
+        tabElements.forEach(function(el) {
+            el.addEventListener('shown.bs.tab', function(e) {
+                localStorage.setItem('activeIglesiaTab_' + iglesiaId, e.target.id);
+            });
         });
-
-        toggleJustificacion();
     });
 </script>
-}
