@@ -1124,6 +1124,12 @@ namespace SOR.Controllers
                         // 5. Registrar Maestros que asistieron
                         foreach (int mId in todosLosMaestrosAsistieronIds)
                         {
+                            string nomComp = null;
+                            string doc = null;
+                            string tel = null;
+                            string mail = null;
+                            bool found = false;
+
                             // Obtener los datos del maestro
                             string sqlGetM = "SELECT Nombres, Apellidos, DocumentoIdentidad, Celular, Correo FROM dbo.Maestros WHERE IdMaestro = @IdM;";
                             using (SqlCommand cmdGetM = new SqlCommand(sqlGetM, cn, tran))
@@ -1133,28 +1139,32 @@ namespace SOR.Controllers
                                 {
                                     if (dr.Read())
                                     {
-                                        string nomComp = $"{dr["Nombres"]} {dr["Apellidos"]}".Trim();
-                                        string doc = dr["DocumentoIdentidad"] != DBNull.Value ? dr["DocumentoIdentidad"].ToString() : "";
-                                        string tel = dr["Celular"] != DBNull.Value ? dr["Celular"].ToString() : "";
-                                        string mail = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "";
-
-                                        // Insertar en EventosAsistentes
-                                        string sqlIns = @"
-                                            INSERT INTO dbo.EventosAsistentes (IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo)
-                                            VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
-                                        using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
-                                        {
-                                            cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                            cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                            cmdIns.Parameters.AddWithValue("@Nombre", nomComp);
-                                            cmdIns.Parameters.AddWithValue("@Doc", string.IsNullOrWhiteSpace(doc) ? (object)DBNull.Value : doc);
-                                            cmdIns.Parameters.AddWithValue("@Tel", string.IsNullOrWhiteSpace(tel) ? (object)DBNull.Value : tel);
-                                            cmdIns.Parameters.AddWithValue("@Correo", string.IsNullOrWhiteSpace(mail) ? (object)DBNull.Value : mail);
-                                            cmdIns.ExecuteNonQuery();
-                                        }
-                                        asistieronCount++;
+                                        nomComp = $"{dr["Nombres"]} {dr["Apellidos"]}".Trim();
+                                        doc = dr["DocumentoIdentidad"] != DBNull.Value ? dr["DocumentoIdentidad"].ToString() : "";
+                                        tel = dr["Celular"] != DBNull.Value ? dr["Celular"].ToString() : "";
+                                        mail = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "";
+                                        found = true;
                                     }
                                 }
+                            }
+
+                            if (found)
+                            {
+                                // Insertar en EventosAsistentes
+                                string sqlIns = @"
+                                    INSERT INTO dbo.EventosAsistentes (IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo)
+                                    VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
+                                using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
+                                {
+                                    cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
+                                    cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                    cmdIns.Parameters.AddWithValue("@Nombre", nomComp);
+                                    cmdIns.Parameters.AddWithValue("@Doc", string.IsNullOrWhiteSpace(doc) ? (object)DBNull.Value : doc);
+                                    cmdIns.Parameters.AddWithValue("@Tel", string.IsNullOrWhiteSpace(tel) ? (object)DBNull.Value : tel);
+                                    cmdIns.Parameters.AddWithValue("@Correo", string.IsNullOrWhiteSpace(mail) ? (object)DBNull.Value : mail);
+                                    cmdIns.ExecuteNonQuery();
+                                }
+                                asistieronCount++;
                             }
                         }
 
