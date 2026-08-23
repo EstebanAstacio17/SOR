@@ -171,24 +171,7 @@
                                                         <button type="button" class="btn btn-sm btn-outline-info font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAsistentes_@ig.IdParticipacion">
                                                             <i class="bi bi-people me-1"></i>Asistentes (@ig.AsistentesDetalle.Count)
                                                         </button>
-                                                        @if (puedeEditar)
-                                                        {
-                                                            <form action="@Url.Action("RegistrarAsistenciaIglesia", "Eventos")" method="post" class="m-0">
-                                                                <input type="hidden" name="idEvento" value="@evento.IdEvento" />
-                                                                <input type="hidden" name="idParticipacion" value="@ig.IdParticipacion" />
-                                                                <input type="hidden" name="asistio" value="@(ig.Asistio ? "false" : "true")" />
-                                                                <button type="submit" class="btn btn-sm @(ig.Asistio ? "btn-outline-danger" : "btn-primary") font-semibold">
-                                                                    @if (ig.Asistio)
-                                                                    {
-                                                                        <span><i class="bi bi-x-circle me-1"></i>Marcar Ausente</span>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <span><i class="bi bi-check-circle me-1"></i>Marcar Asistente</span>
-                                                                    }
-                                                                </button>
-                                                            </form>
-                                                        }
+
                                                     </div>
 
                                                     <!-- MODAL GESTIONAR ASISTENTES DE LA IGLESIA -->

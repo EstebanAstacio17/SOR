@@ -365,9 +365,6 @@
                             <button type="button" class="btn btn-sm btn-primary shadow-sm font-semibold" data-bs-toggle="modal" data-bs-target="#modalRegistrarMaestroFicha">
                                 <i class="bi bi-plus-circle me-1"></i>Registrar Maestro
                             </button>
-                            <a href="@Url.Action("Index", "Maestros", new { idIglesia = Model.IdIglesia })" class="btn btn-sm btn-outline-secondary font-semibold">
-                                <i class="bi bi-gear me-1"></i>Gestionar Maestros
-                            </a>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -933,6 +930,7 @@
             </div>
         </div>
     </div>
+}
 
     <!-- MODAL REGISTRAR MAESTRO DESDE FICHA -->
     <div class="modal fade" id="modalRegistrarMaestroFicha" tabindex="-1" aria-hidden="true">
@@ -975,7 +973,6 @@
             </div>
         </div>
     </div>
-}
 
 <style>
     .badge.bg-primary-soft {
