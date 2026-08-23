@@ -397,8 +397,8 @@ namespace SOR.Controllers
                         bool allowed = PuedeEditarEquipo(u, idEquipo);
                         return Json(new { 
                             success = true, 
-                            allowed = allowed, 
-                            nombreEquipo = nombreEquipo 
+                            allowed, 
+                            nombreEquipo 
                         }, JsonRequestBehavior.AllowGet);
                     }
                 }
@@ -450,6 +450,182 @@ namespace SOR.Controllers
                 cn.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
             }
+        }
+
+        [HttpPost]
+        public ActionResult RemoverMaestro(int idMaestro, int idIglesia, string comentario)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!PuedeEditarIglesiaPorId(u, idIglesia))
+            {
+                TempData["MensajeError"] = "No tiene permiso para remover maestros de esta iglesia.";
+                return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    // 1. Obtener información básica del maestro
+                    string nombres = "";
+                    string apellidos = "";
+                    string documentoIdentidad = "";
+                    string sqlDoc = "SELECT Nombres, Apellidos, DocumentoIdentidad FROM dbo.Maestros WHERE IdMaestro = @IdMaestro;";
+                    using (SqlCommand cmdDoc = new SqlCommand(sqlDoc, cn))
+                    {
+                        cmdDoc.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                        using (SqlDataReader drDoc = cmdDoc.ExecuteReader())
+                        {
+                            if (drDoc.Read())
+                            {
+                                nombres = drDoc["Nombres"].ToString();
+                                apellidos = drDoc["Apellidos"].ToString();
+                                documentoIdentidad = drDoc["DocumentoIdentidad"] != DBNull.Value ? drDoc["DocumentoIdentidad"].ToString() : "";
+                            }
+                        }
+                    }
+
+                    // 2. Obtener participación activa de la iglesia y si ya participó en Taller OCC
+                    int idParticipacion = 0;
+                    bool tallerParticipo = false;
+                    string sqlPart = @"
+                        SELECT TOP 1 IdParticipacion, TallerParticipo 
+                        FROM dbo.ParticipacionesIglesia 
+                        WHERE IdIglesia = @IdIglesia 
+                          AND IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC);";
+                    using (SqlCommand cmdPart = new SqlCommand(sqlPart, cn))
+                    {
+                        cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                        using (SqlDataReader drPart = cmdPart.ExecuteReader())
+                        {
+                            if (drPart.Read())
+                            {
+                                idParticipacion = Convert.ToInt32(drPart["IdParticipacion"]);
+                                tallerParticipo = Convert.ToBoolean(drPart["TallerParticipo"]);
+                            }
+                        }
+                    }
+
+                    // 3. Evaluar asistencia por 3 condiciones
+                    int asistencia = 0;
+
+                    // Condición C: Si la iglesia ya tiene confirmada la participación del Taller OCC
+                    if (tallerParticipo)
+                    {
+                        asistencia = 1;
+                    }
+                    else
+                    {
+                        // Condición A: Revisar AsistenciaMaestro (por IdMaestro)
+                        string sqlCheckA = @"
+                            SELECT COUNT(1)
+                            FROM dbo.AsistenciaMaestro am
+                            INNER JOIN dbo.Eventos e ON am.IdEvento = e.IdEvento
+                            INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada
+                            WHERE am.IdMaestro = @IdMaestro
+                              AND am.Asistio = 1
+                              AND e.TipoEvento = 'Taller'
+                              AND t.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC);";
+                        using (SqlCommand cmdCheckA = new SqlCommand(sqlCheckA, cn))
+                        {
+                            cmdCheckA.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                            asistencia += Convert.ToInt32(cmdCheckA.ExecuteScalar());
+                        }
+
+                        // Condición B: Revisar EventosAsistentes (por Cédula o Coincidencia de Nombre en la participación)
+                        if (idParticipacion > 0)
+                        {
+                            string sqlCheckB = @"
+                                SELECT COUNT(1)
+                                FROM dbo.EventosAsistentes ea
+                                INNER JOIN dbo.Eventos e ON ea.IdEvento = e.IdEvento
+                                INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada
+                                WHERE ea.IdParticipacion = @IdPart
+                                  AND e.TipoEvento = 'Taller'
+                                  AND t.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC)
+                                  AND (
+                                    (REPLACE(ea.Identificacion, '-', '') = REPLACE(@DocIdentidad, '-', '') AND @DocIdentidad <> '')
+                                    OR (ea.NombreCompleto LIKE '%' + @Nombres + '%' AND @Nombres <> '')
+                                    OR (ea.NombreCompleto LIKE '%' + @Apellidos + '%' AND @Apellidos <> '')
+                                  );";
+                            using (SqlCommand cmdCheckB = new SqlCommand(sqlCheckB, cn))
+                            {
+                                cmdCheckB.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmdCheckB.Parameters.AddWithValue("@DocIdentidad", documentoIdentidad);
+                                cmdCheckB.Parameters.AddWithValue("@Nombres", string.IsNullOrWhiteSpace(nombres) ? (object)DBNull.Value : nombres.Trim());
+                                cmdCheckB.Parameters.AddWithValue("@Apellidos", string.IsNullOrWhiteSpace(apellidos) ? (object)DBNull.Value : apellidos.Trim());
+                                asistencia += Convert.ToInt32(cmdCheckB.ExecuteScalar());
+                            }
+                        }
+                    }
+
+                    string accionRealizada = "";
+                    string mensajeAccion = "";
+
+                    if (asistencia > 0)
+                    {
+                        // Inactivate instead of delete
+                        string sqlUpdate = "UPDATE dbo.Maestros SET Activo = 0 WHERE IdMaestro = @IdMaestro;";
+                        using (SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn))
+                        {
+                            cmdUp.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                            cmdUp.ExecuteNonQuery();
+                        }
+                        accionRealizada = $"Maestro Inhabilitado: {nombres} {apellidos}";
+                        mensajeAccion = "El maestro ha sido inhabilitado correctamente ya que posee registro de asistencia en la temporada actual.";
+                        TempData["MensajeExito"] = mensajeAccion;
+                    }
+                    else
+                    {
+                        // Hard delete
+                        string sqlDel = "DELETE FROM dbo.Maestros WHERE IdMaestro = @IdMaestro;";
+                        using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn))
+                        {
+                            cmdDel.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                            cmdDel.ExecuteNonQuery();
+                        }
+                        accionRealizada = $"Maestro Eliminado: {nombres} {apellidos}";
+                        mensajeAccion = "Maestro eliminado correctamente de la base de datos.";
+                        TempData["MensajeExito"] = mensajeAccion;
+                    }
+
+                    // 4. Registrar Comentario si existe
+                    if (!string.IsNullOrWhiteSpace(comentario))
+                    {
+                        string cmtFinal = $"{accionRealizada}. Razón: {comentario}";
+                        string sqlCmt = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIg, @IdUsu, @Cmt);";
+                        using (SqlCommand cmdCmt = new SqlCommand(sqlCmt, cn))
+                        {
+                            cmdCmt.Parameters.AddWithValue("@IdIg", idIglesia);
+                            cmdCmt.Parameters.AddWithValue("@IdUsu", u.IdUsuario);
+                            cmdCmt.Parameters.AddWithValue("@Cmt", cmtFinal);
+                            cmdCmt.ExecuteNonQuery();
+                        }
+                    }
+
+                    // 5. Registrar Historial si existe Participacion
+                    if (idParticipacion > 0)
+                    {
+                        string histMsg = $"{accionRealizada}. {comentario}";
+                        string sqlHist = "INSERT INTO dbo.HistorialParticipacion (IdParticipacion, AccionRealizada, IdUsuarioResponsable, Comentario) VALUES (@IdPart, @Acc, @IdUsu, @Cmt);";
+                        using (SqlCommand cmdHist = new SqlCommand(sqlHist, cn))
+                        {
+                            cmdHist.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdHist.Parameters.AddWithValue("@Acc", accionRealizada);
+                            cmdHist.Parameters.AddWithValue("@IdUsu", u.IdUsuario);
+                            cmdHist.Parameters.AddWithValue("@Cmt", histMsg);
+                            cmdHist.ExecuteNonQuery();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al remover maestro: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
         }
 
         private void ObtenerEquiposHijosRecursivo(int idEquipoPadre, HashSet<int> set)

@@ -280,7 +280,7 @@ namespace SOR.Services
         public void AvanzarEtapa2(int idParticipacion, string estado, string motivo, string comentario, int idUsuario)
         {
             if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("El estado de la evaluación es requerido.");
-            if (estado == "Rechazada" && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para el rechazo.");
+            if ((estado == "Rechazada" || estado == "Detenido") && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para el rechazo o detención.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -318,7 +318,7 @@ namespace SOR.Services
                         }
 
                         int etapaNueva = (estado == "Aprobada") ? 2 : 1;
-                        string estadoEvaluacion = (estado == "Aprobada") ? "Aprobado" : "Rechazado";
+                        string estadoEvaluacion = (estado == "Aprobada") ? "Aprobado" : ((estado == "Detenido") ? "Detenido" : "Rechazado");
 
                         string sql = @"
                             UPDATE dbo.ParticipacionesIglesia SET
@@ -346,7 +346,7 @@ namespace SOR.Services
                         // Registrar Log Historial
                         string logCom = (estado == "Aprobada") 
                             ? "Evaluación inicial APROBADA. Avanza a Evaluada Inicial (Etapa 2)." 
-                            : $"Evaluación inicial RECHAZADA. Motivo: {motivo}.";
+                            : $"Evaluación inicial {estado.ToUpper()}. Motivo: {motivo}.";
 
                         _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Evaluación Inicial", "Inscrita (Etapa 1)", 
                             (estado == "Aprobada") ? "Evaluada (Etapa 2)" : "Rechazado (Etapa 1)", idUsuario, logCom, motivo);

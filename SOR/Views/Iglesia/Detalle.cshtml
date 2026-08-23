@@ -198,10 +198,10 @@
                 <div class="bg-light p-4 rounded-4 mt-4 border border-slate-200">
                     <h6 class="font-bold text-slate-800 mb-3"><i class="bi bi-sliders me-2 text-slate-600"></i>Panel de Control de la Etapa @part.EtapaActual</h6>
 
-                    @if (part.EstadoEvaluacion == "Rechazado")
+                    @if (part.EstadoEvaluacion == "Rechazado" || part.EstadoEvaluacion == "Detenido")
                     {
-                        <div class="alert alert-danger mb-3 py-3 shadow-sm rounded-3">
-                            <h6 class="font-bold mb-1"><i class="bi bi-x-octagon-fill me-2"></i>El proceso de participación ha sido RECHAZADO / CANCELADO</h6>
+                        <div class="alert @(part.EstadoEvaluacion == "Detenido" ? "alert-warning" : "alert-danger") mb-3 py-3 shadow-sm rounded-3">
+                            <h6 class="font-bold mb-1"><i class="bi @(part.EstadoEvaluacion == "Detenido" ? "bi-pause-circle-fill" : "bi-x-octagon-fill") me-2"></i>El proceso de participación ha sido @(part.EstadoEvaluacion == "Detenido" ? "DETENIDO" : "RECHAZADO / CANCELADO")</h6>
                             <p class="small mb-0 mt-1">
                                 <strong>Razón o Justificación:</strong> @(string.IsNullOrEmpty(part.EvalInicialMotivo) ? (string.IsNullOrEmpty(part.EvalTallerMotivo) ? "No especificado" : part.EvalTallerMotivo) : part.EvalInicialMotivo)
                             </p>
@@ -211,7 +211,7 @@
                             <form action="@Url.Action("ReabrirProceso", "Iglesia")" method="post" class="m-0">
                                 <input type="hidden" name="idParticipacion" value="@part.IdParticipacion" />
                                 <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
-                                <button type="submit" class="btn btn-outline-warning btn-sm font-semibold shadow-sm" onclick="return confirm('¿Seguro que deseas revertir el rechazo y reabrir el proceso al estado anterior?');">
+                                <button type="submit" class="btn btn-outline-warning btn-sm font-semibold shadow-sm" onclick="return confirm('¿Seguro que deseas revertir el estado y reabrir el proceso?');">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Proceso / Cambiar Decisión
                                 </button>
                             </form>
@@ -226,6 +226,7 @@
                             {
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-success font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarEvalInicial">Aprobar Evaluación</button>
+                                    <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoEvalInicial">Detener Proceso</button>
                                     <button class="btn btn-danger font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRechazarEvalInicial">Rechazar Iglesia</button>
                                 </div>
                             }
@@ -362,9 +363,12 @@
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h6 class="font-bold text-slate-800 m-0">Maestros de Discipulado Asociados</h6>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-primary shadow-sm font-semibold" data-bs-toggle="modal" data-bs-target="#modalRegistrarMaestroFicha">
-                                <i class="bi bi-plus-circle me-1"></i>Registrar Maestro
-                            </button>
+                            @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary shadow-sm font-semibold" data-bs-toggle="modal" data-bs-target="#modalRegistrarMaestroFicha">
+                                    <i class="bi bi-plus-circle me-1"></i>Registrar Maestro
+                                </button>
+                            }
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -374,26 +378,45 @@
                                     <th>Nombre del Maestro</th>
                                     <th>Contacto</th>
                                     <th>Cédula / Identidad</th>
+                                    @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
+                                    {
+                                        <th class="text-end">Acciones</th>
+                                    }
                                 </tr>
                             </thead>
                             <tbody>
                                 @if (!Model.Maestros.Any())
                                 {
                                     <tr>
-                                        <td colspan="3" class="text-center py-4 text-muted small">No hay maestros registrados para esta iglesia.</td>
+                                        <td colspan="4" class="text-center py-4 text-muted small">No hay maestros registrados para esta iglesia.</td>
                                     </tr>
                                 }
                                 else
                                 {
                                     foreach (var m in Model.Maestros)
                                     {
-                                        <tr>
-                                            <td><strong>@m.Nombres @m.Apellidos</strong></td>
+                                        <tr class="@(m.Activo ? "" : "opacity-75")">
+                                            <td>
+                                                <strong>@m.Nombres @m.Apellidos</strong>
+                                                @if (!m.Activo)
+                                                {
+                                                    <span class="badge bg-danger ms-1" style="font-size: 0.65em;"><i class="bi bi-x-circle me-1"></i>Inhabilitado</span>
+                                                }
+                                            </td>
                                             <td>
                                                 <div><i class="bi bi-telephone text-muted me-1"></i>@m.Celular</div>
                                                 <div class="text-xs text-muted"><i class="bi bi-envelope text-muted me-1"></i>@m.Correo</div>
                                             </td>
                                             <td><span class="font-monospace">@m.DocumentoIdentidad</span></td>
+                                            @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
+                                            {
+                                                <td class="text-end">
+                                                    @if (m.Activo)
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Quitar Maestro" onclick="abrirModalRemoverMaestro(@m.IdMaestro, '@m.Nombres @m.Apellidos')"><i class="bi bi-trash"></i></button>
+                                                    }
+                                                </td>
+                                            }
                                         </tr>
                                     }
                                 }
@@ -582,6 +605,39 @@
                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-success font-semibold">Aprobar Evaluación</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2.A.1: DETENER PROCESO EVALUACIÓN INICIAL -->
+    <div class="modal fade" id="modalDetenerProcesoEvalInicial" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("EvaluarInicial", "Iglesia")" method="post" class="needs-validation" novalidate onsubmit="if(!this.checkValidity()){this.classList.add('was-validated'); return false;}">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <input type="hidden" name="estado" value="Detenido" />
+                    
+                    <div class="modal-header bg-warning text-dark rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-pause-circle me-2"></i>Detener Proceso de Evaluación</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Motivo o Razón (Obligatorio)</label>
+                            <input type="text" name="motivo" class="form-control" placeholder="Ej: Falta de documentación, información en validación..." required />
+                            <div class="invalid-feedback">Por favor, escriba el motivo para detener el proceso.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Comentarios Adicionales (Opcional)</label>
+                            <textarea name="comentario" class="form-control" rows="3" placeholder="Notas sobre por qué se detiene el proceso..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning font-semibold text-dark">Confirmar Detención</button>
                     </div>
                 </form>
             </div>
@@ -975,6 +1031,46 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL REMOVER MAESTRO -->
+    <div class="modal fade" id="modalRemoverMaestro" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("RemoverMaestro", "Maestros")" method="post">
+                    <input type="hidden" name="idMaestro" id="modalRemoverIdMaestro" value="" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-exclamation-triangle me-2"></i>Remover o Inhabilitar Maestro</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p>Estás a punto de eliminar o inhabilitar al maestro <strong id="modalRemoverNombreMaestro"></strong> de esta iglesia.</p>
+                        <p class="small text-muted mb-3">
+                            <em>Nota: Si el maestro ya está registrado como participante en algún taller OCC de la temporada, no se eliminará físicamente sino que se inhabilitará.</em>
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Razón o Comentario <span class="text-danger">*</span></label>
+                            <textarea name="comentario" class="form-control" rows="3" required placeholder="Explica la razón por la que se remueve o inhabilita a este maestro..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger font-semibold"><i class="bi bi-trash me-1"></i>Confirmar Acción</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirModalRemoverMaestro(idMaestro, nombreMaestro) {
+            document.getElementById('modalRemoverIdMaestro').value = idMaestro;
+            document.getElementById('modalRemoverNombreMaestro').textContent = nombreMaestro;
+            var modal = new bootstrap.Modal(document.getElementById('modalRemoverMaestro'));
+            modal.show();
+        }
+    </script>
 
 <style>
     .badge.bg-primary-soft {

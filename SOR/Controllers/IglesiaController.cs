@@ -197,7 +197,7 @@ namespace SOR.Controllers
                 return HttpNotFound();
             }
 
-            // Cargar eventos de tipo Visión y Taller para la temporada activa
+            // Cargar eventos de tipo Visión y Taller para la temporada activa filtrados por equipo
             List<SelectListItem> eventosVision = new List<SelectListItem>();
             List<SelectListItem> eventosTaller = new List<SelectListItem>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -206,10 +206,23 @@ namespace SOR.Controllers
                     SELECT e.IdEvento, e.NombreEvento, e.Fecha, e.Lugar, e.TipoEvento
                     FROM dbo.Eventos e 
                     INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada 
+                    LEFT JOIN dbo.PerfilesCoordinador pc ON e.IdUsuarioCreacion = pc.IdUsuario
                     WHERE e.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC)
-                      AND e.TipoEvento IN ('Vision', 'Taller')
-                    ORDER BY e.Fecha DESC;";
+                      AND e.TipoEvento IN ('Vision', 'Taller')";
+
+                if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue)
+                {
+                    sql += " AND pc.IdEquipo = @IdEquipo";
+                }
+
+                sql += " ORDER BY e.Fecha DESC;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
+                
+                if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue)
+                {
+                    cmd.Parameters.AddWithValue("@IdEquipo", u.IdEquipo.Value);
+                }
+
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -221,8 +234,13 @@ namespace SOR.Controllers
                             Text = $"{dr["NombreEvento"]} - {Convert.ToDateTime(dr["Fecha"]):dd/MM/yyyy} ({dr["Lugar"]})"
                         };
                         string tipo = dr["TipoEvento"].ToString();
-                        if (tipo == "Vision") eventosVision.Add(item);
-                        else if (tipo == "Taller") eventosTaller.Add(item);
+                        
+                        // CMI (2) ve Visión, CD (3) ve Taller, CE (1) / Admin (Rol 1,2) ve ambos
+                        bool esCMI = (u.IdPosicion == 2);
+                        bool esCD = (u.IdPosicion == 3);
+                        
+                        if (tipo == "Vision" && !esCD) eventosVision.Add(item);
+                        else if (tipo == "Taller" && !esCMI) eventosTaller.Add(item);
                     }
                 }
             }
@@ -253,6 +271,12 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.AvanzarEtapa2(idParticipacion, estado, motivo, comentario, u.IdUsuario);
+                
+                if (!string.IsNullOrWhiteSpace(comentario))
+                {
+                    _iglesiaService.AgregarComentario(idIglesia, u.IdUsuario, comentario);
+                }
+
                 TempData["MensajeExito"] = "Evaluación inicial procesada correctamente.";
             }
             catch (Exception ex)
@@ -521,6 +545,12 @@ namespace SOR.Controllers
         public ActionResult ImportarMasivo(HttpPostedFileBase archivoExcel, int? idTemporadaImportar)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2)
+            {
+                TempData["MensajeError"] = "Tu rol no tiene permisos para realizar importaciones masivas de iglesias.";
+                return RedirectToAction("Index");
+            }
+
             if (archivoExcel == null || archivoExcel.ContentLength <= 0)
             {
                 TempData["MensajeError"] = "Por favor selecciona un archivo válido.";

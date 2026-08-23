@@ -260,7 +260,7 @@ namespace SOR.Repositories
                 }
 
                 // 2.2 Cargar Maestros independientes de la Iglesia
-                string sqlMaestros = "SELECT * FROM dbo.Maestros WHERE IdIglesia = @Id AND Activo = 1;";
+                string sqlMaestros = "SELECT * FROM dbo.Maestros WHERE IdIglesia = @Id;";
                 using (SqlCommand cmdM = new SqlCommand(sqlMaestros, cn))
                 {
                     cmdM.Parameters.AddWithValue("@Id", idIglesia);
