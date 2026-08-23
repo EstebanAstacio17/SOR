@@ -7,6 +7,7 @@
     var uEv = (SOR.Models.Usuario)ViewBag.UsuarioActual;
     var equiposPermitidosEv = (HashSet<int>)ViewBag.EquiposPermitidos ?? new HashSet<int>();
     bool esAdminEv = uEv != null && (uEv.IdRolSeguridad == 1 || uEv.IdRolSeguridad == 2);
+    var integrantesEquipo = (List<SelectListItem>)ViewBag.ListaIntegrantesEquipo ?? new List<SelectListItem>();
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
@@ -175,7 +176,7 @@
                                                             </div>
                                                             <div class="col-md-6 mb-3">
                                                                 <label class="form-label fw-semibold">Hora</label>
-                                                                <input type="text" name="Hora" class="form-control" value="@item.Hora" placeholder="Ej: 10:00 AM" />
+                                                                <input type="time" name="Hora" class="form-control" value="@item.Hora" />
                                                             </div>
                                                         </div>
                                                         <div class="row">
@@ -190,7 +191,20 @@
                                                         </div>
                                                         <div class="mb-3">
                                                             <label class="form-label fw-semibold">Responsable</label>
-                                                            <input type="text" name="Responsable" class="form-control" value="@item.Responsable" placeholder="Nombre del facilitador o encargado" />
+                                                            @if (integrantesEquipo.Any())
+                                                            {
+                                                                <select name="Responsable" class="form-select" required>
+                                                                    <option value="">-- Seleccionar Integrante del Equipo --</option>
+                                                                    @foreach (var member in integrantesEquipo)
+                                                                    {
+                                                                        <option value="@member.Value" @(member.Value == item.Responsable ? "selected" : "")>@member.Text</option>
+                                                                    }
+                                                                </select>
+                                                            }
+                                                            else
+                                                            {
+                                                                <input type="text" name="Responsable" class="form-control" value="@item.Responsable" placeholder="Nombre del facilitador o encargado" required />
+                                                            }
                                                         </div>
                                                     </div>
                                                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
@@ -268,8 +282,8 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Hora del Evento</label>
-                            <input type="text" name="Hora" class="form-control" placeholder="Ej: 10:00 AM o 14:00" required />
+                            <label class="form-label fw-semibold">Hora del Evento (HH:mm)</label>
+                            <input type="time" name="Hora" class="form-control" required />
                         </div>
                     </div>
                     <div class="row">
@@ -278,8 +292,21 @@
                             <input type="number" name="CantidadAsistentes" class="form-control" min="0" value="0" required />
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Responsable del Evento</label>
-                            <input type="text" name="Responsable" class="form-control" placeholder="Ej: Pedro Martínez" required />
+                            <label class="form-label fw-semibold">Responsable del Evento (Mismo Equipo)</label>
+                            @if (integrantesEquipo.Any())
+                            {
+                                <select name="Responsable" class="form-select" required>
+                                    <option value="">-- Seleccionar Integrante del Equipo --</option>
+                                    @foreach (var member in integrantesEquipo)
+                                    {
+                                        <option value="@member.Value">@member.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" name="Responsable" class="form-control" placeholder="Nombre del responsable del equipo" required />
+                            }
                         </div>
                     </div>
                 </div>

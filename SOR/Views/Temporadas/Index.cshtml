@@ -32,6 +32,34 @@
     </div>
 }
 
+<!-- CONFIGURACIÓN DE PARÁMETROS DE TEMPORADA -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+    <div class="card-header text-white rounded-top-4 py-3" style="background-color: #0f172a !important;">
+        <h5 class="card-title mb-0 font-bold"><i class="bi bi-sliders me-2 text-info"></i>Reglas de Antigüedad de Participación de Iglesias</h5>
+    </div>
+    <div class="card-body p-4">
+        <form action="@Url.Action("GuardarConfiguracion", "Temporadas")" method="post" class="row align-items-end g-3">
+            <div class="col-md-6 col-lg-5">
+                <label class="form-label font-semibold text-slate-800">
+                    <i class="bi bi-clock-history text-primary me-1"></i>Cantidad mínima de temporadas previas para reparticipar:
+                </label>
+                <div class="input-group">
+                    <input type="number" name="minAniosAntiguedad" class="form-control fw-bold text-primary" value="@(ViewBag.MinAniosAntiguedad ?? 3)" min="1" max="10" required />
+                    <span class="input-group-text bg-light text-slate-600 font-semibold">Temporadas</span>
+                </div>
+                <small class="text-muted text-xs mt-1 d-block">
+                    Ejemplo: Si está configurado en <strong>3 temporadas</strong>, una iglesia inscrita en 2025-2026 debe tener antigüedad mínima en la temporada 2023-2024 para calificar.
+                </small>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <button type="submit" class="btn btn-dark font-semibold px-3 shadow-sm">
+                    <i class="bi bi-check2-square me-1"></i>Guardar Parámetro
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
     <div class="card-body p-0">
         <div class="table-responsive">

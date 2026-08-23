@@ -94,7 +94,7 @@
 
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-        <h2 class="h3 font-bold mb-1 text-slate-800"><i class="bi bi-people-fill text-primary me-2"></i>Gestión de Usuarios, Jerarquía y Permisos</h2>
+        <h2 class="h3 font-bold mb-1 text-slate-800"><i class="bi bi-people-fill text-primary me-2"></i>Gestión de Usuarios y Permisos</h2>
         <p class="text-muted mb-0">Revisa expedientes, aprueba solicitudes, administra estados y asigna roles/posiciones en los equipos OCC RD.</p>
     </div>
 </div>
@@ -116,9 +116,19 @@
 }
 
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-bottom p-3">
+        <div class="row align-items-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscarUsuarioInput" class="form-control bg-light border-start-0" placeholder="Buscar por correo, nombre, equipo o rol..." onkeyup="filtrarTablaUsuarios()">
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-premium align-middle mb-0">
+            <table class="table table-hover table-premium align-middle mb-0" id="tablaUsuarios">
                 <thead>
                     <tr>
                         <th class="ps-4 text-nowrap-th">Usuario / Correo</th>
@@ -143,7 +153,7 @@
                     {
                         foreach (var u in Model)
                         {
-                            <tr>
+                            <tr class="fila-usuario">
                                 <td class="ps-4">
                                     <div class="fw-bold text-slate-800">@u.Correo</div>
                                     <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>Registrado: @(u.FechaRegistro.HasValue ? u.FechaRegistro.Value.ToString("dd/MM/yyyy") : "-")</small>
@@ -432,3 +442,27 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function filtrarTablaUsuarios() {
+            var input = document.getElementById("buscarUsuarioInput");
+            var filter = input.value.toLowerCase().trim();
+            var filas = document.querySelectorAll("#tablaUsuarios tbody tr.fila-usuario");
+
+            filas.forEach(function (fila) {
+                var c1 = fila.cells[0] ? fila.cells[0].innerText.toLowerCase() : "";
+                var c2 = fila.cells[1] ? fila.cells[1].innerText.toLowerCase() : "";
+                var c3 = fila.cells[2] ? fila.cells[2].innerText.toLowerCase() : "";
+                var c4 = fila.cells[3] ? fila.cells[3].innerText.toLowerCase() : "";
+                var c5 = fila.cells[4] ? fila.cells[4].innerText.toLowerCase() : "";
+
+                if (c1.includes(filter) || c2.includes(filter) || c3.includes(filter) || c4.includes(filter) || c5.includes(filter)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        }
+    </script>
+}

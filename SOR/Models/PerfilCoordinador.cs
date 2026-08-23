@@ -23,7 +23,10 @@ namespace SOR.Models
         public string Talla { get; set; } // Talla de camisa / ropa
         public string NumeroDocumento { get; set; } // Cédula
         public string DocumentoAdjuntoRuta { get; set; }
+        public string Sexo { get; set; } // Varón, Hembra, Otro
+        public string EstadoCivil { get; set; } // Soltero, Casado, Divorciado, Viudo, Unión Libre, Otro
         public string NumeroPasaporte { get; set; }
+        public bool NoPoseePasaporte { get; set; }
         public string PasaporteAdjuntoRuta { get; set; }
         public string TelefonoFijo { get; set; }
         public string TelefonoCelularWhatsApp { get; set; }

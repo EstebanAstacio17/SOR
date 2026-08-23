@@ -157,12 +157,13 @@ namespace SOR.Controllers
                         UPDATE dbo.PerfilesCoordinador SET
                             PrimerNombre = @PrimerNombre, OtrosNombres = @OtrosNombres,
                             PrimerApellido = @PrimerApellido, OtrosApellidos = @OtrosApellidos,
-                            FechaNacimiento = @FechaNacimiento, Calle = @Calle, Numero = @Numero,
+                            FechaNacimiento = @FechaNacimiento, Sexo = @Sexo, EstadoCivil = @EstadoCivil,
+                            Calle = @Calle, Numero = @Numero,
                             Sector = @Sector, Ciudad = @Ciudad, Provincia = @Provincia,
                             Pais = @Pais, Nacionalidad = @Nacionalidad, Talla = @Talla,
                             NumeroDocumento = @NumeroDocumento, 
                             DocumentoAdjuntoRuta = ISNULL(@DocumentoAdjuntoRuta, DocumentoAdjuntoRuta),
-                            NumeroPasaporte = @NumeroPasaporte, 
+                            NumeroPasaporte = @NumeroPasaporte, NoPoseePasaporte = @NoPoseePasaporte,
                             PasaporteAdjuntoRuta = ISNULL(@PasaporteAdjuntoRuta, PasaporteAdjuntoRuta),
                             TelefonoFijo = @TelefonoFijo, TelefonoCelularWhatsApp = @TelefonoCelularWhatsApp,
                             Correo = @Correo, 
@@ -195,17 +196,17 @@ namespace SOR.Controllers
                 {
                     string sqlInsert = @"
                         INSERT INTO dbo.PerfilesCoordinador (
-                            IdUsuario, PrimerNombre, OtrosNombres, PrimerApellido, OtrosApellidos, FechaNacimiento,
+                            IdUsuario, PrimerNombre, OtrosNombres, PrimerApellido, OtrosApellidos, FechaNacimiento, Sexo, EstadoCivil,
                             Calle, Numero, Sector, Ciudad, Provincia, Pais, Nacionalidad, Talla,
-                            NumeroDocumento, DocumentoAdjuntoRuta, NumeroPasaporte, PasaporteAdjuntoRuta,
+                            NumeroDocumento, DocumentoAdjuntoRuta, NumeroPasaporte, NoPoseePasaporte, PasaporteAdjuntoRuta,
                             TelefonoFijo, TelefonoCelularWhatsApp, Correo, FotoRuta, DatosConyugue, ContactoEmergencia,
                             IglesiaLocal, PastorIglesiaLocal, CargoIglesiaLocal, AniosServicioMinisterial, InfoMinisterial,
                             NivelEducativo, ProfesionCarrera, InfoEducativa, OcupacionEmpresaLaboral, TelefonoTrabajo, InfoLaboral,
                             CapacitacionesOCC, Ministerio, IdEquipo, IdPosicion, FechaIngreso
                         ) VALUES (
-                            @IdUsuario, @PrimerNombre, @OtrosNombres, @PrimerApellido, @OtrosApellidos, @FechaNacimiento,
+                            @IdUsuario, @PrimerNombre, @OtrosNombres, @PrimerApellido, @OtrosApellidos, @FechaNacimiento, @Sexo, @EstadoCivil,
                             @Calle, @Numero, @Sector, @Ciudad, @Provincia, @Pais, @Nacionalidad, @Talla,
-                            @NumeroDocumento, @DocumentoAdjuntoRuta, @NumeroPasaporte, @PasaporteAdjuntoRuta,
+                            @NumeroDocumento, @DocumentoAdjuntoRuta, @NumeroPasaporte, @NoPoseePasaporte, @PasaporteAdjuntoRuta,
                             @TelefonoFijo, @TelefonoCelularWhatsApp, @Correo, @FotoRuta, @DatosConyugue, @ContactoEmergencia,
                             @IglesiaLocal, @PastorIglesiaLocal, @CargoIglesiaLocal, @AniosServicioMinisterial, @InfoMinisterial,
                             @NivelEducativo, @ProfesionCarrera, @InfoEducativa, @OcupacionEmpresaLaboral, @TelefonoTrabajo, @InfoLaboral,
@@ -221,6 +222,8 @@ namespace SOR.Controllers
                 cmd.Parameters.AddWithValue("@PrimerApellido", modelo.PrimerApellido ?? "");
                 cmd.Parameters.AddWithValue("@OtrosApellidos", modelo.OtrosApellidos ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@FechaNacimiento", modelo.FechaNacimiento ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Sexo", modelo.Sexo ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@EstadoCivil", modelo.EstadoCivil ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Calle", modelo.Calle ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Numero", modelo.Numero ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Sector", modelo.Sector ?? (object)DBNull.Value);
@@ -232,6 +235,7 @@ namespace SOR.Controllers
                 cmd.Parameters.AddWithValue("@NumeroDocumento", modelo.NumeroDocumento ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@DocumentoAdjuntoRuta", modelo.DocumentoAdjuntoRuta ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@NumeroPasaporte", modelo.NumeroPasaporte ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@NoPoseePasaporte", modelo.NoPoseePasaporte);
                 cmd.Parameters.AddWithValue("@PasaporteAdjuntoRuta", modelo.PasaporteAdjuntoRuta ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@TelefonoFijo", modelo.TelefonoFijo ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@TelefonoCelularWhatsApp", modelo.TelefonoCelularWhatsApp ?? (object)DBNull.Value);
@@ -321,8 +325,35 @@ namespace SOR.Controllers
             return Json(posicionesOcupadas, JsonRequestBehavior.AllowGet);
         }
 
+        private void AsegurarEsquemaPerfiles()
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    IF OBJECT_ID('dbo.PerfilesCoordinador', 'U') IS NOT NULL
+                    BEGIN
+                        IF COL_LENGTH('dbo.PerfilesCoordinador', 'Sexo') IS NULL
+                        BEGIN
+                            ALTER TABLE dbo.PerfilesCoordinador ADD Sexo VARCHAR(50) NULL;
+                        END
+                        IF COL_LENGTH('dbo.PerfilesCoordinador', 'EstadoCivil') IS NULL
+                        BEGIN
+                            ALTER TABLE dbo.PerfilesCoordinador ADD EstadoCivil VARCHAR(50) NULL;
+                        END
+                        IF COL_LENGTH('dbo.PerfilesCoordinador', 'NoPoseePasaporte') IS NULL
+                        BEGIN
+                            ALTER TABLE dbo.PerfilesCoordinador ADD NoPoseePasaporte BIT NULL DEFAULT 0;
+                        END
+                    END";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         private PerfilCoordinador ObtenerPerfilPorUsuario(int idUsuario)
         {
+            AsegurarEsquemaPerfiles();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = "SELECT * FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
@@ -350,10 +381,13 @@ namespace SOR.Controllers
                             Provincia = dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
                             Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
                             Nacionalidad = dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
+                            Sexo = dr["Sexo"] != DBNull.Value ? dr["Sexo"].ToString() : "",
+                            EstadoCivil = dr["EstadoCivil"] != DBNull.Value ? dr["EstadoCivil"].ToString() : "",
                             Talla = dr["Talla"] != DBNull.Value ? dr["Talla"].ToString() : "",
                             NumeroDocumento = dr["NumeroDocumento"] != DBNull.Value ? dr["NumeroDocumento"].ToString() : "",
                             DocumentoAdjuntoRuta = dr["DocumentoAdjuntoRuta"] != DBNull.Value ? dr["DocumentoAdjuntoRuta"].ToString() : "",
                             NumeroPasaporte = dr["NumeroPasaporte"] != DBNull.Value ? dr["NumeroPasaporte"].ToString() : "",
+                            NoPoseePasaporte = dr["NoPoseePasaporte"] != DBNull.Value && Convert.ToBoolean(dr["NoPoseePasaporte"]),
                             PasaporteAdjuntoRuta = dr["PasaporteAdjuntoRuta"] != DBNull.Value ? dr["PasaporteAdjuntoRuta"].ToString() : "",
                             TelefonoFijo = dr["TelefonoFijo"] != DBNull.Value ? dr["TelefonoFijo"].ToString() : "",
                             TelefonoCelularWhatsApp = dr["TelefonoCelularWhatsApp"] != DBNull.Value ? dr["TelefonoCelularWhatsApp"].ToString() : "",

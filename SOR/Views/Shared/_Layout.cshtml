@@ -93,9 +93,7 @@
                         var uSesion = (SOR.Models.Usuario)Session["usuario"];
                         if (uSesion.IdEstado == 4) // Usuario plenamente activo
                         {
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="@Url.Action("Index", "Home")"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
-                            </li>
+
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle fw-semibold" href="#" id="navbarDropdownGestionTemp" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-folder2-open me-1"></i> GESTIÓN TEMP
@@ -222,7 +220,7 @@
         {
             <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-4 border-0 mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                <span>@TempData["MensajeExito"]</span>
+                <span>@Html.Raw(TempData["MensajeExito"])</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         }
@@ -230,7 +228,7 @@
         {
             <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-4 border-0 mb-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                <span>@TempData["MensajeError"]</span>
+                <span>@Html.Raw(TempData["MensajeError"])</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         }

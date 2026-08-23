@@ -108,6 +108,28 @@
                         </div>
 
                         <div class="col-md-3">
+                            <label class="form-label font-semibold">Sexo</label>
+                            <select name="Sexo" class="form-select">
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Varón" @(Model.Sexo == "Varón" ? "selected" : "")>Varón</option>
+                                <option value="Hembra" @(Model.Sexo == "Hembra" ? "selected" : "")>Hembra</option>
+                                <option value="Otro" @(Model.Sexo == "Otro" ? "selected" : "")>Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-semibold">Estado Civil</label>
+                            <select name="EstadoCivil" class="form-select">
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Soltero" @(Model.EstadoCivil == "Soltero" ? "selected" : "")>Soltero/a</option>
+                                <option value="Casado" @(Model.EstadoCivil == "Casado" ? "selected" : "")>Casado/a</option>
+                                <option value="Divorciado" @(Model.EstadoCivil == "Divorciado" ? "selected" : "")>Divorciado/a</option>
+                                <option value="Viudo" @(Model.EstadoCivil == "Viudo" ? "selected" : "")>Viudo/a</option>
+                                <option value="Unión Libre" @(Model.EstadoCivil == "Unión Libre" ? "selected" : "")>Unión Libre</option>
+                                <option value="Otro" @(Model.EstadoCivil == "Otro" ? "selected" : "")>Otro</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
                             <label class="form-label font-semibold">Fecha de Nacimiento</label>
                             <input type="date" name="FechaNacimiento" class="form-control" value="@(Model.FechaNacimiento.HasValue ? Model.FechaNacimiento.Value.ToString("yyyy-MM-dd") : "")" />
                         </div>
@@ -162,11 +184,19 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Número de Pasaporte</label>
-                            <input type="text" name="NumeroPasaporte" class="form-control" value="@Model.NumeroPasaporte" />
+                            <div class="input-group mb-1">
+                                <input type="text" id="txtNumeroPasaporte" name="NumeroPasaporte" class="form-control" value="@Model.NumeroPasaporte" @(Model.NoPoseePasaporte ? "disabled" : "") />
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkNoPoseePasaporte" name="NoPoseePasaporte" value="true" @(Model.NoPoseePasaporte ? "checked" : "") onchange="togglePasaporteInput(this)">
+                                <label class="form-check-label text-xs text-muted" for="chkNoPoseePasaporte">
+                                    No posee pasaporte
+                                </label>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Adjuntar Pasaporte (Imagen o PDF)</label>
-                            <input type="file" name="pasaporteAdjunto" class="form-control" accept="image/*,.pdf" />
+                            <input type="file" id="filePasaporte" name="pasaporteAdjunto" class="form-control" accept="image/*,.pdf" @(Model.NoPoseePasaporte ? "disabled" : "") />
                         </div>
 
                         <div class="col-md-4">
@@ -183,7 +213,7 @@
                             <input type="file" name="fotoPerfil" class="form-control" accept="image/*" />
                         </div>
 
-                        <h5 class="h6 font-bold mt-4 mb-2 text-dark">Cónyuge y Contacto de Emergencia</h5>
+                        <h5 class="h6 font-bold mt-4 mb-2 text-dark">Cónyuge o Contacto de Emergencia</h5>
                         <div class="col-md-6">
                             <label class="form-label">Datos del Cónyuge</label>
                             <textarea name="DatosConyugue" class="form-control" rows="2" placeholder="Nombre completo, teléfono...">@Model.DatosConyugue</textarea>
@@ -311,11 +341,6 @@
                             <div id="msgOcupado" class="text-danger small mt-1 d-none">
                                 <i class="bi bi-exclamation-octagon-fill me-1"></i>Esta posición ya se encuentra ocupada por otro coordinador en este equipo.
                             </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label font-semibold">Ministerio / Área</label>
-                            <input type="text" name="Ministerio" class="form-control" value="@Model.Ministerio" placeholder="Ej: Operación Niño de la Navidad" />
                         </div>
 
                         <div class="col-md-6">
@@ -618,5 +643,18 @@
             }
         });
     });
+
+    function togglePasaporteInput(chk) {
+        var txt = document.getElementById('txtNumeroPasaporte');
+        var file = document.getElementById('filePasaporte');
+        if (chk.checked) {
+            txt.value = '';
+            txt.disabled = true;
+            if (file) file.disabled = true;
+        } else {
+            txt.disabled = false;
+            if (file) file.disabled = false;
+        }
+    }
 </script>
 }

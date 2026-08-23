@@ -34,14 +34,22 @@ namespace SOR.Controllers
                 if (mensaje == "SesionExpirada")
                 {
                     ViewData["Mensaje"] = "Su sesión ha expirado por inactividad (5 minutos). Por favor inicie sesión nuevamente.";
+                    ViewData["TipoAlert"] = "alert-warning";
                 }
                 else if (mensaje == "PermisosModificados")
                 {
                     ViewData["Mensaje"] = "Tus permisos, rol o estado de cuenta fueron actualizados por un administrador. Por favor inicia sesión nuevamente.";
+                    ViewData["TipoAlert"] = "alert-warning";
                 }
                 else if (mensaje == "SesionDuplicada")
                 {
                     ViewData["Mensaje"] = "Se ha detectado un inicio de sesión en otra ventana o navegador. Por seguridad, solo se permite una sesión activa a la vez por usuario.";
+                    ViewData["TipoAlert"] = "alert-danger";
+                }
+                else if (mensaje == "RegistroPendiente")
+                {
+                    ViewData["Mensaje"] = "Su solicitud de registro se envió a aprobación. Debe estar en espera de que un administrador la apruebe.";
+                    ViewData["TipoAlert"] = "alert-info";
                 }
             }
             return View();
@@ -60,6 +68,7 @@ namespace SOR.Controllers
             if (oUsuario.Clave != oUsuario.ConfirmarClave)
             {
                 ViewData["Mensaje"] = "Las Contraseñas no coinciden";
+                ViewData["TipoAlert"] = "alert-danger";
                 return View();
             }
 
@@ -67,10 +76,11 @@ namespace SOR.Controllers
             bool registrado = _usuarioService.RegistrarUsuario(oUsuario, out mensaje);
 
             ViewData["Mensaje"] = mensaje;
+            ViewData["TipoAlert"] = "alert-danger";
 
             if (registrado)
             {
-                return RedirectToAction("Login", "Acceso");
+                return RedirectToAction("Login", "Acceso", new { mensaje = "RegistroPendiente" });
             }
             else
             {

@@ -68,6 +68,25 @@ namespace SOR.Controllers
             CargarIglesiasDisponibles();
             ViewBag.UsuarioActual = u;
             ViewBag.IdIglesiaPreseleccionada = idIglesia;
+            if (idIglesia.HasValue && idIglesia.Value > 0)
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sqlIg = "SELECT i.NombreIglesia, i.IdEquipo, e.NombreEquipo FROM dbo.Iglesias i INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo WHERE i.IdIglesia = @Id;";
+                    SqlCommand cmdIg = new SqlCommand(sqlIg, cn);
+                    cmdIg.Parameters.AddWithValue("@Id", idIglesia.Value);
+                    cn.Open();
+                    using (SqlDataReader drIg = cmdIg.ExecuteReader())
+                    {
+                        if (drIg.Read())
+                        {
+                            ViewBag.NombreIglesiaPreseleccionada = drIg["NombreIglesia"].ToString();
+                            ViewBag.IdEquipoIglesiaPreseleccionada = Convert.ToInt32(drIg["IdEquipo"]);
+                            ViewBag.NombreEquipoIglesiaPreseleccionada = drIg["NombreEquipo"].ToString();
+                        }
+                    }
+                }
+            }
             return View(lista);
         }
 
@@ -110,6 +129,94 @@ namespace SOR.Controllers
             return RedirectToAction("Index");
         }
 
+        [HttpPost]
+        public ActionResult RegistrarMaestroDesdeFicha(int idIglesia, string nombres, string apellidos, string documentoIdentidad, string celular, string correo)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (string.IsNullOrWhiteSpace(nombres) || string.IsNullOrWhiteSpace(apellidos) || idIglesia <= 0)
+            {
+                TempData["MensajeError"] = "Los nombres, apellidos e iglesia son obligatorios.";
+                return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
+            }
+
+            if (!PuedeEditarIglesiaPorId(u, idIglesia))
+            {
+                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción.";
+                return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = @"
+                        INSERT INTO dbo.Maestros (IdIglesia, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo, Activo) 
+                        VALUES (@IdIglesia, @Nombres, @Apellidos, @Doc, @Celular, @Correo, 1);";
+
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmd.Parameters.AddWithValue("@Nombres", nombres.Trim());
+                    cmd.Parameters.AddWithValue("@Apellidos", apellidos.Trim());
+                    cmd.Parameters.AddWithValue("@Doc", documentoIdentidad ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Celular", celular ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Correo", correo ?? (object)DBNull.Value);
+
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                TempData["MensajeExito"] = "Maestro registrado con éxito.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar maestro: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        public JsonResult RegistrarMaestroAjax(int idIglesia, string nombres, string apellidos, string documentoIdentidad, string celular, string correo)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (string.IsNullOrWhiteSpace(nombres) || string.IsNullOrWhiteSpace(apellidos) || idIglesia <= 0)
+            {
+                return Json(new { success = false, message = "Los nombres, apellidos e iglesia son obligatorios." });
+            }
+
+            if (!PuedeEditarIglesiaPorId(u, idIglesia))
+            {
+                return Json(new { success = false, message = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción." });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = @"
+                        INSERT INTO dbo.Maestros (IdIglesia, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo, Activo) 
+                        VALUES (@IdIglesia, @Nombres, @Apellidos, @Doc, @Celular, @Correo, 1);";
+
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmd.Parameters.AddWithValue("@Nombres", nombres.Trim());
+                    cmd.Parameters.AddWithValue("@Apellidos", apellidos.Trim());
+                    cmd.Parameters.AddWithValue("@Doc", documentoIdentidad ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Celular", celular ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Correo", correo ?? (object)DBNull.Value);
+
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                return Json(new { success = true, message = "Maestro registrado con éxito." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error al registrar maestro: " + ex.Message });
+            }
+        }
+
         // POST: Maestros/Editar
         [HttpPost]
         public ActionResult Editar(Maestro modelo)
@@ -124,6 +231,12 @@ namespace SOR.Controllers
             if (!PuedeEditarMaestro(u, modelo.IdMaestro))
             {
                 TempData["MensajeError"] = "No tiene permiso para modificar este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicción.";
+                return RedirectToAction("Index");
+            }
+
+            if (!PuedeEditarIglesiaPorId(u, modelo.IdIglesia))
+            {
+                TempData["MensajeError"] = "No tiene permiso para asignar este maestro a una iglesia fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
@@ -255,6 +368,45 @@ namespace SOR.Controllers
             return false;
         }
 
+        [HttpGet]
+        public JsonResult ValidarJurisdiccionIglesia(int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null)
+            {
+                return Json(new { success = false, message = "Sesión inválida." }, JsonRequestBehavior.AllowGet);
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    SELECT i.IdEquipo, e.NombreEquipo 
+                    FROM dbo.Iglesias i 
+                    INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo 
+                    WHERE i.IdIglesia = @Id;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Id", idIglesia);
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    if (dr.Read())
+                    {
+                        int idEquipo = Convert.ToInt32(dr["IdEquipo"]);
+                        string nombreEquipo = dr["NombreEquipo"].ToString();
+                        
+                        bool allowed = PuedeEditarEquipo(u, idEquipo);
+                        return Json(new { 
+                            success = true, 
+                            allowed = allowed, 
+                            nombreEquipo = nombreEquipo 
+                        }, JsonRequestBehavior.AllowGet);
+                    }
+                }
+            }
+
+            return Json(new { success = false, message = "Iglesia no encontrada." }, JsonRequestBehavior.AllowGet);
+        }
+
         private bool PuedeEditarIglesiaPorId(Usuario u, int idIglesia)
         {
             if (u == null) return false;
@@ -323,10 +475,11 @@ namespace SOR.Controllers
         private void CargarIglesiasDisponibles()
         {
             List<SelectListItem> lista = new List<SelectListItem>();
+            var mapaEquipos = new Dictionary<string, object>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = @"
-                    SELECT DISTINCT i.IdIglesia, i.NombreIglesia, e.NombreEquipo
+                    SELECT DISTINCT i.IdIglesia, i.NombreIglesia, e.IdEquipo, e.NombreEquipo
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
                     INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
@@ -339,15 +492,25 @@ namespace SOR.Controllers
                 {
                     while (dr.Read())
                     {
+                        string idIg = dr["IdIglesia"].ToString();
                         lista.Add(new SelectListItem
                         {
-                            Value = dr["IdIglesia"].ToString(),
+                            Value = idIg,
                             Text = $"{dr["NombreIglesia"]} ({dr["NombreEquipo"]})"
                         });
+
+                        mapaEquipos[idIg] = new {
+                            IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
+                            NombreEquipo = dr["NombreEquipo"].ToString()
+                        };
                     }
                 }
             }
             ViewBag.ListaIglesias = lista;
+            
+            // Serializar mapa de equipos a JSON para el buscador JS
+            var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+            ViewBag.MapaEquiposJson = serializer.Serialize(mapaEquipos);
         }
     }
 }

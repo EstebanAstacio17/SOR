@@ -20,7 +20,8 @@ namespace SOR.Repositories
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
                     LEFT JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
-                    LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada AND t.Activa = 1
+                        AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC)
+                    LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     ORDER BY i.NombreIglesia;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -77,7 +78,7 @@ namespace SOR.Repositories
             return lista;
         }
 
-        public int RegistrarIglesia(Iglesia modelo, int idUsuarioCreacion)
+        public int RegistrarIglesia(Iglesia modelo, int idUsuarioCreacion, int? idTemporadaDestinoParam = null)
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -133,33 +134,42 @@ namespace SOR.Repositories
                             InsertarPersona(cn, tran, idIglesiaNew, "LiderMinisterial", modelo.LiderMinisterial);
                         }
 
-                        // 4. Crear Participación Inicial en la Temporada Activa
-                        string sqlTemp = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas WHERE Activa = 1;";
-                        SqlCommand cmdTemp = new SqlCommand(sqlTemp, cn, tran);
-                        object idTempObj = cmdTemp.ExecuteScalar();
-                        if (idTempObj == null)
+                        // 4. Crear Participación Inicial en la Temporada
+                        int idTemporadaDestino = 0;
+                        if (idTemporadaDestinoParam.HasValue && idTemporadaDestinoParam.Value > 0)
                         {
-                            throw new Exception("No hay ninguna temporada activa configurada en el sistema. Contacta a un Administrador para activar una.");
+                            idTemporadaDestino = idTemporadaDestinoParam.Value;
                         }
-                        int idTemporadaActiva = Convert.ToInt32(idTempObj);
-                            string sqlPart = @"
-                                INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EtapaActual)
-                                VALUES (@IdIglesia, @IdTemporada, 1, 'Pendiente', 1);
-                                SELECT SCOPE_IDENTITY();";
+                        else
+                        {
+                            string sqlTemp = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC;";
+                            SqlCommand cmdTemp = new SqlCommand(sqlTemp, cn, tran);
+                            object idTempObj = cmdTemp.ExecuteScalar();
+                            if (idTempObj == null)
+                            {
+                                throw new Exception("No hay temporadas configuradas en el sistema. Contacta a un Administrador.");
+                            }
+                            idTemporadaDestino = Convert.ToInt32(idTempObj);
+                        }
 
-                            SqlCommand cmdPart = new SqlCommand(sqlPart, cn, tran);
-                            cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesiaNew);
-                            cmdPart.Parameters.AddWithValue("@IdTemporada", idTemporadaActiva);
-                            int idParticipacionNew = Convert.ToInt32(cmdPart.ExecuteScalar());
+                        string sqlPart = @"
+                            INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EtapaActual)
+                            VALUES (@IdIglesia, @IdTemporada, 1, 'Pendiente', 1);
+                            SELECT SCOPE_IDENTITY();";
 
-                            // Crear registro inicial de asignación de recursos despachados
-                            string sqlRec = "INSERT INTO dbo.AsignacionesRecursos (IdParticipacion) VALUES (@IdParticipacion);";
-                            SqlCommand cmdRec = new SqlCommand(sqlRec, cn, tran);
-                            cmdRec.Parameters.AddWithValue("@IdParticipacion", idParticipacionNew);
-                            cmdRec.ExecuteNonQuery();
+                        SqlCommand cmdPart = new SqlCommand(sqlPart, cn, tran);
+                        cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesiaNew);
+                        cmdPart.Parameters.AddWithValue("@IdTemporada", idTemporadaDestino);
+                        int idParticipacionNew = Convert.ToInt32(cmdPart.ExecuteScalar());
 
-                            // Registrar Historial de Inscripción (Etapa 1)
-                            RegistrarLogHistorial(cn, tran, idParticipacionNew, "Inscripción en Temporada", null, "Inscrita (Etapa 1)", idUsuarioCreacion, "Iglesia inscrita exitosamente en la temporada activa.");
+                        // Crear registro inicial de asignación de recursos despachados
+                        string sqlRec = "INSERT INTO dbo.AsignacionesRecursos (IdParticipacion) VALUES (@IdParticipacion);";
+                        SqlCommand cmdRec = new SqlCommand(sqlRec, cn, tran);
+                        cmdRec.Parameters.AddWithValue("@IdParticipacion", idParticipacionNew);
+                        cmdRec.ExecuteNonQuery();
+
+                        // Registrar Historial de Inscripción (Etapa 1)
+                        RegistrarLogHistorial(cn, tran, idParticipacionNew, "Inscripción en Temporada", null, "Inscrita (Etapa 1)", idUsuarioCreacion, "Iglesia inscrita exitosamente en la temporada activa.");
 
                         tran.Commit();
                         return idIglesiaNew;
@@ -279,7 +289,8 @@ namespace SOR.Repositories
                     FROM dbo.ParticipacionesIglesia p
                     INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     LEFT JOIN dbo.AsignacionesRecursos r ON p.IdParticipacion = r.IdParticipacion
-                    WHERE p.IdIglesia = @Id AND t.Activa = 1;";
+                    WHERE p.IdIglesia = @Id
+                      AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC);";
 
                 using (SqlCommand cmdPart = new SqlCommand(sqlPart, cn))
                 {
@@ -422,7 +433,7 @@ namespace SOR.Repositories
                            COALESCE(LTRIM(RTRIM(ISNULL(pc.PrimerNombre, '') + ' ' + ISNULL(pc.PrimerApellido, ''))), u.Correo) AS NombreCoordinador,
                            COALESCE(pos.NombrePosicion, 'Sin Posición') AS PosicionCoordinador,
                            COALESCE(eq.NombreEquipo, 'Sin Equipo') AS EquipoCoordinador,
-                           (SELECT TOP 1 NombreTemporada FROM dbo.Temporadas WHERE Activa = 1) AS NombreTemporada
+                           (SELECT TOP 1 NombreTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC) AS NombreTemporada
                     FROM dbo.ComentariosObservaciones c
                     INNER JOIN dbo.Usuarios u ON c.IdUsuario = u.IdUsuario
                     LEFT JOIN dbo.PerfilesCoordinador pc ON u.IdUsuario = pc.IdUsuario

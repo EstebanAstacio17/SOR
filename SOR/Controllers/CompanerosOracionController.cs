@@ -89,7 +89,7 @@ namespace SOR.Controllers
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
-                    string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas WHERE Activa = 1;";
+                    string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
                     cn.Open();
                     object valObj = cmd.ExecuteScalar();
@@ -99,7 +99,7 @@ namespace SOR.Controllers
                     }
                     else
                     {
-                        TempData["MensajeError"] = "No hay una temporada activa en el sistema. Configura una primero.";
+                        TempData["MensajeError"] = "No hay ninguna temporada registrada en el sistema. Configura una primero.";
                         return RedirectToAction("Index");
                     }
                 }

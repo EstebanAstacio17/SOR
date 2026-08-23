@@ -17,6 +17,7 @@ namespace SOR.Controllers
     public class IglesiaController : Controller
     {
         private readonly Services.IglesiaService _iglesiaService = new Services.IglesiaService();
+        private readonly Repositories.IglesiaRepository _iglesiaRepository = new Repositories.IglesiaRepository();
 
         private static string ObtenerCadenaConexion()
         {
@@ -62,6 +63,24 @@ namespace SOR.Controllers
             return View(listaFiltrada.ToList());
         }
 
+        public ActionResult DescargarPlantillaIglesias()
+        {
+            string csvHeader = "NombreIglesia,RNC_Cedula,Telefono,Provincia,Sector,Calle,Numero,Referencia,Denominacion,TipoOrganizacion,PastorNombre,PastorCelular,PastorCorreo,LiderNombre,LiderCelular,LiderCorreo,CantMaestros,CantNinos\n";
+            string csvEjemplo = "\"Iglesia Ejemplo de Fe\",\"001-0000000-0\",\"809-555-0101\",\"Santo Domingo\",\"Centro\",\"Calle Principal\",\"12\",\"Cerca del Parque\",\"Pentecostal\",\"Iglesia Local\",\"Juan Pérez\",\"809-555-0102\",\"pastor@ejemplo.com\",\"María Gómez\",\"809-555-0103\",\"lider@ejemplo.com\",\"5\",\"50\"\n";
+            byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(csvHeader + csvEjemplo);
+            return File(fileBytes, "text/csv", "Plantilla_Carga_Masiva_Iglesias.csv");
+        }
+
+        public ActionResult DescargarCondicionesImportacion()
+        {
+            string path = Server.MapPath("~/Documentos Descargables/Condiciones_Importacion_Iglesias.txt");
+            if (System.IO.File.Exists(path))
+            {
+                return File(path, "text/plain", "Condiciones_Importacion_Iglesias.txt");
+            }
+            return HttpNotFound("Archivo de especificaciones no encontrado.");
+        }
+
         // GET: Iglesia/Crear
         public ActionResult Crear()
         {
@@ -89,6 +108,13 @@ namespace SOR.Controllers
 
             CargarEquiposDisponibles(u);
             CargarCatalogosDenominacionesYTipos();
+
+            string errorValidacion;
+            if (!ValidarFormatosDR(modelo, out errorValidacion))
+            {
+                ViewData["MensajeError"] = errorValidacion;
+                return View(modelo);
+            }
 
             string uploadPath = Server.MapPath("~/Uploads/Iglesias/");
             if (!Directory.Exists(uploadPath))
@@ -123,8 +149,14 @@ namespace SOR.Controllers
                     modelo.IdEquipo = u.IdEquipo ?? 1;
                 }
 
-                int idIglesiaNew = _iglesiaService.RegistrarIglesia(modelo, u.IdUsuario);
-                TempData["MensajeExito"] = "Iglesia registrada exitosamente con su expediente inicial.";
+                List<string> advertencias = new List<string>();
+                int idIglesiaNew = _iglesiaService.RegistrarIglesia(modelo, u.IdUsuario, null, advertencias);
+                string msg = "Iglesia registrada exitosamente con su expediente inicial.";
+                if (advertencias.Any())
+                {
+                    msg += "<br/><strong>Advertencias:</strong><br/>" + string.Join("<br/>", advertencias);
+                }
+                TempData["MensajeExito"] = msg;
                 return RedirectToAction("Detalle", new { id = idIglesiaNew });
             }
             catch (Exception ex)
@@ -154,7 +186,8 @@ namespace SOR.Controllers
                     SELECT e.IdEvento, e.NombreEvento, e.Fecha, e.Lugar, e.TipoEvento
                     FROM dbo.Eventos e 
                     INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada 
-                    WHERE t.Activa = 1 AND e.TipoEvento IN ('Vision', 'Taller')
+                    WHERE e.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC)
+                      AND e.TipoEvento IN ('Vision', 'Taller')
                     ORDER BY e.Fecha DESC;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -186,7 +219,7 @@ namespace SOR.Controllers
         // ============================================================================
 
         [HttpPost]
-        public ActionResult EvaluarInicial(int idParticipacion, int idIglesia, string estado, string motivo, string comentario, int? idEventoVision)
+        public ActionResult EvaluarInicial(int idParticipacion, int idIglesia, string estado, string motivo, string comentario)
         {
             Usuario u = (Usuario)Session["usuario"];
             Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
@@ -199,8 +232,103 @@ namespace SOR.Controllers
 
             try
             {
-                _iglesiaService.AvanzarEtapa2(idParticipacion, estado, motivo, comentario, u.IdUsuario, idEventoVision);
+                _iglesiaService.AvanzarEtapa2(idParticipacion, estado, motivo, comentario, u.IdUsuario);
                 TempData["MensajeExito"] = "Evaluación inicial procesada correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = ex.Message;
+            }
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        public ActionResult AsignarVision(int idParticipacion, int idIglesia, int idEventoVision, PersonaIglesia pastor, PersonaIglesia lider)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permiso para realizar cambios en esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                _iglesiaService.AsignarEventoVision(idParticipacion, idIglesia, idEventoVision, pastor, lider, u.IdUsuario);
+                TempData["MensajeExito"] = "Evento de Presentación de la Visión asignado correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al asignar visión: " + ex.Message;
+            }
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        public ActionResult AprobarElegibilidadBasica(int idParticipacion, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permiso para realizar cambios en esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                // Validar que la asistencia al evento de Presentación de la Visión esté confirmada
+                using (SqlConnection cnVal = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cnVal.Open();
+                    string sqlCheck = @"
+                        SELECT COUNT(1)
+                        FROM dbo.EventosParticipacionIglesia ep
+                        INNER JOIN dbo.Eventos e ON ep.IdEvento = e.IdEvento
+                        WHERE ep.IdParticipacion = @IdPart
+                          AND e.TipoEvento = 'Vision'
+                          AND ep.Asistio = 1;";
+                    using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cnVal))
+                    {
+                        cmdCheck.Parameters.AddWithValue("@IdPart", idParticipacion);
+                        int asistenciaConfirmada = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                        if (asistenciaConfirmada == 0)
+                        {
+                            TempData["MensajeError"] = "No se puede aprobar la iglesia aún. Primero debe confirmarse la asistencia de la iglesia al evento de Presentación de la Visión. Ingrese al evento correspondiente y confirme la asistencia antes de aprobar.";
+                            return RedirectToAction("Detalle", new { id = idIglesia });
+                        }
+                    }
+                }
+
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    using (SqlTransaction tran = cn.BeginTransaction())
+                    {
+                        try
+                        {
+                            string sql = "UPDATE dbo.ParticipacionesIglesia SET EtapaActual = 4, EstadoEvaluacion = 'Aprobado', VisionAsistio = 1, VisionResultado = 'Continua' WHERE IdParticipacion = @IdPart;";
+                            using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Aprobación Elegibilidad Taller", "Visión (Etapa 3)", "Elegible Taller (Etapa 4)", u.IdUsuario, "El CMI/CE aprobó la elegibilidad de la iglesia. Asistencia a Visión confirmada. Iglesia elegible para Taller OCC.");
+
+                            tran.Commit();
+                        }
+                        catch
+                        {
+                            tran.Rollback();
+                            throw;
+                        }
+                    }
+                }
+                TempData["MensajeExito"] = "Iglesia aprobada como elegible para el Taller OCC.";
             }
             catch (Exception ex)
             {
@@ -370,12 +498,38 @@ namespace SOR.Controllers
         // ============================================================================
 
         [HttpPost]
-        public ActionResult ImportarMasivo(HttpPostedFileBase archivoExcel)
+        public ActionResult ImportarMasivo(HttpPostedFileBase archivoExcel, int? idTemporadaImportar)
         {
             Usuario u = (Usuario)Session["usuario"];
             if (archivoExcel == null || archivoExcel.ContentLength <= 0)
             {
                 TempData["MensajeError"] = "Por favor selecciona un archivo válido.";
+                return RedirectToAction("Index");
+            }
+
+            if (!idTemporadaImportar.HasValue || idTemporadaImportar.Value <= 0)
+            {
+                TempData["MensajeError"] = "Por favor selecciona una temporada de destino válida.";
+                return RedirectToAction("Index");
+            }
+
+            // Validar que la temporada seleccionada exista en el sistema
+            bool esTemporadaValida = false;
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlCheck = "SELECT COUNT(1) FROM dbo.Temporadas WHERE IdTemporada = @Id;";
+                using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn))
+                {
+                    cmdCheck.Parameters.AddWithValue("@Id", idTemporadaImportar.Value);
+                    int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                    if (count > 0) esTemporadaValida = true;
+                }
+            }
+
+            if (!esTemporadaValida)
+            {
+                TempData["MensajeError"] = "La temporada seleccionada no es válida o no existe en el sistema.";
                 return RedirectToAction("Index");
             }
 
@@ -394,6 +548,7 @@ namespace SOR.Controllers
 
             int insertados = 0;
             int errores = 0;
+            List<string> detalleErrores = new List<string>();
 
             try
             {
@@ -404,20 +559,30 @@ namespace SOR.Controllers
                     {
                         string headerLine = reader.ReadLine(); // Saltar cabecera
                         string line;
+                        int filaNum = 1;
                         while ((line = reader.ReadLine()) != null)
                         {
+                            filaNum++;
                             string[] cols = line.Split(',');
-                            if (cols.Length < 1) continue;
+                            if (cols.Length < 1 || string.IsNullOrWhiteSpace(cols[0])) continue;
 
                             try
                             {
                                 Iglesia ig = MapearColumnasImport(cols);
-                                _iglesiaService.RegistrarIglesia(ig, u.IdUsuario);
+                                if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                {
+                                    ig.IdEquipo = u.IdEquipo ?? 1;
+                                }
+                                _iglesiaService.RegistrarIglesia(ig, u.IdUsuario, idTemporadaImportar.Value);
                                 insertados++;
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
                                 errores++;
+                                if (detalleErrores.Count < 10)
+                                {
+                                    detalleErrores.Add($"Fila {filaNum} ({cols[0]}): {ex.Message}");
+                                }
                             }
                         }
                     }
@@ -434,19 +599,32 @@ namespace SOR.Controllers
                         {
                             string sheetName = dtSchema.Rows[0]["TABLE_NAME"].ToString();
                             OleDbCommand cmd = new OleDbCommand("SELECT * FROM [" + sheetName + "]", connExcel);
+                            int filaNum = 1;
                             using (OleDbDataReader dr = cmd.ExecuteReader())
                             {
                                 while (dr.Read())
                                 {
+                                    filaNum++;
+                                    string nombreIg = dr[0] != DBNull.Value ? dr[0].ToString().Trim() : "Iglesia Sin Nombre";
+                                    if (string.IsNullOrWhiteSpace(nombreIg)) continue;
+
                                     try
                                     {
                                         Iglesia ig = MapearDataReaderImport(dr, u.IdEquipo ?? 1);
-                                        _iglesiaService.RegistrarIglesia(ig, u.IdUsuario);
+                                        if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                        {
+                                            ig.IdEquipo = u.IdEquipo ?? 1;
+                                        }
+                                        _iglesiaService.RegistrarIglesia(ig, u.IdUsuario, idTemporadaImportar.Value);
                                         insertados++;
                                     }
-                                    catch (Exception)
+                                    catch (Exception ex)
                                     {
                                         errores++;
+                                        if (detalleErrores.Count < 10)
+                                        {
+                                            detalleErrores.Add($"Fila {filaNum} ({nombreIg}): {ex.Message}");
+                                        }
                                     }
                                 }
                             }
@@ -454,7 +632,12 @@ namespace SOR.Controllers
                     }
                 }
 
-                TempData["MensajeExito"] = $"Importación completada: {insertados} iglesias registradas exitosamente. Errores: {errores}.";
+                string msg = $"Importación completada: {insertados} iglesias registradas exitosamente. Errores: {errores}.";
+                if (detalleErrores.Any())
+                {
+                    msg += "<br/><strong>Detalle de Errores (primeros 10):</strong><br/>" + string.Join("<br/>", detalleErrores);
+                }
+                TempData["MensajeExito"] = msg;
             }
             catch (Exception ex)
             {
@@ -659,24 +842,79 @@ namespace SOR.Controllers
         private void CargarCombosFiltros()
         {
             List<SelectListItem> temporadas = new List<SelectListItem>();
+            List<SelectListItem> importarTemporadas = new List<SelectListItem>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                string sql = "SELECT IdTemporada, NombreTemporada FROM dbo.Temporadas ORDER BY IdTemporada DESC;";
-                SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
-                using (SqlDataReader dr = cmd.ExecuteReader())
+
+                // 1. Obtener la temporada activa y anterior para etiquetarlas
+                int idActiva = 0;
+                DateTime? fechaInicioActiva = null;
+                string sqlActiva = "SELECT TOP 1 IdTemporada, FechaInicio FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
+                using (SqlCommand cmdActiva = new SqlCommand(sqlActiva, cn))
                 {
-                    while (dr.Read())
+                    using (SqlDataReader dr = cmdActiva.ExecuteReader())
                     {
-                        temporadas.Add(new SelectListItem
+                        if (dr.Read())
                         {
-                            Value = dr["IdTemporada"].ToString(),
-                            Text = dr["NombreTemporada"].ToString()
-                        });
+                            idActiva = Convert.ToInt32(dr["IdTemporada"]);
+                            fechaInicioActiva = dr["FechaInicio"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaInicio"]) : null;
+                        }
+                    }
+                }
+
+                int idAnterior = 0;
+                if (idActiva > 0 && fechaInicioActiva.HasValue)
+                {
+                    string sqlAnterior = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas WHERE FechaInicio < @FechaInicioActiva ORDER BY FechaInicio DESC;";
+                    using (SqlCommand cmdAnterior = new SqlCommand(sqlAnterior, cn))
+                    {
+                        cmdAnterior.Parameters.AddWithValue("@FechaInicioActiva", fechaInicioActiva.Value);
+                        object val = cmdAnterior.ExecuteScalar();
+                        if (val != null) idAnterior = Convert.ToInt32(val);
+                    }
+                }
+
+                // 2. Obtener TODAS las temporadas de la base de datos
+                string sqlAll = "SELECT IdTemporada, NombreTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC;";
+                using (SqlCommand cmdAll = new SqlCommand(sqlAll, cn))
+                {
+                    using (SqlDataReader dr = cmdAll.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            int idTemp = Convert.ToInt32(dr["IdTemporada"]);
+                            string nombre = dr["NombreTemporada"].ToString();
+                            string label = nombre;
+
+                            if (idTemp == idActiva)
+                            {
+                                label += " (Actual / En Curso)";
+                            }
+                            else if (idTemp == idAnterior)
+                            {
+                                label += " (Anterior)";
+                            }
+
+                            // Filtro de iglesias (todas)
+                            temporadas.Add(new SelectListItem
+                            {
+                                Value = idTemp.ToString(),
+                                Text = nombre
+                            });
+
+                            // Combo de importación (todas con etiquetas de ayuda)
+                            importarTemporadas.Add(new SelectListItem
+                            {
+                                Value = idTemp.ToString(),
+                                Text = label
+                            });
+                        }
                     }
                 }
             }
             ViewBag.FiltroTemporadas = temporadas;
+            ViewBag.ImportarTemporadas = importarTemporadas;
 
             ViewBag.FiltroEtapas = new List<SelectListItem>
             {
@@ -684,7 +922,9 @@ namespace SOR.Controllers
                 new SelectListItem { Value = "2", Text = "Etapa 2: Evaluada" },
                 new SelectListItem { Value = "3", Text = "Etapa 3: Visión" },
                 new SelectListItem { Value = "4", Text = "Etapa 4: Elegible Taller" },
-                new SelectListItem { Value = "5", Text = "Etapa 5: Completado Taller" }
+                new SelectListItem { Value = "5", Text = "Etapa 5: Taller OCC" },
+                new SelectListItem { Value = "6", Text = "Etapa 6: Asignación" },
+                new SelectListItem { Value = "7", Text = "Etapa 7: Aprobación Final" }
             };
 
             ViewBag.FiltroEstados = new List<SelectListItem>
@@ -693,6 +933,71 @@ namespace SOR.Controllers
                 new SelectListItem { Value = "Aprobado", Text = "Aprobada" },
                 new SelectListItem { Value = "Rechazado", Text = "Rechazada / Suspendida" }
             };
+        }
+
+        [HttpGet]
+        public JsonResult VerificarUnicidadPersona(string cedula)
+        {
+            if (string.IsNullOrWhiteSpace(cedula))
+            {
+                return Json(new { existe = false }, JsonRequestBehavior.AllowGet);
+            }
+
+            string cleanCedula = cedula.Replace("-", "").Replace(" ", "").Trim();
+            
+            int idTemporadaActiva = 0;
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cn.Open();
+                object val = cmd.ExecuteScalar();
+                if (val != null) idTemporadaActiva = Convert.ToInt32(val);
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    SELECT 'Lider' AS Rol, i.NombreIglesia, e.NombreEquipo, ne.NombreNivel
+                    FROM dbo.PersonasIglesia per
+                    INNER JOIN dbo.Iglesias i ON per.IdIglesia = i.IdIglesia
+                    INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
+                    INNER JOIN dbo.NivelesEquipo ne ON e.IdNivelEquipo = ne.IdNivelEquipo
+                    INNER JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
+                    WHERE p.IdTemporada = @IdTemp 
+                      AND REPLACE(per.DocumentoIdentidad, '-', '') = @Doc
+                    
+                    UNION ALL
+                    
+                    SELECT 'Maestro' AS Rol, i.NombreIglesia, e.NombreEquipo, ne.NombreNivel
+                    FROM dbo.Maestros m
+                    INNER JOIN dbo.Iglesias i ON m.IdIglesia = i.IdIglesia
+                    INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
+                    INNER JOIN dbo.NivelesEquipo ne ON e.IdNivelEquipo = ne.IdNivelEquipo
+                    INNER JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
+                    WHERE p.IdTemporada = @IdTemp 
+                      AND REPLACE(m.DocumentoIdentidad, '-', '') = @Doc AND m.Activo = 1;";
+
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
+                cmd.Parameters.AddWithValue("@Doc", cleanCedula);
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    if (dr.Read())
+                    {
+                        return Json(new {
+                            existe = true,
+                            rol = dr["Rol"].ToString(),
+                            iglesia = dr["NombreIglesia"].ToString(),
+                            equipo = dr["NombreEquipo"].ToString(),
+                            nivel = dr["NombreNivel"].ToString()
+                        }, JsonRequestBehavior.AllowGet);
+                    }
+                }
+            }
+
+            return Json(new { existe = false }, JsonRequestBehavior.AllowGet);
         }
 
         // ============================================================================
@@ -715,7 +1020,7 @@ namespace SOR.Controllers
             int idTemporadaActiva = 0;
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                string sql = "SELECT IdTemporada FROM dbo.Temporadas WHERE Activa = 1;";
+                string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
                 object val = cmd.ExecuteScalar();
@@ -747,7 +1052,7 @@ namespace SOR.Controllers
             int idTemporadaActiva = 0;
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                string sql = "SELECT IdTemporada FROM dbo.Temporadas WHERE Activa = 1;";
+                string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
                 object val = cmd.ExecuteScalar();

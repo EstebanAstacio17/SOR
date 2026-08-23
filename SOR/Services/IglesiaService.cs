@@ -30,7 +30,27 @@ namespace SOR.Services
             return _iglesiaRepository.ObtenerIglesias();
         }
 
-        public int RegistrarIglesia(Iglesia modelo, int idUsuarioCreacion)
+        public static bool ValidarFormatoRncCedula(string doc)
+        {
+            if (string.IsNullOrWhiteSpace(doc)) return false;
+            string clean = doc.Replace("-", "").Replace(" ", "").Trim();
+            return System.Text.RegularExpressions.Regex.IsMatch(clean, @"^\d{9}$|^\d{11}$");
+        }
+
+        public static bool ValidarFormatoTelefono(string tel)
+        {
+            if (string.IsNullOrWhiteSpace(tel)) return false;
+            string clean = tel.Replace("-", "").Replace(" ", "").Replace("(", "").Replace(")", "").Trim();
+            return System.Text.RegularExpressions.Regex.IsMatch(clean, @"^\d{10}$");
+        }
+
+        public static bool ValidarFormatoCorreo(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return false;
+            return System.Text.RegularExpressions.Regex.IsMatch(email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+        }
+
+        public int RegistrarIglesia(Iglesia modelo, int idUsuarioCreacion, int? idTemporada = null, List<string> outAdvertencias = null)
         {
             if (string.IsNullOrWhiteSpace(modelo.NombreIglesia))
             {
@@ -42,7 +62,179 @@ namespace SOR.Services
                 throw new ArgumentException("Debe asignar la iglesia a un equipo OCC válido.");
             }
 
-            return _iglesiaRepository.RegistrarIglesia(modelo, idUsuarioCreacion);
+            // 1. Determinar temporada destino y temporada activa
+            int idTemporadaDestino = idTemporada ?? 0;
+            bool esTemporadaCurso = false;
+            int idTemporadaActiva = 0;
+            int minAniosAntiguedad = 3;
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlTemp = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
+                using (SqlCommand cmdTemp = new SqlCommand(sqlTemp, cn))
+                {
+                    object idTempObj = cmdTemp.ExecuteScalar();
+                    if (idTempObj != null) idTemporadaActiva = Convert.ToInt32(idTempObj);
+                }
+
+                if (idTemporadaDestino <= 0)
+                {
+                    idTemporadaDestino = idTemporadaActiva;
+                }
+                esTemporadaCurso = (idTemporadaDestino == idTemporadaActiva);
+
+                // Obtener MinAniosAntiguedad
+                string sqlCfg = "SELECT Valor FROM dbo.ConfiguracionesSistema WHERE Clave = 'MinAniosAntiguedad';";
+                using (SqlCommand cmdCfg = new SqlCommand(sqlCfg, cn))
+                {
+                    object val = cmdCfg.ExecuteScalar();
+                    if (val != null && int.TryParse(val.ToString(), out int parsed))
+                    {
+                        minAniosAntiguedad = parsed;
+                    }
+                }
+            }
+
+            // 2. Validar Campos Vacíos en la Temporada de Curso
+            if (esTemporadaCurso)
+            {
+                if (string.IsNullOrWhiteSpace(modelo.RNC_Cedula))
+                    throw new ArgumentException("El RNC o Cédula de la iglesia es obligatorio para la temporada en curso.");
+                if (string.IsNullOrWhiteSpace(modelo.Telefono))
+                    throw new ArgumentException("El teléfono de la iglesia es obligatorio para la temporada en curso.");
+                if (modelo.Pastor == null || string.IsNullOrWhiteSpace(modelo.Pastor.Nombres))
+                    throw new ArgumentException("El nombre del pastor es obligatorio para la temporada en curso.");
+                if (modelo.LiderMinisterial == null || string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Nombres))
+                    throw new ArgumentException("El nombre del líder discipulado es obligatorio para la temporada en curso.");
+            }
+
+            // 3. Validar formatos (si no están vacíos)
+            if (!string.IsNullOrWhiteSpace(modelo.RNC_Cedula) && !ValidarFormatoRncCedula(modelo.RNC_Cedula))
+                throw new ArgumentException("El formato del RNC o Cédula de la iglesia no es correcto (debe tener 9 u 11 dígitos).");
+            if (!string.IsNullOrWhiteSpace(modelo.Telefono) && !ValidarFormatoTelefono(modelo.Telefono))
+                throw new ArgumentException("El formato del teléfono institucional no es correcto (debe tener 10 dígitos).");
+
+            if (modelo.Pastor != null)
+            {
+                if (!string.IsNullOrWhiteSpace(modelo.Pastor.DocumentoIdentidad) && !ValidarFormatoRncCedula(modelo.Pastor.DocumentoIdentidad))
+                    throw new ArgumentException("El formato de la cédula del pastor no es correcto.");
+                if (!string.IsNullOrWhiteSpace(modelo.Pastor.Celular) && !ValidarFormatoTelefono(modelo.Pastor.Celular))
+                    throw new ArgumentException("El formato del celular del pastor no es correcto.");
+                if (!string.IsNullOrWhiteSpace(modelo.Pastor.Correo) && !ValidarFormatoCorreo(modelo.Pastor.Correo))
+                    throw new ArgumentException("El formato del correo del pastor no es correcto.");
+            }
+
+            if (modelo.LiderMinisterial != null)
+            {
+                if (!string.IsNullOrWhiteSpace(modelo.LiderMinisterial.DocumentoIdentidad) && !ValidarFormatoRncCedula(modelo.LiderMinisterial.DocumentoIdentidad))
+                    throw new ArgumentException("El formato de la cédula del líder no es correcto.");
+                if (!string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Celular) && !ValidarFormatoTelefono(modelo.LiderMinisterial.Celular))
+                    throw new ArgumentException("El formato del celular del líder no es correcto.");
+                if (!string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Correo) && !ValidarFormatoCorreo(modelo.LiderMinisterial.Correo))
+                    throw new ArgumentException("El formato del correo del líder no es correcto.");
+            }
+
+            // 4 y 5. Validar reglas de castigo, antigüedad y estado "No reportó"
+            ValidarReglasCastigoYAntiguedad(null, null, modelo.RNC_Cedula, modelo.Pastor?.DocumentoIdentidad, idTemporadaDestino, outAdvertencias);
+
+            // 6 y 7. Validaciones de unicidad vía Stored Procedure
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                
+                // Asegurar que SpValidarUnicidadPastorYIglesia exista
+                string spCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpValidarUnicidadPastorYIglesia]') AND type in (N'P', N'PC');";
+                using (SqlCommand cmdCheck = new SqlCommand(spCheck, cn))
+                {
+                    if (Convert.ToInt32(cmdCheck.ExecuteScalar()) == 0)
+                    {
+                        string spCreate = @"
+                            CREATE PROCEDURE dbo.SpValidarUnicidadPastorYIglesia
+                                @IdTemporada INT,
+                                @RncCedulaIglesia VARCHAR(50),
+                                @CedulaPastor VARCHAR(50),
+                                @ExcluirIdIglesia INT = 0
+                            AS
+                            BEGIN
+                                SET NOCOUNT ON;
+
+                                IF EXISTS (
+                                    SELECT 1 
+                                    FROM dbo.ParticipacionesIglesia p 
+                                    INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia 
+                                    WHERE p.IdTemporada = @IdTemporada 
+                                      AND i.RNC_Cedula = @RncCedulaIglesia 
+                                      AND i.IdIglesia <> @ExcluirIdIglesia
+                                )
+                                BEGIN
+                                    RAISERROR('La iglesia con RNC/Cédula ya está registrada en esta temporada.', 16, 1);
+                                    RETURN;
+                                END
+
+                                IF EXISTS (
+                                    SELECT 1 
+                                    FROM dbo.PersonasIglesia per 
+                                    INNER JOIN dbo.ParticipacionesIglesia p ON per.IdIglesia = p.IdIglesia
+                                    WHERE p.IdTemporada = @IdTemporada 
+                                      AND per.TipoPersona = 'Pastor' 
+                                      AND REPLACE(per.DocumentoIdentidad, '-', '') = REPLACE(@CedulaPastor, '-', '')
+                                      AND per.IdIglesia <> @ExcluirIdIglesia
+                                )
+                                BEGIN
+                                    RAISERROR('El pastor con la cédula indicada ya está registrado en otra iglesia en esta temporada.', 16, 1);
+                                    RETURN;
+                                END
+                            END";
+                        using (SqlCommand cmdCreate = new SqlCommand(spCreate, cn))
+                        {
+                            cmdCreate.ExecuteNonQuery();
+                        }
+                    }
+                }
+
+                // Ejecutar SP
+                using (SqlCommand cmdSp = new SqlCommand("dbo.SpValidarUnicidadPastorYIglesia", cn))
+                {
+                    cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmdSp.Parameters.AddWithValue("@IdTemporada", idTemporadaDestino);
+                    cmdSp.Parameters.AddWithValue("@RncCedulaIglesia", modelo.RNC_Cedula?.Trim() ?? "");
+                    cmdSp.Parameters.AddWithValue("@CedulaPastor", modelo.Pastor?.DocumentoIdentidad?.Trim() ?? "");
+                    cmdSp.Parameters.AddWithValue("@ExcluirIdIglesia", modelo.IdIglesia);
+                    cmdSp.ExecuteNonQuery();
+                }
+            }
+
+            // 8. Advertencia de Líder o Maestro ya asignado en la Temporada Activa
+            if (modelo.LiderMinisterial != null && !string.IsNullOrWhiteSpace(modelo.LiderMinisterial.DocumentoIdentidad))
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    string sqlAdvL = @"
+                        SELECT i.NombreIglesia, e.NombreEquipo, ne.NombreNivel
+                        FROM dbo.PersonasIglesia per 
+                        INNER JOIN dbo.Iglesias i ON per.IdIglesia = i.IdIglesia
+                        INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
+                        INNER JOIN dbo.NivelesEquipo ne ON e.IdNivelEquipo = ne.IdNivelEquipo
+                        INNER JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
+                        WHERE p.IdTemporada = @IdTemp AND per.TipoPersona = 'LiderMinisterial' AND per.DocumentoIdentidad = @Doc;";
+                    using (SqlCommand cmdAdvL = new SqlCommand(sqlAdvL, cn))
+                    {
+                        cmdAdvL.Parameters.AddWithValue("@IdTemp", idTemporadaDestino);
+                        cmdAdvL.Parameters.AddWithValue("@Doc", modelo.LiderMinisterial.DocumentoIdentidad.Replace("-", "").Trim());
+                        using (SqlDataReader dr = cmdAdvL.ExecuteReader())
+                        {
+                            if (dr.Read() && outAdvertencias != null)
+                            {
+                                outAdvertencias.Add($"El líder discipulado con identificación '{modelo.LiderMinisterial.DocumentoIdentidad}' ya está registrado en la iglesia '{dr["NombreIglesia"]}', zona/equipo '{dr["NombreEquipo"]}' ({dr["NombreNivel"]}).");
+                            }
+                        }
+                    }
+                }
+            }
+
+            return _iglesiaRepository.RegistrarIglesia(modelo, idUsuarioCreacion, idTemporadaDestino);
         }
 
         public Iglesia ObtenerExpedienteIglesia(int idIglesia)
@@ -85,7 +277,7 @@ namespace SOR.Services
         // MÉTODOS DE TRANSICIÓN DE ETAPAS DE LA TEMPORADA ACTIVA (LÓGICA GESTIÓN TEMP)
         // ============================================================================
 
-        public void AvanzarEtapa2(int idParticipacion, string estado, string motivo, string comentario, int idUsuario, int? idEventoVision = null)
+        public void AvanzarEtapa2(int idParticipacion, string estado, string motivo, string comentario, int idUsuario)
         {
             if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("El estado de la evaluación es requerido.");
             if (estado == "Rechazada" && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para el rechazo.");
@@ -99,26 +291,33 @@ namespace SOR.Services
                     {
                         if (estado == "Aprobada")
                         {
-                            if (!idEventoVision.HasValue || idEventoVision.Value <= 0)
+                            string rncCedula = "";
+                            string pastorCedula = "";
+                            int idTemporadaDestino = 0;
+                            string sqlGetInfo = @"
+                                SELECT i.RNC_Cedula, p.IdTemporada, per.DocumentoIdentidad
+                                FROM dbo.ParticipacionesIglesia p
+                                INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
+                                LEFT JOIN dbo.PersonasIglesia per ON i.IdIglesia = per.IdIglesia AND per.TipoPersona = 'Pastor'
+                                WHERE p.IdParticipacion = @IdPart;";
+                            using (SqlCommand cmdInfo = new SqlCommand(sqlGetInfo, cn, tran))
                             {
-                                throw new ArgumentException("Debe seleccionar un evento de Presentación de la Visión para invitar a la iglesia.");
+                                cmdInfo.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                using (SqlDataReader drInfo = cmdInfo.ExecuteReader())
+                                {
+                                    if (drInfo.Read())
+                                    {
+                                        rncCedula = drInfo["RNC_Cedula"].ToString();
+                                        idTemporadaDestino = Convert.ToInt32(drInfo["IdTemporada"]);
+                                        pastorCedula = drInfo["DocumentoIdentidad"] != DBNull.Value ? drInfo["DocumentoIdentidad"].ToString() : "";
+                                    }
+                                }
                             }
 
-                            // Vincular la iglesia al evento de Presentación de la Visión
-                            string sqlLink = @"
-                                IF NOT EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart)
-                                BEGIN
-                                    INSERT INTO dbo.EventosParticipacionIglesia (IdEvento, IdParticipacion, Asistio) VALUES (@IdEvento, @IdPart, 0);
-                                END";
-                            using (SqlCommand cmdLink = new SqlCommand(sqlLink, cn, tran))
-                            {
-                                cmdLink.Parameters.AddWithValue("@IdEvento", idEventoVision.Value);
-                                cmdLink.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                cmdLink.ExecuteNonQuery();
-                            }
+                            ValidarReglasCastigoYAntiguedad(cn, tran, rncCedula, pastorCedula, idTemporadaDestino, null);
                         }
 
-                        int etapaNueva = (estado == "Aprobada") ? 3 : 2;
+                        int etapaNueva = (estado == "Aprobada") ? 2 : 1;
                         string estadoEvaluacion = (estado == "Aprobada") ? "Aprobado" : "Rechazado";
 
                         string sql = @"
@@ -146,11 +345,11 @@ namespace SOR.Services
 
                         // Registrar Log Historial
                         string logCom = (estado == "Aprobada") 
-                            ? "Evaluación inicial APROBADA. Avanza a Presentación de la Visión (Etapa 3)." 
+                            ? "Evaluación inicial APROBADA. Avanza a Evaluada Inicial (Etapa 2)." 
                             : $"Evaluación inicial RECHAZADA. Motivo: {motivo}.";
 
                         _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Evaluación Inicial", "Inscrita (Etapa 1)", 
-                            (estado == "Aprobada") ? "Presentación Visión (Etapa 3)" : "Rechazado (Etapa 2)", idUsuario, logCom, motivo);
+                            (estado == "Aprobada") ? "Evaluada (Etapa 2)" : "Rechazado (Etapa 1)", idUsuario, logCom, motivo);
 
                         tran.Commit();
                     }
@@ -159,6 +358,127 @@ namespace SOR.Services
                         tran.Rollback();
                         throw;
                     }
+                }
+            }
+        }
+
+        public void AsignarEventoVision(int idParticipacion, int idIglesia, int idEventoVision, PersonaIglesia pastor, PersonaIglesia lider, int idUsuario)
+        {
+            if (idEventoVision <= 0) throw new ArgumentException("Debe seleccionar un evento de Presentación de la Visión.");
+            if (pastor == null || string.IsNullOrWhiteSpace(pastor.Nombres)) throw new ArgumentException("Los nombres del pastor son obligatorios.");
+            if (lider == null || string.IsNullOrWhiteSpace(lider.Nombres)) throw new ArgumentException("Los nombres del líder ministerial son obligatorios.");
+
+            // Validar formatos de pastor y líder
+            if (!string.IsNullOrWhiteSpace(pastor.DocumentoIdentidad) && !ValidarFormatoRncCedula(pastor.DocumentoIdentidad))
+                throw new ArgumentException("El formato de la cédula del pastor no es correcto.");
+            if (!string.IsNullOrWhiteSpace(pastor.Celular) && !ValidarFormatoTelefono(pastor.Celular))
+                throw new ArgumentException("El formato del celular del pastor no es correcto.");
+            if (!string.IsNullOrWhiteSpace(pastor.Correo) && !ValidarFormatoCorreo(pastor.Correo))
+                throw new ArgumentException("El formato del correo del pastor no es correcto.");
+
+            if (!string.IsNullOrWhiteSpace(lider.DocumentoIdentidad) && !ValidarFormatoRncCedula(lider.DocumentoIdentidad))
+                throw new ArgumentException("El formato de la cédula del líder no es correcto.");
+            if (!string.IsNullOrWhiteSpace(lider.Celular) && !ValidarFormatoTelefono(lider.Celular))
+                throw new ArgumentException("El formato del celular del líder no es correcto.");
+            if (!string.IsNullOrWhiteSpace(lider.Correo) && !ValidarFormatoCorreo(lider.Correo))
+                throw new ArgumentException("El formato del correo del líder no es correcto.");
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Actualizar o Insertar Pastor
+                        ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "Pastor", pastor);
+
+                        // 2. Actualizar o Insertar Líder
+                        ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
+
+                        // 3. Vincular al evento
+                        string sqlLink = @"
+                            IF NOT EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart)
+                            BEGIN
+                                INSERT INTO dbo.EventosParticipacionIglesia (IdEvento, IdParticipacion, Asistio) VALUES (@IdEvento, @IdPart, 0);
+                            END";
+                        using (SqlCommand cmdLink = new SqlCommand(sqlLink, cn, tran))
+                        {
+                            cmdLink.Parameters.AddWithValue("@IdEvento", idEventoVision);
+                            cmdLink.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdLink.ExecuteNonQuery();
+                        }
+
+                        // 4. Actualizar etapa de la iglesia a 3 (Visión)
+                        string sqlStage = "UPDATE dbo.ParticipacionesIglesia SET EtapaActual = 3 WHERE IdParticipacion = @IdPart;";
+                        using (SqlCommand cmdStage = new SqlCommand(sqlStage, cn, tran))
+                        {
+                            cmdStage.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdStage.ExecuteNonQuery();
+                        }
+
+                        // 5. Registrar Historial
+                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Asignación de Visión", "Evaluada Inicial (Etapa 2)", "Visión (Etapa 3)", idUsuario, "Se asignó el evento de Presentación de la Visión y se confirmaron/actualizaron los datos del Pastor y Líder.");
+
+                        tran.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        private void ActualizarOInsertarPersonaInterno(SqlConnection cn, SqlTransaction tran, int idIglesia, string tipoPersona, PersonaIglesia persona)
+        {
+            string sqlCheck = "SELECT COUNT(1) FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
+            int count = 0;
+            using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
+            {
+                cmdCheck.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                cmdCheck.Parameters.AddWithValue("@Tipo", tipoPersona);
+                count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+            }
+
+            if (count > 0)
+            {
+                string sqlUpdate = @"
+                    UPDATE dbo.PersonasIglesia SET
+                        Nombres = @Nombres,
+                        Apellidos = @Apellidos,
+                        DocumentoIdentidad = @Doc,
+                        Celular = @Celular,
+                        Correo = @Correo
+                    WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
+                using (SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn, tran))
+                {
+                    cmdUp.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
+                    cmdUp.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
+                    cmdUp.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
+                    cmdUp.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
+                    cmdUp.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
+                    cmdUp.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdUp.Parameters.AddWithValue("@Tipo", tipoPersona);
+                    cmdUp.ExecuteNonQuery();
+                }
+            }
+            else
+            {
+                string sqlInsert = @"
+                    INSERT INTO dbo.PersonasIglesia (IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo)
+                    VALUES (@IdIglesia, @Tipo, @Nombres, @Apellidos, @Doc, @Celular, @Correo);";
+                using (SqlCommand cmdIns = new SqlCommand(sqlInsert, cn, tran))
+                {
+                    cmdIns.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdIns.Parameters.AddWithValue("@Tipo", tipoPersona);
+                    cmdIns.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
+                    cmdIns.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
+                    cmdIns.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
+                    cmdIns.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
+                    cmdIns.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
+                    cmdIns.ExecuteNonQuery();
                 }
             }
         }
@@ -423,38 +743,20 @@ namespace SOR.Services
                 {
                     try
                     {
-                        string sql = @"
-                            UPDATE dbo.ParticipacionesIglesia SET
-                                EtapaActual = 5,
-                                EstadoEvaluacion = 'Aprobado',
-                                TallerParticipo = 1,
-                                TallerNombre = @Taller,
-                                TallerFecha = @Fecha,
-                                TallerLugar = @Lugar,
-                                TallerCantNinos = @Ninos,
-                                TallerCantMaestrosReg = @MaestrosReg,
-                                TallerCantMaestrosAsist = @MaestrosAsist,
-                                TallerCantMaestrosAus = @MaestrosAus
-                            WHERE IdParticipacion = @IdPart;";
-
-                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        using (SqlCommand cmdSp = new SqlCommand("dbo.SpAvanzarEtapaRecursos", cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Taller", tallerNombre);
-                            cmd.Parameters.AddWithValue("@Fecha", (object)tallerFecha ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Lugar", tallerLugar ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Ninos", cantNinos);
-                            cmd.Parameters.AddWithValue("@MaestrosReg", cantMaestrosReg);
-                            cmd.Parameters.AddWithValue("@MaestrosAsist", cantMaestrosAsist);
-                            cmd.Parameters.AddWithValue("@MaestrosAus", cantMaestrosAus);
-                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
-                            cmd.ExecuteNonQuery();
+                            cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
+                            cmdSp.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
+                            cmdSp.Parameters.AddWithValue("@TallerNombre", tallerNombre);
+                            cmdSp.Parameters.AddWithValue("@TallerFecha", (object)tallerFecha ?? DBNull.Value);
+                            cmdSp.Parameters.AddWithValue("@TallerLugar", tallerLugar ?? (object)DBNull.Value);
+                            cmdSp.Parameters.AddWithValue("@CantNinos", cantNinos);
+                            cmdSp.Parameters.AddWithValue("@CantMaestrosReg", cantMaestrosReg);
+                            cmdSp.Parameters.AddWithValue("@CantMaestrosAsist", cantMaestrosAsist);
+                            cmdSp.Parameters.AddWithValue("@CantMaestrosAus", cantMaestrosAus);
+                            cmdSp.Parameters.AddWithValue("@IdUsuarioResponsable", idUsuario);
+                            cmdSp.ExecuteNonQuery();
                         }
-
-                        // Registrar Log Historial
-                        string logCom = $"Taller OCC registrado exitosamente. Taller: {tallerNombre}. Niños: {cantNinos}, Maestros Asistentes: {cantMaestrosAsist}.";
-
-                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Taller OCC Completado", "Elegibilidad Taller (Etapa 4)", 
-                            "Taller OCC (Etapa 5)", idUsuario, logCom);
 
                         tran.Commit();
                     }
@@ -463,6 +765,104 @@ namespace SOR.Services
                         tran.Rollback();
                         throw;
                     }
+                }
+            }
+        }
+
+        private static void ValidarReglasCastigoYAntiguedad(SqlConnection cnParam, SqlTransaction tranParam, string rncCedula, string pastorCedula, int idTemporadaDestino, List<string> outAdvertencias)
+        {
+            if (string.IsNullOrWhiteSpace(rncCedula)) return;
+
+            SqlConnection cn = cnParam;
+            SqlTransaction tran = tranParam;
+            bool localConnection = false;
+
+            if (cn == null)
+            {
+                cn = new SqlConnection(ObtenerCadenaConexion());
+                cn.Open();
+                localConnection = true;
+            }
+
+            try
+            {
+                int minAniosAntiguedad = 3;
+                string sqlCfg = "SELECT Valor FROM dbo.ConfiguracionesSistema WHERE Clave = 'MinAniosAntiguedad';";
+                using (SqlCommand cmdCfg = new SqlCommand(sqlCfg, cn, tran))
+                {
+                    object val = cmdCfg.ExecuteScalar();
+                    if (val != null && int.TryParse(val.ToString(), out int parsed))
+                    {
+                        minAniosAntiguedad = parsed;
+                    }
+                }
+
+                string sqlCheckAnt = @"
+                    SELECT MAX(p.IdTemporada) 
+                    FROM dbo.ParticipacionesIglesia p 
+                    INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia 
+                    WHERE i.RNC_Cedula = @Rnc AND p.IdTemporada < @IdDest;";
+                using (SqlCommand cmdAnt = new SqlCommand(sqlCheckAnt, cn, tran))
+                {
+                    cmdAnt.Parameters.AddWithValue("@Rnc", rncCedula.Trim());
+                    cmdAnt.Parameters.AddWithValue("@IdDest", idTemporadaDestino);
+                    object valAnt = cmdAnt.ExecuteScalar();
+                    if (valAnt != null && valAnt != DBNull.Value)
+                    {
+                        int idTempPrev = Convert.ToInt32(valAnt);
+                        if (idTemporadaDestino - idTempPrev < minAniosAntiguedad)
+                        {
+                            throw new InvalidOperationException($"La iglesia con RNC/Cédula '{rncCedula}' participó en una temporada reciente (ID {idTempPrev}). Se requiere una antigüedad mínima de {minAniosAntiguedad} temporadas para volver a participar.");
+                        }
+                    }
+                }
+
+                string sqlNoRep = @"
+                    SELECT TOP 1 p.IdParticipacion, t.NombreTemporada, per.DocumentoIdentidad, i.NombreIglesia
+                    FROM dbo.ParticipacionesIglesia p
+                    INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
+                    INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
+                    LEFT JOIN dbo.PersonasIglesia per ON i.IdIglesia = per.IdIglesia AND per.TipoPersona = 'Pastor'
+                    WHERE t.Activa = 0 
+                      AND i.RNC_Cedula = @Rnc 
+                      AND p.IdTemporada < @IdDest
+                      AND (SELECT COUNT(1) FROM dbo.ReportesEventos re WHERE re.IdParticipacion = p.IdParticipacion) = 0
+                    ORDER BY t.IdTemporada DESC;";
+
+                using (SqlCommand cmdNoRep = new SqlCommand(sqlNoRep, cn, tran))
+                {
+                    cmdNoRep.Parameters.AddWithValue("@Rnc", rncCedula.Trim());
+                    cmdNoRep.Parameters.AddWithValue("@IdDest", idTemporadaDestino);
+                    using (SqlDataReader drNoRep = cmdNoRep.ExecuteReader())
+                    {
+                        if (drNoRep.Read())
+                        {
+                            string docPastorAnterior = drNoRep["DocumentoIdentidad"] != DBNull.Value ? drNoRep["DocumentoIdentidad"].ToString().Replace("-", "").Trim() : "";
+                            string docPastorNuevo = pastorCedula?.Replace("-", "").Trim() ?? "";
+                            string nTemp = drNoRep["NombreTemporada"].ToString();
+                            string nIg = drNoRep["NombreIglesia"].ToString();
+
+                            if (!string.IsNullOrEmpty(docPastorAnterior) && docPastorAnterior == docPastorNuevo)
+                            {
+                                throw new InvalidOperationException($"La iglesia '{nIg}' no reportó en la temporada '{nTemp}' con el mismo pastor, por lo que tiene prohibida su participación.");
+                            }
+                            else
+                            {
+                                if (outAdvertencias != null)
+                                {
+                                    outAdvertencias.Add($"ADVERTENCIA: La iglesia '{nIg}' no reportó en la temporada '{nTemp}' con su pastor anterior, pero se permite el registro al registrar un pastor diferente.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                if (localConnection && cn != null)
+                {
+                    cn.Close();
+                    cn.Dispose();
                 }
             }
         }

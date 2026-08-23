@@ -13,7 +13,12 @@
                         <span class="badge bg-info text-dark px-3 py-2 rounded-pill fw-semibold mb-2">
                             <i class="bi bi-shield-check me-1"></i>@(usuario.NombreRol ?? "Coordinador")
                         </span>
-                        <h2 class="h3 font-bold mb-1">¡Bienvenido, @usuario.Correo!</h2>
+                        @{
+                            string nombreMostrar = !string.IsNullOrEmpty(usuario.PrimerNombre) 
+                                ? (usuario.PrimerNombre + " " + usuario.PrimerApellido).Trim() 
+                                : usuario.Correo;
+                        }
+                        <h2 class="h3 font-bold mb-1">¡Bienvenido, @nombreMostrar!</h2>
                         <p class="text-slate-300 mb-0">
                             <i class="bi bi-diagram-3 me-1"></i>Equipo: <strong>@(usuario.NombreEquipo ?? "Sin Equipo Asignado")</strong> | 
                             <i class="bi bi-person-badge me-1"></i>Posición: <strong>@(usuario.NombrePosicion ?? "Pendiente de Completar Perfil")</strong>

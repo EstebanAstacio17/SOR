@@ -28,10 +28,13 @@ namespace SOR.Repositories
                         neq.RangoJerarquico,
                         a.IdPosicion,
                         p.NombrePosicion,
-                        u.FechaRegistro
+                        u.FechaRegistro,
+                        pco.PrimerNombre,
+                        pco.PrimerApellido
                     FROM dbo.Usuarios u
                     INNER JOIN dbo.RolesSeguridad r ON u.IdRolSeguridad = r.IdRolSeguridad
                     INNER JOIN dbo.EstadosCuenta e ON u.IdEstado = e.IdEstado
+                    LEFT JOIN dbo.PerfilesCoordinador pco ON u.IdUsuario = pco.IdUsuario
                     LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
                     LEFT JOIN dbo.Equipos eq ON a.IdEquipo = eq.IdEquipo
                     LEFT JOIN dbo.NivelesEquipo neq ON eq.IdNivelEquipo = neq.IdNivelEquipo
@@ -61,7 +64,9 @@ namespace SOR.Repositories
                             RangoJerarquico = dr["RangoJerarquico"] != DBNull.Value ? (int?)Convert.ToInt32(dr["RangoJerarquico"]) : null,
                             IdPosicion = dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null,
                             NombrePosicion = dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString() : null,
-                            FechaRegistro = dr["FechaRegistro"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRegistro"]) : null
+                            FechaRegistro = dr["FechaRegistro"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRegistro"]) : null,
+                            PrimerNombre = dr["PrimerNombre"] != DBNull.Value ? dr["PrimerNombre"].ToString() : null,
+                            PrimerApellido = dr["PrimerApellido"] != DBNull.Value ? dr["PrimerApellido"].ToString() : null
                         };
                     }
                 }

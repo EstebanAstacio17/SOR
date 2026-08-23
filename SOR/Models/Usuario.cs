@@ -10,6 +10,9 @@ namespace SOR.Models
         public string ConfirmarClave { get; set; }
 
         // Rol de Seguridad (1: SuperAdmin, 2: Administrador, 3: Coordinador)
+        public string PrimerNombre { get; set; }
+        public string PrimerApellido { get; set; }
+
         public int IdRolSeguridad { get; set; }
         public string NombreRol { get; set; }
 

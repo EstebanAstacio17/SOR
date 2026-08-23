@@ -19,7 +19,7 @@
     </div>
 }
 
-<form action="@Url.Action("Crear", "Iglesia")" method="post" enctype="multipart/form-data">
+<form id="formCrearIglesia" action="@Url.Action("Crear", "Iglesia")" method="post" enctype="multipart/form-data">
     <!-- DATOS DE LA INSTITUCIÓN -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-dark text-white p-3">
@@ -149,7 +149,7 @@
 
     <!-- SECCIÓN 2: INFORMACIÓN MINISTERIAL Y REFERENCIAS -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="card-header bg-slate-900 text-white p-3">
+        <div class="card-header text-white p-3" style="background-color: #0f172a !important;">
             <h3 class="h5 font-bold mb-0"><i class="bi bi-file-earmark-medical me-2 text-warning"></i>4. Información Ministerial y Referencias</h3>
         </div>
         <div class="card-body p-4">
@@ -211,3 +211,142 @@
         </button>
     </div>
 </form>
+
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof $.fn.validate === 'function') {
+            if (!$.validator.methods.regex) {
+                $.validator.addMethod("regex", function(value, element, regexp) {
+                    var re = new RegExp(regexp);
+                    return this.optional(element) || re.test(value);
+                }, "Formato inválido.");
+            }
+
+            $("#formCrearIglesia").validate({
+                rules: {
+                    NombreIglesia: { required: true },
+                    RNC_Cedula: {
+                        required: true,
+                        regex: "^(\\d{9}|\\d{11}|\\d{3}-\\d{7}-\\d{1})$"
+                    },
+                    Telefono: {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    Calle: { required: true },
+                    Numero: { required: true },
+                    Sector: { required: true },
+                    Ciudad: { required: true },
+                    Referencia: { required: true },
+                    "Pastor.Nombres": { required: true },
+                    "Pastor.Apellidos": { required: true },
+                    "Pastor.DocumentoIdentidad": {
+                        required: true,
+                        regex: "^(\\d{11}|\\d{3}-\\d{7}-\\d{1})$"
+                    },
+                    "Pastor.Celular": {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    "Pastor.Correo": {
+                        required: true,
+                        email: true
+                    },
+                    "LiderMinisterial.Nombres": { required: true },
+                    "LiderMinisterial.Apellidos": { required: true },
+                    "LiderMinisterial.DocumentoIdentidad": {
+                        required: true,
+                        regex: "^(\\d{11}|\\d{3}-\\d{7}-\\d{1})$"
+                    },
+                    "LiderMinisterial.Celular": {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    "LiderMinisterial.Correo": {
+                        required: true,
+                        email: true
+                    },
+                    CantidadMaestros: { required: true, min: 0 },
+                    CantidadNinos: { required: true, min: 0 },
+                    Denominacion: { required: true },
+                    TipoOrganizacion: { required: true },
+                    Ref1Nombre: { required: true },
+                    Ref1Contacto: {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    Ref2Nombre: { required: true },
+                    Ref2Contacto: {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    }
+                },
+                messages: {
+                    RNC_Cedula: {
+                        required: "El RNC o Cédula es obligatorio.",
+                        regex: "Debe tener 9 u 11 dígitos numéricos (ej: 001-1234567-8)."
+                    },
+                    Telefono: {
+                        required: "El teléfono es obligatorio.",
+                        regex: "Formato de teléfono inválido (ej: 809-555-1234)."
+                    },
+                    "Pastor.DocumentoIdentidad": {
+                        required: "La cédula del pastor es obligatoria.",
+                        regex: "Formato de cédula inválido."
+                    },
+                    "Pastor.Celular": {
+                        required: "El celular del pastor es obligatorio.",
+                        regex: "Formato de celular inválido."
+                    },
+                    "Pastor.Correo": {
+                        required: "El correo es obligatorio.",
+                        email: "Ingrese un correo electrónico válido."
+                    },
+                    "LiderMinisterial.DocumentoIdentidad": {
+                        required: "La cédula del líder es obligatoria.",
+                        regex: "Formato de cédula inválido."
+                    },
+                    "LiderMinisterial.Celular": {
+                        required: "El celular del líder es obligatorio.",
+                        regex: "Formato de celular inválido."
+                    },
+                    "LiderMinisterial.Correo": {
+                        required: "El correo es obligatorio.",
+                        email: "Ingrese un correo electrónico válido."
+                    },
+                    Ref1Contacto: {
+                        required: "El contacto es obligatorio.",
+                        regex: "Formato de teléfono inválido."
+                    },
+                    Ref2Contacto: {
+                        required: "El contacto es obligatorio.",
+                        regex: "Formato de teléfono inválido."
+                    }
+                },
+                errorElement: 'div',
+                errorClass: 'invalid-feedback d-block mt-1',
+                highlight: function(element) {
+                    $(element).addClass('is-invalid');
+                },
+                unhighlight: function(element) {
+                    $(element).removeClass('is-invalid');
+                },
+                errorPlacement: function(error, element) {
+                    error.insertAfter(element);
+                }
+            });
+        }
+
+        // Validación de unicidad de líder por AJAX
+        $(document).on('change', 'input[name="LiderMinisterial.DocumentoIdentidad"]', function() {
+            var val = $(this).val();
+            if (!val) return;
+            var $input = $(this);
+            $.getJSON('@Url.Action("VerificarUnicidadPersona", "Iglesia")', { cedula: val }, function(response) {
+                if (response.existe) {
+                    alert('ADVERTENCIA: El ' + (response.rol === 'Lider' ? 'Líder discipulado' : 'Maestro') + ' con la identificación ' + val + ' ya está registrado en la iglesia "' + response.iglesia + '", zona/equipo "' + response.equipo + '" (' + response.nivel + ').');
+                }
+            });
+        });
+    });
+</script>

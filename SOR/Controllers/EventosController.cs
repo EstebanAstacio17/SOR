@@ -19,7 +19,6 @@ namespace SOR.Controllers
             }
             return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
         }
-
         private void AsegurarEsquemaEventos()
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -56,6 +55,164 @@ namespace SOR.Controllers
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
                 cmd.ExecuteNonQuery();
+
+                // Asegurar Stored Procedure SpEliminarEvento
+                string spCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpEliminarEvento]') AND type in (N'P', N'PC');";
+                SqlCommand cmdCheck = new SqlCommand(spCheck, cn);
+                int spExists = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                if (spExists == 0)
+                {
+                    string spCreate = @"
+                        CREATE PROCEDURE dbo.SpEliminarEvento
+                            @IdEvento INT
+                        AS
+                        BEGIN
+                            SET NOCOUNT ON;
+
+                            IF EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND Asistio = 1)
+                            BEGIN
+                                RAISERROR('No se puede eliminar el evento porque tiene iglesias confirmadas.', 16, 1);
+                                RETURN;
+                            END
+
+                            IF EXISTS (SELECT 1 FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento)
+                            BEGIN
+                                RAISERROR('No se puede eliminar el evento porque tiene asistentes registrados.', 16, 1);
+                                RETURN;
+                            END
+
+                            IF EXISTS (SELECT 1 FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento)
+                            BEGIN
+                                RAISERROR('No se puede eliminar el evento porque tiene asistencia de maestros registrada.', 16, 1);
+                                RETURN;
+                            END
+
+                            DELETE FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento;
+                            DELETE FROM dbo.Eventos WHERE IdEvento = @IdEvento;
+                        END";
+                    SqlCommand cmdCreate = new SqlCommand(spCreate, cn);
+                    cmdCreate.ExecuteNonQuery();
+                }
+
+                // Asegurar Tabla LogsCambiosEtapa
+                string sqlLogsEtapa = @"
+                    IF OBJECT_ID('dbo.LogsCambiosEtapa', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.LogsCambiosEtapa (
+                            IdLog INT IDENTITY(1,1) PRIMARY KEY,
+                            IdIglesia INT NOT NULL,
+                            EtapaAnterior INT NOT NULL,
+                            EtapaNueva INT NOT NULL,
+                            IdUsuarioResponsable INT NOT NULL,
+                            FechaHora DATETIME DEFAULT GETDATE(),
+                            Detalles NVARCHAR(MAX) NULL
+                        );
+                    END";
+                SqlCommand cmdLogsEtapa = new SqlCommand(sqlLogsEtapa, cn);
+                cmdLogsEtapa.ExecuteNonQuery();
+
+                // Asegurar Stored Procedure SpAvanzarEtapaTaller
+                string spTallerCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpAvanzarEtapaTaller]') AND type in (N'P', N'PC');";
+                SqlCommand cmdTallerCheck = new SqlCommand(spTallerCheck, cn);
+                int spTallerExists = Convert.ToInt32(cmdTallerCheck.ExecuteScalar());
+                if (spTallerExists == 0)
+                {
+                    string spTallerCreate = @"
+                        CREATE PROCEDURE dbo.SpAvanzarEtapaTaller
+                            @IdParticipacion INT,
+                            @IdEvento INT,
+                            @Asistio BIT,
+                            @IdUsuarioResponsable INT
+                        AS
+                        BEGIN
+                            SET NOCOUNT ON;
+                            DECLARE @EtapaAnterior INT;
+                            DECLARE @IdIglesia INT;
+
+                            SELECT @EtapaAnterior = EtapaActual, @IdIglesia = IdIglesia
+                            FROM dbo.ParticipacionesIglesia
+                            WHERE IdParticipacion = @IdParticipacion;
+
+                            IF @EtapaAnterior = 5 AND @Asistio = 1
+                            BEGIN
+                                -- Actualizar etapa
+                                UPDATE dbo.ParticipacionesIglesia
+                                SET TallerParticipo = 1,
+                                    EtapaActual = 6
+                                WHERE IdParticipacion = @IdParticipacion;
+
+                                -- Registrar en HistorialParticipacion
+                                INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
+                                VALUES (@IdParticipacion, GETDATE(), 'Completado Taller OCC', 'Taller OCC (Etapa 5)', 'Evaluación Asignación (Etapa 6)', @IdUsuarioResponsable, 'Asistencia al Taller OCC confirmada. Avanza a Evaluación Asignación.');
+
+                                -- Registrar en LogsCambiosEtapa
+                                INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
+                                VALUES (@IdIglesia, 5, 6, @IdUsuarioResponsable, GETDATE(), 'Transición automática tras registrar asistencia en Taller OCC.');
+                            END
+                            ELSE
+                            BEGIN
+                                -- Solo actualizar participación
+                                UPDATE dbo.ParticipacionesIglesia
+                                SET TallerParticipo = @Asistio
+                                WHERE IdParticipacion = @IdParticipacion;
+                            END
+                        END";
+                    SqlCommand cmdTallerCreate = new SqlCommand(spTallerCreate, cn);
+                    cmdTallerCreate.ExecuteNonQuery();
+                }
+
+                // Asegurar Stored Procedure SpAvanzarEtapaRecursos
+                string spRecursosCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpAvanzarEtapaRecursos]') AND type in (N'P', N'PC');";
+                SqlCommand cmdRecursosCheck = new SqlCommand(spRecursosCheck, cn);
+                int spRecursosExists = Convert.ToInt32(cmdRecursosCheck.ExecuteScalar());
+                if (spRecursosExists == 0)
+                {
+                    string spRecursosCreate = @"
+                        CREATE PROCEDURE dbo.SpAvanzarEtapaRecursos
+                            @IdParticipacion INT,
+                            @TallerNombre NVARCHAR(255),
+                            @TallerFecha DATETIME,
+                            @TallerLugar NVARCHAR(255),
+                            @CantNinos INT,
+                            @CantMaestrosReg INT,
+                            @CantMaestrosAsist INT,
+                            @CantMaestrosAus INT,
+                            @IdUsuarioResponsable INT
+                        AS
+                        BEGIN
+                            SET NOCOUNT ON;
+                            DECLARE @EtapaAnterior INT;
+                            DECLARE @IdIglesia INT;
+
+                            SELECT @EtapaAnterior = EtapaActual, @IdIglesia = IdIglesia
+                            FROM dbo.ParticipacionesIglesia
+                            WHERE IdParticipacion = @IdParticipacion;
+
+                            -- Actualizar los datos
+                            UPDATE dbo.ParticipacionesIglesia SET
+                                EtapaActual = 7,
+                                EstadoEvaluacion = 'Aprobado',
+                                TallerParticipo = 1,
+                                TallerNombre = @TallerNombre,
+                                TallerFecha = @TallerFecha,
+                                TallerLugar = @TallerLugar,
+                                TallerCantNinos = @CantNinos,
+                                TallerCantMaestrosReg = @CantMaestrosReg,
+                                TallerCantMaestrosAsist = @CantMaestrosAsist,
+                                TallerCantMaestrosAus = @CantMaestrosAus
+                            WHERE IdParticipacion = @IdParticipacion;
+
+                            -- Registrar en HistorialParticipacion
+                            INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
+                            VALUES (@IdParticipacion, GETDATE(), 'Asignación de Recursos Finalizada', 'Evaluación Asignación (Etapa 6)', 'Aprobación Final (Etapa 7)', @IdUsuarioResponsable, 'Se finalizó la asignación de recursos y se completó la participación.');
+
+                            -- Registrar en LogsCambiosEtapa
+                            INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
+                            VALUES (@IdIglesia, @EtapaAnterior, 7, @IdUsuarioResponsable, GETDATE(), 'Transición de asignación final de recursos y cierre de participación.');
+                        END";
+                    SqlCommand cmdRecursosCreate = new SqlCommand(spRecursosCreate, cn);
+                    cmdRecursosCreate.ExecuteNonQuery();
+                }
             }
         }
 
@@ -112,7 +269,7 @@ namespace SOR.Controllers
             }
             ViewBag.EquiposPermitidos = equiposPermitidos;
 
-            CargarTemporadasYTipos();
+            CargarTemporadasYTipos(u);
             ViewBag.UsuarioActual = u;
             return View(lista);
         }
@@ -134,7 +291,7 @@ namespace SOR.Controllers
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
-                    string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas WHERE Activa = 1;";
+                    string sql = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
                     cn.Open();
                     object valObj = cmd.ExecuteScalar();
@@ -144,7 +301,7 @@ namespace SOR.Controllers
                     }
                     else
                     {
-                        TempData["MensajeError"] = "No hay una temporada activa en el sistema. Configura una primero.";
+                        TempData["MensajeError"] = "No hay ninguna temporada registrada en el sistema. Configura una primero.";
                         return RedirectToAction("Index");
                     }
                 }
@@ -399,6 +556,94 @@ namespace SOR.Controllers
                 }
             }
 
+            // Cargar Pastor, Líder y Maestros para cada iglesia en la lista
+            using (SqlConnection cn3 = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn3.Open();
+                foreach (var item in lista)
+                {
+                    // Pastor
+                    string sqlP = "SELECT * FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = 'Pastor';";
+                    using (SqlCommand cmdP = new SqlCommand(sqlP, cn3))
+                    {
+                        cmdP.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
+                        using (SqlDataReader drP = cmdP.ExecuteReader())
+                        {
+                            if (drP.Read())
+                            {
+                                item.Pastor = new PersonaIglesia
+                                {
+                                    IdPersonaIglesia = Convert.ToInt32(drP["IdPersonaIglesia"]),
+                                    IdIglesia = item.IdIglesia,
+                                    TipoPersona = "Pastor",
+                                    Nombres = drP["Nombres"].ToString(),
+                                    Apellidos = drP["Apellidos"].ToString(),
+                                    DocumentoIdentidad = drP["DocumentoIdentidad"] != DBNull.Value ? drP["DocumentoIdentidad"].ToString() : "",
+                                    Celular = drP["Celular"] != DBNull.Value ? drP["Celular"].ToString() : "",
+                                    Correo = drP["Correo"] != DBNull.Value ? drP["Correo"].ToString() : ""
+                                };
+                            }
+                            else
+                            {
+                                item.Pastor = new PersonaIglesia { TipoPersona = "Pastor", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
+                            }
+                        }
+                    }
+
+                    // LiderMinisterial
+                    string sqlL = "SELECT * FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = 'LiderMinisterial';";
+                    using (SqlCommand cmdL = new SqlCommand(sqlL, cn3))
+                    {
+                        cmdL.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
+                        using (SqlDataReader drL = cmdL.ExecuteReader())
+                        {
+                            if (drL.Read())
+                            {
+                                item.LiderMinisterial = new PersonaIglesia
+                                {
+                                    IdPersonaIglesia = Convert.ToInt32(drL["IdPersonaIglesia"]),
+                                    IdIglesia = item.IdIglesia,
+                                    TipoPersona = "LiderMinisterial",
+                                    Nombres = drL["Nombres"].ToString(),
+                                    Apellidos = drL["Apellidos"].ToString(),
+                                    DocumentoIdentidad = drL["DocumentoIdentidad"] != DBNull.Value ? drL["DocumentoIdentidad"].ToString() : "",
+                                    Celular = drL["Celular"] != DBNull.Value ? drL["Celular"].ToString() : "",
+                                    Correo = drL["Correo"] != DBNull.Value ? drL["Correo"].ToString() : ""
+                                };
+                            }
+                            else
+                            {
+                                item.LiderMinisterial = new PersonaIglesia { TipoPersona = "LiderMinisterial", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
+                            }
+                        }
+                    }
+
+                    // Maestros
+                    string sqlM = "SELECT * FROM dbo.Maestros WHERE IdIglesia = @IdIglesia AND Activo = 1;";
+                    using (SqlCommand cmdM = new SqlCommand(sqlM, cn3))
+                    {
+                        cmdM.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
+                        using (SqlDataReader drM = cmdM.ExecuteReader())
+                        {
+                            while (drM.Read())
+                            {
+                                item.Maestros.Add(new Maestro
+                                {
+                                    IdMaestro = Convert.ToInt32(drM["IdMaestro"]),
+                                    IdIglesia = item.IdIglesia,
+                                    Nombres = drM["Nombres"].ToString(),
+                                    Apellidos = drM["Apellidos"].ToString(),
+                                    DocumentoIdentidad = drM["DocumentoIdentidad"] != DBNull.Value ? drM["DocumentoIdentidad"].ToString() : "",
+                                    Celular = drM["Celular"] != DBNull.Value ? drM["Celular"].ToString() : "",
+                                    Correo = drM["Correo"] != DBNull.Value ? drM["Correo"].ToString() : "",
+                                    Activo = Convert.ToBoolean(drM["Activo"])
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
             // Cargar asistentes registrados por iglesia
             using (SqlConnection cn2 = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -472,7 +717,7 @@ namespace SOR.Controllers
             return lista;
         }
 
-        private void CargarTemporadasYTipos()
+        private void CargarTemporadasYTipos(Usuario u = null)
         {
             List<SelectListItem> lista = new List<SelectListItem>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -501,6 +746,34 @@ namespace SOR.Controllers
                 new SelectListItem { Value = "Evangelistico", Text = "Evento Evangelístico" },
                 new SelectListItem { Value = "GranAventura", Text = "La Gran Aventura" }
             };
+
+            List<SelectListItem> integrantes = new List<SelectListItem>();
+            if (u != null && u.IdEquipo.HasValue)
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sqlInt = @"
+                        SELECT u.IdUsuario, u.Correo, p.PrimerNombre, p.PrimerApellido
+                        FROM dbo.Usuarios u
+                        INNER JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                        LEFT JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
+                        WHERE a.IdEquipo = @IdEquipo AND u.IdEstado = 4;";
+                    SqlCommand cmdInt = new SqlCommand(sqlInt, cn);
+                    cmdInt.Parameters.AddWithValue("@IdEquipo", u.IdEquipo.Value);
+                    cn.Open();
+                    using (SqlDataReader drInt = cmdInt.ExecuteReader())
+                    {
+                        while (drInt.Read())
+                        {
+                            string pNombre = drInt["PrimerNombre"] != DBNull.Value ? drInt["PrimerNombre"].ToString() : "";
+                            string pApellido = drInt["PrimerApellido"] != DBNull.Value ? drInt["PrimerApellido"].ToString() : "";
+                            string nombreComp = (!string.IsNullOrEmpty(pNombre) ? $"{pNombre} {pApellido}" : drInt["Correo"].ToString()).Trim();
+                            integrantes.Add(new SelectListItem { Value = nombreComp, Text = nombreComp });
+                        }
+                    }
+                }
+            }
+            ViewBag.ListaIntegrantesEquipo = integrantes;
         }
 
         // POST: Eventos/Editar
@@ -590,31 +863,395 @@ namespace SOR.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Verificar si hay asistentes confirmados
-                string sqlAsist = "SELECT COUNT(1) FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND Asistio = 1;";
-                SqlCommand cmdA = new SqlCommand(sqlAsist, cn);
-                cmdA.Parameters.AddWithValue("@IdEvento", idEvento);
-                int countAsist = Convert.ToInt32(cmdA.ExecuteScalar());
-                if (countAsist > 0)
+                try
                 {
-                    TempData["MensajeError"] = $"No se puede eliminar el evento porque tiene {countAsist} iglesia(s) con asistencia confirmada. Primero desmárquelas.";
+                    using (SqlCommand cmdSp = new SqlCommand("dbo.SpEliminarEvento", cn))
+                    {
+                        cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmdSp.Parameters.AddWithValue("@IdEvento", idEvento);
+                        cmdSp.ExecuteNonQuery();
+                    }
+                }
+                catch (SqlException ex)
+                {
+                    TempData["MensajeError"] = ex.Message;
                     return RedirectToAction("Index");
                 }
-
-                // Eliminar invitaciones pendientes y luego el evento
-                string sqlDelPart = "DELETE FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento;";
-                SqlCommand cmdDP = new SqlCommand(sqlDelPart, cn);
-                cmdDP.Parameters.AddWithValue("@IdEvento", idEvento);
-                cmdDP.ExecuteNonQuery();
-
-                string sqlDel = "DELETE FROM dbo.Eventos WHERE IdEvento = @IdEvento;";
-                SqlCommand cmdD = new SqlCommand(sqlDel, cn);
-                cmdD.Parameters.AddWithValue("@IdEvento", idEvento);
-                cmdD.ExecuteNonQuery();
             }
 
             TempData["MensajeExito"] = "Evento eliminado correctamente.";
             return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public ActionResult GuardarAsistenciaVision(int idEvento, int idParticipacion, int idIglesia, PersonaIglesia pastor, bool? pastorAsistio, PersonaIglesia lider, bool? liderAsistio)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!PuedeEditarEvento(u, idEvento))
+            {
+                TempData["MensajeError"] = "No tiene permiso para modificar este evento.";
+                return RedirectToAction("Detalle", new { id = idEvento });
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Actualizar Pastor
+                        if (pastor != null && !string.IsNullOrWhiteSpace(pastor.Nombres))
+                        {
+                            ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "Pastor", pastor);
+                        }
+
+                        // 2. Actualizar Líder Ministerial
+                        if (lider != null && !string.IsNullOrWhiteSpace(lider.Nombres))
+                        {
+                            ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
+                        }
+
+                        // 3. Limpiar asistentes anteriores de esta iglesia en este evento
+                        string sqlDel = "DELETE FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
+                        using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
+                        {
+                            cmdDel.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdDel.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdDel.ExecuteNonQuery();
+                        }
+
+                        int asistieronCount = 0;
+
+                        // 4. Registrar Pastor como asistente si aplica
+                        if (pastorAsistio == true)
+                        {
+                            string sqlIns = @"
+                                INSERT INTO dbo.EventosAsistentes (IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo)
+                                VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
+                            using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
+                            {
+                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmdIns.Parameters.AddWithValue("@Nombre", $"{pastor.Nombres} {pastor.Apellidos}".Trim());
+                                cmdIns.Parameters.AddWithValue("@Doc", pastor.DocumentoIdentidad ?? (object)DBNull.Value);
+                                cmdIns.Parameters.AddWithValue("@Tel", pastor.Celular ?? (object)DBNull.Value);
+                                cmdIns.Parameters.AddWithValue("@Correo", pastor.Correo ?? (object)DBNull.Value);
+                                cmdIns.ExecuteNonQuery();
+                            }
+                            asistieronCount++;
+                        }
+
+                        // 5. Registrar Líder como asistente si aplica
+                        if (liderAsistio == true)
+                        {
+                            string sqlIns = @"
+                                INSERT INTO dbo.EventosAsistentes (IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo)
+                                VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
+                            using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
+                            {
+                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmdIns.Parameters.AddWithValue("@Nombre", $"{lider.Nombres} {lider.Apellidos}".Trim());
+                                cmdIns.Parameters.AddWithValue("@Doc", lider.DocumentoIdentidad ?? (object)DBNull.Value);
+                                cmdIns.Parameters.AddWithValue("@Tel", lider.Celular ?? (object)DBNull.Value);
+                                cmdIns.Parameters.AddWithValue("@Correo", lider.Correo ?? (object)DBNull.Value);
+                                cmdIns.ExecuteNonQuery();
+                            }
+                            asistieronCount++;
+                        }
+
+                        // 6. Actualizar Asistio en EventosParticipacionIglesia
+                        bool asistioCualquiera = (asistieronCount > 0);
+                        string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
+                        using (SqlCommand cmdUp = new SqlCommand(sqlUpPart, cn, tran))
+                        {
+                            cmdUp.Parameters.AddWithValue("@Asistio", asistioCualquiera ? 1 : 0);
+                            cmdUp.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdUp.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdUp.ExecuteNonQuery();
+                        }
+
+                        // 7. Sincronizar ParticipacionesIglesia
+                        string sqlSync = @"
+                            UPDATE dbo.ParticipacionesIglesia
+                            SET VisionAsistio = @Asistio,
+                                VisionResultado = CASE WHEN @Asistio = 1 THEN 'Continua' ELSE 'Pendiente' END
+                            WHERE IdParticipacion = @IdPart;";
+                        using (SqlCommand cmdSync = new SqlCommand(sqlSync, cn, tran))
+                        {
+                            cmdSync.Parameters.AddWithValue("@Asistio", asistioCualquiera ? 1 : 0);
+                            cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdSync.ExecuteNonQuery();
+                        }
+
+                        // 8. Actualizar cantidad de asistentes en evento
+                        string sqlUpCant = "UPDATE dbo.Eventos SET CantidadAsistentes = (SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento) WHERE IdEvento = @IdEvento;";
+                        using (SqlCommand cmdUpCant = new SqlCommand(sqlUpCant, cn, tran))
+                        {
+                            cmdUpCant.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdUpCant.ExecuteNonQuery();
+                        }
+
+                        tran.Commit();
+                        TempData["MensajeExito"] = "Asistencia y datos del Pastor/Líder actualizados correctamente.";
+                    }
+                    catch (Exception ex)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Error al registrar asistencia: " + ex.Message;
+                    }
+                }
+            }
+
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        [HttpPost]
+        public ActionResult GuardarAsistenciaTaller(int idEvento, int idParticipacion, int idIglesia, PersonaIglesia lider, bool? liderAsistio, List<Maestro> maestros, List<int> maestrosAsistieronIds)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!PuedeEditarEvento(u, idEvento))
+            {
+                TempData["MensajeError"] = "No tiene permiso para modificar este evento.";
+                return RedirectToAction("Detalle", new { id = idEvento });
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Actualizar Líder
+                        if (lider != null && !string.IsNullOrWhiteSpace(lider.Nombres))
+                        {
+                            ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
+                        }
+
+                        // 2. Procesar Maestros (Insertar nuevos o actualizar existentes)
+                        List<int> todosLosMaestrosAsistieronIds = new List<int>();
+                        if (maestrosAsistieronIds != null)
+                        {
+                            todosLosMaestrosAsistieronIds.AddRange(maestrosAsistieronIds);
+                        }
+
+                        if (maestros != null)
+                        {
+                            for (int i = 0; i < maestros.Count; i++)
+                            {
+                                var m = maestros[i];
+                                if (string.IsNullOrWhiteSpace(m.Nombres)) continue;
+
+                                if (m.IdMaestro > 0)
+                                {
+                                    // Actualizar
+                                    string sqlUpM = @"
+                                        UPDATE dbo.Maestros 
+                                        SET Nombres = @Nombres, Apellidos = @Apellidos, DocumentoIdentidad = @Doc, Celular = @Cel, Correo = @Correo
+                                        WHERE IdMaestro = @IdM;";
+                                    using (SqlCommand cmdUpM = new SqlCommand(sqlUpM, cn, tran))
+                                    {
+                                        cmdUpM.Parameters.AddWithValue("@Nombres", m.Nombres.Trim());
+                                        cmdUpM.Parameters.AddWithValue("@Apellidos", m.Apellidos ?? "");
+                                        cmdUpM.Parameters.AddWithValue("@Doc", m.DocumentoIdentidad ?? (object)DBNull.Value);
+                                        cmdUpM.Parameters.AddWithValue("@Cel", m.Celular ?? (object)DBNull.Value);
+                                        cmdUpM.Parameters.AddWithValue("@Correo", m.Correo ?? (object)DBNull.Value);
+                                        cmdUpM.Parameters.AddWithValue("@IdM", m.IdMaestro);
+                                        cmdUpM.ExecuteNonQuery();
+                                    }
+                                }
+                                else
+                                {
+                                    // Insertar
+                                    string sqlInsM = @"
+                                        INSERT INTO dbo.Maestros (IdIglesia, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo, Activo)
+                                        VALUES (@IdIglesia, @Nombres, @Apellidos, @Doc, @Cel, @Correo, 1);
+                                        SELECT SCOPE_IDENTITY();";
+                                    using (SqlCommand cmdInsM = new SqlCommand(sqlInsM, cn, tran))
+                                    {
+                                        cmdInsM.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                                        cmdInsM.Parameters.AddWithValue("@Nombres", m.Nombres.Trim());
+                                        cmdInsM.Parameters.AddWithValue("@Apellidos", m.Apellidos ?? "");
+                                        cmdInsM.Parameters.AddWithValue("@Doc", m.DocumentoIdentidad ?? (object)DBNull.Value);
+                                        cmdInsM.Parameters.AddWithValue("@Cel", m.Celular ?? (object)DBNull.Value);
+                                        cmdInsM.Parameters.AddWithValue("@Correo", m.Correo ?? (object)DBNull.Value);
+                                        int newMId = Convert.ToInt32(cmdInsM.ExecuteScalar());
+
+                                        // Si venía marcado como asistido en el checkbox correspondiente
+                                        // lo agregamos a la lista
+                                        string asistKey = Request.Form["maestroNuevoAsistio_" + i];
+                                        if (asistKey == "true")
+                                        {
+                                            todosLosMaestrosAsistieronIds.Add(newMId);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Limpiar asistentes anteriores de esta iglesia en este evento
+                        string sqlDel = "DELETE FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
+                        using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
+                        {
+                            cmdDel.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdDel.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdDel.ExecuteNonQuery();
+                        }
+
+                        int asistieronCount = 0;
+
+                        // 4. Registrar Líder como asistente si aplica
+                        if (liderAsistio == true)
+                        {
+                            string sqlIns = @"
+                                INSERT INTO dbo.EventosAsistentes (IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo)
+                                VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
+                            using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
+                            {
+                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmdIns.Parameters.AddWithValue("@Nombre", $"{lider.Nombres} {lider.Apellidos}".Trim());
+                                cmdIns.Parameters.AddWithValue("@Doc", lider.DocumentoIdentidad ?? (object)DBNull.Value);
+                                cmdIns.Parameters.AddWithValue("@Tel", lider.Celular ?? (object)DBNull.Value);
+                                cmdIns.Parameters.AddWithValue("@Correo", lider.Correo ?? (object)DBNull.Value);
+                                cmdIns.ExecuteNonQuery();
+                            }
+                            asistieronCount++;
+                        }
+
+                        // 5. Registrar Maestros que asistieron
+                        foreach (int mId in todosLosMaestrosAsistieronIds)
+                        {
+                            // Obtener los datos del maestro
+                            string sqlGetM = "SELECT Nombres, Apellidos, DocumentoIdentidad, Celular, Correo FROM dbo.Maestros WHERE IdMaestro = @IdM;";
+                            using (SqlCommand cmdGetM = new SqlCommand(sqlGetM, cn, tran))
+                            {
+                                cmdGetM.Parameters.AddWithValue("@IdM", mId);
+                                using (SqlDataReader dr = cmdGetM.ExecuteReader())
+                                {
+                                    if (dr.Read())
+                                    {
+                                        string nomComp = $"{dr["Nombres"]} {dr["Apellidos"]}".Trim();
+                                        string doc = dr["DocumentoIdentidad"] != DBNull.Value ? dr["DocumentoIdentidad"].ToString() : "";
+                                        string tel = dr["Celular"] != DBNull.Value ? dr["Celular"].ToString() : "";
+                                        string mail = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "";
+
+                                        // Insertar en EventosAsistentes
+                                        string sqlIns = @"
+                                            INSERT INTO dbo.EventosAsistentes (IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo)
+                                            VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
+                                        using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
+                                        {
+                                            cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
+                                            cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                            cmdIns.Parameters.AddWithValue("@Nombre", nomComp);
+                                            cmdIns.Parameters.AddWithValue("@Doc", string.IsNullOrWhiteSpace(doc) ? (object)DBNull.Value : doc);
+                                            cmdIns.Parameters.AddWithValue("@Tel", string.IsNullOrWhiteSpace(tel) ? (object)DBNull.Value : tel);
+                                            cmdIns.Parameters.AddWithValue("@Correo", string.IsNullOrWhiteSpace(mail) ? (object)DBNull.Value : mail);
+                                            cmdIns.ExecuteNonQuery();
+                                        }
+                                        asistieronCount++;
+                                    }
+                                }
+                            }
+                        }
+
+                        // 6. Actualizar Asistio en EventosParticipacionIglesia
+                        bool asistioCualquiera = (asistieronCount > 0);
+                        string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
+                        using (SqlCommand cmdUp = new SqlCommand(sqlUpPart, cn, tran))
+                        {
+                            cmdUp.Parameters.AddWithValue("@Asistio", asistioCualquiera ? 1 : 0);
+                            cmdUp.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdUp.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdUp.ExecuteNonQuery();
+                        }
+
+                        // 7. Sincronizar ParticipacionesIglesia usando Stored Procedure
+                        using (SqlCommand cmdSp = new SqlCommand("dbo.SpAvanzarEtapaTaller", cn, tran))
+                        {
+                            cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
+                            cmdSp.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
+                            cmdSp.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdSp.Parameters.AddWithValue("@Asistio", asistioCualquiera);
+                            cmdSp.Parameters.AddWithValue("@IdUsuarioResponsable", u.IdUsuario);
+                            cmdSp.ExecuteNonQuery();
+                        }
+
+                        // 8. Actualizar cantidad de asistentes en evento
+                        string sqlUpCant = "UPDATE dbo.Eventos SET CantidadAsistentes = (SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento) WHERE IdEvento = @IdEvento;";
+                        using (SqlCommand cmdUpCant = new SqlCommand(sqlUpCant, cn, tran))
+                        {
+                            cmdUpCant.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdUpCant.ExecuteNonQuery();
+                        }
+
+                        tran.Commit();
+                        TempData["MensajeExito"] = "Asistencia y datos del Líder/Maestros actualizados correctamente.";
+                    }
+                    catch (Exception ex)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Error al registrar asistencia: " + ex.Message;
+                    }
+                }
+            }
+
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        private void ActualizarOInsertarPersonaInterno(SqlConnection cn, SqlTransaction tran, int idIglesia, string tipoPersona, PersonaIglesia persona)
+        {
+            string sqlCheck = "SELECT COUNT(1) FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
+            int count = 0;
+            using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
+            {
+                cmdCheck.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                cmdCheck.Parameters.AddWithValue("@Tipo", tipoPersona);
+                count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+            }
+
+            if (count > 0)
+            {
+                string sqlUpdate = @"
+                    UPDATE dbo.PersonasIglesia SET
+                        Nombres = @Nombres,
+                        Apellidos = @Apellidos,
+                        DocumentoIdentidad = @Doc,
+                        Celular = @Celular,
+                        Correo = @Correo
+                    WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
+                using (SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn, tran))
+                {
+                    cmdUp.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
+                    cmdUp.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
+                    cmdUp.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
+                    cmdUp.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
+                    cmdUp.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
+                    cmdUp.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdUp.Parameters.AddWithValue("@Tipo", tipoPersona);
+                    cmdUp.ExecuteNonQuery();
+                }
+            }
+            else
+            {
+                string sqlInsert = @"
+                    INSERT INTO dbo.PersonasIglesia (IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo)
+                    VALUES (@IdIglesia, @Tipo, @Nombres, @Apellidos, @Doc, @Celular, @Correo);";
+                using (SqlCommand cmdIns = new SqlCommand(sqlInsert, cn, tran))
+                {
+                    cmdIns.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdIns.Parameters.AddWithValue("@Tipo", tipoPersona);
+                    cmdIns.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
+                    cmdIns.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
+                    cmdIns.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
+                    cmdIns.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
+                    cmdIns.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
+                    cmdIns.ExecuteNonQuery();
+                }
+            }
         }
 
         // POST: Eventos/GuardarAsistentes
@@ -699,6 +1336,28 @@ namespace SOR.Controllers
                             cmdSync.Parameters.AddWithValue("@IdEvento", idEvento);
                             cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
                             cmdSync.ExecuteNonQuery();
+                        }
+
+                        // Sincronizar con TallerParticipo y EtapaActual usando Stored Procedure
+                        string tipoEvento = "";
+                        using (SqlCommand cmdEv = new SqlCommand("SELECT TipoEvento FROM dbo.Eventos WHERE IdEvento = @IdEvento;", cn, tran))
+                        {
+                            cmdEv.Parameters.AddWithValue("@IdEvento", idEvento);
+                            object typeVal = cmdEv.ExecuteScalar();
+                            if (typeVal != null) tipoEvento = typeVal.ToString();
+                        }
+
+                        if (tipoEvento == "Taller")
+                        {
+                            using (SqlCommand cmdSp = new SqlCommand("dbo.SpAvanzarEtapaTaller", cn, tran))
+                            {
+                                cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
+                                cmdSp.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
+                                cmdSp.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdSp.Parameters.AddWithValue("@Asistio", tieneAsistentes);
+                                cmdSp.Parameters.AddWithValue("@IdUsuarioResponsable", u.IdUsuario);
+                                cmdSp.ExecuteNonQuery();
+                            }
                         }
 
                         tran.Commit();
@@ -798,6 +1457,11 @@ namespace SOR.Controllers
         public string NombreEquipo { get; set; }
         public bool Asistio { get; set; }
         public List<EventoAsistenteViewModel> AsistentesDetalle { get; set; } = new List<EventoAsistenteViewModel>();
+
+        // Propiedades adicionales
+        public PersonaIglesia Pastor { get; set; }
+        public PersonaIglesia LiderMinisterial { get; set; }
+        public List<Maestro> Maestros { get; set; } = new List<Maestro>();
     }
 
     public class MaestroAsistenciaViewModel

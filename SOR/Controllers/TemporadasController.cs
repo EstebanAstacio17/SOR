@@ -20,9 +20,29 @@ namespace SOR.Controllers
             return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
         }
 
+        private void AsegurarEsquemaConfiguraciones()
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    IF OBJECT_ID('dbo.ConfiguracionesSistema', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.ConfiguracionesSistema (
+                            Clave VARCHAR(100) PRIMARY KEY,
+                            Valor VARCHAR(255) NOT NULL
+                        );
+                        INSERT INTO dbo.ConfiguracionesSistema (Clave, Valor) VALUES ('MinAniosAntiguedad', '3');
+                    END";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         // GET: Temporadas
         public ActionResult Index()
         {
+            AsegurarEsquemaConfiguraciones();
             Usuario u = (Usuario)Session["usuario"];
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2) // Solo Admin/SuperAdmin
             {
@@ -51,8 +71,55 @@ namespace SOR.Controllers
                 }
             }
 
+            int aniosAntiguedadMinima = 3;
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlCfg = "SELECT Valor FROM dbo.ConfiguracionesSistema WHERE Clave = 'MinAniosAntiguedad';";
+                using (SqlCommand cmdCfg = new SqlCommand(sqlCfg, cn))
+                {
+                    object val = cmdCfg.ExecuteScalar();
+                    if (val != null && int.TryParse(val.ToString(), out int parsed))
+                    {
+                        aniosAntiguedadMinima = parsed;
+                    }
+                }
+            }
+            ViewBag.MinAniosAntiguedad = aniosAntiguedadMinima;
             ViewBag.UsuarioActual = u;
             return View(lista);
+        }
+
+        [HttpPost]
+        public ActionResult GuardarConfiguracion(int minAniosAntiguedad)
+        {
+            AsegurarEsquemaConfiguraciones();
+            Usuario u = (Usuario)Session["usuario"];
+            if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlCheck = "SELECT COUNT(1) FROM dbo.ConfiguracionesSistema WHERE Clave = 'MinAniosAntiguedad';";
+                using (SqlCommand cmdChk = new SqlCommand(sqlCheck, cn))
+                {
+                    int existe = Convert.ToInt32(cmdChk.ExecuteScalar());
+                    string sqlSave = existe > 0
+                        ? "UPDATE dbo.ConfiguracionesSistema SET Valor = @Val WHERE Clave = 'MinAniosAntiguedad';"
+                        : "INSERT INTO dbo.ConfiguracionesSistema (Clave, Valor) VALUES ('MinAniosAntiguedad', @Val);";
+                    using (SqlCommand cmdSave = new SqlCommand(sqlSave, cn))
+                    {
+                        cmdSave.Parameters.AddWithValue("@Val", minAniosAntiguedad.ToString());
+                        cmdSave.ExecuteNonQuery();
+                    }
+                }
+            }
+
+            TempData["MensajeExito"] = "Configuración de antigüedad de temporadas actualizada correctamente.";
+            return RedirectToAction("Index");
         }
 
         // POST: Temporadas/Crear

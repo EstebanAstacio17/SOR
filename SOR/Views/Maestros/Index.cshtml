@@ -187,13 +187,16 @@
                                                         </div>
                                                         <div class="mb-3">
                                                             <label class="form-label fw-semibold">Iglesia Asociada</label>
-                                                            <select name="IdIglesia" class="form-select" required>
+                                                            <select name="IdIglesia" class="form-select" required onchange="validarEquipoIglesiaModal(this)">
                                                                 <option value="">Selecciona una Iglesia...</option>
                                                                 @foreach (var ig in iglesias)
                                                                 {
                                                                     <option value="@ig.Value" @(ig.Value == item.IdIglesia.ToString() ? "selected" : "")>@ig.Text</option>
                                                                 }
                                                             </select>
+                                                            <div class="alert alert-warning py-2 text-xs mt-2 d-none shadow-sm alerta-equipo-diferente">
+                                                                <i class="bi bi-exclamation-triangle-fill me-1"></i><span class="texto-alerta-equipo"></span>
+                                                            </div>
                                                         </div>
                                                         <div class="mb-3">
                                                             <label class="form-label fw-semibold">Documento Identidad (Cédula/Pasaporte)</label>
@@ -250,17 +253,31 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Iglesia Asociada (Temporada Activa Actual)</label>
-                        <div class="input-group input-group-sm mb-1">
-                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" id="filtroModalIglesia" class="form-control" placeholder="Escribe para buscar iglesia..." onkeyup="filtrarSelectIglesias()" />
-                        </div>
-                        <select name="IdIglesia" id="selectModalIglesia" class="form-select" required size="5">
-                            <option value="" disabled selected>-- Selecciona una Iglesia --</option>
-                            @foreach (var ig in iglesias)
-                            {
-                                <option value="@ig.Value">@ig.Text</option>
-                            }
-                        </select>
+                        @if (ViewBag.IdIglesiaPreseleccionada != null)
+                        {
+                            <input type="hidden" name="IdIglesia" value="@ViewBag.IdIglesiaPreseleccionada" />
+                            <div class="form-control bg-light border text-slate-800 font-semibold py-2">
+                                <i class="bi bi-building text-primary me-2"></i>@ViewBag.NombreIglesiaPreseleccionada <span class="badge bg-slate-200 text-slate-700 ms-2">@ViewBag.NombreEquipoIglesiaPreseleccionada</span>
+                            </div>
+                            <small class="text-muted text-xs mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Iglesia seleccionada automáticamente desde su expediente.</small>
+                        }
+                        else
+                        {
+                            <div class="input-group input-group-sm mb-1">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="filtroModalIglesia" class="form-control" placeholder="Escribe para buscar iglesia..." onkeyup="filtrarSelectIglesias()" />
+                            </div>
+                            <select name="IdIglesia" id="selectModalIglesia" class="form-select" required size="5" onchange="validarEquipoIglesiaModal(this)">
+                                <option value="" disabled selected>-- Selecciona una Iglesia --</option>
+                                @foreach (var ig in iglesias)
+                                {
+                                    <option value="@ig.Value">@ig.Text</option>
+                                }
+                            </select>
+                            <div id="alertaEquipoDiferente" class="alert alert-warning py-2 text-xs mt-2 d-none shadow-sm alerta-equipo-diferente">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="textoAlertaEquipo" class="texto-alerta-equipo"></span>
+                            </div>
+                        }
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Documento Identidad (Cédula/Pasaporte)</label>
@@ -298,6 +315,35 @@
 </style>
 
 <script type="text/javascript">
+    var mapaEquipos = @Html.Raw(ViewBag.MapaEquiposJson ?? "{}");
+    var esAdmin = @(esAdmin ? "true" : "false");
+    var equiposPermitidosIds = [@string.Join(",", equiposPermitidos)];
+
+    function validarEquipoIglesiaModal(selectElement) {
+        var alertaDiv = selectElement.parentNode.querySelector('.alerta-equipo-diferente') || document.getElementById("alertaEquipoDiferente");
+        var textoSpan = alertaDiv ? alertaDiv.querySelector('.texto-alerta-equipo') : null;
+        var submitBtn = selectElement.closest('form').querySelector('button[type="submit"]');
+
+        if (!selectElement.value) {
+            if (alertaDiv) alertaDiv.classList.add("d-none");
+            if (submitBtn) submitBtn.disabled = false;
+            return;
+        }
+
+        $.getJSON('/Maestros/ValidarJurisdiccionIglesia', { idIglesia: selectElement.value }, function(response) {
+            if (response.success) {
+                if (!response.allowed) {
+                    if (textoSpan) textoSpan.textContent = "Esta iglesia pertenece al equipo: " + response.nombreEquipo;
+                    if (alertaDiv) alertaDiv.classList.remove("d-none");
+                    if (submitBtn) submitBtn.disabled = true;
+                } else {
+                    if (alertaDiv) alertaDiv.classList.add("d-none");
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            }
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         var searchInput = document.getElementById('txtBuscarMaestro');
         if (searchInput) {
