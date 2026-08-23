@@ -22,6 +22,28 @@ namespace SOR.Controllers
         {
             Usuario usuario = (Usuario)Session["usuario"];
             ViewBag.Usuario = usuario;
+
+            string temporadaActiva = "No Definida";
+            string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
+            using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(connectionString))
+            {
+                string query = @"
+                    SELECT TOP 1 NombreTemporada 
+                    FROM Temporadas 
+                    WHERE GETDATE() BETWEEN FechaInicio AND FechaFin
+                    ORDER BY IdTemporada DESC";
+                using (System.Data.SqlClient.SqlCommand cmd = new System.Data.SqlClient.SqlCommand(query, conn))
+                {
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        temporadaActiva = result.ToString().Replace("Temp ", "").Trim();
+                    }
+                }
+            }
+            ViewBag.TemporadaActiva = temporadaActiva;
+
             return View();
         }
 

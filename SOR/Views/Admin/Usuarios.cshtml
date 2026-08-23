@@ -117,12 +117,43 @@
 
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
     <div class="card-header bg-white border-bottom p-3">
-        <div class="row align-items-center">
-            <div class="col-md-6 col-lg-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-2">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscarUsuarioInput" class="form-control bg-light border-start-0" placeholder="Buscar por correo, nombre, equipo o rol..." onkeyup="filtrarTablaUsuarios()">
+                    <input type="text" id="buscarUsuarioInput" class="form-control bg-light border-start-0" placeholder="Buscar..." onkeyup="filtrarTablaUsuarios()">
                 </div>
+            </div>
+            <div class="col-md-2">
+                <select id="filtroEquipoUsuario" class="form-select bg-light text-truncate" onchange="onFilterChange('filtroEquipoUsuario')">
+                    <option value="">Equipos (Todos)</option>
+                    @foreach (var eq in listaEquipos) { 
+                        <option value="@(eq.Text.Contains("] ") ? eq.Text.Substring(eq.Text.IndexOf("] ") + 2) : eq.Text)">@eq.Text</option> 
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="filtroEstadoUsuario" class="form-select bg-light text-truncate" onchange="onFilterChange('filtroEstadoUsuario')">
+                    <option value="">Estados (Todos)</option>
+                    @foreach (var est in listaEstados) { <option value="@est.Text">@est.Text</option> }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="filtroRolOCCUsuario" class="form-select bg-light text-truncate" onchange="onFilterChange('filtroRolOCCUsuario')">
+                    <option value="">Rol OCC (Todos)</option>
+                    @foreach (var pos in listaPosiciones) { <option value="@pos.Text">@pos.Text</option> }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="filtroRolSeguridadUsuario" class="form-select bg-light text-truncate" onchange="onFilterChange('filtroRolSeguridadUsuario')">
+                    <option value="">Seguridad (Todos)</option>
+                    @foreach (var rol in listaRoles) { <option value="@rol.Text">@rol.Text</option> }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex">
+                <button class="btn btn-outline-secondary w-100 text-truncate" type="button" onclick="limpiarFiltrosUsuarios()">
+                    <i class="bi bi-eraser me-1"></i>Limpiar
+                </button>
             </div>
         </div>
     </div>
@@ -445,19 +476,57 @@
 
 @section Scripts {
     <script>
+        var activeFilters = [];
+
+        function onFilterChange(selectId) {
+            var val = document.getElementById(selectId).value;
+            // Remover si existía
+            activeFilters = activeFilters.filter(id => id !== selectId);
+            
+            if (val !== "") {
+                activeFilters.push(selectId);
+                // Si hay más de 2 filtros activos, quitar el más antiguo
+                if (activeFilters.length > 2) {
+                    var oldest = activeFilters.shift();
+                    document.getElementById(oldest).value = "";
+                }
+            }
+            filtrarTablaUsuarios();
+        }
+
+        function limpiarFiltrosUsuarios() {
+            document.getElementById("buscarUsuarioInput").value = "";
+            document.getElementById("filtroEquipoUsuario").value = "";
+            document.getElementById("filtroEstadoUsuario").value = "";
+            document.getElementById("filtroRolOCCUsuario").value = "";
+            document.getElementById("filtroRolSeguridadUsuario").value = "";
+            activeFilters = [];
+            filtrarTablaUsuarios();
+        }
+
         function filtrarTablaUsuarios() {
-            var input = document.getElementById("buscarUsuarioInput");
-            var filter = input.value.toLowerCase().trim();
+            var input = document.getElementById("buscarUsuarioInput").value.toLowerCase().trim();
+            var eq = document.getElementById("filtroEquipoUsuario").value.toLowerCase().trim();
+            var est = document.getElementById("filtroEstadoUsuario").value.toLowerCase().trim();
+            var rolocc = document.getElementById("filtroRolOCCUsuario").value.toLowerCase().trim();
+            var rolseg = document.getElementById("filtroRolSeguridadUsuario").value.toLowerCase().trim();
+
             var filas = document.querySelectorAll("#tablaUsuarios tbody tr.fila-usuario");
 
             filas.forEach(function (fila) {
-                var c1 = fila.cells[0] ? fila.cells[0].innerText.toLowerCase() : "";
-                var c2 = fila.cells[1] ? fila.cells[1].innerText.toLowerCase() : "";
-                var c3 = fila.cells[2] ? fila.cells[2].innerText.toLowerCase() : "";
-                var c4 = fila.cells[3] ? fila.cells[3].innerText.toLowerCase() : "";
-                var c5 = fila.cells[4] ? fila.cells[4].innerText.toLowerCase() : "";
+                var c1 = fila.cells[0] ? fila.cells[0].textContent.toLowerCase() : "";
+                var c2 = fila.cells[1] ? fila.cells[1].textContent.toLowerCase() : "";
+                var c3 = fila.cells[2] ? fila.cells[2].textContent.toLowerCase() : ""; // Equipo y Rol OCC
+                var c4 = fila.cells[3] ? fila.cells[3].textContent.toLowerCase() : ""; // Estado
+                var c5 = fila.cells[4] ? fila.cells[4].textContent.toLowerCase() : ""; // Rol Seguridad
 
-                if (c1.includes(filter) || c2.includes(filter) || c3.includes(filter) || c4.includes(filter) || c5.includes(filter)) {
+                var matchInput = input === "" || c1.indexOf(input) > -1 || c2.indexOf(input) > -1 || c3.indexOf(input) > -1 || c4.indexOf(input) > -1 || c5.indexOf(input) > -1;
+                var matchEq = eq === "" || c3.indexOf(eq) > -1;
+                var matchEst = est === "" || c4.indexOf(est) > -1;
+                var matchRolOcc = rolocc === "" || c3.indexOf(rolocc) > -1;
+                var matchRolSeg = rolseg === "" || c5.indexOf(rolseg) > -1;
+
+                if (matchInput && matchEq && matchEst && matchRolOcc && matchRolSeg) {
                     fila.style.display = "";
                 } else {
                     fila.style.display = "none";

@@ -59,6 +59,26 @@ namespace SOR.Controllers
             }
 
             CargarCombosFiltros();
+            
+            // Cargar Equipos para el filtro de la vista
+            List<SelectListItem> listaEq = new List<SelectListItem>();
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;";
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cn.Open();
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            listaEq.Add(new SelectListItem { Value = dr["NombreEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+                        }
+                    }
+                }
+            }
+            ViewBag.ListaEquipos = listaEq;
+
             ViewBag.UsuarioActual = u;
             return View(listaFiltrada.ToList());
         }

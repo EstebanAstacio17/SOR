@@ -38,6 +38,47 @@
     </div>
 }
 
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Búsqueda General</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filtroBuscarEvento" class="form-control bg-light border-start-0" placeholder="Buscar evento, responsable..." onkeyup="filtrarTablaEventos()">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
+            <select id="filtroTemporada" class="form-select form-select-sm bg-light" onchange="filtrarTablaEventos()">
+                <option value="">Todas</option>
+                @foreach (var temp in temporadas)
+                {
+                    <option value="@temp.Text">@temp.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Tipo de Evento</label>
+            <select id="filtroTipo" class="form-select form-select-sm bg-light" onchange="filtrarTablaEventos()">
+                <option value="">Todos</option>
+                <option value="Visión">Visión</option>
+                <option value="Taller OCC">Taller OCC</option>
+                <option value="Evangelístico">Evangelístico</option>
+                <option value="La Gran Aventura">La Gran Aventura</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Fecha (Desde)</label>
+            <input type="date" id="filtroFecha" class="form-control form-control-sm bg-light" onchange="filtrarTablaEventos()">
+        </div>
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-sm btn-outline-secondary w-100" type="button" onclick="limpiarFiltrosEventos()">
+                <i class="bi bi-eraser me-1"></i>Limpiar
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -256,16 +297,6 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Temporada</label>
-                        <select name="IdTemporada" class="form-select">
-                            <option value="">-- Temporada Activa Actual --</option>
-                            @foreach (var temp in temporadas)
-                            {
-                                <option value="@temp.Value">@temp.Text</option>
-                            }
-                        </select>
-                    </div>
-                     <div class="mb-3">
                         <label class="form-label fw-semibold">Lugar</label>
                         <input type="text" name="Lugar" class="form-control" placeholder="Ej: Salón Multiusos Iglesia Central" required />
                     </div>
@@ -341,3 +372,62 @@
         color: #6c757d !important;
     }
 </style>
+
+<script>
+    function filtrarTablaEventos() {
+        var inputBusqueda = document.getElementById("filtroBuscarEvento").value.toLowerCase();
+        var filtroTemporada = document.getElementById("filtroTemporada").value.toLowerCase();
+        var filtroTipo = document.getElementById("filtroTipo").value.toLowerCase();
+        var filtroFecha = document.getElementById("filtroFecha").value; // YYYY-MM-DD
+        
+        // Convertir formato de filtroFecha de YYYY-MM-DD a DD/MM/YYYY para comparar
+        var fechaComparar = "";
+        if (filtroFecha) {
+            var partes = filtroFecha.split('-');
+            fechaComparar = partes[2] + "/" + partes[1] + "/" + partes[0];
+        }
+
+        var tbody = document.querySelector("table tbody");
+        var tr = tbody.getElementsByTagName("tr");
+
+        for (var i = 0; i < tr.length; i++) {
+            // Ignorar la fila de "no hay eventos"
+            if (tr[i].getElementsByTagName("td").length === 1) continue;
+
+            var tdEventoResp = tr[i].getElementsByTagName("td")[0];
+            var tdTipo = tr[i].getElementsByTagName("td")[1];
+            var tdTemporada = tr[i].getElementsByTagName("td")[2];
+            var tdFecha = tr[i].getElementsByTagName("td")[3];
+            var tdLugar = tr[i].getElementsByTagName("td")[4];
+
+            if (tdEventoResp && tdTipo && tdTemporada && tdFecha && tdLugar) {
+                var txtEvento = tdEventoResp.textContent || tdEventoResp.innerText;
+                var txtLugar = tdLugar.textContent || tdLugar.innerText;
+                var txtTexto = txtEvento + " " + txtLugar;
+                
+                var txtTipo = tdTipo.textContent || tdTipo.innerText;
+                var txtTemporada = tdTemporada.textContent || tdTemporada.innerText;
+                var txtFecha = tdFecha.textContent || tdFecha.innerText;
+
+                var matchBusqueda = txtTexto.toLowerCase().indexOf(inputBusqueda) > -1;
+                var matchTemporada = filtroTemporada === "" || txtTemporada.toLowerCase().indexOf(filtroTemporada) > -1;
+                var matchTipo = filtroTipo === "" || txtTipo.toLowerCase().indexOf(filtroTipo) > -1;
+                var matchFecha = fechaComparar === "" || txtFecha.indexOf(fechaComparar) > -1;
+
+                if (matchBusqueda && matchTemporada && matchTipo && matchFecha) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+
+    function limpiarFiltrosEventos() {
+        document.getElementById("filtroBuscarEvento").value = "";
+        document.getElementById("filtroTemporada").value = "";
+        document.getElementById("filtroTipo").value = "";
+        document.getElementById("filtroFecha").value = "";
+        filtrarTablaEventos();
+    }
+</script>

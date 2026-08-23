@@ -233,7 +233,7 @@
 
 <!-- MODAL CREAR MAESTRO -->
 <div class="modal fade text-start" id="modalCrearMaestro" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 rounded-4 shadow">
             <form action="@Url.Action("Crear", "Maestros")" method="post">
                 <div class="modal-header bg-dark text-white rounded-top-4 py-3">
@@ -265,16 +265,16 @@
                         {
                             <div class="input-group input-group-sm mb-1">
                                 <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                                <input type="text" id="filtroModalIglesia" class="form-control" placeholder="Escribe para buscar iglesia..." onkeyup="filtrarSelectIglesias()" />
+                                <input type="text" id="filtroModalIglesia" class="form-control" placeholder="Escribe para buscar iglesia..." onkeyup="filtrarSelectIglesias()" style="max-width: 100%;" />
                             </div>
-                            <select name="IdIglesia" id="selectModalIglesia" class="form-select" required size="5" onchange="validarEquipoIglesiaModal(this)">
+                            <select name="IdIglesia" id="selectModalIglesia" class="form-select" required size="5" onchange="validarEquipoIglesiaModal(this)" style="max-width: 100%;">
                                 <option value="" disabled selected>-- Selecciona una Iglesia --</option>
                                 @foreach (var ig in iglesias)
                                 {
                                     <option value="@ig.Value">@ig.Text</option>
                                 }
                             </select>
-                            <div id="alertaEquipoDiferente" class="alert alert-warning py-2 text-xs mt-2 d-none shadow-sm alerta-equipo-diferente">
+                            <div id="alertaEquipoDiferente" class="alert alert-warning py-2 text-xs mt-2 d-none shadow-sm alerta-equipo-diferente w-100">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="textoAlertaEquipo" class="texto-alerta-equipo"></span>
                             </div>
                         }

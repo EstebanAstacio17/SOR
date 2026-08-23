@@ -944,25 +944,27 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
-                            <input type="text" name="nombres" class="form-control" required placeholder="Ej: María" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label>
-                            <input type="text" name="apellidos" class="form-control" required placeholder="Ej: Rodríguez" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Cédula <span class="text-danger">*</span></label>
-                            <input type="text" name="documentoIdentidad" class="form-control" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="001-0000000-0" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Celular <span class="text-danger">*</span></label>
-                            <input type="text" name="celular" class="form-control" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="809-555-1234" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Correo Electrónico <span class="text-danger">*</span></label>
-                            <input type="email" name="correo" class="form-control" required placeholder="maestro@ejemplo.com" />
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Nombres <span class="text-danger">*</span></label>
+                                <input type="text" name="nombres" class="form-control" required placeholder="Ej: María" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Apellidos <span class="text-danger">*</span></label>
+                                <input type="text" name="apellidos" class="form-control" required placeholder="Ej: Rodríguez" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Cédula <span class="text-danger">*</span></label>
+                                <input type="text" name="documentoIdentidad" class="form-control" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="001-0000000-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Celular <span class="text-danger">*</span></label>
+                                <input type="text" name="celular" class="form-control" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="809-555-1234" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Correo Electrónico <span class="text-danger">*</span></label>
+                                <input type="email" name="correo" class="form-control" required placeholder="maestro@ejemplo.com" />
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
