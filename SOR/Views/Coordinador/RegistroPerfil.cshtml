@@ -8,19 +8,6 @@
     bool esUsuarioAprobado = usuarioActual != null && usuarioActual.IdEstado == 4;
 }
 
-<div class="mb-4">
-    <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-person-vcard text-primary me-2"></i>Formulario de Perfil de Coordinador</h2>
-    <p class="text-muted mb-0">Por favor completa todas las secciones con tus datos personales, ministeriales y tu asignación dentro de OCC RD.</p>
-</div>
-
-@if (TempData["MensajeExito"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
-        <i class="bi bi-check-circle-fill me-2 fs-5"></i>@TempData["MensajeExito"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
 @if (ViewData["MensajeError"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
@@ -45,6 +32,11 @@
         </div>
     </div>
     <button type="button" class="btn-close" onclick="$('#alertValidacionPerfil').addClass('d-none');" aria-label="Close"></button>
+</div>
+
+<div class="mb-4">
+    <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-person-vcard text-primary me-2"></i>Formulario de Perfil de Coordinador</h2>
+    <p class="text-muted mb-0">Por favor completa todas las secciones con tus datos personales, ministeriales y tu asignación dentro de OCC RD.</p>
 </div>
 
 <form action="@Url.Action("RegistroPerfil", "Coordinador")" method="post" enctype="multipart/form-data" id="formPerfilCoordinador" novalidate>
