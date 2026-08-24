@@ -41,7 +41,7 @@
                 </div>
 
                 <h5 class="h6 font-bold mt-4 mb-2 text-dark">Dirección Física Completa</h5>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label font-semibold">Calle <span class="text-danger">*</span></label>
                     <input type="text" name="Calle" class="form-control" value="@Model.Calle" required placeholder="Ej: Calle Duarte" />
                 </div>
@@ -53,9 +53,13 @@
                     <label class="form-label font-semibold">Sector <span class="text-danger">*</span></label>
                     <input type="text" name="Sector" class="form-control" value="@Model.Sector" required placeholder="Ej: El Ensanche" />
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label font-semibold">Ciudad / Provincia <span class="text-danger">*</span></label>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Ciudad <span class="text-danger">*</span></label>
                     <input type="text" name="Ciudad" class="form-control" value="@Model.Ciudad" required placeholder="Ej: Santiago" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Provincia <span class="text-danger">*</span></label>
+                    <input type="text" name="Provincia" class="form-control" value="@Model.Provincia" required placeholder="Ej: Santiago" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label font-semibold">Referencia de Ubicación <span class="text-danger">*</span></label>
