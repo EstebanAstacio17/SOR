@@ -141,7 +141,35 @@
         {
             var part = Model.ParticipacionActual;
             <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
-                <h5 class="h6 font-bold text-slate-800 mb-4 border-bottom pb-2"><i class="bi bi-signpost-split me-2 text-primary"></i>Etapas de la Temporada Activa: @part.NombreTemporada</h5>
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4 flex-wrap gap-2">
+                    <h5 class="h6 font-bold text-slate-800 mb-0"><i class="bi bi-signpost-split me-2 text-primary"></i>Etapas de la Temporada Activa: @part.NombreTemporada</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-semibold text-slate-600">Estatus Reportes:</span>
+                        @if (part.EstatusEvaluacionReporte == "Reportó")
+                        {
+                            <span class="badge bg-success px-2 py-1">Reportó</span>
+                        }
+                        else if (part.EstatusEvaluacionReporte == "No Reportó")
+                        {
+                            <span class="badge bg-danger px-2 py-1">No Reportó</span>
+                        }
+                        else if (part.EstatusEvaluacionReporte == "Castigada")
+                        {
+                            <span class="badge bg-dark px-2 py-1">Castigada</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary px-2 py-1">Pendiente</span>
+                        }
+                        
+                        @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" data-bs-toggle="modal" data-bs-target="#modalCambiarEstatusReporte" title="Cambiar Estatus">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
                 
                 <!-- Timeline SVG / Steps -->
                 <div class="d-flex align-items-center justify-content-between position-relative px-2 flex-wrap gap-3">
@@ -1121,6 +1149,57 @@
     .badge.bg-success-soft {
         background-color: rgba(25, 135, 84, 0.15) !important;
         color: #198754 !important;
+    }
+</style>
+
+<!-- MODAL CAMBIAR ESTATUS REPORTE -->
+<div class="modal fade" id="modalCambiarEstatusReporte" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("CambiarEstatusReporte", "Iglesia")" method="post" class="needs-validation" novalidate onsubmit="if(!this.checkValidity()){this.classList.add('was-validated'); return false;}">
+                @if (Model.ParticipacionActual != null)
+                {
+                    <input type="hidden" name="idParticipacion" value="@Model.ParticipacionActual.IdParticipacion" />
+                }
+                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2"></i>Cambiar Estatus de Reporte</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="small text-slate-600 mb-3">Modifica el estatus de evaluación exclusivo para reportes de esta iglesia.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Estatus de Evaluación (Reporte)</label>
+                        <select name="estatusEvaluacionReporte" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            <option value="Pendiente" @(Model.ParticipacionActual != null && Model.ParticipacionActual.EstatusEvaluacionReporte == "Pendiente" ? "selected" : "")>Pendiente</option>
+                            <option value="Reportó" @(Model.ParticipacionActual != null && Model.ParticipacionActual.EstatusEvaluacionReporte == "Reportó" ? "selected" : "")>Reportó</option>
+                            <option value="No Reportó" @(Model.ParticipacionActual != null && Model.ParticipacionActual.EstatusEvaluacionReporte == "No Reportó" ? "selected" : "")>No Reportó</option>
+                            <option value="Castigada" @(Model.ParticipacionActual != null && Model.ParticipacionActual.EstatusEvaluacionReporte == "Castigada" ? "selected" : "")>Castigada</option>
+                        </select>
+                        <div class="invalid-feedback">Debe seleccionar un estatus.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Comentarios / Notas</label>
+                        <textarea name="comentario" class="form-control" rows="2" placeholder="Opcional. Escriba un comentario sobre este cambio..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark font-semibold">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* TIMELINE STYLES */
+    .border-3 { border-width: 3px !important; }
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+        color: #0d6efd !important;
     }
     .badge.bg-warning-soft {
         background-color: rgba(255, 193, 7, 0.15) !important;

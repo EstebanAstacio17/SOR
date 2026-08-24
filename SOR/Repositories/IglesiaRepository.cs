@@ -16,7 +16,7 @@ namespace SOR.Repositories
             {
                 string sql = @"
                     SELECT i.*, e.NombreEquipo,
-                           p.IdParticipacion, p.EstadoEvaluacion, p.EtapaActual, t.NombreTemporada
+                           p.IdParticipacion, p.EstadoEvaluacion, p.EstatusEvaluacionReporte, p.EtapaActual, t.NombreTemporada
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
                     LEFT JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
@@ -65,6 +65,7 @@ namespace SOR.Repositories
                                 IdParticipacion = Convert.ToInt32(dr["IdParticipacion"]),
                                 IdIglesia = ig.IdIglesia,
                                 EstadoEvaluacion = dr["EstadoEvaluacion"].ToString(),
+                                EstatusEvaluacionReporte = dr["EstatusEvaluacionReporte"] != DBNull.Value ? dr["EstatusEvaluacionReporte"].ToString() : "Pendiente",
                                 EtapaActual = Convert.ToInt32(dr["EtapaActual"]),
                                 NombreTemporada = dr["NombreTemporada"].ToString()
                             };
@@ -308,6 +309,7 @@ namespace SOR.Repositories
                                 Participara = Convert.ToBoolean(drPart["Participara"]),
                                 JustificacionNoParticipacion = drPart["JustificacionNoParticipacion"] != DBNull.Value ? drPart["JustificacionNoParticipacion"].ToString() : "",
                                 EstadoEvaluacion = drPart["EstadoEvaluacion"].ToString(),
+                                EstatusEvaluacionReporte = drPart["EstatusEvaluacionReporte"] != DBNull.Value ? drPart["EstatusEvaluacionReporte"].ToString() : "Pendiente",
 
                                 EtapaActual = Convert.ToInt32(drPart["EtapaActual"]),
                                 EvalInicialEstado = drPart["EvalInicialEstado"].ToString(),

@@ -29,7 +29,7 @@ namespace SOR.Controllers
         }
 
         // GET: Iglesia/Index
-        public ActionResult Index(int? idTemporada, string denominacion, string tipoOrg, int? etapaProcess, string estatusEval)
+        public ActionResult Index(int? idTemporada, string denominacion, string tipoOrg, int? etapaProcess, string estadoParticipacion, string estatusEvalReporte)
         {
             Usuario u = (Usuario)Session["usuario"];
             List<Iglesia> listaCompleta = _iglesiaService.ObtenerIglesias();
@@ -53,9 +53,13 @@ namespace SOR.Controllers
             {
                 listaFiltrada = listaFiltrada.Where(x => x.ParticipacionActual != null && x.ParticipacionActual.EtapaActual == etapaProcess.Value);
             }
-            if (!string.IsNullOrEmpty(estatusEval))
+            if (!string.IsNullOrEmpty(estadoParticipacion))
             {
-                listaFiltrada = listaFiltrada.Where(x => x.ParticipacionActual != null && x.ParticipacionActual.EstadoEvaluacion.Equals(estatusEval, StringComparison.OrdinalIgnoreCase));
+                listaFiltrada = listaFiltrada.Where(x => x.ParticipacionActual != null && x.ParticipacionActual.EstadoEvaluacion.Equals(estadoParticipacion, StringComparison.OrdinalIgnoreCase));
+            }
+            if (!string.IsNullOrEmpty(estatusEvalReporte))
+            {
+                listaFiltrada = listaFiltrada.Where(x => x.ParticipacionActual != null && x.ParticipacionActual.EstatusEvaluacionReporte.Equals(estatusEvalReporte, StringComparison.OrdinalIgnoreCase));
             }
 
             CargarCombosFiltros();
@@ -517,6 +521,77 @@ namespace SOR.Controllers
             }
 
             TempData["MensajeExito"] = "El proceso de la iglesia ha sido detenido exitosamente.";
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        public ActionResult CambiarEstatusReporte(int idParticipacion, int idIglesia, string estatusEvaluacionReporte, string comentario)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+            
+            // Permitir que Administradores, CD y CE puedan cambiar esto
+            if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2 && u.IdPosicion != 3)
+            {
+                TempData["MensajeError"] = "Su usuario no tiene autorización para cambiar el estatus de reportes.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permiso para realizar cambios en esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlGet = "SELECT EstatusEvaluacionReporte FROM dbo.ParticipacionesIglesia WHERE IdParticipacion = @Id;";
+                string estadoAnterior = "Desconocido";
+                using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn))
+                {
+                    cmdGet.Parameters.AddWithValue("@Id", idParticipacion);
+                    object val = cmdGet.ExecuteScalar();
+                    if (val != null) estadoAnterior = val.ToString();
+                }
+
+                string sql = "UPDATE dbo.ParticipacionesIglesia SET EstatusEvaluacionReporte = @Estatus WHERE IdParticipacion = @Id;";
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Estatus", estatusEvaluacionReporte);
+                    cmd.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmd.ExecuteNonQuery();
+                }
+
+                string histCmt = $"El Estatus de Evaluación (Reporte) cambió de '{estadoAnterior}' a '{estatusEvaluacionReporte}'. " + (!string.IsNullOrWhiteSpace(comentario) ? $"Notas: {comentario}" : "");
+                string sqlLog = @"
+                    INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
+                    VALUES (@IdPart, GETDATE(), 'Cambio Estatus Reporte', @EstadoAnt, @EstadoNue, @IdUser, @Cmt);";
+                using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
+                {
+                    cmdLog.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdLog.Parameters.AddWithValue("@EstadoAnt", estadoAnterior);
+                    cmdLog.Parameters.AddWithValue("@EstadoNue", iglesia.ParticipacionActual.EstadoEvaluacion); // El estado del proceso sigue igual
+                    cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
+                    cmdLog.Parameters.AddWithValue("@Cmt", histCmt);
+                    cmdLog.ExecuteNonQuery();
+                }
+
+                if (!string.IsNullOrWhiteSpace(comentario))
+                {
+                    string sqlComentario = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
+                    using (SqlCommand cmdCmt = new SqlCommand(sqlComentario, cn))
+                    {
+                        cmdCmt.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                        cmdCmt.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                        cmdCmt.Parameters.AddWithValue("@Comentario", "Cambio de Estatus de Reporte: " + comentario);
+                        cmdCmt.ExecuteNonQuery();
+                    }
+                }
+            }
+
+            TempData["MensajeExito"] = "El estatus de evaluación de reportes ha sido actualizado exitosamente.";
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
@@ -1053,9 +1128,18 @@ namespace SOR.Controllers
 
             ViewBag.FiltroEstados = new List<SelectListItem>
             {
-                new SelectListItem { Value = "Pendiente", Text = "Pendiente de Aprobación" },
+                new SelectListItem { Value = "Pendiente", Text = "Pendiente" },
                 new SelectListItem { Value = "Aprobado", Text = "Aprobada" },
+                new SelectListItem { Value = "Detenido", Text = "Detenida" },
                 new SelectListItem { Value = "Rechazado", Text = "Rechazada / Suspendida" }
+            };
+
+            ViewBag.FiltroEstatusReportes = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "Pendiente", Text = "Pendiente" },
+                new SelectListItem { Value = "Reportó", Text = "Reportó" },
+                new SelectListItem { Value = "No Reportó", Text = "No Reportó" },
+                new SelectListItem { Value = "Castigada", Text = "Castigada" }
             };
         }
 

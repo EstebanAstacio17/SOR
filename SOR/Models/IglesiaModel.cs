@@ -78,6 +78,7 @@ namespace SOR.Models
         public bool Participara { get; set; } = true;
         public string JustificacionNoParticipacion { get; set; }
         public string EstadoEvaluacion { get; set; } = "Pendiente"; // Pendiente, Aprobado, NoAprobado
+        public string EstatusEvaluacionReporte { get; set; } = "Pendiente"; // Pendiente, Reportó, No Reportó, Castigada
         public int? IdUsuarioEvaluador { get; set; }
         public DateTime? FechaSolicitud { get; set; }
         public DateTime? FechaEvaluacion { get; set; }

@@ -6,6 +6,7 @@
     var temporadas = (List<SelectListItem>)ViewBag.FiltroTemporadas;
     var etapas = (List<SelectListItem>)ViewBag.FiltroEtapas;
     var estados = (List<SelectListItem>)ViewBag.FiltroEstados;
+    var estatusReportes = (List<SelectListItem>)ViewBag.FiltroEstatusReportes;
     var importarTemporadas = (List<SelectListItem>)ViewBag.ImportarTemporadas;
 }
 
@@ -84,7 +85,7 @@
                 </div>
 
                 <div>
-                    <label class="form-label text-slate-600 small fw-semibold">Etapa de Proceso</label>
+                    <label class="form-label text-slate-600 small fw-semibold">Etapas en Temporada</label>
                     <select name="etapaProcess" class="form-select">
                         <option value="">Todas las etapas</option>
                         @foreach (var et in etapas)
@@ -95,12 +96,26 @@
                 </div>
 
                 <div>
-                    <label class="form-label text-slate-600 small fw-semibold">Estatus Evaluación</label>
-                    <select name="estatusEval" class="form-select">
-                        <option value="">Todos los estatus</option>
+                    <label class="form-label text-slate-600 small fw-semibold">Estado de Participación</label>
+                    <select name="estadoParticipacion" class="form-select">
+                        <option value="">Todos los estados</option>
                         @foreach (var st in estados)
                         {
-                            <option value="@st.Value" @(Request.QueryString["estatusEval"] == st.Value ? "selected" : "")>@st.Text</option>
+                            <option value="@st.Value" @(Request.QueryString["estadoParticipacion"] == st.Value ? "selected" : "")>@st.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Estatus Evaluación (Reporte)</label>
+                    <select name="estatusEvalReporte" class="form-select">
+                        <option value="">Todos los estatus</option>
+                        @if(estatusReportes != null)
+                        {
+                            foreach (var rep in estatusReportes)
+                            {
+                                <option value="@rep.Value" @(Request.QueryString["estatusEvalReporte"] == rep.Value ? "selected" : "")>@rep.Text</option>
+                            }
                         }
                     </select>
                 </div>
