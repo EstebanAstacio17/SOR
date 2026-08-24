@@ -9,6 +9,7 @@ namespace SOR.Models
         public string NombreIglesia { get; set; }
         public string RNC_Cedula { get; set; }
         public string Telefono { get; set; }
+        public string CorreoInstitucion { get; set; }
         public string Calle { get; set; }
         public string Numero { get; set; }
         public string Sector { get; set; }

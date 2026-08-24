@@ -40,21 +40,6 @@
     </div>
 </div>
 
-@if (TempData["MensajeExito"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData["MensajeError"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
 
 <div class="row g-4">
     <!-- Panel Izquierdo: Sidebar de Filtros -->
@@ -308,7 +293,7 @@
                 </div>
                 <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-info text-white font-semibold"><i class="bi bi-box-arrow-in-down me-1"></i>Importar Datos</button>
+                    <button type="submit" class="btn btn-info text-white font-semibold"><i class="bi bi-eye me-1"></i>Subir y Previsualizar</button>
                 </div>
             </form>
         </div>

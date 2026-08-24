@@ -37,6 +37,7 @@ namespace SOR.Repositories
                             NombreIglesia = dr["NombreIglesia"].ToString(),
                             RNC_Cedula = dr["RNC_Cedula"] != DBNull.Value ? dr["RNC_Cedula"].ToString() : "",
                             Telefono = dr["Telefono"] != DBNull.Value ? dr["Telefono"].ToString() : "",
+                            CorreoInstitucion = dr["CorreoInstitucion"] != DBNull.Value ? dr["CorreoInstitucion"].ToString() : "",
                             Calle = dr["Calle"] != DBNull.Value ? dr["Calle"].ToString() : "",
                             Numero = dr["Numero"] != DBNull.Value ? dr["Numero"].ToString() : "",
                             Sector = dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
@@ -91,10 +92,10 @@ namespace SOR.Repositories
                         // 1. Insertar Iglesia
                         string sqlIglesia = @"
                             INSERT INTO dbo.Iglesias (
-                                NombreIglesia, RNC_Cedula, Telefono, Calle, Numero, Sector, Ciudad, Provincia, Referencia, IdEquipo, IdUsuarioCreacion,
+                                NombreIglesia, RNC_Cedula, Telefono, CorreoInstitucion, Calle, Numero, Sector, Ciudad, Provincia, Referencia, IdEquipo, IdUsuarioCreacion,
                                 Denominacion, TipoOrganizacion, CantidadMaestros, CantidadNinos, Ref1Nombre, Ref1Contacto, Ref2Nombre, Ref2Contacto
                             ) VALUES (
-                                @NombreIglesia, @RNC_Cedula, @Telefono, @Calle, @Numero, @Sector, @Ciudad, @Provincia, @Referencia, @IdEquipo, @IdUsuarioCreacion,
+                                @NombreIglesia, @RNC_Cedula, @Telefono, @CorreoInstitucion, @Calle, @Numero, @Sector, @Ciudad, @Provincia, @Referencia, @IdEquipo, @IdUsuarioCreacion,
                                 @Denominacion, @TipoOrganizacion, @CantidadMaestros, @CantidadNinos, @Ref1Nombre, @Ref1Contacto, @Ref2Nombre, @Ref2Contacto
                             );
                             SELECT SCOPE_IDENTITY();";
@@ -103,6 +104,7 @@ namespace SOR.Repositories
                         cmdIg.Parameters.AddWithValue("@NombreIglesia", modelo.NombreIglesia);
                         cmdIg.Parameters.AddWithValue("@RNC_Cedula", modelo.RNC_Cedula ?? (object)DBNull.Value);
                         cmdIg.Parameters.AddWithValue("@Telefono", modelo.Telefono ?? (object)DBNull.Value);
+                        cmdIg.Parameters.AddWithValue("@CorreoInstitucion", modelo.CorreoInstitucion ?? (object)DBNull.Value);
                         cmdIg.Parameters.AddWithValue("@Calle", modelo.Calle ?? (object)DBNull.Value);
                         cmdIg.Parameters.AddWithValue("@Numero", modelo.Numero ?? (object)DBNull.Value);
                         cmdIg.Parameters.AddWithValue("@Sector", modelo.Sector ?? (object)DBNull.Value);
@@ -153,14 +155,19 @@ namespace SOR.Repositories
                             idTemporadaDestino = Convert.ToInt32(idTempObj);
                         }
 
+                        string estatusReporte = (modelo.ParticipacionActual != null && !string.IsNullOrEmpty(modelo.ParticipacionActual.EstatusEvaluacionReporte)) 
+                                                ? modelo.ParticipacionActual.EstatusEvaluacionReporte 
+                                                : "Pendiente";
+
                         string sqlPart = @"
-                            INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EtapaActual)
-                            VALUES (@IdIglesia, @IdTemporada, 1, 'Pendiente', 1);
+                            INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EstatusEvaluacionReporte, EtapaActual)
+                            VALUES (@IdIglesia, @IdTemporada, 1, 'Pendiente', @EstatusReporte, 1);
                             SELECT SCOPE_IDENTITY();";
 
                         SqlCommand cmdPart = new SqlCommand(sqlPart, cn, tran);
                         cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesiaNew);
                         cmdPart.Parameters.AddWithValue("@IdTemporada", idTemporadaDestino);
+                        cmdPart.Parameters.AddWithValue("@EstatusReporte", estatusReporte);
                         int idParticipacionNew = Convert.ToInt32(cmdPart.ExecuteScalar());
 
                         // Crear registro inicial de asignación de recursos despachados
@@ -207,6 +214,7 @@ namespace SOR.Repositories
                                 NombreIglesia = dr["NombreIglesia"].ToString(),
                                 RNC_Cedula = dr["RNC_Cedula"] != DBNull.Value ? dr["RNC_Cedula"].ToString() : "",
                                 Telefono = dr["Telefono"] != DBNull.Value ? dr["Telefono"].ToString() : "",
+                                CorreoInstitucion = dr["CorreoInstitucion"] != DBNull.Value ? dr["CorreoInstitucion"].ToString() : "",
                                 Calle = dr["Calle"] != DBNull.Value ? dr["Calle"].ToString() : "",
                                 Numero = dr["Numero"] != DBNull.Value ? dr["Numero"].ToString() : "",
                                 Sector = dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
@@ -599,6 +607,7 @@ namespace SOR.Repositories
                                 NombreIglesia = @NombreIglesia,
                                 RNC_Cedula = @RNC_Cedula,
                                 Telefono = @Telefono,
+                                CorreoInstitucion = @CorreoInstitucion,
                                 Calle = @Calle,
                                 Numero = @Numero,
                                 Sector = @Sector,
@@ -621,6 +630,7 @@ namespace SOR.Repositories
                             cmdIg.Parameters.AddWithValue("@NombreIglesia", modelo.NombreIglesia);
                             cmdIg.Parameters.AddWithValue("@RNC_Cedula", modelo.RNC_Cedula ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Telefono", modelo.Telefono ?? (object)DBNull.Value);
+                            cmdIg.Parameters.AddWithValue("@CorreoInstitucion", modelo.CorreoInstitucion ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Calle", modelo.Calle ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Numero", modelo.Numero ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Sector", modelo.Sector ?? (object)DBNull.Value);

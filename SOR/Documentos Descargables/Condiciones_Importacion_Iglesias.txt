@@ -1,42 +1,50 @@
-ESPECIFICACIONES DE ARCHIVO DE PLANILLA PARA CARGA MASIVA DE IGLESIAS (SOR)
+GUÍA Y CONDICIONES PARA CARGA MASIVA DE IGLESIAS (NUEVA PLATAFORMA SOR)
 ========================================================================
 
-Para evitar errores durante la carga masiva, el archivo debe cumplir estrictamente con el siguiente orden de columnas y formatos requeridos:
+Para procesar adecuadamente la carga masiva mediante la plantilla Excel, el archivo debe cumplir estrictamente con el siguiente orden de columnas (23 Columnas en total). 
 
-1. ESTRUCTURA Y ORDEN DE LAS COLUMNAS (18 Columnas en total):
+Nota: En el nuevo procedimiento, la información se cargará en una pantalla de "Previsualización" donde podrás validar y corregir los datos antes de guardarlos definitivamente en la base de datos.
+
+1. ESTRUCTURA Y ORDEN DE LAS COLUMNAS:
 ------------------------------------------------------------
-Columna A (1): NombreIglesia      - [Texto, Max 150 caracteres] (Obligatorio)
-Columna B (2): RNC_Cedula         - [Cédula o RNC sin guiones o con formato] (Ej: 001-0000000-0 o 00100000000) (Obligatorio para Temporada Activa/En Curso)
-Columna C (3): Telefono           - [10 dígitos numéricos] (Ej: 809-555-5555 o 8095555555) (Obligatorio para Temporada Activa/En Curso)
-Columna D (4): Provincia          - [Texto, Provincia donde se ubica la iglesia]
-Columna E (5): Sector             - [Texto, Sector/Barrio]
-Columna F (6): Calle              - [Texto, Calle]
-Columna G (7): Numero             - [Texto/Número]
-Columna H (8): Referencia         - [Texto, punto de referencia]
-Columna I (9): Denominacion       - [Texto] (Ej: Pentecostal, Bautista, etc.)
-Columna J (10): TipoOrganizacion  - [Texto] (Ej: Iglesia Local, Asociación)
-Columna K (11): PastorNombre      - [Texto, Nombre completo del Pastor] (Obligatorio para Temporada Activa/En Curso)
-Columna L (12): PastorCelular     - [Celular del Pastor, 10 dígitos]
-Columna M (13): PastorCorreo      - [Correo electrónico válido] (Ej: pastor@correo.com)
-Columna N (14): LiderNombre       - [Texto, Nombre del Líder de Discipulado/Ministerial] (Obligatorio para Temporada Activa/En Curso)
-Columna O (15): LiderCelular      - [Celular del Líder, 10 dígitos]
-Columna P (16): LiderCorreo       - [Correo electrónico del Líder]
-Columna Q (17): CantMaestros      - [Número entero] (Ej: 5)
-Columna R (18): CantNinos         - [Número entero] (Ej: 50)
+Columna A (1): NO                           - [Se ignora. Puede venir vacío o con números].
+Columna B (2): NombredeIglesia_Organización - [Texto] Nombre completo de la iglesia. (Obligatorio).
+Columna C (3): RNC_Cedula                   - [Cédula o RNC] (Obligatorio).
+Columna D (4): Telefono                     - [Texto numérico, 10 dígitos] (Obligatorio).
+Columna E (5): CorreoInstitucion            - [Texto] Correo electrónico oficial de la iglesia.
+Columna F (6): Provincia                    - [Texto] Provincia donde se ubica la iglesia (Obligatorio).
+Columna G (7): Ciudad                       - [Texto] Ciudad o municipio (Obligatorio).
+Columna H (8): Sector                       - [Texto] Barrio o sector (Obligatorio).
+Columna I (9): Calle                        - [Texto] Dirección (Obligatorio).
+Columna J (10): Numero                      - [Texto/Número]
+Columna K (11): Próxima a que esta la Iglesia? - [Texto] Punto de referencia para ubicación.
+Columna L (12): Denominacion                - [Texto] Ej: Pentecostal, Bautista, etc.
+Columna M (13): PastorNombre                - [Texto] Nombre completo del Pastor. El sistema automáticamente dividirá el primer nombre de los apellidos. (Obligatorio).
+Columna N (14): PastorIdentificacion        - [Cédula del Pastor] (Opcional en la carga masiva).
+Columna O (15): PastorCelular               - [Texto numérico, 10 dígitos] (Obligatorio).
+Columna P (16): PastorCorreo                - [Texto] Correo del pastor.
+Columna Q (17): LiderNombre                 - [Texto] Nombre completo del Líder. El sistema lo dividirá en Nombres y Apellidos. (Obligatorio).
+Columna R (18): LiderIdentificacion         - [Cédula del Líder] (Opcional en la carga masiva).
+Columna S (19): LiderCelular                - [Texto numérico, 10 dígitos] (Obligatorio).
+Columna T (20): LiderCorreo                 - [Texto] Correo del líder.
+Columna U (21): CantMaestros                - [Número entero].
+Columna V (22): CantNinos                   - [Número entero].
+Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vacío, el sistema asumirá que "NO" reportó.
 
-2. CONDICIONES DE VALIDACIÓN SEGÚN LA TEMPORADA DE DESTINO:
+2. PROCEDIMIENTO DE PREVISUALIZACIÓN Y CAMPOS VACÍOS:
 -----------------------------------------------------------
-* NOTA IMPORTANTE: La plataforma únicamente permite la importación masiva de datos destinados a la TEMPORADA ACTUAL EN CURSO y a la TEMPORADA INMEDIATAMENTE ANTERIOR.
+- Los registros se cargan inicialmente en una pantalla temporal (Grid de Previsualización).
+- Ya no se rechazan automáticamente las filas por estar incompletas durante la lectura del Excel.
+- SIN EMBARGO, si la plantilla trae campos vacíos en columnas obligatorias (como RNC, Nombre, Provincia, Pastor, etc.), las casillas correspondientes se resaltarán en rojo en la pantalla de previsualización.
+- EL SISTEMA NO PERMITIRÁ GUARDAR LOS DATOS DEFINITIVAMENTE hasta que se llenen o corrijan manualmente todos los campos requeridos marcados en rojo en dicha pantalla.
 
-- TEMPORADA ANTERIOR (HISTÓRICA PERMITIDA):
-  * Se admiten campos vacíos en RNC_Cedula, Telefono, PastorNombre, LiderNombre. Esto permite cargar archivos de la temporada pasada sin penalizaciones de datos incompletos.
-  * Si los campos de Cédula/RNC, Teléfono o Correo están provistos, se validará su formato.
+3. ASIGNACIÓN AUTOMÁTICA DE EQUIPOS:
+-----------------------------------------------------------
+- Las iglesias importadas serán asignadas automáticamente al "Equipo OCC" al cual pertenezca el usuario que esté realizando la carga masiva en ese momento.
+- Se registrarán con el tipo de institución por defecto: "Iglesia".
 
-- TEMPORADA EN CURSO (ACTIVA ACTUAL):
-  * NO SE ADMITEN campos vacíos en los campos críticos: Nombre de Iglesia, RNC_Cedula, Telefono, PastorNombre, y LiderNombre. Si falta alguno, la fila será rechazada.
-
-3. FORMATOS Y VALIDACIONES DE DATOS:
+4. FORMATOS DE DATOS GENERALES:
 ------------------------------------
-- Cédulas / RNC: Deben tener 9 u 11 dígitos.
-- Teléfonos / Celulares: Deben tener exactamente 10 dígitos numéricos (comenzando con 809, 829, 849 u otros prefijos válidos de RD).
-- Correos: Deben tener un formato de email válido (ejemplo@dominio.com).
+- Cédulas / RNC: 9 u 11 dígitos.
+- Teléfonos / Celulares: 10 dígitos (comenzando con código de área válido).
+- Reportó: Exclusivamente usar "SI" o "NO" (Sin importar mayúsculas o minúsculas).

@@ -89,10 +89,12 @@ namespace SOR.Controllers
 
         public ActionResult DescargarPlantillaIglesias()
         {
-            string csvHeader = "NombreIglesia,RNC_Cedula,Telefono,Provincia,Sector,Calle,Numero,Referencia,Denominacion,TipoOrganizacion,PastorNombre,PastorCelular,PastorCorreo,LiderNombre,LiderCelular,LiderCorreo,CantMaestros,CantNinos\n";
-            string csvEjemplo = "\"Iglesia Ejemplo de Fe\",\"001-0000000-0\",\"809-555-0101\",\"Santo Domingo\",\"Centro\",\"Calle Principal\",\"12\",\"Cerca del Parque\",\"Pentecostal\",\"Iglesia Local\",\"Juan Pérez\",\"809-555-0102\",\"pastor@ejemplo.com\",\"María Gómez\",\"809-555-0103\",\"lider@ejemplo.com\",\"5\",\"50\"\n";
-            byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(csvHeader + csvEjemplo);
-            return File(fileBytes, "text/csv", "Plantilla_Carga_Masiva_Iglesias.csv");
+            string path = Server.MapPath("~/Documentos Descargables/Plantilla_Carga_Masiva_Iglesias.xlsx");
+            if (System.IO.File.Exists(path))
+            {
+                return File(path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Plantilla_Carga_Masiva_Iglesias.xlsx");
+            }
+            return HttpNotFound("Archivo de plantilla no encontrado.");
         }
 
         public ActionResult DescargarCondicionesImportacion()
@@ -115,7 +117,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Index");
             }
 
-            CargarEquiposDisponibles(u);
+            CargarEquiposDisponibles();
             CargarCatalogosDenominacionesYTipos();
             return View(new Iglesia());
         }
@@ -130,11 +132,10 @@ namespace SOR.Controllers
                 return RedirectToAction("Index");
             }
 
-            CargarEquiposDisponibles(u);
+            CargarEquiposDisponibles();
             CargarCatalogosDenominacionesYTipos();
 
-            string errorValidacion;
-            if (!ValidarFormatosDR(modelo, out errorValidacion))
+            if (!ValidarFormatosDR(modelo, out string errorValidacion))
             {
                 ViewData["MensajeError"] = errorValidacion;
                 return View(modelo);
@@ -745,8 +746,8 @@ namespace SOR.Controllers
             string filePath = Path.Combine(uploadPath, Guid.NewGuid().ToString() + ext);
             archivoExcel.SaveAs(filePath);
 
-            int insertados = 0;
-            int errores = 0;
+
+            List<Iglesia> iglesiasPreview = new List<Iglesia>();
             List<string> detalleErrores = new List<string>();
 
             try
@@ -763,24 +764,18 @@ namespace SOR.Controllers
                         {
                             filaNum++;
                             string[] cols = line.Split(',');
-                            if (cols.Length < 1 || string.IsNullOrWhiteSpace(cols[0])) continue;
-
-                            try
+                            // Leer y procesar solo si la columna 0 es un número del 1 al 200
+                            if (int.TryParse(cols[0].Trim(), out int noFila) && noFila >= 1 && noFila <= 200)
                             {
-                                Iglesia ig = MapearColumnasImport(cols);
-                                if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                try
                                 {
+                                    Iglesia ig = MapearColumnasImport(cols);
                                     ig.IdEquipo = u.IdEquipo ?? 1;
+                                    iglesiasPreview.Add(ig);
                                 }
-                                _iglesiaService.RegistrarIglesia(ig, u.IdUsuario, idTemporadaImportar.Value);
-                                insertados++;
-                            }
-                            catch (Exception ex)
-                            {
-                                errores++;
-                                if (detalleErrores.Count < 10)
+                                catch (Exception ex)
                                 {
-                                    detalleErrores.Add($"Fila {filaNum} ({cols[0]}): {ex.Message}");
+                                    if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} (NO: {noFila}): {ex.Message}");
                                 }
                             }
                         }
@@ -804,25 +799,23 @@ namespace SOR.Controllers
                                 while (dr.Read())
                                 {
                                     filaNum++;
-                                    string nombreIg = dr[0] != DBNull.Value ? dr[0].ToString().Trim() : "Iglesia Sin Nombre";
-                                    if (string.IsNullOrWhiteSpace(nombreIg)) continue;
+                                    string noFilaStr = dr[0] != DBNull.Value ? dr[0].ToString().Trim() : "";
+                                    
+                                    // Leer y procesar solo si la columna 0 es un número del 1 al 200
+                                    if (int.TryParse(noFilaStr, out int noFila) && noFila >= 1 && noFila <= 200)
+                                    {
+                                        // Ignoramos si no tiene nombre
+                                        if (dr.FieldCount <= 1 || dr[1] == DBNull.Value || string.IsNullOrWhiteSpace(dr[1].ToString())) continue;
 
-                                    try
-                                    {
-                                        Iglesia ig = MapearDataReaderImport(dr, u.IdEquipo ?? 1);
-                                        if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                        try
                                         {
+                                            Iglesia ig = MapearDataReaderImport(dr, u.IdEquipo ?? 1);
                                             ig.IdEquipo = u.IdEquipo ?? 1;
+                                            iglesiasPreview.Add(ig);
                                         }
-                                        _iglesiaService.RegistrarIglesia(ig, u.IdUsuario, idTemporadaImportar.Value);
-                                        insertados++;
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        errores++;
-                                        if (detalleErrores.Count < 10)
+                                        catch (Exception ex)
                                         {
-                                            detalleErrores.Add($"Fila {filaNum} ({nombreIg}): {ex.Message}");
+                                            if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} (NO: {noFila}): {ex.Message}");
                                         }
                                     }
                                 }
@@ -831,63 +824,152 @@ namespace SOR.Controllers
                     }
                 }
 
-                string msg = $"Importación completada: {insertados} iglesias registradas exitosamente. Errores: {errores}.";
                 if (detalleErrores.Any())
                 {
-                    msg += "<br/><strong>Detalle de Errores (primeros 10):</strong><br/>" + string.Join("<br/>", detalleErrores);
+                    TempData["MensajeError"] = "Se encontraron errores al leer algunas filas:<br/>" + string.Join("<br/>", detalleErrores);
                 }
-                TempData["MensajeExito"] = msg;
+
+                Session["IglesiasImportPreview"] = iglesiasPreview;
+                Session["IdTemporadaImportPreview"] = idTemporadaImportar.Value;
+                
+                return View("PreviewImportacion", iglesiasPreview);
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error crítico durante la importación: " + ex.Message + " (Nota: Si es un archivo XLSX, asegúrate de tener instalado el controlador de Microsoft ACE OLEDB de 64 bits en tu servidor, o sube el archivo en formato CSV).";
+                TempData["MensajeError"] = "Error crítico durante la lectura del archivo: " + ex.Message;
+                return RedirectToAction("Index");
             }
             finally
             {
                 if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
             }
+        }
+
+        [HttpPost]
+        public ActionResult ConfirmarImportacionMasiva(List<Iglesia> iglesias)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2)
+            {
+                TempData["MensajeError"] = "Tu rol no tiene permisos para realizar importaciones masivas de iglesias.";
+                return RedirectToAction("Index");
+            }
+
+            int idTemporadaImportar = Session["IdTemporadaImportPreview"] != null ? (int)Session["IdTemporadaImportPreview"] : 0;
+            if (idTemporadaImportar <= 0)
+            {
+                TempData["MensajeError"] = "Sesión de importación caducada. Vuelve a subir el archivo.";
+                return RedirectToAction("Index");
+            }
+
+            if (iglesias == null || !iglesias.Any())
+            {
+                TempData["MensajeError"] = "No se recibieron datos para importar.";
+                return RedirectToAction("Index");
+            }
+
+            int insertados = 0;
+            int errores = 0;
+            List<string> detalleErrores = new List<string>();
+
+            foreach (var ig in iglesias)
+            {
+                try
+                {
+                    ig.IdEquipo = u.IdEquipo ?? 1;
+                    _iglesiaService.RegistrarIglesia(ig, u.IdUsuario, idTemporadaImportar);
+                    insertados++;
+                }
+                catch (Exception ex)
+                {
+                    errores++;
+                    if (detalleErrores.Count < 10) detalleErrores.Add($"{ig.NombreIglesia}: {ex.Message}");
+                }
+            }
+
+            Session.Remove("IglesiasImportPreview");
+            Session.Remove("IdTemporadaImportPreview");
+
+            string msg = $"Importación completada: {insertados} iglesias registradas exitosamente. Errores: {errores}.";
+            if (detalleErrores.Any())
+            {
+                msg += "<br/><strong>Detalle de Errores:</strong><br/>" + string.Join("<br/>", detalleErrores);
+            }
+            TempData["MensajeExito"] = msg;
 
             return RedirectToAction("Index");
         }
 
+        private void SepararNombresApellidos(string nombreCompleto, out string nombres, out string apellidos)
+        {
+            if (string.IsNullOrWhiteSpace(nombreCompleto))
+            {
+                nombres = "";
+                apellidos = "";
+                return;
+            }
+            string[] partes = nombreCompleto.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (partes.Length == 1)
+            {
+                nombres = partes[0];
+                apellidos = "";
+            }
+            else
+            {
+                nombres = partes[0];
+                apellidos = string.Join(" ", partes.Skip(1));
+            }
+        }
+
         private Iglesia MapearColumnasImport(string[] cols)
         {
-            // Mapeo seguro por índices de columnas
             Iglesia ig = new Iglesia
             {
-                NombreIglesia = cols.Length > 0 ? cols[0].Trim() : "Iglesia Importada",
-                RNC_Cedula = cols.Length > 1 ? cols[1].Trim() : "",
-                Telefono = cols.Length > 2 ? cols[2].Trim() : "",
-                Provincia = cols.Length > 3 ? cols[3].Trim() : "",
-                Sector = cols.Length > 4 ? cols[4].Trim() : "",
-                Calle = cols.Length > 5 ? cols[5].Trim() : "",
-                Numero = cols.Length > 6 ? cols[6].Trim() : "",
-                Referencia = cols.Length > 7 ? cols[7].Trim() : "",
-                Denominacion = cols.Length > 8 ? cols[8].Trim() : "",
-                TipoOrganizacion = cols.Length > 9 ? cols[9].Trim() : "",
-                IdEquipo = 1 // Default
+                NombreIglesia = cols.Length > 1 ? cols[1].Trim() : "Iglesia Importada",
+                RNC_Cedula = cols.Length > 2 ? cols[2].Trim() : "",
+                Telefono = cols.Length > 3 ? cols[3].Trim() : "",
+                CorreoInstitucion = cols.Length > 4 ? cols[4].Trim() : "",
+                Provincia = cols.Length > 5 ? cols[5].Trim() : "",
+                Ciudad = cols.Length > 6 ? cols[6].Trim() : "",
+                Sector = cols.Length > 7 ? cols[7].Trim() : "",
+                Calle = cols.Length > 8 ? cols[8].Trim() : "",
+                Numero = cols.Length > 9 ? cols[9].Trim() : "",
+                Referencia = cols.Length > 10 ? cols[10].Trim() : "",
+                Denominacion = cols.Length > 11 ? cols[11].Trim() : "",
+                TipoOrganizacion = "Iglesia",
+                IdEquipo = 1 // Se reasignará luego
             };
 
+            SepararNombresApellidos(cols.Length > 12 ? cols[12] : "", out string pNombres, out string pApellidos);
             ig.Pastor = new PersonaIglesia
             {
                 TipoPersona = "Pastor",
-                Nombres = cols.Length > 10 ? cols[10].Trim() : "Pastor",
-                Apellidos = "",
-                Celular = cols.Length > 11 ? cols[11].Trim() : "",
-                Correo = cols.Length > 12 ? cols[12].Trim() : ""
-            };
-
-            ig.LiderMinisterial = new PersonaIglesia
-            {
-                TipoPersona = "LiderMinisterial",
-                Nombres = cols.Length > 13 ? cols[13].Trim() : "Lider",
-                Apellidos = "",
+                Nombres = pNombres,
+                Apellidos = pApellidos,
+                DocumentoIdentidad = cols.Length > 13 ? cols[13].Trim() : "",
                 Celular = cols.Length > 14 ? cols[14].Trim() : "",
                 Correo = cols.Length > 15 ? cols[15].Trim() : ""
             };
 
-            ig.CantidadMaestros = cols.Length > 16 && int.TryParse(cols[16], out int m) ? (int?)m : null;
-            ig.CantidadNinos = cols.Length > 17 && int.TryParse(cols[17], out int n) ? (int?)n : null;
+            SepararNombresApellidos(cols.Length > 16 ? cols[16] : "", out string lNombres, out string lApellidos);
+            ig.LiderMinisterial = new PersonaIglesia
+            {
+                TipoPersona = "LiderMinisterial",
+                Nombres = lNombres,
+                Apellidos = lApellidos,
+                DocumentoIdentidad = cols.Length > 17 ? cols[17].Trim() : "",
+                Celular = cols.Length > 18 ? cols[18].Trim() : "",
+                Correo = cols.Length > 19 ? cols[19].Trim() : ""
+            };
+
+            ig.CantidadMaestros = cols.Length > 20 && int.TryParse(cols[20], out int m) ? (int?)m : null;
+            ig.CantidadNinos = cols.Length > 21 && int.TryParse(cols[21], out int n) ? (int?)n : null;
+
+            string reportoVal = cols.Length > 22 ? cols[22].Trim().ToUpper() : "NO";
+            ig.ParticipacionActual = new ParticipacionIglesia
+            {
+                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÍ") ? "Reportó" : "No Reportó"
+            };
 
             return ig;
         }
@@ -896,39 +978,51 @@ namespace SOR.Controllers
         {
             Iglesia ig = new Iglesia
             {
-                NombreIglesia = dr[0] != DBNull.Value ? dr[0].ToString().Trim() : "Iglesia Importada",
-                RNC_Cedula = dr[1] != DBNull.Value ? dr[1].ToString().Trim() : "",
-                Telefono = dr[2] != DBNull.Value ? dr[2].ToString().Trim() : "",
-                Provincia = dr[3] != DBNull.Value ? dr[3].ToString().Trim() : "",
-                Sector = dr[4] != DBNull.Value ? dr[4].ToString().Trim() : "",
-                Calle = dr[5] != DBNull.Value ? dr[5].ToString().Trim() : "",
-                Numero = dr[6] != DBNull.Value ? dr[6].ToString().Trim() : "",
-                Referencia = dr[7] != DBNull.Value ? dr[7].ToString().Trim() : "",
-                Denominacion = dr[8] != DBNull.Value ? dr[8].ToString().Trim() : "",
-                TipoOrganizacion = dr[9] != DBNull.Value ? dr[9].ToString().Trim() : "",
+                NombreIglesia = dr.FieldCount > 1 && dr[1] != DBNull.Value ? dr[1].ToString().Trim() : "Iglesia Importada",
+                RNC_Cedula = dr.FieldCount > 2 && dr[2] != DBNull.Value ? dr[2].ToString().Trim() : "",
+                Telefono = dr.FieldCount > 3 && dr[3] != DBNull.Value ? dr[3].ToString().Trim() : "",
+                CorreoInstitucion = dr.FieldCount > 4 && dr[4] != DBNull.Value ? dr[4].ToString().Trim() : "",
+                Provincia = dr.FieldCount > 5 && dr[5] != DBNull.Value ? dr[5].ToString().Trim() : "",
+                Ciudad = dr.FieldCount > 6 && dr[6] != DBNull.Value ? dr[6].ToString().Trim() : "",
+                Sector = dr.FieldCount > 7 && dr[7] != DBNull.Value ? dr[7].ToString().Trim() : "",
+                Calle = dr.FieldCount > 8 && dr[8] != DBNull.Value ? dr[8].ToString().Trim() : "",
+                Numero = dr.FieldCount > 9 && dr[9] != DBNull.Value ? dr[9].ToString().Trim() : "",
+                Referencia = dr.FieldCount > 10 && dr[10] != DBNull.Value ? dr[10].ToString().Trim() : "",
+                Denominacion = dr.FieldCount > 11 && dr[11] != DBNull.Value ? dr[11].ToString().Trim() : "",
+                TipoOrganizacion = "Iglesia",
                 IdEquipo = defaultIdEquipo
             };
 
+            SepararNombresApellidos(dr.FieldCount > 12 && dr[12] != DBNull.Value ? dr[12].ToString() : "", out string pNombres, out string pApellidos);
             ig.Pastor = new PersonaIglesia
             {
                 TipoPersona = "Pastor",
-                Nombres = dr[10] != DBNull.Value ? dr[10].ToString().Trim() : "Pastor",
-                Apellidos = "",
-                Celular = dr[11] != DBNull.Value ? dr[11].ToString().Trim() : "",
-                Correo = dr[12] != DBNull.Value ? dr[12].ToString().Trim() : ""
+                Nombres = pNombres,
+                Apellidos = pApellidos,
+                DocumentoIdentidad = dr.FieldCount > 13 && dr[13] != DBNull.Value ? dr[13].ToString().Trim() : "",
+                Celular = dr.FieldCount > 14 && dr[14] != DBNull.Value ? dr[14].ToString().Trim() : "",
+                Correo = dr.FieldCount > 15 && dr[15] != DBNull.Value ? dr[15].ToString().Trim() : ""
             };
 
+            SepararNombresApellidos(dr.FieldCount > 16 && dr[16] != DBNull.Value ? dr[16].ToString() : "", out string lNombres, out string lApellidos);
             ig.LiderMinisterial = new PersonaIglesia
             {
                 TipoPersona = "LiderMinisterial",
-                Nombres = dr[13] != DBNull.Value ? dr[13].ToString().Trim() : "Lider",
-                Apellidos = "",
-                Celular = dr[14] != DBNull.Value ? dr[14].ToString().Trim() : "",
-                Correo = dr[15] != DBNull.Value ? dr[15].ToString().Trim() : ""
+                Nombres = lNombres,
+                Apellidos = lApellidos,
+                DocumentoIdentidad = dr.FieldCount > 17 && dr[17] != DBNull.Value ? dr[17].ToString().Trim() : "",
+                Celular = dr.FieldCount > 18 && dr[18] != DBNull.Value ? dr[18].ToString().Trim() : "",
+                Correo = dr.FieldCount > 19 && dr[19] != DBNull.Value ? dr[19].ToString().Trim() : ""
             };
 
-            ig.CantidadMaestros = dr[16] != DBNull.Value && int.TryParse(dr[16].ToString(), out int m) ? (int?)m : null;
-            ig.CantidadNinos = dr[17] != DBNull.Value && int.TryParse(dr[17].ToString(), out int n) ? (int?)n : null;
+            if (dr.FieldCount > 20 && dr[20] != DBNull.Value && int.TryParse(dr[20].ToString(), out int m)) ig.CantidadMaestros = m;
+            if (dr.FieldCount > 21 && dr[21] != DBNull.Value && int.TryParse(dr[21].ToString(), out int n)) ig.CantidadNinos = n;
+
+            string reportoVal = dr.FieldCount > 22 && dr[22] != DBNull.Value ? dr[22].ToString().Trim().ToUpper() : "NO";
+            ig.ParticipacionActual = new ParticipacionIglesia
+            {
+                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÍ") ? "Reportó" : "No Reportó"
+            };
 
             return ig;
         }
@@ -970,7 +1064,7 @@ namespace SOR.Controllers
             }
         }
 
-        private void CargarEquiposDisponibles(Usuario u)
+        private void CargarEquiposDisponibles()
         {
             List<SelectListItem> lista = new List<SelectListItem>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -1222,7 +1316,7 @@ namespace SOR.Controllers
             if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
             {
                 TempData["MensajeError"] = "Su usuario no tiene autorización para editar este expediente.";
-                return RedirectToAction("Detalle", new { id = id });
+                return RedirectToAction("Detalle", new { id });
             }
 
             int idTemporadaActiva = 0;
@@ -1236,7 +1330,7 @@ namespace SOR.Controllers
             }
             bool esTemporadaActual = (iglesia.ParticipacionActual != null && iglesia.ParticipacionActual.IdTemporada == idTemporadaActiva);
 
-            CargarEquiposDisponibles(u);
+            CargarEquiposDisponibles();
             CargarCatalogosDenominacionesYTipos();
             ViewBag.UsuarioActual = u;
             ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u) && esTemporadaActual;
@@ -1268,7 +1362,7 @@ namespace SOR.Controllers
             }
             bool esTemporadaActual = (iglesiaOriginal.ParticipacionActual != null && iglesiaOriginal.ParticipacionActual.IdTemporada == idTemporadaActiva);
 
-            CargarEquiposDisponibles(u);
+            CargarEquiposDisponibles();
             CargarCatalogosDenominacionesYTipos();
 
             // Validar si intentó cambiar de equipo y no tiene permiso
@@ -1281,11 +1375,10 @@ namespace SOR.Controllers
             }
 
             // Validar formatos del formulario
-            string errorValidacion;
-            if (!ValidarFormatosDR(modelo, out errorValidacion))
+            if (!ValidarFormatosDR(modelo, out string errorValidacion))
             {
                 TempData["MensajeError"] = errorValidacion;
-                CargarEquiposDisponibles(u);
+                CargarEquiposDisponibles();
                 ViewBag.UsuarioActual = u;
                 ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
                 return View(modelo);
@@ -1334,7 +1427,7 @@ namespace SOR.Controllers
                         {
                             try
                             {
-                                RegistrarNotificacionReasignacion(cn, tran, modelo.IdIglesia, modelo.NombreIglesia, iglesiaOriginal.IdEquipo, modelo.IdEquipo);
+                                RegistrarNotificacionReasignacion(cn, tran, modelo.NombreIglesia, iglesiaOriginal.IdEquipo, modelo.IdEquipo);
                                 tran.Commit();
                             }
                             catch
@@ -1351,7 +1444,7 @@ namespace SOR.Controllers
             catch (Exception ex)
             {
                 TempData["MensajeError"] = "Error al actualizar el expediente: " + ex.Message;
-                CargarEquiposDisponibles(u);
+                CargarEquiposDisponibles();
                 ViewBag.UsuarioActual = u;
                 ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
                 return View(modelo);
@@ -1409,7 +1502,7 @@ namespace SOR.Controllers
             return true;
         }
 
-        private void RegistrarNotificacionReasignacion(SqlConnection cn, SqlTransaction tran, int idIglesia, string nombreIglesia, int idEquipoAnterior, int idEquipoNuevo)
+        private void RegistrarNotificacionReasignacion(SqlConnection cn, SqlTransaction tran, string nombreIglesia, int idEquipoAnterior, int idEquipoNuevo)
         {
             string nombreEqAnterior = "Equipo Anterior";
             string nombreEqNuevo = "Equipo Nuevo";

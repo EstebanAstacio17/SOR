@@ -27,7 +27,7 @@
         </div>
         <div class="card-body p-4">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label font-semibold">Nombre Completo de la Iglesia o Institución <span class="text-danger">*</span></label>
                     <input type="text" name="NombreIglesia" class="form-control" value="@Model.NombreIglesia" required placeholder="Ej: Iglesia Evangélica Central" />
                 </div>
@@ -35,9 +35,13 @@
                     <label class="form-label font-semibold">RNC o Cédula <span class="text-danger">*</span></label>
                     <input type="text" name="RNC_Cedula" class="form-control" value="@Model.RNC_Cedula" required pattern="^(\d{9}|\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 101012345 o 001-1234567-8" />
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label font-semibold">Teléfono Institucional <span class="text-danger">*</span></label>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Teléfono <span class="text-danger">*</span></label>
                     <input type="text" name="Telefono" class="form-control" value="@Model.Telefono" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 809-555-1234" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Correo Institucional <span class="text-danger">*</span></label>
+                    <input type="email" name="CorreoInstitucion" class="form-control" value="@Model.CorreoInstitucion" required placeholder="Ej: contacto@iglesia.org" />
                 </div>
 
                 <h5 class="h6 font-bold mt-4 mb-2 text-dark">Dirección Física Completa</h5>
