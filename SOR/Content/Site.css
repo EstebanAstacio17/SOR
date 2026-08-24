@@ -1,4 +1,4 @@
-﻿/* Set padding to keep content from hitting the edges */
+/* Set padding to keep content from hitting the edges */
 .body-content {
     margin-top: 15px;
     padding-left: 15px;
@@ -17,4 +17,85 @@ input,
 select,
 textarea {
     max-width: 280px;
+}
+
+/* =========================================================================
+   SISTEMA DE DISEÑO GLOBAL ESTANDARIZADO - ANTI-GRAVITY
+   ========================================================================= */
+
+:root {
+  /* Paleta Oficial de la Plataforma Anti-gravity */
+  --color-primary-green: #006400; /* Fondo de Cabecera y Navegación Principal */
+  --color-action-red: #FF0000;    /* Botones de Acción Principal (CTAs) */
+  --color-accent-tan: #D2B48C;    /* Iconos, acentos secundarios y menús laterales */
+  --color-bg-main: #FFFFFF;       /* Fondo del Panel Principal (Área de contenido) */
+  --color-bg-secondary: #F0F0F0;  /* Fondo de Paneles Secundarios y Divisores */
+  
+  /* Textos */
+  --color-text-light: #FFFFFF;    /* Texto sobre fondos oscuros (verde o rojo) */
+  --color-text-dark: #333333;     /* Texto sobre fondos claros (blanco o gris) */
+}
+
+/* 1. Cabecera Superior (Top Bar) Sticky y Verde */
+.navbar-sor, header, .header-class-name, .sticky-top {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+    background-color: var(--color-primary-green) !important;
+    background-image: none !important;
+    width: 100% !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.navbar-sor .navbar-brand,
+.navbar-sor .nav-link,
+.navbar-sor .nav-item,
+.navbar-sor i {
+    color: var(--color-text-light) !important;
+}
+
+/* 2. Botones Principales (CTAs en Rojo) */
+.btn-primary, .btn-action-primary {
+    background-color: var(--color-action-red) !important;
+    border-color: var(--color-action-red) !important;
+    color: var(--color-text-light) !important;
+    font-weight: 600;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active,
+.btn-action-primary:hover, .btn-action-primary:focus, .btn-action-primary:active {
+    background-color: #cc0000 !important;
+    border-color: #cc0000 !important;
+    color: var(--color-text-light) !important;
+}
+
+/* 3. Botones Secundarios (Fondo transparente, borde Tan/Gris) */
+.btn-secondary, .btn-outline-primary, .btn-outline-secondary, .btn-action-secondary {
+    background-color: transparent !important;
+    color: var(--color-text-dark) !important;
+    border: 1px solid var(--color-accent-tan) !important;
+}
+
+.btn-secondary:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover, .btn-action-secondary:hover {
+    background-color: var(--color-accent-tan) !important;
+    color: var(--color-text-light) !important;
+}
+
+/* 4. Menú Lateral (Sidebar) & Acentos */
+.sidebar, .nav-sidebar, .accent-icon {
+    color: var(--color-accent-tan) !important;
+}
+.sidebar .nav-link i, .sidebar i {
+    color: var(--color-accent-tan) !important;
+}
+
+/* 5. Fondos y Paneles */
+body, .bg-main-content {
+    background-color: var(--color-bg-main) !important;
+    color: var(--color-text-dark) !important;
+}
+
+.bg-secondary-panel, .card-header, .divider-line {
+    background-color: var(--color-bg-secondary) !important;
+    border-color: var(--color-bg-secondary) !important;
 }
