@@ -208,13 +208,9 @@
                         </div>
                         if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3)
                         {
-                            <form action="@Url.Action("ReabrirProceso", "Iglesia")" method="post" class="m-0">
-                                <input type="hidden" name="idParticipacion" value="@part.IdParticipacion" />
-                                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
-                                <button type="submit" class="btn btn-outline-warning btn-sm font-semibold shadow-sm" onclick="return confirm('¿Seguro que deseas revertir el estado y reabrir el proceso?');">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Proceso / Cambiar Decisión
-                                </button>
-                            </form>
+                            <button class="btn btn-outline-warning btn-sm font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalReabrirProcesoGlobal">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Proceso / Cambiar Decisión
+                            </button>
                         }
                     }
                     else
@@ -226,7 +222,7 @@
                             {
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-success font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarEvalInicial">Aprobar Evaluación</button>
-                                    <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoEvalInicial">Detener Proceso</button>
+                                    <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoGlobal">Detener Proceso</button>
                                     <button class="btn btn-danger font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRechazarEvalInicial">Rechazar Iglesia</button>
                                 </div>
                             }
@@ -240,7 +236,10 @@
                             <p class="small text-slate-600 mb-3">La evaluación inicial ha sido aprobada. El siguiente paso es invitar a la iglesia y registrar los detalles y la asistencia al evento **Presentación de la Visión**.</p>
                             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2)
                             {
-                                <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAsignarVision"><i class="bi bi-eye me-2"></i>Asignar Presentación de la Visión</button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAsignarVision"><i class="bi bi-eye me-2"></i>Asignar Presentación de la Visión</button>
+                                    <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoGlobal">Detener Proceso</button>
+                                </div>
                             }
                             else
                             {
@@ -270,11 +269,14 @@
                             {
                                 if (visionAsistioConfirmada)
                                 {
-                                    <form action="@Url.Action("AprobarElegibilidadBasica", "Iglesia")" method="post" class="m-0">
-                                        <input type="hidden" name="idParticipacion" value="@part.IdParticipacion" />
-                                        <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
-                                        <button type="submit" class="btn btn-success font-semibold px-4 shadow-sm" onclick="return confirm('¿Aprobar la elegibilidad de esta iglesia para pasar al Taller OCC?');"><i class="bi bi-check-circle me-1"></i>Aprobar para Taller OCC</button>
-                                    </form>
+                                    <div class="d-flex gap-2">
+                                        <form action="@Url.Action("AprobarElegibilidadBasica", "Iglesia")" method="post" class="m-0">
+                                            <input type="hidden" name="idParticipacion" value="@part.IdParticipacion" />
+                                            <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                                            <button type="submit" class="btn btn-success font-semibold px-4 shadow-sm" onclick="return confirm('¿Aprobar la elegibilidad de esta iglesia para pasar al Taller OCC?');"><i class="bi bi-check-circle me-1"></i>Aprobar para Taller OCC</button>
+                                        </form>
+                                        <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoGlobal">Detener Proceso</button>
+                                    </div>
                                 }
                                 else
                                 {
@@ -296,7 +298,10 @@
                             <p class="small text-slate-600 mb-3">La iglesia es Elegible para el Taller OCC. El Coordinador de Discipulado (CD) o CE debe asignarle el taller correspondiente y confirmar los líderes/maestros.</p>
                             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
                             {
-                                <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarElegibilidad"><i class="bi bi-calendar-event me-1"></i>Asignar Taller OCC</button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAprobarElegibilidad"><i class="bi bi-calendar-event me-1"></i>Asignar Taller OCC</button>
+                                    <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoGlobal">Detener Proceso</button>
+                                </div>
                             }
                             else
                             {
@@ -315,7 +320,10 @@
                             </div>
                             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
                             {
-                                <button class="btn btn-success font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCompletarTaller"><i class="bi bi-gift me-2"></i>Finalizar Asignación de Recursos</button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCompletarTaller"><i class="bi bi-gift me-2"></i>Finalizar Asignación de Recursos</button>
+                                    <button class="btn btn-warning font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDetenerProcesoGlobal">Detener Proceso</button>
+                                </div>
                             }
                             else
                             {
@@ -611,33 +619,62 @@
         </div>
     </div>
 
-    <!-- MODAL 2.A.1: DETENER PROCESO EVALUACIÓN INICIAL -->
-    <div class="modal fade" id="modalDetenerProcesoEvalInicial" tabindex="-1" aria-hidden="true">
+    <!-- MODAL GLOBAL: DETENER PROCESO -->
+    <div class="modal fade" id="modalDetenerProcesoGlobal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content border-0 rounded-4 shadow">
-                <form action="@Url.Action("EvaluarInicial", "Iglesia")" method="post" class="needs-validation" novalidate onsubmit="if(!this.checkValidity()){this.classList.add('was-validated'); return false;}">
+                <form action="@Url.Action("DetenerProceso", "Iglesia")" method="post" class="needs-validation" novalidate onsubmit="if(!this.checkValidity()){this.classList.add('was-validated'); return false;}">
                     <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
                     <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
-                    <input type="hidden" name="estado" value="Detenido" />
                     
                     <div class="modal-header bg-warning text-dark rounded-top-4 py-3">
-                        <h5 class="modal-title font-bold"><i class="bi bi-pause-circle me-2"></i>Detener Proceso de Evaluación</h5>
+                        <h5 class="modal-title font-bold"><i class="bi bi-pause-circle me-2"></i>Detener Proceso de la Iglesia</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4">
+                        <p class="small text-slate-600 mb-3">El proceso de participación será puesto en pausa y la iglesia no avanzará a la siguiente etapa hasta que un coordinador decida reabrir el proceso.</p>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Motivo o Razón (Obligatorio)</label>
-                            <input type="text" name="motivo" class="form-control" placeholder="Ej: Falta de documentación, información en validación..." required />
-                            <div class="invalid-feedback">Por favor, escriba el motivo para detener el proceso.</div>
+                            <label class="form-label fw-semibold">Motivo principal (Obligatorio)</label>
+                            <input type="text" name="motivo" class="form-control" placeholder="Ej: Falta de documentación, requiere verificación..." required />
+                            <div class="invalid-feedback">Por favor, escriba el motivo principal para detener el proceso.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Comentarios Adicionales (Opcional)</label>
-                            <textarea name="comentario" class="form-control" rows="3" placeholder="Notas sobre por qué se detiene el proceso..."></textarea>
+                            <label class="form-label fw-semibold">Comentarios Detallados (Opcional)</label>
+                            <textarea name="comentario" class="form-control" rows="3" placeholder="Notas adicionales sobre el caso..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-warning font-semibold text-dark">Confirmar Detención</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GLOBAL: REABRIR PROCESO -->
+    <div class="modal fade" id="modalReabrirProcesoGlobal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("ReabrirProceso", "Iglesia")" method="post" class="needs-validation" novalidate onsubmit="if(!this.checkValidity()){this.classList.add('was-validated'); return false;}">
+                    <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    
+                    <div class="modal-header bg-success text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-arrow-counterclockwise me-2"></i>Reabrir Proceso</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="small text-slate-600 mb-3">Estás a punto de reanudar el proceso de esta iglesia. Será restituida a la etapa anterior para continuar su ciclo de participación.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Justificación de la Reapertura (Obligatorio)</label>
+                            <textarea name="comentario" class="form-control" rows="3" placeholder="Ej: Documentación completada, información validada, etc." required></textarea>
+                            <div class="invalid-feedback">Debe proporcionar un comentario que justifique esta acción.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success font-semibold">Confirmar Reapertura</button>
                     </div>
                 </form>
             </div>

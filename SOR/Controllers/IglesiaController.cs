@@ -382,7 +382,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
-        public ActionResult ReabrirProceso(int idParticipacion, int idIglesia)
+        public ActionResult ReabrirProceso(int idParticipacion, int idIglesia, string comentario)
         {
             Usuario u = (Usuario)Session["usuario"];
             Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
@@ -396,6 +396,12 @@ namespace SOR.Controllers
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2 && u.IdPosicion != 3)
             {
                 TempData["MensajeError"] = "Su usuario no tiene autorización para reabrir el proceso.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (string.IsNullOrWhiteSpace(comentario))
+            {
+                TempData["MensajeError"] = "Debe proporcionar una justificación para reabrir el proceso.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -433,16 +439,84 @@ namespace SOR.Controllers
 
                 string sqlLog = @"
                     INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                    VALUES (@IdPart, GETDATE(), 'Reapertura de Proceso', 'Rechazado', 'Pendiente', @IdUser, 'El proceso fue reabierto para cambiar la decisión anterior.');";
+                    VALUES (@IdPart, GETDATE(), 'Reapertura de Proceso', 'Detenido/Rechazado', 'Pendiente', @IdUser, @Cmt);";
                 using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
                 {
                     cmdLog.Parameters.AddWithValue("@IdPart", idParticipacion);
                     cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
+                    cmdLog.Parameters.AddWithValue("@Cmt", "Proceso Reabierto. Razón: " + comentario);
                     cmdLog.ExecuteNonQuery();
+                }
+
+                string sqlComentario = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
+                using (SqlCommand cmdCmt = new SqlCommand(sqlComentario, cn))
+                {
+                    cmdCmt.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdCmt.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                    cmdCmt.Parameters.AddWithValue("@Comentario", "Reapertura de Proceso: " + comentario);
+                    cmdCmt.ExecuteNonQuery();
                 }
             }
 
             TempData["MensajeExito"] = "El proceso ha sido reabierto y restablecido al estado anterior.";
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        public ActionResult DetenerProceso(int idParticipacion, int idIglesia, string motivo, string comentario)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permiso para realizar cambios en esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlGet = "SELECT EstadoEvaluacion FROM dbo.ParticipacionesIglesia WHERE IdParticipacion = @Id;";
+                string estadoAnterior = "Desconocido";
+                using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn))
+                {
+                    cmdGet.Parameters.AddWithValue("@Id", idParticipacion);
+                    object val = cmdGet.ExecuteScalar();
+                    if (val != null) estadoAnterior = val.ToString();
+                }
+
+                string sql = "UPDATE dbo.ParticipacionesIglesia SET EstadoEvaluacion = 'Detenido' WHERE IdParticipacion = @Id;";
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmd.ExecuteNonQuery();
+                }
+
+                string histCmt = $"Proceso Detenido. Motivo: {motivo}. " + (!string.IsNullOrWhiteSpace(comentario) ? $"Notas: {comentario}" : "");
+                string sqlLog = @"
+                    INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
+                    VALUES (@IdPart, GETDATE(), 'Detención de Proceso', @EstadoAnt, 'Detenido', @IdUser, @Cmt);";
+                using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
+                {
+                    cmdLog.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdLog.Parameters.AddWithValue("@EstadoAnt", estadoAnterior);
+                    cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
+                    cmdLog.Parameters.AddWithValue("@Cmt", histCmt);
+                    cmdLog.ExecuteNonQuery();
+                }
+
+                string sqlComentario = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
+                using (SqlCommand cmdCmt = new SqlCommand(sqlComentario, cn))
+                {
+                    cmdCmt.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdCmt.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                    cmdCmt.Parameters.AddWithValue("@Comentario", histCmt);
+                    cmdCmt.ExecuteNonQuery();
+                }
+            }
+
+            TempData["MensajeExito"] = "El proceso de la iglesia ha sido detenido exitosamente.";
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
