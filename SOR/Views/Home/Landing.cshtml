@@ -4,160 +4,198 @@
 }
 
 <style>
-    .hero-banner {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%);
-        color: #ffffff;
-        padding: 80px 20px;
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        margin-top: 20px;
-        position: relative;
-        overflow: hidden;
+    .apple-hero {
+        padding: 90px 20px 70px 20px;
+        text-align: center;
+        max-width: 960px;
+        margin: 0 auto;
     }
 
-    .hero-banner::before {
-        content: "";
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 60%);
-        pointer-events: none;
+    .apple-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        box-shadow: var(--apple-shadow-xs);
+        padding: 6px 16px;
+        border-radius: 980px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--apple-accent);
+        margin-bottom: 24px;
     }
 
-    .hero-title {
-        font-size: 3rem;
-        font-weight: 800;
-        letter-spacing: -1px;
-        line-height: 1.2;
+    .apple-hero-title {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        line-height: 1.1;
+        color: var(--apple-text-primary);
         margin-bottom: 20px;
-        background: linear-gradient(90deg, #ffffff, #7dd3fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
     }
 
-    .hero-subtitle {
-        font-size: 1.25rem;
-        color: #cbd5e1;
-        max-width: 800px;
-        margin: 0 auto 30px auto;
-        line-height: 1.6;
+    .apple-hero-subtitle {
+        font-size: clamp(1.15rem, 2vw, 1.4rem);
+        font-weight: 400;
+        color: var(--apple-text-secondary);
+        max-width: 720px;
+        margin: 0 auto 36px auto;
+        line-height: 1.5;
+        letter-spacing: -0.015em;
     }
 
-    .quote-box {
-        background: rgba(255, 255, 255, 0.07);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 30px;
-        border-radius: 16px;
-        margin: 30px auto;
-        max-width: 850px;
+    .apple-btn-primary {
+        background-color: var(--apple-accent) !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        padding: 12px 28px;
+        font-size: 1rem;
+        border-radius: 980px;
+        border: none;
+        transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .apple-btn-primary:hover {
+        background-color: var(--apple-accent-hover) !important;
+        transform: scale(1.02);
+        color: #ffffff !important;
+    }
+
+    .apple-btn-secondary {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: var(--apple-text-primary) !important;
+        border: 1px solid var(--apple-border);
+        font-weight: 500;
+        padding: 12px 28px;
+        font-size: 1rem;
+        border-radius: 980px;
+        transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 12px;
+    }
+
+    .apple-btn-secondary:hover {
+        background-color: rgba(0, 0, 0, 0.09);
+        transform: scale(1.02);
+        color: var(--apple-text-primary) !important;
+    }
+
+    .apple-quote-card {
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        border-radius: 24px;
+        padding: 36px 40px;
+        margin: 40px auto 70px auto;
+        max-width: 860px;
+        box-shadow: var(--apple-shadow-sm);
         text-align: left;
     }
 
-    .quote-text {
-        font-size: 1.15rem;
-        font-style: italic;
-        color: #e2e8f0;
-        line-height: 1.7;
-    }
-
-    .btn-action-primary {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        color: #ffffff !important;
-        font-weight: 600;
-        padding: 14px 32px;
-        font-size: 1.1rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-    }
-
-    .btn-action-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.6);
-        color: #ffffff !important;
-    }
-
-    .btn-action-secondary {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        font-weight: 600;
-        padding: 14px 32px;
-        font-size: 1.1rem;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        margin-left: 15px;
-    }
-
-    .btn-action-secondary:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: #ffffff !important;
-    }
-
-    .value-card {
+    .apple-feature-card {
         background: #ffffff;
-        border-radius: 16px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
-        transition: all 0.3s ease;
+        border: 1px solid var(--apple-border);
+        border-radius: 22px;
+        padding: 36px 28px;
+        box-shadow: var(--apple-shadow-xs);
+        transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
         height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
-    .value-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    .apple-feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--apple-shadow-md);
     }
 
-    .card-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        background: #e0f2fe;
-        color: #0284c7;
+    .apple-icon-bubble {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        background: #f0f6ff;
+        color: var(--apple-accent);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
-        margin-bottom: 20px;
+        margin-bottom: 22px;
     }
 </style>
 
-<div class="container text-center">
-    <div class="hero-banner">
-        <h1 class="hero-title">Sistema de Gestión Interna OCC República Dominicana</h1>
-        <p class="hero-subtitle">
-            Transformando vidas a través de la evangelización y discipulado infantil en toda la República Dominicana.
-        </p>
-
-        <div class="quote-box">
-            <p class="quote-text">
-                <i class="bi bi-quote fs-3 me-2"></i>
-                La misión de Operation Christmas Child es demostrar el amor de Dios de una manera tangible a niños
-                necesitados alrededor del mundo. A través de este proyecto, Samaritan´s Purse colabora junto con la iglesia local de
-                todo el mundo con el fin de compartir las Buenas Nuevas de Jesucristo y hacer discípulos de todas las naciones.
-                <i class="bi bi-quote fs-3 ms-2" style="transform: rotate(180deg); display: inline-block;"></i>
-            </p>
-            <div class="text-end text-sky-300 font-semibold" style="color: #7dd3fc; font-weight: 600;">
-                — Equipo de Samaritan´s Purse
-            </div>
-        </div>
-
-        <div class="mt-4">
-            <a href="@Url.Action("Login", "Acceso")" class="btn-action-primary me-2">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
-            </a>
-            <a href="@Url.Action("SolicitudVoluntario", "Home")" class="btn-action-secondary">
-                <i class="bi bi-person-plus me-2"></i>Solicitud de Nuevo Voluntario
-            </a>
-        </div>
+<div class="apple-hero">
+    <div class="apple-hero-badge">
+        <i class="bi bi-sparkles"></i> Samaritan's Purse • Operation Christmas Child
+    </div>
+    <h1 class="apple-hero-title">Gestión Inteligente.<br />Impacto Eterno.</h1>
+    <p class="apple-hero-subtitle">
+        Plataforma oficial de sincronización, logística y discipulado para coordinadores y voluntarios de OCC en toda la República Dominicana.
+    </p>
+    <div class="d-flex justify-content-center align-items-center flex-wrap gap-2">
+        <a href="@Url.Action("Login", "Acceso")" class="apple-btn-primary">
+            Iniciar Sesión <i class="bi bi-arrow-right"></i>
+        </a>
+        <a href="@Url.Action("Registrar", "Acceso")" class="apple-btn-secondary">
+            Solicitar Cuenta
+        </a>
     </div>
 
+    <div class="apple-quote-card">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-quote fs-1" style="color: var(--apple-accent); line-height: 1;"></i>
+            <div>
+                <p class="mb-2" style="font-size: 1.15rem; font-style: italic; color: var(--apple-text-primary); line-height: 1.6;">
+                    "Llevando buenas noticias y gran gozo a los niños a través de una simple caja de regalos, discipulado y oración."
+                </p>
+                <small class="fw-semibold text-uppercase" style="color: var(--apple-text-secondary); letter-spacing: 0.05em; font-size: 0.75rem;">
+                    Misión Samaritan's Purse RD
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="apple-feature-card">
+                <div class="apple-icon-bubble">
+                    <i class="bi bi-building"></i>
+                </div>
+                <h3 class="h5 font-bold mb-2" style="color: var(--apple-text-primary);">Red de Iglesias</h3>
+                <p style="color: var(--apple-text-secondary); font-size: 0.95rem; line-height: 1.5;" class="mb-0">
+                    Registro centralizado, seguimiento de procesos de discipulado y validación institucional en tiempo real.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="apple-feature-card">
+                <div class="apple-icon-bubble" style="background: #e8f9ed; color: var(--apple-success);">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h3 class="h5 font-bold mb-2" style="color: var(--apple-text-primary);">Maestros y Eventos</h3>
+                <p style="color: var(--apple-text-secondary); font-size: 0.95rem; line-height: 1.5;" class="mb-0">
+                    Capacitaciones ministeriales, asignaciones de voluntarios y control riguroso de asistencia.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="apple-feature-card">
+                <div class="apple-icon-bubble" style="background: #fff6e6; color: var(--apple-warning);">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <h3 class="h5 font-bold mb-2" style="color: var(--apple-text-primary);">Reportes e Impacto</h3>
+                <p style="color: var(--apple-text-secondary); font-size: 0.95rem; line-height: 1.5;" class="mb-0">
+                    Estadísticas detalladas de cajas entregadas, niños alcanzados y graduados de La Gran Aventura.
+                </p>
+            </div>
+        </div>
+    </div>
 </div>

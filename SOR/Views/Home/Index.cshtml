@@ -2,31 +2,29 @@
     ViewBag.Title = "Panel Principal";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var usuario = (SOR.Models.Usuario)ViewBag.Usuario ?? new SOR.Models.Usuario { Correo = "Usuario", NombreRol = "Coordinador" };
+    string nombreMostrar = !string.IsNullOrEmpty(usuario.PrimerNombre) 
+        ? (usuario.PrimerNombre + " " + usuario.PrimerApellido).Trim() 
+        : usuario.Correo;
 }
 
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
-            <div class="card-body p-4 text-white">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div>
-                        <span class="badge bg-info text-dark px-3 py-2 rounded-pill fw-semibold mb-2">
-                            <i class="bi bi-shield-check me-1"></i>@(usuario.NombreRol ?? "Coordinador")
-                        </span>
-                        @{
-                            string nombreMostrar = !string.IsNullOrEmpty(usuario.PrimerNombre) 
-                                ? (usuario.PrimerNombre + " " + usuario.PrimerApellido).Trim() 
-                                : usuario.Correo;
-                        }
-                        <h2 class="h3 font-bold mb-1">¡Bienvenido, @nombreMostrar!</h2>
-                        <p class="text-slate-300 mb-0">
-                            <i class="bi bi-diagram-3 me-1"></i>Equipo: <strong>@(usuario.NombreEquipo ?? "Sin Equipo Asignado")</strong> | 
-                            <i class="bi bi-person-badge me-1"></i>Posición: <strong>@(usuario.NombrePosicion ?? "Pendiente de Completar Perfil")</strong>
-                        </p>
-                    </div>
-                    <div>
-                        <!-- Estado Activo Removido -->
-                    </div>
+        <div class="card border-0 shadow-sm rounded-4 p-4" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div>
+                    <span class="badge mb-2" style="background-color: #f0f6ff; color: var(--apple-accent); font-weight: 600;">
+                        <i class="bi bi-shield-check me-1"></i>@(usuario.NombreRol ?? "Coordinador")
+                    </span>
+                    <h1 class="h2 font-bold mb-1" style="color: var(--apple-text-primary); letter-spacing: -0.025em;">¡Bienvenido, @nombreMostrar!</h1>
+                    <p class="mb-0" style="color: var(--apple-text-secondary); font-size: 0.95rem;">
+                        <i class="bi bi-diagram-3 me-1"></i>Equipo: <strong style="color: var(--apple-text-primary);">@(usuario.NombreEquipo ?? "Sin Equipo Asignado")</strong> &nbsp;•&nbsp; 
+                        <i class="bi bi-person-badge me-1"></i>Posición: <strong style="color: var(--apple-text-primary);">@(usuario.NombrePosicion ?? "Pendiente de Completar Perfil")</strong>
+                    </p>
+                </div>
+                <div>
+                    <a href="@Url.Action("Index", "Iglesia")" class="btn btn-primary">
+                        <i class="bi bi-building me-1"></i> Ir a Iglesias
+                    </a>
                 </div>
             </div>
         </div>
@@ -41,24 +39,24 @@
 {
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
-                <h5 class="h6 font-bold text-slate-800 mb-3 border-bottom pb-2">
-                    <i class="bi bi-bell-fill text-warning me-2"></i>Notificaciones de Cambios de Equipo / Incorporaciones
+            <div class="card border-0 shadow-sm rounded-4 p-4" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
+                <h5 class="h6 font-bold mb-3 border-bottom pb-2" style="color: var(--apple-text-primary);">
+                    <i class="bi bi-bell-fill me-2" style="color: var(--apple-warning);"></i>Notificaciones de Cambios de Equipo / Incorporaciones
                 </h5>
                 <div class="d-flex flex-column gap-2">
                     @foreach (var n in notifs)
                     {
-                        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-warning rounded-3 d-flex align-items-center justify-content-between p-3 m-0" role="alert">
+                        <div class="alert alert-warning alert-dismissible fade show border-0 rounded-3 d-flex align-items-center justify-content-between p-3 m-0" style="background-color: #fff8eb; color: #7c4a03;" role="alert">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-info-circle-fill text-warning fs-5 me-3"></i>
+                                <i class="bi bi-info-circle-fill fs-5 me-3" style="color: var(--apple-warning);"></i>
                                 <div>
-                                    <span class="fw-semibold text-slate-800">@n.Mensaje</span>
-                                    <small class="text-muted d-block" style="font-size: 0.75rem;">Recibido: @n.FechaCreacion.ToString("dd/MM/yyyy hh:mm tt")</small>
+                                    <span class="fw-semibold">@n.Mensaje</span>
+                                    <small class="d-block text-muted" style="font-size: 0.75rem;">Recibido: @n.FechaCreacion.ToString("dd/MM/yyyy hh:mm tt")</small>
                                 </div>
                             </div>
                             <form action="@Url.Action("MarcarNotificacionLeida", "Iglesia")" method="post" class="m-0 ms-3">
                                 <input type="hidden" name="idNotificacion" value="@n.IdNotificacion" />
-                                <button type="submit" class="btn btn-sm btn-dark font-semibold rounded-pill px-3 py-1 text-nowrap">
+                                <button type="submit" class="btn btn-sm btn-secondary text-nowrap">
                                     <i class="bi bi-check-lg me-1"></i>Marcar como Vista
                                 </button>
                             </form>
@@ -70,56 +68,56 @@
     </div>
 }
 
-<!-- Tarjetas de Resumen y Accesos Rápidos -->
+<!-- Tarjetas de Resumen Apple Style -->
 <div class="row g-4 mb-4">
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm rounded-3 p-3 h-100 bg-white">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <span class="text-muted small fw-semibold text-uppercase">Iglesias Registradas</span>
-                    <h3 class="h2 font-bold mb-0 mt-1" style="color: #0284c7;">0</h3>
+                    <span class="small fw-semibold text-uppercase" style="color: var(--apple-text-secondary); letter-spacing: 0.04em; font-size: 0.72rem;">Iglesias Registradas</span>
+                    <h3 class="h2 font-bold mb-0 mt-1" style="color: var(--apple-text-primary); letter-spacing: -0.03em;">0</h3>
                 </div>
-                <div class="p-3 bg-sky-50 rounded-3 text-sky-600" style="background: #e0f2fe; color: #0284c7;">
-                    <i class="bi bi-building fs-3"></i>
+                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 48px; height: 48px; background: #f0f6ff; color: var(--apple-accent);">
+                    <i class="bi bi-building fs-4"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm rounded-3 p-3 h-100 bg-white">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <span class="text-muted small fw-semibold text-uppercase">Temporada Activa</span>
-                    <h3 class="h2 font-bold mb-0 mt-1 text-success">@(ViewBag.TemporadaActiva ?? "No Definida")</h3>
+                    <span class="small fw-semibold text-uppercase" style="color: var(--apple-text-secondary); letter-spacing: 0.04em; font-size: 0.72rem;">Temporada Activa</span>
+                    <h3 class="h2 font-bold mb-0 mt-1" style="color: var(--apple-success); letter-spacing: -0.03em;">@(ViewBag.TemporadaActiva ?? "No Definida")</h3>
                 </div>
-                <div class="p-3 bg-emerald-50 rounded-3 text-emerald-600" style="background: #dcfce7; color: #16a34a;">
-                    <i class="bi bi-calendar-event fs-3"></i>
+                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 48px; height: 48px; background: #e8f9ed; color: var(--apple-success);">
+                    <i class="bi bi-calendar-event fs-4"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm rounded-3 p-3 h-100 bg-white">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <span class="text-muted small fw-semibold text-uppercase">Solicitudes Pendientes</span>
-                    <h3 class="h2 font-bold mb-0 mt-1 text-warning">0</h3>
+                    <span class="small fw-semibold text-uppercase" style="color: var(--apple-text-secondary); letter-spacing: 0.04em; font-size: 0.72rem;">Solicitudes Pendientes</span>
+                    <h3 class="h2 font-bold mb-0 mt-1" style="color: var(--apple-warning); letter-spacing: -0.03em;">0</h3>
                 </div>
-                <div class="p-3 bg-amber-50 rounded-3 text-amber-600" style="background: #fef3c7; color: #d97706;">
-                    <i class="bi bi-hourglass-split fs-3"></i>
+                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 48px; height: 48px; background: #fff6e6; color: var(--apple-warning);">
+                    <i class="bi bi-hourglass-split fs-4"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm rounded-3 p-3 h-100 bg-white">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <span class="text-muted small fw-semibold text-uppercase">Nivel Jerárquico</span>
-                    <h3 class="h2 font-bold mb-0 mt-1 text-indigo" style="color: #4f46e5;">@(usuario.NombreNivel ?? (usuario.RangoJerarquico == 1 ? "ENL" : usuario.RangoJerarquico == 2 ? "ERLE" : "ERL"))</h3>
+                    <span class="small fw-semibold text-uppercase" style="color: var(--apple-text-secondary); letter-spacing: 0.04em; font-size: 0.72rem;">Nivel Jerárquico</span>
+                    <h3 class="h2 font-bold mb-0 mt-1" style="color: var(--apple-accent); letter-spacing: -0.03em;">@(usuario.NombreNivel ?? (usuario.RangoJerarquico == 1 ? "ENL" : usuario.RangoJerarquico == 2 ? "ERLE" : "ERL"))</h3>
                 </div>
-                <div class="p-3 rounded-3 text-indigo" style="background: #e0e7ff; color: #4f46e5;">
-                    <i class="bi bi-diagram-2 fs-3"></i>
+                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 48px; height: 48px; background: #f0f6ff; color: var(--apple-accent);">
+                    <i class="bi bi-diagram-2 fs-4"></i>
                 </div>
             </div>
         </div>
@@ -128,22 +126,22 @@
 
 <div class="row g-4">
     <div class="col-md-8">
-        <div class="card border-0 shadow-sm rounded-3 bg-white p-4 h-100">
-            <h4 class="h5 font-bold mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Actividad Reciente del Sistema</h4>
-            <div class="alert alert-light border rounded-3 p-3 text-muted">
-                <i class="bi bi-info-circle me-2"></i>Bienvenido al Sistema de Gestión Interna SOR. La plataforma ha sido inicializada y configurada correctamente con los niveles jerárquicos y roles de OCC RD.
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
+            <h4 class="h5 font-bold mb-3" style="color: var(--apple-text-primary);"><i class="bi bi-clock-history me-2 text-primary"></i>Actividad Reciente del Sistema</h4>
+            <div class="alert border-0 rounded-3 p-3" style="background-color: var(--apple-bg); color: var(--apple-text-secondary);">
+                <i class="bi bi-info-circle me-2 text-primary"></i>Bienvenido al Sistema de Gestión Interna SOR. La plataforma ha sido inicializada y configurada correctamente con los niveles jerárquicos y roles de OCC RD.
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-3 bg-white p-4 h-100">
-            <h4 class="h5 font-bold mb-3"><i class="bi bi-shield-lock me-2 text-primary"></i>Seguridad e Inactividad</h4>
-            <p class="text-muted small">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="background: #ffffff; border: 1px solid var(--apple-border) !important;">
+            <h4 class="h5 font-bold mb-3" style="color: var(--apple-text-primary);"><i class="bi bi-shield-lock me-2 text-primary"></i>Seguridad e Inactividad</h4>
+            <p class="small mb-3" style="color: var(--apple-text-secondary);">
                 Por políticas de seguridad de OCC RD, el sistema cerrará automáticamente la sesión tras <strong>5 minutos de inactividad</strong>.
             </p>
-            <div class="p-3 bg-light rounded-3">
-                <small class="text-muted d-block mb-1">Última marca de actividad:</small>
-                <strong class="text-dark"><i class="bi bi-stopwatch me-1"></i>@DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")</strong>
+            <div class="p-3 rounded-3" style="background-color: var(--apple-bg);">
+                <small class="d-block mb-1" style="color: var(--apple-text-secondary);">Última marca de actividad:</small>
+                <strong style="color: var(--apple-text-primary);"><i class="bi bi-stopwatch me-1"></i>@DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")</strong>
             </div>
         </div>
     </div>

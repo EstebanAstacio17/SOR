@@ -1,101 +1,351 @@
-/* Set padding to keep content from hitting the edges */
-.body-content {
-    margin-top: 15px;
-    padding-left: 15px;
-    padding-right: 15px;
-}
-
-/* Override the default bootstrap behavior where horizontal description lists 
-   will truncate terms that are too long to fit in the left column 
-*/
-.dl-horizontal dt {
-    white-space: normal;
-}
-
-/* Set width on the form input elements since they're 100% wide by default */
-input,
-select,
-textarea {
-    max-width: 280px;
-}
-
 /* =========================================================================
-   SISTEMA DE DISEÑO GLOBAL ESTANDARIZADO - ANTI-GRAVITY
+   APPLE-INSPIRED GLOBAL DESIGN SYSTEM - SOR / ANTI-GRAVITY
+   Inspired by Apple Human Interface Guidelines & apple.com aesthetic
    ========================================================================= */
 
 :root {
-  /* Paleta Oficial de la Plataforma Anti-gravity */
-  --color-primary-green: #006400; /* Fondo de Cabecera y Navegación Principal */
-  --color-action-red: #FF0000;    /* Botones de Acción Principal (CTAs) */
-  --color-accent-tan: #D2B48C;    /* Iconos, acentos secundarios y menús laterales */
-  --color-bg-main: #FFFFFF;       /* Fondo del Panel Principal (Área de contenido) */
-  --color-bg-secondary: #F0F0F0;  /* Fondo de Paneles Secundarios y Divisores */
+  /* Apple Palette */
+  --apple-bg: #f5f5f7;
+  --apple-card-bg: #ffffff;
+  --apple-text-primary: #1d1d1f;
+  --apple-text-secondary: #86868b;
+  --apple-text-tertiary: #a1a1a6;
   
-  /* Textos */
-  --color-text-light: #FFFFFF;    /* Texto sobre fondos oscuros (verde o rojo) */
-  --color-text-dark: #333333;     /* Texto sobre fondos claros (blanco o gris) */
+  --apple-accent: #0071e3;
+  --apple-accent-hover: #0077ed;
+  --apple-accent-light: #f0f6ff;
+  
+  --apple-success: #34c759;
+  --apple-warning: #ff9500;
+  --apple-danger: #ff3b30;
+  
+  --apple-border: rgba(0, 0, 0, 0.08);
+  --apple-border-subtle: rgba(0, 0, 0, 0.04);
+  --apple-nav-bg: rgba(255, 255, 255, 0.82);
+  --apple-nav-bg-dark: rgba(22, 22, 23, 0.8);
+  
+  /* Radii */
+  --apple-radius-card: 18px;
+  --apple-radius-card-lg: 22px;
+  --apple-radius-btn: 980px;
+  --apple-radius-input: 12px;
+  --apple-radius-badge: 980px;
+  
+  /* Shadows */
+  --apple-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.03);
+  --apple-shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.04);
+  --apple-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --apple-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
 }
 
-/* 1. Cabecera Superior (Top Bar) Sticky y Verde */
-.navbar-sor, header, .header-class-name, .sticky-top {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1000 !important;
-    background-color: var(--color-primary-green) !important;
-    background-image: none !important;
-    width: 100% !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+/* Base Document */
+html {
+  scroll-behavior: smooth;
 }
 
-.navbar-sor .navbar-brand,
-.navbar-sor .nav-link,
-.navbar-sor .nav-item,
-.navbar-sor i {
-    color: var(--color-text-light) !important;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--apple-bg);
+  color: var(--apple-text-primary);
+  letter-spacing: -0.012em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-/* 2. Botones Principales (CTAs en Rojo) */
-.btn-primary, .btn-action-primary {
-    background-color: var(--color-action-red) !important;
-    border-color: var(--color-action-red) !important;
-    color: var(--color-text-light) !important;
-    font-weight: 600;
+.body-content {
+  margin-top: 24px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
-.btn-primary:hover, .btn-primary:focus, .btn-primary:active,
-.btn-action-primary:hover, .btn-action-primary:focus, .btn-action-primary:active {
-    background-color: #cc0000 !important;
-    border-color: #cc0000 !important;
-    color: var(--color-text-light) !important;
+/* Headings */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  color: var(--apple-text-primary);
 }
 
-/* 3. Botones Secundarios (Fondo transparente, borde Tan/Gris) */
-.btn-secondary, .btn-outline-primary, .btn-outline-secondary, .btn-action-secondary {
-    background-color: transparent !important;
-    color: var(--color-text-dark) !important;
-    border: 1px solid var(--color-accent-tan) !important;
+/* 1. Header / Navbar (Apple Frosted Glass Sticky) */
+.navbar-sor, header, .header-class-name, nav.navbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+  background-color: var(--apple-nav-bg) !important;
+  backdrop-filter: saturate(180%) blur(20px) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
+  border-bottom: 1px solid var(--apple-border) !important;
+  box-shadow: var(--apple-shadow-xs) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-.btn-secondary:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover, .btn-action-secondary:hover {
-    background-color: var(--color-accent-tan) !important;
-    color: var(--color-text-light) !important;
+.navbar-sor .navbar-brand {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--apple-text-primary) !important;
+  font-size: 1.05rem;
 }
 
-/* 4. Menú Lateral (Sidebar) & Acentos */
-.sidebar, .nav-sidebar, .accent-icon {
-    color: var(--color-accent-tan) !important;
-}
-.sidebar .nav-link i, .sidebar i {
-    color: var(--color-accent-tan) !important;
-}
-
-/* 5. Fondos y Paneles */
-body, .bg-main-content {
-    background-color: var(--color-bg-main) !important;
-    color: var(--color-text-dark) !important;
+.navbar-sor .nav-link {
+  color: var(--apple-text-primary) !important;
+  opacity: 0.8;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  padding: 8px 14px !important;
+  border-radius: var(--apple-radius-btn);
+  transition: opacity 0.2s ease, background-color 0.2s ease;
 }
 
-.bg-secondary-panel, .card-header, .divider-line {
-    background-color: var(--color-bg-secondary) !important;
-    border-color: var(--color-bg-secondary) !important;
+.navbar-sor .nav-link:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.navbar-sor .navbar-toggler {
+  border: none;
+  padding: 6px 10px;
+}
+
+.navbar-sor .dropdown-menu {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid var(--apple-border);
+  border-radius: 14px;
+  box-shadow: var(--apple-shadow-lg);
+  padding: 8px;
+}
+
+.navbar-sor .dropdown-item {
+  border-radius: 8px;
+  font-size: 0.875rem;
+  padding: 8px 14px;
+  color: var(--apple-text-primary);
+  transition: background-color 0.15s ease;
+}
+
+.navbar-sor .dropdown-item:hover {
+  background-color: var(--apple-accent);
+  color: #ffffff;
+}
+
+/* 2. Apple Pill Buttons */
+.btn-primary, .btn-action-primary, button[type="submit"].btn-primary, .btn-apple-primary {
+  background-color: var(--apple-accent) !important;
+  border: 1px solid var(--apple-accent) !important;
+  color: #ffffff !important;
+  border-radius: var(--apple-radius-btn) !important;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 8px 20px;
+  letter-spacing: -0.01em;
+  box-shadow: var(--apple-shadow-xs);
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-primary:hover, .btn-action-primary:hover, .btn-apple-primary:hover,
+.btn-primary:focus, .btn-action-primary:focus {
+  background-color: var(--apple-accent-hover) !important;
+  border-color: var(--apple-accent-hover) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+}
+
+.btn-secondary, .btn-outline-primary, .btn-outline-secondary, .btn-action-secondary, .btn-apple-secondary {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid var(--apple-border) !important;
+  color: var(--apple-text-primary) !important;
+  border-radius: var(--apple-radius-btn) !important;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 8px 20px;
+  letter-spacing: -0.01em;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-secondary:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover, .btn-action-secondary:hover, .btn-apple-secondary:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  color: var(--apple-text-primary) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+/* 3. Cards and Containers */
+.card, .apple-card {
+  background-color: var(--apple-card-bg) !important;
+  border: 1px solid var(--apple-border) !important;
+  border-radius: var(--apple-radius-card) !important;
+  box-shadow: var(--apple-shadow-sm) !important;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.card:hover {
+  box-shadow: var(--apple-shadow-md) !important;
+}
+
+.card-header {
+  background-color: transparent !important;
+  border-bottom: 1px solid var(--apple-border-subtle) !important;
+  padding: 18px 24px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+/* 4. Form Controls */
+.form-control, .form-select {
+  border-radius: var(--apple-radius-input) !important;
+  border: 1px solid #d2d2d7 !important;
+  background-color: #ffffff !important;
+  color: var(--apple-text-primary) !important;
+  font-size: 0.9rem;
+  padding: 10px 14px;
+  letter-spacing: -0.01em;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--apple-accent) !important;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15) !important;
+  outline: none;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--apple-text-secondary);
+  margin-bottom: 6px;
+}
+
+/* 5. Tables */
+.table-responsive {
+  border-radius: var(--apple-radius-card);
+  border: 1px solid var(--apple-border);
+  background: var(--apple-card-bg);
+}
+
+.table {
+  margin-bottom: 0;
+  color: var(--apple-text-primary);
+  font-size: 0.9rem;
+}
+
+.table thead th {
+  background-color: #fafafc;
+  color: var(--apple-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--apple-border);
+  padding: 14px 18px;
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--apple-border-subtle);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.015);
+}
+
+/* 6. Badges & Status */
+.badge {
+  border-radius: var(--apple-radius-badge) !important;
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 5px 12px;
+  letter-spacing: -0.005em;
+}
+
+.badge.bg-primary {
+  background-color: var(--apple-accent-light) !important;
+  color: var(--apple-accent) !important;
+}
+
+.badge.bg-success {
+  background-color: #e8f9ed !important;
+  color: var(--apple-success) !important;
+}
+
+.badge.bg-warning {
+  background-color: #fff6e6 !important;
+  color: var(--apple-warning) !important;
+}
+
+.badge.bg-danger {
+  background-color: #ffebeb !important;
+  color: var(--apple-danger) !important;
+}
+
+/* 7. Modals */
+.modal-content {
+  border-radius: var(--apple-radius-card-lg) !important;
+  border: 1px solid var(--apple-border) !important;
+  box-shadow: var(--apple-shadow-lg) !important;
+  background-color: #ffffff;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--apple-border-subtle);
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--apple-border-subtle);
+  padding: 16px 24px;
+}
+
+/* 8. Floating Action Button */
+.floating-info-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: var(--apple-card-bg);
+  color: var(--apple-accent) !important;
+  border: 1px solid var(--apple-border);
+  box-shadow: var(--apple-shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  z-index: 9999;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.floating-info-btn:hover {
+  transform: scale(1.08);
+  box-shadow: var(--apple-shadow-lg);
+  color: var(--apple-accent-hover) !important;
+}
+
+/* 9. Footer */
+.footer-sor {
+  background-color: transparent;
+  border-top: 1px solid var(--apple-border);
+  padding: 30px 0;
+  margin-top: 60px;
+  color: var(--apple-text-secondary);
+  font-size: 0.85rem;
 }

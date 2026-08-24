@@ -20,18 +20,18 @@
         @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2)
         {
             <div class="dropdown">
-                <button class="btn btn-primary rounded-pill font-semibold px-4 py-2 shadow-sm dropdown-toggle d-flex align-items-center" type="button" id="dropdownAgregarIglesia" data-bs-toggle="dropdown" aria-expanded="false" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: none;">
-                    <i class="bi bi-plus-circle-fill me-2"></i>Agregar Iglesia
+                <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownAgregarIglesia" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-plus-circle me-1"></i> Agregar Iglesia
                 </button>
-                <ul class="dropdown-menu dropdown-menu-dark bg-slate-900 border-slate-800 shadow-lg rounded-3 mt-2" aria-labelledby="dropdownAgregarIglesia">
+                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg" aria-labelledby="dropdownAgregarIglesia">
                     <li>
-                        <a class="dropdown-item text-white font-semibold py-2" href="@Url.Action("Crear", "Iglesia")">
-                            <i class="bi bi-person-plus-fill me-2 text-info"></i>Registro Individual
+                        <a class="dropdown-item fw-medium py-2" href="@Url.Action("Crear", "Iglesia")">
+                            <i class="bi bi-building me-2 text-primary"></i>Registro Individual
                         </a>
                     </li>
                     <li>
-                        <button class="dropdown-item text-white font-semibold py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalImportarMasivo">
-                            <i class="bi bi-file-earmark-excel-fill me-2 text-success"></i>Importación Masiva (Excel/CSV)
+                        <button class="dropdown-item fw-medium py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalImportarMasivo">
+                            <i class="bi bi-file-earmark-excel me-2 text-success"></i>Importación Masiva (Excel/CSV)
                         </button>
                     </li>
                 </ul>

@@ -8,44 +8,112 @@
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
     <style>
+        :root {
+            --apple-bg: #f5f5f7;
+            --apple-card-bg: #ffffff;
+            --apple-text-primary: #1d1d1f;
+            --apple-text-secondary: #86868b;
+            --apple-accent: #0071e3;
+            --apple-accent-hover: #0077ed;
+            --apple-border: rgba(0, 0, 0, 0.08);
+            --apple-nav-bg: rgba(255, 255, 255, 0.82);
+            --apple-radius-card: 18px;
+            --apple-radius-btn: 980px;
+        }
+
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--apple-bg);
+            color: var(--apple-text-primary);
+            letter-spacing: -0.012em;
+            -webkit-font-smoothing: antialiased;
         }
+
         .navbar-sor {
-            background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1000 !important;
+            background-color: var(--apple-nav-bg) !important;
+            backdrop-filter: saturate(180%) blur(20px) !important;
+            -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
+            border-bottom: 1px solid var(--apple-border) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
         }
+
+        .navbar-sor .nav-link {
+            color: var(--apple-text-primary) !important;
+            font-size: 0.875rem;
+            font-weight: 400;
+            padding: 8px 14px !important;
+            border-radius: var(--apple-radius-btn);
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+            opacity: 0.85;
+        }
+
+        .navbar-sor .nav-link:hover {
+            opacity: 1;
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .navbar-sor .dropdown-menu {
+            background-color: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--apple-border);
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+            padding: 8px;
+        }
+
+        .navbar-sor .dropdown-item {
+            border-radius: 8px;
+            font-size: 0.875rem;
+            padding: 8px 14px;
+            color: var(--apple-text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .navbar-sor .dropdown-item:hover {
+            background-color: var(--apple-accent);
+            color: #ffffff !important;
+        }
+
+        .navbar-sor .dropdown-item:hover i {
+            color: #ffffff !important;
+        }
+
         .footer-sor {
-            background-color: #ffffff;
-            border-top: 1px solid #e2e8f0;
-            padding: 20px 0;
-            margin-top: 40px;
-            color: #64748b;
+            background-color: transparent;
+            border-top: 1px solid var(--apple-border);
+            padding: 30px 0;
+            margin-top: 50px;
+            color: var(--apple-text-secondary);
         }
+
         .floating-info-btn {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 56px;
-            height: 56px;
+            bottom: 28px;
+            right: 28px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-            color: white !important;
+            background: #ffffff;
+            color: var(--apple-accent) !important;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
-            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+            font-size: 1.4rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--apple-border);
             z-index: 9999;
-            border: none;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
         }
+
         .floating-info-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.6);
+            transform: scale(1.08);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+            color: var(--apple-accent-hover) !important;
         }
     </style>
 </head>
@@ -65,20 +133,20 @@
             sessionStorage.removeItem("user_tab_session");
         </script>
     }
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-sor sticky-top py-3">
+    <nav class="navbar navbar-expand-lg navbar-light navbar-sor sticky-top py-2">
         <div class="container">
             @if (Session["usuario"] != null)
             {
                 <a class="navbar-brand font-bold d-flex align-items-center" href="@Url.Action("Index", "Home")">
-                    <i class="bi bi-box-seam-fill text-primary me-2 fs-4"></i>
-                    <span class="fw-bold tracking-tight">SOR <span class="text-info font-normal fs-6">| OCC Rep Dom</span></span>
+                    <i class="bi bi-box-seam text-primary me-2 fs-4"></i>
+                    <span class="fw-bold tracking-tight text-dark">SOR <span class="text-secondary fw-normal fs-6">| OCC Rep Dom</span></span>
                 </a>
             }
             else
             {
                 <a class="navbar-brand font-bold d-flex align-items-center" href="@Url.Action("Landing", "Home")">
-                    <i class="bi bi-box-seam-fill text-primary me-2 fs-4"></i>
-                    <span class="fw-bold tracking-tight">SOR <span class="text-info font-normal fs-6">| OCC Rep Dom</span></span>
+                    <i class="bi bi-box-seam text-primary me-2 fs-4"></i>
+                    <span class="fw-bold tracking-tight text-dark">SOR <span class="text-secondary fw-normal fs-6">| OCC Rep Dom</span></span>
                 </a>
             }
 
@@ -95,64 +163,64 @@
                         {
 
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle fw-semibold" href="#" id="navbarDropdownGestionTemp" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-folder2-open me-1"></i> GESTIÓN TEMP
+                                <a class="nav-link dropdown-toggle fw-medium" href="#" id="navbarDropdownGestionTemp" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-folder2-open me-1"></i> Gestión
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-dark bg-slate-900 border-slate-800" aria-labelledby="navbarDropdownGestionTemp">
+                                <ul class="dropdown-menu border-0 shadow-lg" aria-labelledby="navbarDropdownGestionTemp">
                                     <li>
-                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "Iglesia")">
-                                            <i class="bi bi-building me-2"></i>Iglesias
+                                        <a class="dropdown-item fw-medium" href="@Url.Action("Index", "Iglesia")">
+                                            <i class="bi bi-building me-2 text-primary"></i>Iglesias
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "Maestros")">
-                                            <i class="bi bi-people me-2"></i>Maestros
+                                        <a class="dropdown-item fw-medium" href="@Url.Action("Index", "Maestros")">
+                                            <i class="bi bi-people me-2 text-primary"></i>Maestros
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "Eventos")">
-                                            <i class="bi bi-calendar-event me-2"></i>Eventos y Asistencia
+                                        <a class="dropdown-item fw-medium" href="@Url.Action("Index", "Eventos")">
+                                            <i class="bi bi-calendar-event me-2 text-primary"></i>Eventos y Asistencia
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item fw-semibold" href="@Url.Action("Index", "CompanerosOracion")">
-                                            <i class="bi bi-heart me-2"></i>Compañeros de Oración
+                                        <a class="dropdown-item fw-medium" href="@Url.Action("Index", "CompanerosOracion")">
+                                            <i class="bi bi-heart me-2 text-primary"></i>Compañeros de Oración
                                         </a>
                                     </li>
                                 </ul>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="@Url.Action("Index", "Reporte")"><i class="bi bi-bar-chart-line me-1"></i> Reportes</a>
+                                <a class="nav-link fw-medium" href="@Url.Action("Index", "Reporte")"><i class="bi bi-bar-chart-line me-1"></i> Reportes</a>
                             </li>
 
                             if (uSesion.IdRolSeguridad == 1 || uSesion.IdRolSeguridad == 2)
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-warning fw-semibold" href="@Url.Action("Usuarios", "Admin")"><i class="bi bi-people-fill me-1"></i> Usuarios</a>
+                                    <a class="nav-link fw-medium" href="@Url.Action("Usuarios", "Admin")"><i class="bi bi-people me-1"></i> Usuarios</a>
                                 </li>
                             }
                             if (uSesion.IdRolSeguridad == 1 || uSesion.IdRolSeguridad == 2)
                             {
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-info fw-semibold" href="#" id="navbarDropdownMantenimiento" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-gear-wide-connected me-1"></i> Mantenedores
+                                    <a class="nav-link dropdown-toggle fw-medium" href="#" id="navbarDropdownMantenimiento" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear me-1"></i> Mantenedores
                                     </a>
-                                    <ul class="dropdown-menu dropdown-menu-dark bg-slate-900 border-slate-800" aria-labelledby="navbarDropdownMantenimiento">
+                                    <ul class="dropdown-menu border-0 shadow-lg" aria-labelledby="navbarDropdownMantenimiento">
                                         <li>
-                                            <a class="dropdown-item text-info font-semibold" href="@Url.Action("Index", "Equipos")">
-                                                <i class="bi bi-diagram-3 me-2"></i>Equipos y Estructura
+                                            <a class="dropdown-item fw-medium" href="@Url.Action("Index", "Equipos")">
+                                                <i class="bi bi-diagram-3 me-2 text-primary"></i>Equipos y Estructura
                                             </a>
                                         </li>
-                                        <li><hr class="dropdown-divider border-slate-800"></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <a class="dropdown-item text-info font-semibold" href="@Url.Action("Index", "Temporadas")">
-                                                <i class="bi bi-calendar-event me-2"></i>Temporadas OCC
+                                            <a class="dropdown-item fw-medium" href="@Url.Action("Index", "Temporadas")">
+                                                <i class="bi bi-calendar-event me-2 text-primary"></i>Temporadas OCC
                                             </a>
                                         </li>
-                                        <li><hr class="dropdown-divider border-slate-800"></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <a class="dropdown-item text-info font-semibold" href="@Url.Action("Catalogos", "Admin")">
-                                                <i class="bi bi-tags me-2"></i>Catálogos (Denominación / Tipo)
+                                            <a class="dropdown-item fw-medium" href="@Url.Action("Catalogos", "Admin")">
+                                                <i class="bi bi-tags me-2 text-primary"></i>Catálogos
                                             </a>
                                         </li>
                                     </ul>
@@ -163,11 +231,9 @@
                         {
 
                             <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="@Url.Action("EstadoSolicitud", "Coordinador")"><i class="bi bi-info-circle me-1"></i> Estado de Solicitud</a>
+                                <a class="nav-link fw-medium" href="@Url.Action("EstadoSolicitud", "Coordinador")"><i class="bi bi-info-circle me-1"></i> Estado de Solicitud</a>
                             </li>
                         }
-                    }
-
                     }
                 </ul>
 
@@ -176,21 +242,21 @@
                     {
                         var usuarioSesion = (SOR.Models.Usuario)Session["usuario"];
                         <li class="nav-item dropdown me-2">
-                            <a class="nav-link dropdown-toggle text-light d-flex align-items-center py-1" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="line-height: 1.2;">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center py-1" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="line-height: 1.2;">
                                 <div class="d-flex flex-column align-items-start me-2">
-                                    <span class="text-slate-300 fw-semibold" style="font-size: 0.85rem;">@usuarioSesion.Correo</span>
-                                    <span class="badge bg-primary mt-1" style="font-size: 0.7rem; padding: 0.25em 0.5em;">@(usuarioSesion.NombreRol ?? "Coordinador")</span>
+                                    <span class="text-dark fw-semibold" style="font-size: 0.85rem;">@usuarioSesion.Correo</span>
+                                    <span class="badge bg-primary mt-1" style="font-size: 0.7rem; padding: 0.2em 0.6em;">@(usuarioSesion.NombreRol ?? "Coordinador")</span>
                                 </div>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark bg-slate-900 border-slate-800 shadow" aria-labelledby="navbarUserDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg" aria-labelledby="navbarUserDropdown">
                                 <li>
-                                    <a class="dropdown-item text-light font-semibold py-2" href="@Url.Action("RegistroPerfil", "Coordinador")">
-                                        <i class="bi bi-person-vcard me-2 text-info"></i>Mi Perfil
+                                    <a class="dropdown-item fw-medium py-2" href="@Url.Action("RegistroPerfil", "Coordinador")">
+                                        <i class="bi bi-person-circle me-2 text-primary"></i>Mi Perfil
                                     </a>
                                 </li>
-                                <li><hr class="dropdown-divider border-slate-800"></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item text-danger font-semibold py-2" href="@Url.Action("CerrarSesion", "Acceso")">
+                                    <a class="dropdown-item text-danger fw-medium py-2" href="@Url.Action("CerrarSesion", "Acceso")">
                                         <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión (Salir)
                                     </a>
                                 </li>
@@ -200,7 +266,7 @@
                     else
                     {
                         <li class="nav-item me-2">
-                            <a class="btn btn-outline-light btn-sm px-3" href="@Url.Action("Login", "Acceso")">
+                            <a class="btn btn-secondary btn-sm px-3" href="@Url.Action("Login", "Acceso")">
                                 <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar Sesión
                             </a>
                         </li>
