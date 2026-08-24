@@ -91,6 +91,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult GuardarConfiguracion(int minAniosAntiguedad)
         {
             AsegurarEsquemaConfiguraciones();
@@ -124,6 +125,7 @@ namespace SOR.Controllers
 
         // POST: Temporadas/Crear
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Crear(string nombreTemporada, DateTime? fechaInicio, DateTime? fechaFin)
         {
             Usuario u = (Usuario)Session["usuario"];
@@ -156,6 +158,7 @@ namespace SOR.Controllers
 
         // POST: Temporadas/Editar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Editar(int idTemporada, string nombreTemporada, DateTime? fechaInicio, DateTime? fechaFin)
         {
             Usuario u = (Usuario)Session["usuario"];
@@ -189,6 +192,7 @@ namespace SOR.Controllers
 
         // POST: Temporadas/Activar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Activar(int idTemporada)
         {
             Usuario u = (Usuario)Session["usuario"];
@@ -235,6 +239,7 @@ namespace SOR.Controllers
 
         // POST: Temporadas/Inactivar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Inactivar(int idTemporada)
         {
             Usuario u = (Usuario)Session["usuario"];

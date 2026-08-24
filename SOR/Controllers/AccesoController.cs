@@ -63,6 +63,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Registrar(Usuario oUsuario)
         {
             if (oUsuario.Clave != oUsuario.ConfirmarClave)
@@ -134,6 +135,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Login(Usuario oUsuario)
         {
             // Validar correo
@@ -269,6 +271,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult RecuperarClave(string correo)
         {
             if (string.IsNullOrWhiteSpace(correo))
@@ -328,6 +331,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult CambiarClave(string correo, string nuevaClave, string confirmarClave)
         {
             if (string.IsNullOrEmpty(correo))

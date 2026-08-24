@@ -20,6 +20,7 @@
 }
 
 <form id="formCrearIglesia" action="@Url.Action("Crear", "Iglesia")" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
     <!-- DATOS DE LA INSTITUCIÓN -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-dark text-white p-3">

@@ -48,6 +48,7 @@
 </div>
 
 <form action="@Url.Action("RegistroPerfil", "Coordinador")" method="post" enctype="multipart/form-data" id="formPerfilCoordinador" novalidate>
+    @Html.AntiForgeryToken()
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <!-- Navegación por pestañas/secciones -->
         <div class="card-header bg-light border-0 p-3">

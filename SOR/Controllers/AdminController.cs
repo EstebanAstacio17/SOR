@@ -138,6 +138,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult AprobarCorreo(int idUsuario, string correoCorregido)
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
@@ -163,6 +164,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult RechazarUsuario(int idUsuario)
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
@@ -206,6 +208,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult AprobarPerfil(int idUsuario)
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
@@ -315,6 +318,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult EditarUsuarioAdmin(int idUsuario, int idRolSeguridad, int idEstado, int? idEquipo, int? idPosicion)
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
@@ -485,6 +489,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult AprobarRestablecimiento(int idUsuario)
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -552,6 +557,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult RechazarRestablecimiento(int idUsuario)
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -692,6 +698,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult CrearDenominacion(string nombre)
         {
             if (!string.IsNullOrWhiteSpace(nombre))
@@ -711,6 +718,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult ToggleDenominacion(int id, bool activo)
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -727,6 +735,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult CrearTipoOrg(string nombre)
         {
             if (!string.IsNullOrWhiteSpace(nombre))
@@ -746,6 +755,7 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult ToggleTipoOrg(int id, bool activo)
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))

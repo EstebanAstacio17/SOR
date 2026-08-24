@@ -122,7 +122,79 @@ namespace SOR.Controllers
             return View(new Iglesia());
         }
 
+        // ==========================================
+        // VALIDACIÓN DE SEGURIDAD PARA ARCHIVOS
+        // ==========================================
+        private static readonly HashSet<string> ExtensionesPermitidasAdjuntos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".jpg", ".jpeg", ".png"
+        };
+
+        private static bool ValidarArchivoSeguroIglesia(HttpPostedFileBase archivo, out string error)
+        {
+            error = string.Empty;
+            if (archivo == null || archivo.ContentLength == 0) return true;
+
+            // Límite: 5 MB
+            if (archivo.ContentLength > 5 * 1024 * 1024)
+            {
+                error = "El archivo excede el límite de 5 MB.";
+                return false;
+            }
+
+            string ext = Path.GetExtension(archivo.FileName);
+            if (string.IsNullOrEmpty(ext) || !ExtensionesPermitidasAdjuntos.Contains(ext))
+            {
+                error = "Tipo de archivo no permitido. Solo se permiten formatos PDF, JPG y PNG.";
+                return false;
+            }
+
+            try
+            {
+                byte[] buffer = new byte[8];
+                long originalPos = archivo.InputStream.Position;
+                archivo.InputStream.Position = 0;
+                int bytesLeidos = archivo.InputStream.Read(buffer, 0, 8);
+                archivo.InputStream.Position = originalPos;
+
+                if (bytesLeidos < 4)
+                {
+                    error = "El archivo subido está corrupto o incompleto.";
+                    return false;
+                }
+
+                bool esPdf = buffer[0] == 0x25 && buffer[1] == 0x50 && buffer[2] == 0x44 && buffer[3] == 0x46; // %PDF
+                bool esJpg = buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF;
+                bool esPng = buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47; // .PNG
+
+                if (!esPdf && !esJpg && !esPng)
+                {
+                    error = "La firma binaria del archivo no coincide con su formato legítimo.";
+                    return false;
+                }
+            }
+            catch
+            {
+                error = "No se pudo verificar la integridad del archivo.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static string SanitizarFormulaExcel(string valor)
+        {
+            if (string.IsNullOrEmpty(valor)) return valor;
+            valor = valor.Trim();
+            if (valor.StartsWith("=") || valor.StartsWith("+") || valor.StartsWith("-") || valor.StartsWith("@"))
+            {
+                return "'" + valor;
+            }
+            return valor;
+        }
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Crear(Iglesia modelo, HttpPostedFileBase docPastor, HttpPostedFileBase docLider)
         {
             Usuario u = (Usuario)Session["usuario"];
@@ -141,6 +213,19 @@ namespace SOR.Controllers
                 return View(modelo);
             }
 
+            // Validar seguridad de archivos adjuntos
+            string errPastor, errLider;
+            if (!ValidarArchivoSeguroIglesia(docPastor, out errPastor))
+            {
+                ViewData["MensajeError"] = "Cédula del Pastor: " + errPastor;
+                return View(modelo);
+            }
+            if (!ValidarArchivoSeguroIglesia(docLider, out errLider))
+            {
+                ViewData["MensajeError"] = "Cédula del Líder: " + errLider;
+                return View(modelo);
+            }
+
             string uploadPath = Server.MapPath("~/Uploads/Iglesias/");
             if (!Directory.Exists(uploadPath))
             {
@@ -149,16 +234,16 @@ namespace SOR.Controllers
 
             if (docPastor != null && docPastor.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docPastor.FileName);
-                string fileName = $"Pastor_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(docPastor.FileName).ToLowerInvariant();
+                string fileName = $"Pastor_{Guid.NewGuid():N}{ext}";
                 docPastor.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.Pastor.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
             }
 
             if (docLider != null && docLider.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docLider.FileName);
-                string fileName = $"Lider_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(docLider.FileName).ToLowerInvariant();
+                string fileName = $"Lider_{Guid.NewGuid():N}{ext}";
                 docLider.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.LiderMinisterial.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
             }
@@ -200,6 +285,13 @@ namespace SOR.Controllers
             if (iglesia == null)
             {
                 return HttpNotFound();
+            }
+
+            // Mitigación IDOR: Coordinadores solo pueden consultar iglesias de su jurisdicción / equipo
+            if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue && iglesia.IdEquipo != u.IdEquipo.Value)
+            {
+                TempData["MensajeError"] = "No tienes autorización para acceder al expediente de una iglesia perteneciente a otro equipo.";
+                return RedirectToAction("Index");
             }
 
             // Cargar eventos de tipo Visión y Taller para la temporada activa filtrados por equipo
@@ -925,17 +1017,17 @@ namespace SOR.Controllers
         {
             Iglesia ig = new Iglesia
             {
-                NombreIglesia = cols.Length > 1 ? cols[1].Trim() : "Iglesia Importada",
-                RNC_Cedula = cols.Length > 2 ? cols[2].Trim() : "",
-                Telefono = cols.Length > 3 ? cols[3].Trim() : "",
-                CorreoInstitucion = cols.Length > 4 ? cols[4].Trim() : "",
-                Provincia = cols.Length > 5 ? cols[5].Trim() : "",
-                Ciudad = cols.Length > 6 ? cols[6].Trim() : "",
-                Sector = cols.Length > 7 ? cols[7].Trim() : "",
-                Calle = cols.Length > 8 ? cols[8].Trim() : "",
-                Numero = cols.Length > 9 ? cols[9].Trim() : "",
-                Referencia = cols.Length > 10 ? cols[10].Trim() : "",
-                Denominacion = cols.Length > 11 ? cols[11].Trim() : "",
+                NombreIglesia = cols.Length > 1 ? SanitizarFormulaExcel(cols[1]) : "Iglesia Importada",
+                RNC_Cedula = cols.Length > 2 ? SanitizarFormulaExcel(cols[2]) : "",
+                Telefono = cols.Length > 3 ? SanitizarFormulaExcel(cols[3]) : "",
+                CorreoInstitucion = cols.Length > 4 ? SanitizarFormulaExcel(cols[4]) : "",
+                Provincia = cols.Length > 5 ? SanitizarFormulaExcel(cols[5]) : "",
+                Ciudad = cols.Length > 6 ? SanitizarFormulaExcel(cols[6]) : "",
+                Sector = cols.Length > 7 ? SanitizarFormulaExcel(cols[7]) : "",
+                Calle = cols.Length > 8 ? SanitizarFormulaExcel(cols[8]) : "",
+                Numero = cols.Length > 9 ? SanitizarFormulaExcel(cols[9]) : "",
+                Referencia = cols.Length > 10 ? SanitizarFormulaExcel(cols[10]) : "",
+                Denominacion = cols.Length > 11 ? SanitizarFormulaExcel(cols[11]) : "",
                 TipoOrganizacion = "Iglesia",
                 IdEquipo = 1 // Se reasignará luego
             };
@@ -944,22 +1036,22 @@ namespace SOR.Controllers
             ig.Pastor = new PersonaIglesia
             {
                 TipoPersona = "Pastor",
-                Nombres = pNombres,
-                Apellidos = pApellidos,
-                DocumentoIdentidad = cols.Length > 13 ? cols[13].Trim() : "",
-                Celular = cols.Length > 14 ? cols[14].Trim() : "",
-                Correo = cols.Length > 15 ? cols[15].Trim() : ""
+                Nombres = SanitizarFormulaExcel(pNombres),
+                Apellidos = SanitizarFormulaExcel(pApellidos),
+                DocumentoIdentidad = cols.Length > 13 ? SanitizarFormulaExcel(cols[13]) : "",
+                Celular = cols.Length > 14 ? SanitizarFormulaExcel(cols[14]) : "",
+                Correo = cols.Length > 15 ? SanitizarFormulaExcel(cols[15]) : ""
             };
 
             SepararNombresApellidos(cols.Length > 16 ? cols[16] : "", out string lNombres, out string lApellidos);
             ig.LiderMinisterial = new PersonaIglesia
             {
                 TipoPersona = "LiderMinisterial",
-                Nombres = lNombres,
-                Apellidos = lApellidos,
-                DocumentoIdentidad = cols.Length > 17 ? cols[17].Trim() : "",
-                Celular = cols.Length > 18 ? cols[18].Trim() : "",
-                Correo = cols.Length > 19 ? cols[19].Trim() : ""
+                Nombres = SanitizarFormulaExcel(lNombres),
+                Apellidos = SanitizarFormulaExcel(lApellidos),
+                DocumentoIdentidad = cols.Length > 17 ? SanitizarFormulaExcel(cols[17]) : "",
+                Celular = cols.Length > 18 ? SanitizarFormulaExcel(cols[18]) : "",
+                Correo = cols.Length > 19 ? SanitizarFormulaExcel(cols[19]) : ""
             };
 
             ig.CantidadMaestros = cols.Length > 20 && int.TryParse(cols[20], out int m) ? (int?)m : null;
@@ -978,17 +1070,17 @@ namespace SOR.Controllers
         {
             Iglesia ig = new Iglesia
             {
-                NombreIglesia = dr.FieldCount > 1 && dr[1] != DBNull.Value ? dr[1].ToString().Trim() : "Iglesia Importada",
-                RNC_Cedula = dr.FieldCount > 2 && dr[2] != DBNull.Value ? dr[2].ToString().Trim() : "",
-                Telefono = dr.FieldCount > 3 && dr[3] != DBNull.Value ? dr[3].ToString().Trim() : "",
-                CorreoInstitucion = dr.FieldCount > 4 && dr[4] != DBNull.Value ? dr[4].ToString().Trim() : "",
-                Provincia = dr.FieldCount > 5 && dr[5] != DBNull.Value ? dr[5].ToString().Trim() : "",
-                Ciudad = dr.FieldCount > 6 && dr[6] != DBNull.Value ? dr[6].ToString().Trim() : "",
-                Sector = dr.FieldCount > 7 && dr[7] != DBNull.Value ? dr[7].ToString().Trim() : "",
-                Calle = dr.FieldCount > 8 && dr[8] != DBNull.Value ? dr[8].ToString().Trim() : "",
-                Numero = dr.FieldCount > 9 && dr[9] != DBNull.Value ? dr[9].ToString().Trim() : "",
-                Referencia = dr.FieldCount > 10 && dr[10] != DBNull.Value ? dr[10].ToString().Trim() : "",
-                Denominacion = dr.FieldCount > 11 && dr[11] != DBNull.Value ? dr[11].ToString().Trim() : "",
+                NombreIglesia = dr.FieldCount > 1 && dr[1] != DBNull.Value ? SanitizarFormulaExcel(dr[1].ToString()) : "Iglesia Importada",
+                RNC_Cedula = dr.FieldCount > 2 && dr[2] != DBNull.Value ? SanitizarFormulaExcel(dr[2].ToString()) : "",
+                Telefono = dr.FieldCount > 3 && dr[3] != DBNull.Value ? SanitizarFormulaExcel(dr[3].ToString()) : "",
+                CorreoInstitucion = dr.FieldCount > 4 && dr[4] != DBNull.Value ? SanitizarFormulaExcel(dr[4].ToString()) : "",
+                Provincia = dr.FieldCount > 5 && dr[5] != DBNull.Value ? SanitizarFormulaExcel(dr[5].ToString()) : "",
+                Ciudad = dr.FieldCount > 6 && dr[6] != DBNull.Value ? SanitizarFormulaExcel(dr[6].ToString()) : "",
+                Sector = dr.FieldCount > 7 && dr[7] != DBNull.Value ? SanitizarFormulaExcel(dr[7].ToString()) : "",
+                Calle = dr.FieldCount > 8 && dr[8] != DBNull.Value ? SanitizarFormulaExcel(dr[8].ToString()) : "",
+                Numero = dr.FieldCount > 9 && dr[9] != DBNull.Value ? SanitizarFormulaExcel(dr[9].ToString()) : "",
+                Referencia = dr.FieldCount > 10 && dr[10] != DBNull.Value ? SanitizarFormulaExcel(dr[10].ToString()) : "",
+                Denominacion = dr.FieldCount > 11 && dr[11] != DBNull.Value ? SanitizarFormulaExcel(dr[11].ToString()) : "",
                 TipoOrganizacion = "Iglesia",
                 IdEquipo = defaultIdEquipo
             };
@@ -997,22 +1089,22 @@ namespace SOR.Controllers
             ig.Pastor = new PersonaIglesia
             {
                 TipoPersona = "Pastor",
-                Nombres = pNombres,
-                Apellidos = pApellidos,
-                DocumentoIdentidad = dr.FieldCount > 13 && dr[13] != DBNull.Value ? dr[13].ToString().Trim() : "",
-                Celular = dr.FieldCount > 14 && dr[14] != DBNull.Value ? dr[14].ToString().Trim() : "",
-                Correo = dr.FieldCount > 15 && dr[15] != DBNull.Value ? dr[15].ToString().Trim() : ""
+                Nombres = SanitizarFormulaExcel(pNombres),
+                Apellidos = SanitizarFormulaExcel(pApellidos),
+                DocumentoIdentidad = dr.FieldCount > 13 && dr[13] != DBNull.Value ? SanitizarFormulaExcel(dr[13].ToString()) : "",
+                Celular = dr.FieldCount > 14 && dr[14] != DBNull.Value ? SanitizarFormulaExcel(dr[14].ToString()) : "",
+                Correo = dr.FieldCount > 15 && dr[15] != DBNull.Value ? SanitizarFormulaExcel(dr[15].ToString()) : ""
             };
 
             SepararNombresApellidos(dr.FieldCount > 16 && dr[16] != DBNull.Value ? dr[16].ToString() : "", out string lNombres, out string lApellidos);
             ig.LiderMinisterial = new PersonaIglesia
             {
                 TipoPersona = "LiderMinisterial",
-                Nombres = lNombres,
-                Apellidos = lApellidos,
-                DocumentoIdentidad = dr.FieldCount > 17 && dr[17] != DBNull.Value ? dr[17].ToString().Trim() : "",
-                Celular = dr.FieldCount > 18 && dr[18] != DBNull.Value ? dr[18].ToString().Trim() : "",
-                Correo = dr.FieldCount > 19 && dr[19] != DBNull.Value ? dr[19].ToString().Trim() : ""
+                Nombres = SanitizarFormulaExcel(lNombres),
+                Apellidos = SanitizarFormulaExcel(lApellidos),
+                DocumentoIdentidad = dr.FieldCount > 17 && dr[17] != DBNull.Value ? SanitizarFormulaExcel(dr[17].ToString()) : "",
+                Celular = dr.FieldCount > 18 && dr[18] != DBNull.Value ? SanitizarFormulaExcel(dr[18].ToString()) : "",
+                Correo = dr.FieldCount > 19 && dr[19] != DBNull.Value ? SanitizarFormulaExcel(dr[19].ToString()) : ""
             };
 
             if (dr.FieldCount > 20 && dr[20] != DBNull.Value && int.TryParse(dr[20].ToString(), out int m)) ig.CantidadMaestros = m;
@@ -1339,6 +1431,7 @@ namespace SOR.Controllers
 
         // POST: Iglesia/Editar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Editar(Iglesia modelo, HttpPostedFileBase docPastor, HttpPostedFileBase docLider)
         {
             Usuario u = (Usuario)Session["usuario"];
@@ -1384,14 +1477,33 @@ namespace SOR.Controllers
                 return View(modelo);
             }
 
+            // Validar seguridad de archivos adjuntos
+            string errPastor, errLider;
+            if (!ValidarArchivoSeguroIglesia(docPastor, out errPastor))
+            {
+                TempData["MensajeError"] = "Cédula del Pastor: " + errPastor;
+                CargarEquiposDisponibles();
+                ViewBag.UsuarioActual = u;
+                ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
+                return View(modelo);
+            }
+            if (!ValidarArchivoSeguroIglesia(docLider, out errLider))
+            {
+                TempData["MensajeError"] = "Cédula del Líder: " + errLider;
+                CargarEquiposDisponibles();
+                ViewBag.UsuarioActual = u;
+                ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
+                return View(modelo);
+            }
+
             string uploadPath = Server.MapPath("~/Uploads/Iglesias/");
             if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
-            // Manejo de archivos adjuntos
+            // Manejo seguro de archivos adjuntos
             if (docPastor != null && docPastor.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docPastor.FileName);
-                string fileName = $"Pastor_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(docPastor.FileName).ToLowerInvariant();
+                string fileName = $"Pastor_{Guid.NewGuid():N}{ext}";
                 docPastor.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.Pastor.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
             }
@@ -1402,8 +1514,8 @@ namespace SOR.Controllers
 
             if (docLider != null && docLider.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docLider.FileName);
-                string fileName = $"Lider_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(docLider.FileName).ToLowerInvariant();
+                string fileName = $"Lider_{Guid.NewGuid():N}{ext}";
                 docLider.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.LiderMinisterial.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
             }

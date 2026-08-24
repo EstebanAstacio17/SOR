@@ -26,6 +26,7 @@
     <main class="form-signin w-100 m-auto">
 
         <form action="@Url.Action("Registrar", "Acceso")" method="post" onsubmit="sessionStorage.setItem('user_tab_session', 'active');">
+            @Html.AntiForgeryToken()
 
             <!-- LOGO -->
             <img src="~/Content/css/Imgs/OCC-logo.png"

@@ -39,6 +39,7 @@
     </div>
     <div class="card-body p-4">
         <form action="@Url.Action("GuardarConfiguracion", "Temporadas")" method="post" class="row align-items-end g-3">
+            @Html.AntiForgeryToken()
             <div class="col-md-6 col-lg-5">
                 <label class="form-label font-semibold text-slate-800">
                     <i class="bi bi-clock-history text-primary me-1"></i>Cantidad mínima de temporadas previas para reparticipar:
@@ -108,6 +109,7 @@
                                         @if (!item.Activa)
                                         {
                                             <form action="@Url.Action("Activar", "Temporadas")" method="post" class="m-0">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="idTemporada" value="@item.IdTemporada" />
                                                 <button type="submit" class="btn btn-sm btn-success font-semibold" onclick="return confirm('¿Seguro que deseas establecer esta temporada como ACTIVA? Se desactivarán las demás.');">
                                                     <i class="bi bi-check2-circle me-1"></i>Habilitar / Activar
@@ -117,6 +119,7 @@
                                         else
                                         {
                                             <form action="@Url.Action("Inactivar", "Temporadas")" method="post" class="m-0">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="idTemporada" value="@item.IdTemporada" />
                                                 <button type="submit" class="btn btn-sm btn-danger font-semibold" onclick="return confirm('¿Seguro que deseas DESACTIVAR esta temporada?');">
                                                     <i class="bi bi-slash-circle me-1"></i>Inhabilitar
@@ -133,6 +136,7 @@
                                         <div class="modal-dialog">
                                             <div class="modal-content border-0 rounded-4 shadow">
                                                 <form action="@Url.Action("Editar", "Temporadas")" method="post">
+                                                    @Html.AntiForgeryToken()
                                                     <input type="hidden" name="idTemporada" value="@item.IdTemporada" />
                                                     <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                                                         <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2 text-info"></i>Editar Temporada</h5>
@@ -178,6 +182,7 @@
     <div class="modal-dialog">
         <div class="modal-content border-0 rounded-4 shadow">
             <form action="@Url.Action("Crear", "Temporadas")" method="post">
+                @Html.AntiForgeryToken()
                 <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                     <h5 class="modal-title font-bold"><i class="bi bi-calendar-plus me-2 text-primary"></i>Crear Nueva Temporada</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>

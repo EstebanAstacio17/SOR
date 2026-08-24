@@ -277,6 +277,7 @@
                                                 </li>
                                                 <li>
                                                     <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar esta solicitud de registro de correo?');">
+                                                        @Html.AntiForgeryToken()
                                                         <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                         <button type="submit" class="dropdown-item text-danger">
                                                             <i class="bi bi-x-lg"></i> Rechazar Registro
@@ -289,6 +290,7 @@
                                                 <li><hr class="dropdown-divider border-slate-100"></li>
                                                 <li>
                                                     <form action="@Url.Action("AprobarPerfil", "Admin")" method="post" class="d-block">
+                                                        @Html.AntiForgeryToken()
                                                         <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                         <button type="submit" class="dropdown-item text-success fw-semibold">
                                                             <i class="bi bi-check-circle"></i> Aprobar Perfil
@@ -297,6 +299,7 @@
                                                 </li>
                                                 <li>
                                                     <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar este expediente de coordinador?');">
+                                                        @Html.AntiForgeryToken()
                                                         <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                         <button type="submit" class="dropdown-item text-danger">
                                                             <i class="bi bi-x-circle"></i> Rechazar Perfil
@@ -309,6 +312,7 @@
                                                 <li><hr class="dropdown-divider border-slate-100"></li>
                                                 <li>
                                                     <form action="@Url.Action("AprobarRestablecimiento", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de aprobar la solicitud de recuperación de contraseña de este usuario?');">
+                                                        @Html.AntiForgeryToken()
                                                         <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                         <button type="submit" class="dropdown-item text-success fw-semibold">
                                                             <i class="bi bi-unlock-fill"></i> Aprobar Restablecimiento
@@ -317,6 +321,7 @@
                                                 </li>
                                                 <li>
                                                     <form action="@Url.Action("RechazarRestablecimiento", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar la solicitud de recuperación de contraseña? (La cuenta del usuario se suspenderá y se liberará su rol)');">
+                                                        @Html.AntiForgeryToken()
                                                         <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                         <button type="submit" class="dropdown-item text-danger">
                                                             <i class="bi bi-slash-circle-fill"></i> Rechazar Restablecimiento
@@ -401,6 +406,7 @@
                                     <div class="modal fade text-start" id="modalEditarUsuario_@u.IdUsuario" tabindex="-1" aria-hidden="true">
                                         <div class="modal-dialog">
                                             <form action="@Url.Action("EditarUsuarioAdmin", "Admin")" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                 <div class="modal-content border-0 rounded-4 shadow">
                                                     <div class="modal-header bg-primary text-white rounded-top-4 py-3">
@@ -442,6 +448,7 @@
                                     <div class="modal fade text-start" id="modalAprobarCorreo_@u.IdUsuario" tabindex="-1" aria-hidden="true">
                                         <div class="modal-dialog">
                                             <form action="@Url.Action("AprobarCorreo", "Admin")" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
                                                 <div class="modal-content border-0 rounded-4 shadow">
                                                     <div class="modal-header bg-success text-white rounded-top-4 py-3">

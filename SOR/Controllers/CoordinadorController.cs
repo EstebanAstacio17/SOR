@@ -52,7 +52,70 @@ namespace SOR.Controllers
             return View(perfil);
         }
 
+        // ==========================================
+        // VALIDACIÓN DE SEGURIDAD PARA ARCHIVOS
+        // ==========================================
+        private static readonly HashSet<string> ExtensionesPermitidasArchivos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".jpg", ".jpeg", ".png"
+        };
+
+        private static bool ValidarArchivoSeguro(HttpPostedFileBase archivo, out string error)
+        {
+            error = string.Empty;
+            if (archivo == null || archivo.ContentLength == 0) return true;
+
+            // 1. Tamaño máximo: 5 MB (5 * 1024 * 1024 bytes)
+            if (archivo.ContentLength > 5 * 1024 * 1024)
+            {
+                error = "El archivo '" + Path.GetFileName(archivo.FileName) + "' excede el tamaño máximo permitido de 5 MB.";
+                return false;
+            }
+
+            // 2. Validación de extensión por lista blanca estricta
+            string ext = Path.GetExtension(archivo.FileName);
+            if (string.IsNullOrEmpty(ext) || !ExtensionesPermitidasArchivos.Contains(ext))
+            {
+                error = "El tipo de archivo '" + ext + "' no está permitido. Solo se aceptan documentos PDF e imágenes JPG o PNG.";
+                return false;
+            }
+
+            // 3. Validación de Magic Bytes (firmas binarias)
+            try
+            {
+                byte[] buffer = new byte[8];
+                long originalPos = archivo.InputStream.Position;
+                archivo.InputStream.Position = 0;
+                int bytesLeidos = archivo.InputStream.Read(buffer, 0, 8);
+                archivo.InputStream.Position = originalPos; // Restaurar puntero de lectura
+
+                if (bytesLeidos < 4)
+                {
+                    error = "El archivo '" + Path.GetFileName(archivo.FileName) + "' está corrupto o incompleto.";
+                    return false;
+                }
+
+                bool esPdf = buffer[0] == 0x25 && buffer[1] == 0x50 && buffer[2] == 0x44 && buffer[3] == 0x46; // %PDF
+                bool esJpg = buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF;
+                bool esPng = buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47; // .PNG
+
+                if (!esPdf && !esJpg && !esPng)
+                {
+                    error = "El contenido interno del archivo '" + Path.GetFileName(archivo.FileName) + "' no coincide con su formato legítimo.";
+                    return false;
+                }
+            }
+            catch
+            {
+                error = "No se pudo verificar la integridad del archivo subido.";
+                return false;
+            }
+
+            return true;
+        }
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult RegistroPerfil(PerfilCoordinador modelo, HttpPostedFileBase docAdjunto, HttpPostedFileBase pasaporteAdjunto, HttpPostedFileBase fotoPerfil)
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
@@ -76,9 +139,15 @@ namespace SOR.Controllers
             if (!modelo.IdPosicion.HasValue || modelo.IdPosicion.Value <= 0)
                 errores.Add("Pestaña 3 (Datos OCC y Equipo): Debe seleccionar una 'Posición / Rol'.");
 
+            // Validar seguridad de los 3 archivos adjuntos
+            string errDoc, errPas, errFoto;
+            if (!ValidarArchivoSeguro(docAdjunto, out errDoc)) errores.Add("Documento de Identidad: " + errDoc);
+            if (!ValidarArchivoSeguro(pasaporteAdjunto, out errPas)) errores.Add("Pasaporte: " + errPas);
+            if (!ValidarArchivoSeguro(fotoPerfil, out errFoto)) errores.Add("Foto de Perfil: " + errFoto);
+
             if (errores.Any())
             {
-                ViewData["MensajeError"] = "Por favor completa los siguientes campos obligatorios:<br/>• " + string.Join("<br/>• ", errores);
+                ViewData["MensajeError"] = "Por favor completa y corrige los siguientes campos obligatorios:<br/>• " + string.Join("<br/>• ", errores);
                 return View(modelo);
             }
 
@@ -92,7 +161,7 @@ namespace SOR.Controllers
                 }
             }
 
-            // 2. Procesar Carga de Archivos Adjuntos (Uploads)
+            // 3. Procesar Carga Segura de Archivos Adjuntos (Uploads)
             string uploadPath = Server.MapPath("~/Uploads/Usuarios/");
             if (!Directory.Exists(uploadPath))
             {
@@ -101,24 +170,24 @@ namespace SOR.Controllers
 
             if (docAdjunto != null && docAdjunto.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docAdjunto.FileName);
-                string fileName = $"Doc_{usuarioActual.IdUsuario}_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(docAdjunto.FileName).ToLowerInvariant();
+                string fileName = $"Doc_{usuarioActual.IdUsuario}_{Guid.NewGuid():N}{ext}";
                 docAdjunto.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.DocumentoAdjuntoRuta = "/Uploads/Usuarios/" + fileName;
             }
 
             if (pasaporteAdjunto != null && pasaporteAdjunto.ContentLength > 0)
             {
-                string ext = Path.GetExtension(pasaporteAdjunto.FileName);
-                string fileName = $"Pas_{usuarioActual.IdUsuario}_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(pasaporteAdjunto.FileName).ToLowerInvariant();
+                string fileName = $"Pas_{usuarioActual.IdUsuario}_{Guid.NewGuid():N}{ext}";
                 pasaporteAdjunto.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.PasaporteAdjuntoRuta = "/Uploads/Usuarios/" + fileName;
             }
 
             if (fotoPerfil != null && fotoPerfil.ContentLength > 0)
             {
-                string ext = Path.GetExtension(fotoPerfil.FileName);
-                string fileName = $"Foto_{usuarioActual.IdUsuario}_{Guid.NewGuid()}{ext}";
+                string ext = Path.GetExtension(fotoPerfil.FileName).ToLowerInvariant();
+                string fileName = $"Foto_{usuarioActual.IdUsuario}_{Guid.NewGuid():N}{ext}";
                 fotoPerfil.SaveAs(Path.Combine(uploadPath, fileName));
                 modelo.FotoRuta = "/Uploads/Usuarios/" + fileName;
             }
