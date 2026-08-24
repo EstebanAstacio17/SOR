@@ -5,42 +5,29 @@
 
 <style>
     .page-header {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%);
-        color: #ffffff;
-        padding: 50px 20px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        color: var(--apple-text-primary);
+        padding: 44px 20px;
+        border-radius: 22px;
+        box-shadow: var(--apple-shadow-xs);
         margin-top: 20px;
         margin-bottom: 30px;
         text-align: center;
         position: relative;
-        overflow: hidden;
-    }
-
-    .page-header::before {
-        content: "";
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 60%);
-        pointer-events: none;
     }
 
     .page-title {
-        font-size: 2.25rem;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        background: linear-gradient(90deg, #ffffff, #7dd3fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 10px;
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--apple-text-primary);
+        margin-bottom: 8px;
     }
 
     .page-subtitle {
-        color: #cbd5e1;
-        font-size: 1.1rem;
+        color: var(--apple-text-secondary);
+        font-size: 1.05rem;
         max-width: 700px;
         margin: 0 auto;
         line-height: 1.5;
@@ -48,12 +35,12 @@
 
     .info-card {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        padding: 30px;
+        border: 1px solid var(--apple-border);
+        border-radius: 20px;
+        box-shadow: var(--apple-shadow-xs);
+        padding: 32px;
         height: 100%;
-        transition: transform 0.3s ease;
+        transition: transform 0.25s ease;
     }
 
     .info-card:hover {
@@ -61,41 +48,41 @@
     }
 
     .info-icon-wrapper {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        background: #e0f2fe;
-        color: #0284c7;
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: #f0f6ff;
+        color: var(--apple-accent);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         margin-bottom: 20px;
     }
 
     .step-badge {
-        width: 28px;
-        height: 28px;
-        background: #0284c7;
+        width: 26px;
+        height: 26px;
+        background: var(--apple-accent);
         color: white;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        font-size: 0.9rem;
+        font-weight: 600;
+        font-size: 0.85rem;
         margin-right: 10px;
     }
 
     .btn-download-pdf {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        background: var(--apple-accent);
         color: #ffffff !important;
-        font-weight: 600;
-        padding: 14px 24px;
-        font-size: 1.05rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
-        transition: all 0.3s ease;
+        font-weight: 500;
+        padding: 13px 24px;
+        font-size: 1rem;
+        border-radius: 980px;
+        box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
+        transition: all 0.25s ease;
         text-decoration: none;
         display: inline-block;
         width: 100%;
@@ -104,16 +91,17 @@
     }
 
     .btn-download-pdf:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.5);
+        background: var(--apple-accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 113, 227, 0.35);
     }
 
     .pdf-viewer-container {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 15px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: var(--apple-shadow-xs);
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -126,7 +114,7 @@
     }
 
     .contact-icon {
-        color: #0284c7;
+        color: var(--apple-accent);
         font-size: 1.2rem;
         margin-right: 12px;
         margin-top: 2px;
@@ -134,12 +122,12 @@
 
     .contact-text strong {
         display: block;
-        color: #334155;
+        color: var(--apple-text-primary);
         font-size: 0.95rem;
     }
 
     .contact-text span {
-        color: #64748b;
+        color: var(--apple-text-secondary);
         font-size: 0.9rem;
     }
 </style>
