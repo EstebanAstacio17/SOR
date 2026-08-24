@@ -153,6 +153,7 @@
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <form action="@Url.Action("Eliminar", "Equipos")" method="post" class="d-inline form-delete-equipo">
+                                            @Html.AntiForgeryToken()
                                             <input type="hidden" name="idEquipo" value="@eq.IdEquipo" />
                                             <button type="submit" class="btn btn-outline-danger btn-sm" title="Desactivar o Eliminar Equipo" onclick="return confirm('¿Está seguro de que desea eliminar/inhabilitar este equipo? Si posee dependencias asociadas, el sistema lo desactivará automáticamente para preservar los datos históricos.');">
                                                 <i class="bi bi-trash"></i>
@@ -180,6 +181,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="@Url.Action("Crear", "Equipos")" method="post">
+                @Html.AntiForgeryToken()
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label font-semibold text-slate-700">Nombre del Equipo</label>
@@ -227,6 +229,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="@Url.Action("Editar", "Equipos")" method="post">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="IdEquipo" id="editIdEquipo" />
                 <div class="modal-body p-4">
                     <div class="mb-3">

@@ -59,6 +59,7 @@ namespace SOR.Controllers
 
         // POST: Equipos/Crear
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Crear(EquipoConDetalles modelo)
         {
             try
@@ -76,6 +77,7 @@ namespace SOR.Controllers
 
         // POST: Equipos/Editar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Editar(EquipoConDetalles modelo)
         {
             try
@@ -93,6 +95,7 @@ namespace SOR.Controllers
 
         // POST: Equipos/Eliminar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Eliminar(int idEquipo)
         {
             try

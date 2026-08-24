@@ -65,6 +65,7 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <form action="@Url.Action("ToggleDenominacion", "Admin")" method="post" class="d-inline m-0">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@item.Id" />
                                                 <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
                                                 <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
@@ -126,6 +127,7 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <form action="@Url.Action("ToggleTipoOrg", "Admin")" method="post" class="d-inline m-0">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@item.Id" />
                                                 <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
                                                 <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
@@ -149,6 +151,7 @@
     <div class="modal-dialog">
         <div class="modal-content border-0 rounded-4 shadow">
             <form action="@Url.Action("CrearDenominacion", "Admin")" method="post">
+                @Html.AntiForgeryToken()
                 <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                     <h5 class="modal-title font-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Nueva Denominación</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -171,6 +174,7 @@
     <div class="modal-dialog">
         <div class="modal-content border-0 rounded-4 shadow">
             <form action="@Url.Action("CrearTipoOrg", "Admin")" method="post">
+                @Html.AntiForgeryToken()
                 <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                     <h5 class="modal-title font-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo Tipo de Organización</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
