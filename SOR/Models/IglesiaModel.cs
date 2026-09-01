@@ -76,6 +76,7 @@ namespace SOR.Models
         public int IdIglesia { get; set; }
         public int IdTemporada { get; set; }
         public string NombreTemporada { get; set; }
+        public bool TemporadaActiva { get; set; } = true;
         public bool Participara { get; set; } = true;
         public string JustificacionNoParticipacion { get; set; }
         public string EstadoEvaluacion { get; set; } = "Pendiente"; // Pendiente, Aprobado, NoAprobado

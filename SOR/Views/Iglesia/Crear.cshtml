@@ -11,7 +11,26 @@
     <p class="text-muted mb-0">Ingresa los datos de la institución, del Pastor principal y del Líder Ministerial.</p>
 </div>
 
-@if (ViewData["MensajeError"] != null)
+@if (ViewBag.AlertaIglesiaOtroEquipo != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show mb-4 shadow-sm border-warning" role="alert">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <i class="bi bi-exclamation-triangle-fill me-2 text-warning fs-5"></i>
+                <strong class="text-dark">@ViewBag.AlertaIglesiaOtroEquipo</strong>
+            </div>
+            @if (ViewBag.IdIglesiaOtroEquipo != null && (int)ViewBag.IdIglesiaOtroEquipo > 0)
+            {
+                <a href="@Url.Action("Detalle", "Iglesia", new { id = ViewBag.IdIglesiaOtroEquipo })" class="btn btn-sm btn-dark font-semibold">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver Expediente de la Iglesia
+                </a>
+            }
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (ViewData["MensajeError"] != null && ViewBag.AlertaIglesiaOtroEquipo == null)
 {
     <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>@ViewData["MensajeError"]
@@ -34,8 +53,9 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label font-semibold">RNC o Cédula <span class="text-danger">*</span></label>
-                    <input type="text" name="RNC_Cedula" class="form-control" value="@Model.RNC_Cedula" required pattern="^(\d{9}|\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 101012345 o 001-1234567-8" />
+                    <input type="text" name="RNC_Cedula" id="txtRNC_Cedula" class="form-control" value="@Model.RNC_Cedula" required pattern="^(\d{9}|\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 101012345 o 001-1234567-8" />
                 </div>
+                <div class="col-12" id="contenedorAlertaIglesiaDuplicada" style="display:none;"></div>
                 <div class="col-md-2">
                     <label class="form-label font-semibold">Teléfono <span class="text-danger">*</span></label>
                     <input type="text" name="Telefono" class="form-control" value="@Model.Telefono" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 809-555-1234" />
@@ -156,10 +176,10 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 2: INFORMACIÓN MINISTERIAL Y REFERENCIAS -->
+    <!-- SECCIÓN 4: INFORMACIÓN MINISTERIAL Y REFERENCIAS -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="card-header text-white p-3" style="background-color: #0f172a !important;">
-            <h3 class="h5 font-bold mb-0"><i class="bi bi-file-earmark-medical me-2 text-warning"></i>4. Información Ministerial y Referencias</h3>
+        <div class="card-header bg-dark text-white p-3">
+            <h3 class="h5 font-bold mb-0 text-white"><i class="bi bi-file-earmark-medical me-2 text-warning"></i>4. Información Ministerial y Referencias</h3>
         </div>
         <div class="card-body p-4">
             <div class="row g-3">
@@ -354,6 +374,35 @@
             $.getJSON('@Url.Action("VerificarUnicidadPersona", "Iglesia")', { cedula: val }, function(response) {
                 if (response.existe) {
                     alert('ADVERTENCIA: El ' + (response.rol === 'Lider' ? 'Líder discipulado' : 'Maestro') + ' con la identificación ' + val + ' ya está registrado en la iglesia "' + response.iglesia + '", zona/equipo "' + response.equipo + '" (' + response.nivel + ').');
+                }
+            });
+        });
+
+        // Validación en vivo de iglesia registrada en otro equipo en la temporada activa
+        $(document).on('change', '#txtRNC_Cedula', function() {
+            var val = $(this).val();
+            if (!val) {
+                $('#contenedorAlertaIglesiaDuplicada').slideUp().empty();
+                return;
+            }
+            var idEquipoActual = $('select[name="IdEquipo"]').val() || '@(u != null && u.IdEquipo.HasValue ? u.IdEquipo.Value : 0)';
+            $.getJSON('@Url.Action("VerificarIglesiaExistente", "Iglesia")', { rncCedula: val, idEquipoActual: idEquipoActual, excluirIdIglesia: 0 }, function(response) {
+                if (response.existe && !response.mismoEquipo) {
+                    var urlDetalle = '@Url.Action("Detalle", "Iglesia")/' + response.idIglesia;
+                    var alertHtml = `
+                        <div class="alert alert-warning border-warning shadow-sm p-3 mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2 rounded-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-2"></i>
+                                <span>Esta iglesia ya está registrada en el equipo: <strong class="text-dark">${response.nombreEquipo}</strong></span>
+                            </div>
+                            <a href="${urlDetalle}" target="_blank" class="btn btn-sm btn-dark font-semibold">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Ver Expediente
+                            </a>
+                        </div>
+                    `;
+                    $('#contenedorAlertaIglesiaDuplicada').html(alertHtml).slideDown();
+                } else {
+                    $('#contenedorAlertaIglesiaDuplicada').slideUp().empty();
                 }
             });
         });

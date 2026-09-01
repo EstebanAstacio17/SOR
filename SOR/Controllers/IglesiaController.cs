@@ -271,7 +271,26 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                ViewData["MensajeError"] = "Error al registrar la iglesia: " + ex.Message;
+                if (ex.Message.Contains("Esta iglesia ya está registrada en el equipo:"))
+                {
+                    string raw = ex.Message;
+                    int idx = raw.IndexOf("Esta iglesia ya está registrada en el equipo:");
+                    string sub = raw.Substring(idx);
+                    string[] parts = sub.Split('|');
+                    string msgBase = parts[0].Trim();
+                    int idExistente = 0;
+                    if (parts.Length > 1 && int.TryParse(parts[1], out int parsedId))
+                    {
+                        idExistente = parsedId;
+                    }
+                    ViewBag.AlertaIglesiaOtroEquipo = msgBase;
+                    ViewBag.IdIglesiaOtroEquipo = idExistente;
+                    ViewData["MensajeError"] = msgBase;
+                }
+                else
+                {
+                    ViewData["MensajeError"] = "Error al registrar la iglesia: " + ex.Message;
+                }
                 return View(modelo);
             }
         }
@@ -1386,6 +1405,83 @@ namespace SOR.Controllers
                             iglesia = dr["NombreIglesia"].ToString(),
                             equipo = dr["NombreEquipo"].ToString(),
                             nivel = dr["NombreNivel"].ToString()
+                        }, JsonRequestBehavior.AllowGet);
+                    }
+                }
+            }
+
+            return Json(new { existe = false }, JsonRequestBehavior.AllowGet);
+        }
+
+        [HttpGet]
+        public JsonResult VerificarIglesiaExistente(string rncCedula, int? idEquipoActual, int? excluirIdIglesia)
+        {
+            if (string.IsNullOrWhiteSpace(rncCedula))
+            {
+                return Json(new { existe = false }, JsonRequestBehavior.AllowGet);
+            }
+
+            string cleanDoc = rncCedula.Replace("-", "").Replace(" ", "").Trim();
+            int idExcluir = excluirIdIglesia ?? 0;
+
+            int idTemporadaActiva = 0;
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sqlTemp = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
+                SqlCommand cmdTemp = new SqlCommand(sqlTemp, cn);
+                cn.Open();
+                object val = cmdTemp.ExecuteScalar();
+                if (val != null) idTemporadaActiva = Convert.ToInt32(val);
+            }
+
+            if (idTemporadaActiva <= 0)
+            {
+                return Json(new { existe = false }, JsonRequestBehavior.AllowGet);
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    SELECT TOP 1 i.IdIglesia, i.NombreIglesia, i.IdEquipo, e.NombreEquipo, p.IdTemporada
+                    FROM dbo.Iglesias i
+                    INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
+                    INNER JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
+                    WHERE p.IdTemporada = @IdTemp
+                      AND (
+                          i.RNC_Cedula = @RncCedula 
+                          OR REPLACE(REPLACE(ISNULL(i.RNC_Cedula, ''), '-', ''), ' ', '') = @CleanDoc
+                      )
+                      AND (@ExcluirId <= 0 OR i.IdIglesia <> @ExcluirId);";
+
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
+                cmd.Parameters.AddWithValue("@RncCedula", rncCedula.Trim());
+                cmd.Parameters.AddWithValue("@CleanDoc", cleanDoc);
+                cmd.Parameters.AddWithValue("@ExcluirId", idExcluir);
+
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    if (dr.Read())
+                    {
+                        int idIg = Convert.ToInt32(dr["IdIglesia"]);
+                        string nombreIg = dr["NombreIglesia"].ToString();
+                        int idEq = Convert.ToInt32(dr["IdEquipo"]);
+                        string nombreEq = dr["NombreEquipo"].ToString();
+                        int idTemp = Convert.ToInt32(dr["IdTemporada"]);
+
+                        bool mismoEquipo = idEquipoActual.HasValue && idEquipoActual.Value > 0 && idEquipoActual.Value == idEq;
+
+                        return Json(new
+                        {
+                            existe = true,
+                            mismoEquipo = mismoEquipo,
+                            idIglesia = idIg,
+                            nombreIglesia = nombreIg,
+                            idEquipo = idEq,
+                            nombreEquipo = nombreEq,
+                            idTemporada = idTemp,
+                            mensaje = $"Esta iglesia ya está registrada en el equipo: {nombreEq}"
                         }, JsonRequestBehavior.AllowGet);
                     }
                 }

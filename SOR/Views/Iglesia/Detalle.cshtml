@@ -25,12 +25,12 @@
     <!-- PANEL IZQUIERDO: FICHA FÍSICA E IDENTIDAD -->
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
-            <div class="card-header bg-dark text-white rounded-top-4 py-3">
-                <h5 class="card-title mb-0 font-bold"><i class="bi bi-building me-2"></i>Ficha de Identidad</h5>
+            <div class="card-header text-white rounded-top-4 py-3 border-0" style="background-color: #0f172a !important;">
+                <h5 class="card-title mb-0 font-bold"><i class="bi bi-building me-2 text-warning"></i>Ficha de Identidad</h5>
             </div>
             <div class="card-body p-4">
                 <h4 class="font-bold text-primary mb-1">@Model.NombreIglesia</h4>
-                <span class="badge bg-dark text-white border border-secondary mb-3 px-3 py-2 fw-bold"><i class="bi bi-diagram-3 me-1"></i>@Model.NombreEquipo</span>
+                <span style="background-color: #f1f5f9 !important; color: #334155 !important; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-bottom: 12px; border: 1px solid #cbd5e1;"><i class="bi bi-diagram-3 me-1 text-primary"></i>@Model.NombreEquipo</span>
                 
                 <div class="d-flex flex-column gap-3 text-sm mt-2">
                     <div>
@@ -142,7 +142,14 @@
             var part = Model.ParticipacionActual;
             <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4 flex-wrap gap-2">
-                    <h5 class="h6 font-bold text-slate-800 mb-0"><i class="bi bi-signpost-split me-2 text-primary"></i>Etapas de la Temporada Activa: @part.NombreTemporada</h5>
+                    <h5 class="h6 font-bold text-slate-800 mb-0">
+                        <i class="bi bi-signpost-split me-2 text-primary"></i>
+                        @(part.TemporadaActiva ? "Etapas de la Temporada Activa: " : "Etapas de la Temporada: ") @part.NombreTemporada
+                        @if (!part.TemporadaActiva)
+                        {
+                            <span class="badge bg-secondary ms-2 text-xxs">Inactiva / Cerrada</span>
+                        }
+                    </h5>
                     <div class="d-flex align-items-center gap-2">
                         <span class="small fw-semibold text-slate-600">Estatus Reportes:</span>
                         @if (part.EstatusEvaluacionReporte == "Reportó")
@@ -170,55 +177,85 @@
                         }
                     </div>
                 </div>
-                
-                <!-- Timeline SVG / Steps -->
-                <div class="d-flex align-items-center justify-content-between position-relative px-2 flex-wrap gap-3">
-                    <!-- Progress line container -->
-                    <div class="position-absolute start-0 end-0" style="left: 20px !important; right: 20px !important; top: 20px; height: 4px; z-index: 1;">
-                        <div class="w-100 h-100 bg-light"></div>
-                        <div class="bg-primary position-absolute top-0 start-0 h-100" style="width: @((part.EtapaActual - 1) * 16.66)%; transition: width 0.3s ease; z-index: 2;"></div>
-                    </div>
- 
-                    <!-- Step 1: Inscrita -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 1 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">1</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Inscrita</span>
-                    </div>
- 
-                    <!-- Step 2: Evaluada -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 2 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">2</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Evaluada</span>
-                    </div>
- 
-                    <!-- Step 3: Visión -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 3 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">3</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Visión</span>
-                    </div>
- 
-                    <!-- Step 4: Elegibilidad -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 4 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">4</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Elegible Taller</span>
-                    </div>
- 
-                    <!-- Step 5: Taller OCC -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 5 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">5</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Taller OCC</span>
-                    </div>
- 
-                    <!-- Step 6: Asignación -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 6 ? "bg-primary text-white border-primary" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">6</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Asignación</span>
-                    </div>
 
-                    <!-- Step 7: Aprobación Final -->
-                    <div class="d-flex flex-column align-items-center position-relative" style="z-index: 3;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center border-3 fw-bold @(part.EtapaActual >= 7 ? "bg-success text-white border-success" : "bg-white text-slate-400 border-slate-300")" style="width: 40px; height: 40px;">7</div>
-                        <span class="small font-semibold text-slate-700 mt-2">Aprobación Final</span>
+                @if (!part.TemporadaActiva)
+                {
+                    <div class="alert alert-secondary py-2 px-3 mb-3 d-flex align-items-center gap-2 rounded-3">
+                        <i class="bi bi-lock-fill text-muted flex-shrink-0"></i>
+                        <span class="small">Esta temporada se encuentra <strong>cerrada o inactiva</strong>. Los datos se muestran en modo histórico de consulta y las transiciones operativas están deshabilitadas.</span>
+                    </div>
+                }
+                
+                <!-- Timeline Steps Container -->
+                <div class="py-2 px-1">
+                    <div class="row g-2 justify-content-between position-relative">
+                        <!-- Connecting track behind the steps -->
+                        <div class="position-absolute d-none d-md-block" style="top: 20px; left: 5%; right: 5%; height: 3px; background-color: #e2e8f0; z-index: 1;">
+                            <div class="h-100 bg-success" style="width: @(Math.Min(100, Math.Max(0, (part.EtapaActual - 1) * 16.66)))%; transition: width 0.4s ease;"></div>
+                        </div>
+
+                        <!-- Step 1: Inscrita -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual > 1 ? "bg-success text-white" : (part.EtapaActual == 1 ? "bg-primary text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual > 1 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("1"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual == 1 ? "text-primary fw-bold" : (part.EtapaActual > 1 ? "text-success" : "text-muted"))">Inscrita</div>
+                            <div class="text-xxs text-muted">@(Model.FechaCreacion.HasValue ? Model.FechaCreacion.Value.ToString("dd/MM/yyyy") : "Completada")</div>
+                        </div>
+
+                        <!-- Step 2: Evaluada -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual > 2 ? "bg-success text-white" : (part.EtapaActual == 2 ? "bg-primary text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual > 2 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("2"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual == 2 ? "text-primary fw-bold" : (part.EtapaActual > 2 ? "text-success" : "text-muted"))">Evaluada</div>
+                            <div class="text-xxs text-muted">@(part.EvalInicialFecha.HasValue ? part.EvalInicialFecha.Value.ToString("dd/MM/yyyy") : (part.EtapaActual > 2 ? "Completada" : (part.EtapaActual == 2 ? "En curso" : "Pendiente")))</div>
+                        </div>
+
+                        <!-- Step 3: Visión -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual > 3 ? "bg-success text-white" : (part.EtapaActual == 3 ? "bg-primary text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual > 3 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("3"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual == 3 ? "text-primary fw-bold" : (part.EtapaActual > 3 ? "text-success" : "text-muted"))">Visión</div>
+                            <div class="text-xxs text-muted">@(part.VisionFecha.HasValue ? part.VisionFecha.Value.ToString("dd/MM/yyyy") : (part.EtapaActual > 3 ? "Completada" : (part.EtapaActual == 3 ? "En curso" : "Pendiente")))</div>
+                        </div>
+
+                        <!-- Step 4: Elegibilidad -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual > 4 ? "bg-success text-white" : (part.EtapaActual == 4 ? "bg-primary text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual > 4 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("4"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual == 4 ? "text-primary fw-bold" : (part.EtapaActual > 4 ? "text-success" : "text-muted"))">Elegible Taller</div>
+                            <div class="text-xxs text-muted">@(part.EvalTallerFecha.HasValue ? part.EvalTallerFecha.Value.ToString("dd/MM/yyyy") : (part.EtapaActual > 4 ? "Completada" : (part.EtapaActual == 4 ? "En curso" : "Pendiente")))</div>
+                        </div>
+
+                        <!-- Step 5: Taller OCC -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual > 5 ? "bg-success text-white" : (part.EtapaActual == 5 ? "bg-primary text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual > 5 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("5"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual == 5 ? "text-primary fw-bold" : (part.EtapaActual > 5 ? "text-success" : "text-muted"))">Taller OCC</div>
+                            <div class="text-xxs text-muted">@(part.TallerFecha.HasValue ? part.TallerFecha.Value.ToString("dd/MM/yyyy") : (part.EtapaActual > 5 ? "Completada" : (part.EtapaActual == 5 ? "En curso" : "Pendiente")))</div>
+                        </div>
+
+                        <!-- Step 6: Asignación -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual > 6 ? "bg-success text-white" : (part.EtapaActual == 6 ? "bg-primary text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual > 6 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("6"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual == 6 ? "text-primary fw-bold" : (part.EtapaActual > 6 ? "text-success" : "text-muted"))">Asignación</div>
+                            <div class="text-xxs text-muted">@(part.EtapaActual > 6 ? "Completada" : (part.EtapaActual == 6 ? "En curso" : "Pendiente"))</div>
+                        </div>
+
+                        <!-- Step 7: Aprobación Final -->
+                        <div class="col text-center position-relative" style="z-index: 2;">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual >= 7 ? "bg-success text-white" : "bg-white text-muted border"))" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual >= 7 ? Html.Raw("<i class=\"bi bi-check-lg\"></i>") : Html.Raw("7"))
+                            </div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual >= 7 ? "text-success fw-bold" : "text-muted")">Aprobación Final</div>
+                            <div class="text-xxs text-muted">@(part.FechaEvaluacion.HasValue ? part.FechaEvaluacion.Value.ToString("dd/MM/yyyy") : (part.EtapaActual >= 7 ? "Completada" : "Pendiente"))</div>
+                        </div>
                     </div>
                 </div>
 
@@ -240,6 +277,12 @@
                                 <i class="bi bi-arrow-counterclockwise me-1"></i>Reabrir Proceso / Cambiar Decisión
                             </button>
                         }
+                    }
+                    else if (!part.TemporadaActiva)
+                    {
+                        <div class="p-3 bg-white rounded-3 border">
+                            <p class="small text-muted mb-0"><i class="bi bi-lock me-1"></i>Las operaciones de avance de etapa no están disponibles para esta participación debido a que la temporada se encuentra cerrada o inactiva.</p>
+                        </div>
                     }
                     else
                     {
@@ -514,12 +557,12 @@
                     }
                     else
                     {
-                        <div class="position-relative ps-4 border-start border-2 border-slate-200 mt-2 ms-2">
+                        <div class="timeline-track mt-3 ms-1">
                             @foreach (var h in Model.Historial)
                             {
-                                <div class="position-relative mb-4">
+                                <div class="timeline-item">
                                     <!-- Timeline circle -->
-                                    <div class="position-absolute bg-primary rounded-circle border border-white border-2" style="width: 14px; height: 14px; left: -28px; top: 4px;"></div>
+                                    <div class="timeline-dot"></div>
                                     
                                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
                                         <div class="text-xs text-muted">
@@ -655,9 +698,9 @@
                     <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
                     <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
                     
-                    <div class="modal-header bg-warning text-dark rounded-top-4 py-3">
-                        <h5 class="modal-title font-bold"><i class="bi bi-pause-circle me-2"></i>Detener Proceso de la Iglesia</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold text-white"><i class="bi bi-pause-circle me-2 text-warning"></i>Detener Proceso de la Iglesia</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4">
                         <p class="small text-slate-600 mb-3">El proceso de participación será puesto en pausa y la iglesia no avanzará a la siguiente etapa hasta que un coordinador decida reabrir el proceso.</p>
@@ -673,7 +716,7 @@
                     </div>
                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning font-semibold text-dark">Confirmar Detención</button>
+                        <button type="submit" class="btn btn-warning font-semibold text-white">Confirmar Detención</button>
                     </div>
                 </form>
             </div>

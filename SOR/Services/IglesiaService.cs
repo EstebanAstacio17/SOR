@@ -143,54 +143,64 @@ namespace SOR.Services
             {
                 cn.Open();
                 
-                // Asegurar que SpValidarUnicidadPastorYIglesia exista
-                string spCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpValidarUnicidadPastorYIglesia]') AND type in (N'P', N'PC');";
-                using (SqlCommand cmdCheck = new SqlCommand(spCheck, cn))
+                // Asegurar que SpValidarUnicidadPastorYIglesia exista y devuelva el nombre del equipo
+                string spCreate = @"
+                    IF OBJECT_ID(N'[dbo].[SpValidarUnicidadPastorYIglesia]', N'P') IS NOT NULL
+                        DROP PROCEDURE dbo.SpValidarUnicidadPastorYIglesia;
+                ";
+                using (SqlCommand cmdDrop = new SqlCommand(spCreate, cn))
                 {
-                    if (Convert.ToInt32(cmdCheck.ExecuteScalar()) == 0)
-                    {
-                        string spCreate = @"
-                            CREATE PROCEDURE dbo.SpValidarUnicidadPastorYIglesia
-                                @IdTemporada INT,
-                                @RncCedulaIglesia VARCHAR(50),
-                                @CedulaPastor VARCHAR(50),
-                                @ExcluirIdIglesia INT = 0
-                            AS
-                            BEGIN
-                                SET NOCOUNT ON;
+                    cmdDrop.ExecuteNonQuery();
+                }
 
-                                IF EXISTS (
-                                    SELECT 1 
-                                    FROM dbo.ParticipacionesIglesia p 
-                                    INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia 
-                                    WHERE p.IdTemporada = @IdTemporada 
-                                      AND i.RNC_Cedula = @RncCedulaIglesia 
-                                      AND i.IdIglesia <> @ExcluirIdIglesia
-                                )
-                                BEGIN
-                                    RAISERROR('La iglesia con RNC/Cédula ya está registrada en esta temporada.', 16, 1);
-                                    RETURN;
-                                END
+                string spDef = @"
+                    CREATE PROCEDURE dbo.SpValidarUnicidadPastorYIglesia
+                        @IdTemporada INT,
+                        @RncCedulaIglesia VARCHAR(50),
+                        @CedulaPastor VARCHAR(50),
+                        @ExcluirIdIglesia INT = 0
+                    AS
+                    BEGIN
+                        SET NOCOUNT ON;
 
-                                IF EXISTS (
-                                    SELECT 1 
-                                    FROM dbo.PersonasIglesia per 
-                                    INNER JOIN dbo.ParticipacionesIglesia p ON per.IdIglesia = p.IdIglesia
-                                    WHERE p.IdTemporada = @IdTemporada 
-                                      AND per.TipoPersona = 'Pastor' 
-                                      AND REPLACE(per.DocumentoIdentidad, '-', '') = REPLACE(@CedulaPastor, '-', '')
-                                      AND per.IdIglesia <> @ExcluirIdIglesia
-                                )
-                                BEGIN
-                                    RAISERROR('El pastor con la cédula indicada ya está registrado en otra iglesia en esta temporada.', 16, 1);
-                                    RETURN;
-                                END
-                            END";
-                        using (SqlCommand cmdCreate = new SqlCommand(spCreate, cn))
-                        {
-                            cmdCreate.ExecuteNonQuery();
-                        }
-                    }
+                        DECLARE @NomEquipo NVARCHAR(200);
+                        DECLARE @IdIglesiaReg INT;
+
+                        SELECT TOP 1 @NomEquipo = e.NombreEquipo, @IdIglesiaReg = i.IdIglesia
+                        FROM dbo.ParticipacionesIglesia p 
+                        INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia 
+                        INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
+                        WHERE p.IdTemporada = @IdTemporada 
+                          AND (
+                              i.RNC_Cedula = @RncCedulaIglesia 
+                              OR REPLACE(REPLACE(ISNULL(i.RNC_Cedula, ''), '-', ''), ' ', '') = REPLACE(REPLACE(@RncCedulaIglesia, '-', ''), ' ', '')
+                          )
+                          AND i.IdIglesia <> @ExcluirIdIglesia;
+
+                        IF @NomEquipo IS NOT NULL
+                        BEGIN
+                            DECLARE @Msg NVARCHAR(500) = 'Esta iglesia ya está registrada en el equipo: ' + @NomEquipo + '|' + CAST(@IdIglesiaReg AS NVARCHAR(20));
+                            RAISERROR(@Msg, 16, 1);
+                            RETURN;
+                        END
+
+                        IF EXISTS (
+                            SELECT 1 
+                            FROM dbo.PersonasIglesia per 
+                            INNER JOIN dbo.ParticipacionesIglesia p ON per.IdIglesia = p.IdIglesia
+                            WHERE p.IdTemporada = @IdTemporada 
+                              AND per.TipoPersona = 'Pastor' 
+                              AND REPLACE(per.DocumentoIdentidad, '-', '') = REPLACE(@CedulaPastor, '-', '')
+                              AND per.IdIglesia <> @ExcluirIdIglesia
+                        )
+                        BEGIN
+                            RAISERROR('El pastor con la cédula indicada ya está registrado en otra iglesia en esta temporada.', 16, 1);
+                            RETURN;
+                        END
+                    END";
+                using (SqlCommand cmdCreate = new SqlCommand(spDef, cn))
+                {
+                    cmdCreate.ExecuteNonQuery();
                 }
 
                 // Ejecutar SP

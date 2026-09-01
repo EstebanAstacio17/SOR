@@ -20,7 +20,7 @@ namespace SOR.Repositories
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
                     LEFT JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
-                        AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC)
+                        AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC)
                     LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     ORDER BY i.NombreIglesia;";
 
@@ -294,12 +294,12 @@ namespace SOR.Repositories
 
                 // 3. Participación y Recursos Actuales con soporte de etapas de la temporada
                 string sqlPart = @"
-                    SELECT p.*, t.NombreTemporada, r.* 
+                    SELECT p.*, t.NombreTemporada, t.Activa AS TemporadaActiva, r.* 
                     FROM dbo.ParticipacionesIglesia p
                     INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     LEFT JOIN dbo.AsignacionesRecursos r ON p.IdParticipacion = r.IdParticipacion
                     WHERE p.IdIglesia = @Id
-                      AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC);";
+                      AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC);";
 
                 using (SqlCommand cmdPart = new SqlCommand(sqlPart, cn))
                 {
@@ -314,6 +314,7 @@ namespace SOR.Repositories
                                 IdIglesia = Convert.ToInt32(drPart["IdIglesia"]),
                                 IdTemporada = Convert.ToInt32(drPart["IdTemporada"]),
                                 NombreTemporada = drPart["NombreTemporada"].ToString(),
+                                TemporadaActiva = drPart["TemporadaActiva"] != DBNull.Value && Convert.ToBoolean(drPart["TemporadaActiva"]),
                                 Participara = Convert.ToBoolean(drPart["Participara"]),
                                 JustificacionNoParticipacion = drPart["JustificacionNoParticipacion"] != DBNull.Value ? drPart["JustificacionNoParticipacion"].ToString() : "",
                                 EstadoEvaluacion = drPart["EstadoEvaluacion"].ToString(),

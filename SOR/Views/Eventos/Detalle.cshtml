@@ -5,13 +5,35 @@
     var iglesias = (List<SOR.Controllers.IglesiaParticipacionViewModel>)ViewBag.Iglesias;
     var maestros = (List<SOR.Controllers.MaestroAsistenciaViewModel>)ViewBag.Maestros;
     bool puedeEditar = ViewBag.PuedeEditar != null && (bool)ViewBag.PuedeEditar;
+    var u = (SOR.Models.Usuario)Session["usuario"] ?? new SOR.Models.Usuario();
+    bool eventoPasado = evento != null && evento.Fecha.Date < DateTime.Today;
 }
+
+@Html.AntiForgeryToken()
 
 <div class="mb-4">
     <a href="@Url.Action("Index", "Eventos")" class="btn btn-sm btn-outline-secondary font-semibold">
         <i class="bi bi-arrow-left me-1"></i>Volver a Eventos
     </a>
 </div>
+
+@if (eventoPasado)
+{
+    <div class="alert alert-secondary py-2 px-3 mb-4 d-flex align-items-center gap-2 rounded-3 border">
+        <i class="bi bi-clock-history text-muted flex-shrink-0 fs-5"></i>
+        <div class="small">
+            Este evento se realizó el <strong>@evento.Fecha.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))</strong>.
+            @if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+            {
+                <span>La lista de asistencia se encuentra en <strong>modo histórico de solo lectura</strong> y está inhabilitada para retiro o modificación de participantes.</span>
+            }
+            else
+            {
+                <span>Modo de edición administrativa habilitado para SuperAdmin / Administrador.</span>
+            }
+        </div>
+    </div>
+}
 
 <div class="row g-4 mb-4">
     <!-- Panel Izquierdo: Ficha del Evento -->
@@ -267,7 +289,14 @@
                                                                         </div>
                                                                         <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                                            <button type="submit" class="btn btn-primary font-semibold"><i class="bi bi-save me-1"></i>Confirmar y Guardar Asistencia</button>
+                                                                            @if (eventoPasado && u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                                                            {
+                                                                                <button type="button" class="btn btn-secondary font-semibold" disabled title="El evento ya pasó"><i class="bi bi-lock me-1"></i>Evento Pasado (Solo Lectura)</button>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <button type="submit" class="btn btn-primary font-semibold"><i class="bi bi-save me-1"></i>Confirmar y Guardar Asistencia</button>
+                                                                            }
                                                                         </div>
                                                                     </form>
                                                                 }
@@ -363,13 +392,23 @@
                                                                                 }
                                                                             </div>
 
-                                                                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="agregarFilaMaestroNuevo('contenedorMaestrosTaller_@ig.IdParticipacion')">
-                                                                                <i class="bi bi-plus-circle me-1"></i>Registrar Nuevo Maestro en Taller
-                                                                            </button>
+                                                                            @if (!eventoPasado || u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2)
+                                                                            {
+                                                                                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="agregarFilaMaestroNuevo('contenedorMaestrosTaller_@ig.IdParticipacion')">
+                                                                                    <i class="bi bi-plus-circle me-1"></i>Registrar Nuevo Maestro en Taller
+                                                                                </button>
+                                                                            }
                                                                         </div>
                                                                         <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                                            <button type="submit" class="btn btn-primary font-semibold"><i class="bi bi-save me-1"></i>Confirmar y Guardar Asistencia</button>
+                                                                            @if (eventoPasado && u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                                                            {
+                                                                                <button type="button" class="btn btn-secondary font-semibold" disabled title="El evento ya pasó"><i class="bi bi-lock me-1"></i>Evento Pasado (Solo Lectura)</button>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <button type="submit" class="btn btn-primary font-semibold"><i class="bi bi-save me-1"></i>Confirmar y Guardar Asistencia</button>
+                                                                            }
                                                                         </div>
                                                                     </form>
                                                                 }
@@ -499,6 +538,7 @@
                                         <th>Rol / Relación</th>
                                         <th>Identificación</th>
                                         <th>Contacto</th>
+                                        <th class="text-end pe-4">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -533,6 +573,7 @@
                                                 }
 
                                                 asistentesList.Add(new {
+                                                    IdAsistente = a.IdAsistente,
                                                     Nombre = a.NombreCompleto,
                                                     Iglesia = ig.NombreIglesia,
                                                     Rol = rol,
@@ -547,7 +588,7 @@
                                     @if (!asistentesList.Any())
                                     {
                                         <tr>
-                                            <td colspan="5" class="text-center py-5 text-muted">
+                                            <td colspan="6" class="text-center py-5 text-muted">
                                                 <i class="bi bi-person-x fs-2 d-block mb-2 text-slate-300"></i>
                                                 No hay asistentes confirmados para este evento todavía.
                                             </td>
@@ -575,6 +616,27 @@
                                                 <td>
                                                     <div class="small"><i class="bi bi-telephone text-muted me-1"></i>@(string.IsNullOrEmpty(ast.Telefono) ? "N/D" : ast.Telefono)</div>
                                                     <div class="text-xs text-muted"><i class="bi bi-envelope text-muted me-1"></i>@(string.IsNullOrEmpty(ast.Correo) ? "N/D" : ast.Correo)</div>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    @if (puedeEditar)
+                                                    {
+                                                        if (eventoPasado && u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary disabled" disabled title="El evento ya pasó. No se puede modificar la asistencia histórica.">
+                                                                <i class="bi bi-lock me-1"></i>Inhabilitado
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-asistencia-maestro"
+                                                                    data-id-asistente="@ast.IdAsistente"
+                                                                    data-id-evento="@evento.IdEvento"
+                                                                    data-nombre="@ast.Nombre"
+                                                                    title="Retirar de esta asistencia">
+                                                                <i class="bi bi-trash me-1"></i>Eliminar
+                                                            </button>
+                                                        }
+                                                    }
                                                 </td>
                                             </tr>
                                         }
@@ -658,6 +720,56 @@
                 }
             });
         });
+
+        // Manejador para retirar maestro de la asistencia
+        $(document).on('click', '.btn-eliminar-asistencia-maestro', function(e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var idAsistente = $btn.data('id-asistente');
+            var idEvento = $btn.data('id-evento');
+            var nombre = $btn.data('nombre') || 'este maestro';
+
+            if (!confirm('¿Está seguro de que desea retirar a "' + nombre + '" de la asistencia de este evento?\n\nNota: El maestro NO será eliminado del sistema, únicamente se retirará de esta asistencia.')) {
+                return;
+            }
+
+            var token = $('input[name="__RequestVerificationToken"]').val() || $('[name="__RequestVerificationToken"]').val();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
+
+            $.ajax({
+                url: '@Url.Action("EliminarMaestroDeAsistencia", "Eventos")',
+                type: 'POST',
+                data: {
+                    idEvento: idEvento,
+                    idAsistente: idAsistente,
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        var $row = $btn.closest('tr');
+                        $row.fadeOut(300, function() {
+                            $(this).remove();
+                            location.reload();
+                        });
+                    } else {
+                        alert(response.message || 'No se pudo retirar el maestro de la asistencia.');
+                        $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Eliminar');
+                    }
+                },
+                error: function(xhr) {
+                    var msg = 'Error en el servidor al intentar retirar al maestro de la asistencia.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    } else if (xhr && xhr.responseText && xhr.responseText.indexOf('anti-forgery') !== -1) {
+                        msg = 'Error de seguridad con el token de verificación. Por favor recargue la página.';
+                    } else if (xhr && xhr.status === 403) {
+                        msg = 'No tiene permisos para modificar la asistencia de este evento.';
+                    }
+                    alert(msg);
+                    $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Eliminar');
+                }
+            });
+        });
     });
 
     function agregarFilaAsistente(contenedorId) {
@@ -720,11 +832,12 @@
                     <label class="form-label small fw-semibold">Correo</label>
                     <input type="email" name="maestros[${index}].Correo" class="form-control form-control-sm" placeholder="maestro@correo.com" />
                 </div>
-                <div class="col-md-2 d-flex align-items-end justify-content-center">
+                <div class="col-md-2 d-flex align-items-end justify-content-between">
                     <div class="form-check mb-2">
                         <input type="checkbox" name="maestroNuevoAsistio_${index}" value="true" class="form-check-input" checked />
                         <label class="form-check-label fw-semibold text-xs">Asistió</label>
                     </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger mb-2" onclick="this.closest('.item-maestro-nuevo').remove();" title="Quitar fila"><i class="bi bi-trash"></i></button>
                 </div>
             </div>
         `;

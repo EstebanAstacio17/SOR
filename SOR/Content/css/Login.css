@@ -1,26 +1,33 @@
-﻿html,
+html,
 body {
     height: 100%;
 }
 
-.form-signin {
-    max-width: 330px;
-    padding: 1rem;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
 }
 
-/* Logo encima de los campos */
+.form-signin {
+    max-width: 360px;
+    padding: 2rem 1.5rem;
+}
+
+/* Logo */
 .logo-login {
     display: block;
-    width: 140px;
-    height: auto;
-    max-height: 140px;
+    width: 155px;
+    height: 140px;
     object-fit: contain;
-    margin: 0 auto 2rem auto;
+    margin: 0 auto 1.75rem auto;
 }
- 
-/* Mantiene los campos unidos */
+
+/* Form controls */
 .form-signin .form-floating:focus-within {
     z-index: 2;
+}
+
+.form-signin .form-control {
+    border-radius: 12px;
 }
 
 .form-signin input[type="email"] {
@@ -30,15 +37,36 @@ body {
 }
 
 .form-signin input[type="password"] {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
 }
 
-.logo-login {
-    display: block;
-    width: 155px;
-    height: 140px;
-    object-fit: contain;
-    margin: 0 auto 2rem auto;
+/* Apple Pill Button */
+.form-signin .btn-primary {
+    background-color: #0071e3 !important;
+    border-color: #0071e3 !important;
+    color: #ffffff !important;
+    border-radius: 980px !important;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.form-signin .btn-primary:hover {
+    background-color: #0077ed !important;
+    border-color: #0077ed !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 113, 227, 0.35);
+}
+
+.form-signin a {
+    color: #38bdf8;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.form-signin a:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
 }

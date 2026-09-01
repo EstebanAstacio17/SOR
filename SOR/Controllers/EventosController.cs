@@ -1212,6 +1212,185 @@ namespace SOR.Controllers
             return RedirectToAction("Detalle", new { id = idEvento });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult EliminarMaestroDeAsistencia(int idEvento, int idAsistente)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null)
+            {
+                return Json(new { success = false, message = "Sesión inválida o expirada." });
+            }
+
+            if (!PuedeEditarEvento(u, idEvento))
+            {
+                return Json(new { success = false, message = "No tiene permisos para modificar la asistencia de este evento." });
+            }
+
+            if (idEvento <= 0 || idAsistente <= 0)
+            {
+                return Json(new { success = false, message = "Parámetros inválidos para la eliminación." });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    using (SqlTransaction tran = cn.BeginTransaction())
+                    {
+                        try
+                        {
+                            // 0. Validar si el evento ya pasó
+                            DateTime fechaEvento = DateTime.MinValue;
+                            string sqlFecha = "SELECT Fecha FROM dbo.Eventos WHERE IdEvento = @IdEvento;";
+                            using (SqlCommand cmdF = new SqlCommand(sqlFecha, cn, tran))
+                            {
+                                cmdF.Parameters.AddWithValue("@IdEvento", idEvento);
+                                object valF = cmdF.ExecuteScalar();
+                                if (valF != null && valF != DBNull.Value)
+                                {
+                                    fechaEvento = Convert.ToDateTime(valF);
+                                }
+                            }
+
+                            if (fechaEvento != DateTime.MinValue && fechaEvento.Date < DateTime.Today && u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
+                            {
+                                tran.Rollback();
+                                return Json(new { success = false, message = "El evento ya se llevó a cabo el " + fechaEvento.ToString("dd/MM/yyyy") + ". No se pueden retirar participantes de un evento que ya pasó." });
+                            }
+
+                            // 1. Obtener datos del asistente en EventosAsistentes
+                            int idParticipacion = 0;
+                            string nombreCompleto = "";
+                            string identificacion = "";
+
+                            string sqlGet = @"
+                                SELECT IdParticipacion, NombreCompleto, Identificacion 
+                                FROM dbo.EventosAsistentes 
+                                WHERE IdAsistente = @IdAsistente AND IdEvento = @IdEvento;";
+                            using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn, tran))
+                            {
+                                cmdGet.Parameters.AddWithValue("@IdAsistente", idAsistente);
+                                cmdGet.Parameters.AddWithValue("@IdEvento", idEvento);
+                                using (SqlDataReader dr = cmdGet.ExecuteReader())
+                                {
+                                    if (dr.Read())
+                                    {
+                                        idParticipacion = Convert.ToInt32(dr["IdParticipacion"]);
+                                        nombreCompleto = dr["NombreCompleto"] != DBNull.Value ? dr["NombreCompleto"].ToString() : "";
+                                        identificacion = dr["Identificacion"] != DBNull.Value ? dr["Identificacion"].ToString() : "";
+                                    }
+                                }
+                            }
+
+                            if (idParticipacion <= 0)
+                            {
+                                tran.Rollback();
+                                return Json(new { success = false, message = "El registro de asistencia no fue encontrado en este evento." });
+                            }
+
+                            // 2. Obtener IdIglesia e IdMaestro si existe
+                            int idIglesia = 0;
+                            string sqlIg = "SELECT IdIglesia FROM dbo.ParticipacionesIglesia WHERE IdParticipacion = @IdPart;";
+                            using (SqlCommand cmdIg = new SqlCommand(sqlIg, cn, tran))
+                            {
+                                cmdIg.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                object valIg = cmdIg.ExecuteScalar();
+                                if (valIg != null) idIglesia = Convert.ToInt32(valIg);
+                            }
+
+                            int idMaestro = 0;
+                            if (idIglesia > 0)
+                            {
+                                string cleanDoc = identificacion.Replace("-", "").Replace(" ", "").Trim();
+                                string sqlM = @"
+                                    SELECT TOP 1 IdMaestro FROM dbo.Maestros 
+                                    WHERE IdIglesia = @IdIg 
+                                      AND (
+                                          (REPLACE(REPLACE(ISNULL(DocumentoIdentidad, ''), '-', ''), ' ', '') = @Doc AND @Doc <> '')
+                                          OR (LTRIM(RTRIM(ISNULL(Nombres, '') + ' ' + ISNULL(Apellidos, ''))) = @Nom AND @Nom <> '')
+                                      );";
+                                using (SqlCommand cmdM = new SqlCommand(sqlM, cn, tran))
+                                {
+                                    cmdM.Parameters.AddWithValue("@IdIg", idIglesia);
+                                    cmdM.Parameters.AddWithValue("@Doc", cleanDoc);
+                                    cmdM.Parameters.AddWithValue("@Nom", nombreCompleto.Trim());
+                                    object valM = cmdM.ExecuteScalar();
+                                    if (valM != null) idMaestro = Convert.ToInt32(valM);
+                                }
+                            }
+
+                            // 3. Eliminar relación de dbo.EventosAsistentes
+                            string sqlDelAsist = "DELETE FROM dbo.EventosAsistentes WHERE IdAsistente = @IdAsistente AND IdEvento = @IdEvento;";
+                            using (SqlCommand cmdDelA = new SqlCommand(sqlDelAsist, cn, tran))
+                            {
+                                cmdDelA.Parameters.AddWithValue("@IdAsistente", idAsistente);
+                                cmdDelA.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdDelA.ExecuteNonQuery();
+                            }
+
+                            // 4. Si existe relación en dbo.AsistenciaMaestro, eliminar solo de este evento
+                            if (idMaestro > 0)
+                            {
+                                string sqlDelAm = "DELETE FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento AND IdMaestro = @IdMaestro;";
+                                using (SqlCommand cmdDelAm = new SqlCommand(sqlDelAm, cn, tran))
+                                {
+                                    cmdDelAm.Parameters.AddWithValue("@IdEvento", idEvento);
+                                    cmdDelAm.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                                    cmdDelAm.ExecuteNonQuery();
+                                }
+                            }
+
+                            // 5. Recalcular cantidad de asistentes en dbo.Eventos
+                            string sqlUpCant = @"
+                                UPDATE dbo.Eventos 
+                                SET CantidadAsistentes = (SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento) 
+                                WHERE IdEvento = @IdEvento;";
+                            using (SqlCommand cmdUpCant = new SqlCommand(sqlUpCant, cn, tran))
+                            {
+                                cmdUpCant.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdUpCant.ExecuteNonQuery();
+                            }
+
+                            // 6. Verificar si la iglesia aún tiene asistentes en este evento
+                            string sqlCountRest = "SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
+                            int restantes = 0;
+                            using (SqlCommand cmdRest = new SqlCommand(sqlCountRest, cn, tran))
+                            {
+                                cmdRest.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdRest.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                restantes = Convert.ToInt32(cmdRest.ExecuteScalar());
+                            }
+
+                            if (restantes == 0)
+                            {
+                                string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = 0 WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
+                                using (SqlCommand cmdUpP = new SqlCommand(sqlUpPart, cn, tran))
+                                {
+                                    cmdUpP.Parameters.AddWithValue("@IdEvento", idEvento);
+                                    cmdUpP.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                    cmdUpP.ExecuteNonQuery();
+                                }
+                            }
+
+                            tran.Commit();
+                            return Json(new { success = true, message = "Maestro retirado de la asistencia exitosamente." });
+                        }
+                        catch (Exception exInner)
+                        {
+                            tran.Rollback();
+                            return Json(new { success = false, message = "Error al retirar de la asistencia: " + exInner.Message });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error de conexión o permisos: " + ex.Message });
+            }
+        }
+
         private void ActualizarOInsertarPersonaInterno(SqlConnection cn, SqlTransaction tran, int idIglesia, string tipoPersona, PersonaIglesia persona)
         {
             string sqlCheck = "SELECT COUNT(1) FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
