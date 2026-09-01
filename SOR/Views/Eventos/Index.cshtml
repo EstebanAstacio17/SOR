@@ -150,6 +150,7 @@
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <form action="@Url.Action("Eliminar", "Eventos")" method="post" class="d-inline m-0" onsubmit="return confirm('¿Está seguro de eliminar este evento? Solo se podrá eliminar si no tiene asistencias confirmadas.');">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="idEvento" value="@item.IdEvento" />
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                                     <i class="bi bi-trash"></i>
@@ -163,7 +164,9 @@
                                         <div class="modal-dialog">
                                             <div class="modal-content border-0 rounded-4 shadow">
                                                 <form action="@Url.Action("Editar", "Eventos")" method="post">
+                                                    @Html.AntiForgeryToken()
                                                     <input type="hidden" name="IdEvento" value="@item.IdEvento" />
+                                                    <input type="hidden" name="RowVersionString" value="@item.RowVersionString" />
                                                     <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                                                         <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2 text-info"></i>Editar Evento</h5>
                                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>

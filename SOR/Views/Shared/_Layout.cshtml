@@ -581,6 +581,80 @@
         </script>
     }
 
+    <div id="__globalAntiForgeryContainer" style="display:none;">
+        @Html.AntiForgeryToken()
+    </div>
+
+    <script>
+        (function () {
+            // Sincronización global de Token Anti-CSRF y protección contra Doble Envío
+            var $globalTokenInput = $('#__globalAntiForgeryContainer input[name="__RequestVerificationToken"]');
+            var globalToken = $globalTokenInput.length ? $globalTokenInput.val() : '';
+
+            // 1. Prefiltrar peticiones AJAX de jQuery para enviar siempre el token CSRF
+            if (globalToken && window.jQuery) {
+                $.ajaxPrefilter(function (options, originalOptions, jqXHR) {
+                    var verb = (options.type || 'GET').toUpperCase();
+                    if (verb === 'POST' || verb === 'PUT' || verb === 'DELETE') {
+                        jqXHR.setRequestHeader('RequestVerificationToken', globalToken);
+                        if (options.data && typeof options.data === 'string' && options.data.indexOf('__RequestVerificationToken') === -1) {
+                            options.data += (options.data.length > 0 ? '&' : '') + '__RequestVerificationToken=' + encodeURIComponent(globalToken);
+                        }
+                    }
+                });
+            }
+
+            // 2. Interceptor universal de formularios para CSRF y prevención de doble clic
+            $(document).on('submit', 'form', function (e) {
+                var $form = $(this);
+
+                // Si la validación nativa o de bootstrap falla, no bloquear botón
+                if ($form[0].checkValidity && !$form[0].checkValidity()) {
+                    return;
+                }
+
+                // Inyectar token CSRF si el formulario es POST y no lo tiene
+                var method = ($form.attr('method') || 'GET').toUpperCase();
+                if (method === 'POST' && globalToken) {
+                    if ($form.find('input[name="__RequestVerificationToken"]').length === 0) {
+                        $form.prepend('<input type="hidden" name="__RequestVerificationToken" value="' + globalToken + '" />');
+                    }
+                }
+
+                // Prevención de doble clic: si ya se está enviando, prevenir envío repetido
+                if ($form.data('submitting') === true) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Evitar bloquear formularios de búsqueda GET o descargas
+                if (method === 'POST') {
+                    var $submitBtn = $form.find('button[type="submit"], input[type="submit"]').filter(':visible').first();
+                    if ($submitBtn.length && !$form.hasClass('no-auto-disable')) {
+                        $form.data('submitting', true);
+                        
+                        var originalHtml = $submitBtn.html();
+                        $submitBtn.data('original-html', originalHtml);
+                        
+                        setTimeout(function () {
+                            $submitBtn.prop('disabled', true);
+                            $submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...');
+                        }, 20);
+
+                        // Timeout de seguridad: reestablecer tras 20s en caso de respuesta sin redirección
+                        setTimeout(function () {
+                            $form.data('submitting', false);
+                            $submitBtn.prop('disabled', false);
+                            if ($submitBtn.data('original-html')) {
+                                $submitBtn.html($submitBtn.data('original-html'));
+                            }
+                        }, 20000);
+                    }
+                }
+            });
+        })();
+    </script>
+
     @RenderSection("scripts", required: false)
 </body>
 </html>

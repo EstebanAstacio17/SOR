@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using SOR.Models;
+using SOR.Helpers;
 
 namespace SOR.Repositories
 {
@@ -45,7 +46,8 @@ namespace SOR.Repositories
                             RangoJerarquico = Convert.ToInt32(dr["RangoJerarquico"]),
                             IdEquipoPadre = dr["IdEquipoPadre"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoPadre"]) : null,
                             NombreEquipoPadre = dr["NombreEquipoPadre"] != DBNull.Value ? dr["NombreEquipoPadre"].ToString() : "Nivel Nacional (Sin Padre)",
-                            Activo = dr["Activo"] != DBNull.Value ? Convert.ToBoolean(dr["Activo"]) : true
+                            Activo = dr["Activo"] != DBNull.Value ? Convert.ToBoolean(dr["Activo"]) : true,
+                            RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
                         });
                     }
                 }
@@ -92,7 +94,8 @@ namespace SOR.Repositories
                             RangoJerarquico = Convert.ToInt32(dr["RangoJerarquico"]),
                             IdEquipoPadre = dr["IdEquipoPadre"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoPadre"]) : null,
                             NombreEquipoPadre = dr["NombreEquipoPadre"] != DBNull.Value ? dr["NombreEquipoPadre"].ToString() : "Nivel Nacional (Sin Padre)",
-                            Activo = dr["Activo"] != DBNull.Value ? Convert.ToBoolean(dr["Activo"]) : true
+                            Activo = dr["Activo"] != DBNull.Value ? Convert.ToBoolean(dr["Activo"]) : true,
+                            RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
                         };
                     }
                 }
@@ -129,18 +132,27 @@ namespace SOR.Repositories
                     SET NombreEquipo = @NombreEquipo, 
                         IdNivelEquipo = @IdNivelEquipo, 
                         IdEquipoPadre = @IdEquipoPadre,
-                        Activo = @Activo
-                    WHERE IdEquipo = @IdEquipo;";
+                        Activo = @Activo,
+                        FechaModificacion = GETUTCDATE()
+                    WHERE IdEquipo = @IdEquipo
+                      AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cmd.Parameters.AddWithValue("@NombreEquipo", equipo.NombreEquipo);
                 cmd.Parameters.AddWithValue("@IdNivelEquipo", equipo.IdNivelEquipo);
                 cmd.Parameters.AddWithValue("@IdEquipoPadre", equipo.IdEquipoPadre ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Activo", equipo.Activo);
+                cmd.Parameters.AddWithValue("@RowVersion", equipo.RowVersion ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@IdEquipo", equipo.IdEquipo);
 
                 cn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                int rows = cmd.ExecuteNonQuery();
+                if (rows == 0)
+                {
+                    throw new System.Data.DBConcurrencyException("El equipo fue modificado concurrentemente por otro usuario. Actualice la página antes de continuar.");
+                }
+                SOR.Helpers.AuditoriaHelper.Registrar(null, "", "UPDATE", "Equipo", equipo.IdEquipo.ToString(), "Actualización de equipo: " + equipo.NombreEquipo);
+                return true;
             }
         }
 

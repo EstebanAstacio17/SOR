@@ -126,6 +126,9 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\Criptografia.cs" />
+    <Compile Include="Helpers\DatabaseSchemaHelper.cs" />
+    <Compile Include="Helpers\AuditoriaHelper.cs" />
+    <Compile Include="Helpers\DataReaderExtensions.cs" />
     <Compile Include="Models\IglesiaModel.cs" />
     <Compile Include="Models\PerfilCoordinador.cs" />
     <Compile Include="Models\Usuario.cs" />

@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Web.Mvc;
 using SOR.Models;
 using SOR.Permisos;
+using SOR.Helpers;
 
 namespace SOR.Controllers
 {
@@ -255,7 +257,8 @@ namespace SOR.Controllers
                             IdUsuarioCreacion = Convert.ToInt32(dr["IdUsuarioCreacion"]),
                             IdEquipoCreador = dr["IdEquipoCreador"] != DBNull.Value ? Convert.ToInt32(dr["IdEquipoCreador"]) : (int?)null,
                             CorreoCreador = dr["CorreoCreador"].ToString(),
-                            FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"])
+                            FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]),
+                            RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
                         });
                     }
                 }
@@ -372,7 +375,8 @@ namespace SOR.Controllers
                             CantidadAsistentes = dr["CantidadAsistentes"] != DBNull.Value ? Convert.ToInt32(dr["CantidadAsistentes"]) : 0,
                             IdUsuarioCreacion = Convert.ToInt32(dr["IdUsuarioCreacion"]),
                             CorreoCreador = dr["CorreoCreador"].ToString(),
-                            FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"])
+                            FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]),
+                            RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
                         };
                     }
                 }
@@ -556,118 +560,104 @@ namespace SOR.Controllers
                 }
             }
 
-            // Cargar Pastor, Líder y Maestros para cada iglesia en la lista
-            using (SqlConnection cn3 = new SqlConnection(ObtenerCadenaConexion()))
+            if (!lista.Any()) return lista;
+
+            var idsIglesias = lista.Select(x => x.IdIglesia).Distinct().ToList();
+            var idsParticipaciones = lista.Select(x => x.IdParticipacion).Distinct().ToList();
+
+            // Optimización de Alto Rendimiento: Cargar pastores, líderes, maestros y asistentes en consultas por lote
+            using (SqlConnection cnBatch = new SqlConnection(ObtenerCadenaConexion()))
             {
-                cn3.Open();
-                foreach (var item in lista)
+                cnBatch.Open();
+
+                // 1. Cargar Pastores y Líderes en una sola consulta
+                string sqlPersonas = $@"
+                    SELECT IdPersonaIglesia, IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo
+                    FROM dbo.PersonasIglesia
+                    WHERE IdIglesia IN ({string.Join(",", idsIglesias)}) 
+                      AND TipoPersona IN ('Pastor', 'LiderMinisterial');";
+
+                using (SqlCommand cmdP = new SqlCommand(sqlPersonas, cnBatch))
+                using (SqlDataReader drP = cmdP.ExecuteReader())
                 {
-                    // Pastor
-                    string sqlP = "SELECT * FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = 'Pastor';";
-                    using (SqlCommand cmdP = new SqlCommand(sqlP, cn3))
+                    while (drP.Read())
                     {
-                        cmdP.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
-                        using (SqlDataReader drP = cmdP.ExecuteReader())
+                        int idIg = Convert.ToInt32(drP["IdIglesia"]);
+                        string tipo = drP["TipoPersona"].ToString();
+                        var target = lista.FirstOrDefault(x => x.IdIglesia == idIg);
+                        if (target != null)
                         {
-                            if (drP.Read())
+                            var persona = new PersonaIglesia
                             {
-                                item.Pastor = new PersonaIglesia
-                                {
-                                    IdPersonaIglesia = Convert.ToInt32(drP["IdPersonaIglesia"]),
-                                    IdIglesia = item.IdIglesia,
-                                    TipoPersona = "Pastor",
-                                    Nombres = drP["Nombres"].ToString(),
-                                    Apellidos = drP["Apellidos"].ToString(),
-                                    DocumentoIdentidad = drP["DocumentoIdentidad"] != DBNull.Value ? drP["DocumentoIdentidad"].ToString() : "",
-                                    Celular = drP["Celular"] != DBNull.Value ? drP["Celular"].ToString() : "",
-                                    Correo = drP["Correo"] != DBNull.Value ? drP["Correo"].ToString() : ""
-                                };
-                            }
-                            else
-                            {
-                                item.Pastor = new PersonaIglesia { TipoPersona = "Pastor", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
-                            }
-                        }
-                    }
+                                IdPersonaIglesia = Convert.ToInt32(drP["IdPersonaIglesia"]),
+                                IdIglesia = idIg,
+                                TipoPersona = tipo,
+                                Nombres = drP["Nombres"].ToString(),
+                                Apellidos = drP["Apellidos"].ToString(),
+                                DocumentoIdentidad = drP["DocumentoIdentidad"] != DBNull.Value ? drP["DocumentoIdentidad"].ToString() : "",
+                                Celular = drP["Celular"] != DBNull.Value ? drP["Celular"].ToString() : "",
+                                Correo = drP["Correo"] != DBNull.Value ? drP["Correo"].ToString() : ""
+                            };
 
-                    // LiderMinisterial
-                    string sqlL = "SELECT * FROM dbo.PersonasIglesia WHERE IdIglesia = @IdIglesia AND TipoPersona = 'LiderMinisterial';";
-                    using (SqlCommand cmdL = new SqlCommand(sqlL, cn3))
-                    {
-                        cmdL.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
-                        using (SqlDataReader drL = cmdL.ExecuteReader())
-                        {
-                            if (drL.Read())
-                            {
-                                item.LiderMinisterial = new PersonaIglesia
-                                {
-                                    IdPersonaIglesia = Convert.ToInt32(drL["IdPersonaIglesia"]),
-                                    IdIglesia = item.IdIglesia,
-                                    TipoPersona = "LiderMinisterial",
-                                    Nombres = drL["Nombres"].ToString(),
-                                    Apellidos = drL["Apellidos"].ToString(),
-                                    DocumentoIdentidad = drL["DocumentoIdentidad"] != DBNull.Value ? drL["DocumentoIdentidad"].ToString() : "",
-                                    Celular = drL["Celular"] != DBNull.Value ? drL["Celular"].ToString() : "",
-                                    Correo = drL["Correo"] != DBNull.Value ? drL["Correo"].ToString() : ""
-                                };
-                            }
-                            else
-                            {
-                                item.LiderMinisterial = new PersonaIglesia { TipoPersona = "LiderMinisterial", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
-                            }
-                        }
-                    }
-
-                    // Maestros
-                    string sqlM = "SELECT * FROM dbo.Maestros WHERE IdIglesia = @IdIglesia AND Activo = 1;";
-                    using (SqlCommand cmdM = new SqlCommand(sqlM, cn3))
-                    {
-                        cmdM.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
-                        using (SqlDataReader drM = cmdM.ExecuteReader())
-                        {
-                            while (drM.Read())
-                            {
-                                item.Maestros.Add(new Maestro
-                                {
-                                    IdMaestro = Convert.ToInt32(drM["IdMaestro"]),
-                                    IdIglesia = item.IdIglesia,
-                                    Nombres = drM["Nombres"].ToString(),
-                                    Apellidos = drM["Apellidos"].ToString(),
-                                    DocumentoIdentidad = drM["DocumentoIdentidad"] != DBNull.Value ? drM["DocumentoIdentidad"].ToString() : "",
-                                    Celular = drM["Celular"] != DBNull.Value ? drM["Celular"].ToString() : "",
-                                    Correo = drM["Correo"] != DBNull.Value ? drM["Correo"].ToString() : "",
-                                    Activo = Convert.ToBoolean(drM["Activo"])
-                                });
-                            }
+                            if (tipo == "Pastor") target.Pastor = persona;
+                            else if (tipo == "LiderMinisterial") target.LiderMinisterial = persona;
                         }
                     }
                 }
-            }
 
-            // Cargar asistentes registrados por iglesia
-            using (SqlConnection cn2 = new SqlConnection(ObtenerCadenaConexion()))
-            {
-                cn2.Open();
-                foreach (var item in lista)
+                // 2. Cargar Maestros en una sola consulta
+                string sqlMaestros = $@"
+                    SELECT IdMaestro, IdIglesia, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo, Activo
+                    FROM dbo.Maestros
+                    WHERE IdIglesia IN ({string.Join(",", idsIglesias)}) AND Activo = 1;";
+
+                using (SqlCommand cmdM = new SqlCommand(sqlMaestros, cnBatch))
+                using (SqlDataReader drM = cmdM.ExecuteReader())
                 {
-                    string sqlAsist = @"
-                        SELECT IdAsistente, IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo
-                        FROM dbo.EventosAsistentes
-                        WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart
-                        ORDER BY IdAsistente ASC;";
-                    using (SqlCommand cmdAsist = new SqlCommand(sqlAsist, cn2))
+                    while (drM.Read())
                     {
-                        cmdAsist.Parameters.AddWithValue("@IdEvento", idEvento);
-                        cmdAsist.Parameters.AddWithValue("@IdPart", item.IdParticipacion);
-                        using (SqlDataReader drA = cmdAsist.ExecuteReader())
+                        int idIg = Convert.ToInt32(drM["IdIglesia"]);
+                        var target = lista.FirstOrDefault(x => x.IdIglesia == idIg);
+                        if (target != null)
                         {
-                            while (drA.Read())
+                            target.Maestros.Add(new Maestro
                             {
-                                item.AsistentesDetalle.Add(new EventoAsistenteViewModel
+                                IdMaestro = Convert.ToInt32(drM["IdMaestro"]),
+                                IdIglesia = idIg,
+                                Nombres = drM["Nombres"].ToString(),
+                                Apellidos = drM["Apellidos"].ToString(),
+                                DocumentoIdentidad = drM["DocumentoIdentidad"] != DBNull.Value ? drM["DocumentoIdentidad"].ToString() : "",
+                                Celular = drM["Celular"] != DBNull.Value ? drM["Celular"].ToString() : "",
+                                Correo = drM["Correo"] != DBNull.Value ? drM["Correo"].ToString() : "",
+                                Activo = Convert.ToBoolean(drM["Activo"])
+                            });
+                        }
+                    }
+                }
+
+                // 3. Cargar Asistentes en una sola consulta
+                string sqlAsist = $@"
+                    SELECT IdAsistente, IdEvento, IdParticipacion, NombreCompleto, Identificacion, Telefono, Correo
+                    FROM dbo.EventosAsistentes
+                    WHERE IdEvento = @IdEvento AND IdParticipacion IN ({string.Join(",", idsParticipaciones)})
+                    ORDER BY IdAsistente ASC;";
+
+                using (SqlCommand cmdA = new SqlCommand(sqlAsist, cnBatch))
+                {
+                    cmdA.Parameters.AddWithValue("@IdEvento", idEvento);
+                    using (SqlDataReader drA = cmdA.ExecuteReader())
+                    {
+                        while (drA.Read())
+                        {
+                            int idPart = Convert.ToInt32(drA["IdParticipacion"]);
+                            var target = lista.FirstOrDefault(x => x.IdParticipacion == idPart);
+                            if (target != null)
+                            {
+                                target.AsistentesDetalle.Add(new EventoAsistenteViewModel
                                 {
                                     IdAsistente = Convert.ToInt32(drA["IdAsistente"]),
                                     IdEvento = Convert.ToInt32(drA["IdEvento"]),
-                                    IdParticipacion = Convert.ToInt32(drA["IdParticipacion"]),
+                                    IdParticipacion = idPart,
                                     NombreCompleto = drA["NombreCompleto"].ToString(),
                                     Identificacion = drA["Identificacion"] != DBNull.Value ? drA["Identificacion"].ToString() : "",
                                     Telefono = drA["Telefono"] != DBNull.Value ? drA["Telefono"].ToString() : "",
@@ -678,6 +668,16 @@ namespace SOR.Controllers
                     }
                 }
             }
+
+            // Asegurar objetos por defecto no nulos
+            foreach (var item in lista)
+            {
+                if (item.Pastor == null)
+                    item.Pastor = new PersonaIglesia { TipoPersona = "Pastor", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
+                if (item.LiderMinisterial == null)
+                    item.LiderMinisterial = new PersonaIglesia { TipoPersona = "LiderMinisterial", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
+            }
+
             return lista;
         }
 
@@ -778,6 +778,7 @@ namespace SOR.Controllers
 
         // POST: Eventos/Editar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Editar(Evento modelo)
         {
             Usuario u = (Usuario)Session["usuario"];
@@ -817,8 +818,11 @@ namespace SOR.Controllers
                         Responsable = @Resp,
                         TipoLugar = @TipoLugar,
                         Hora = @Hora,
-                        CantidadAsistentes = @Cant
-                    WHERE IdEvento = @IdEvento;";
+                        CantidadAsistentes = @Cant,
+                        FechaModificacion = GETUTCDATE(),
+                        UsuarioModificacion = @IdUsuario
+                    WHERE IdEvento = @IdEvento
+                      AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cmd.Parameters.AddWithValue("@Nombre", modelo.NombreEvento);
@@ -829,16 +833,26 @@ namespace SOR.Controllers
                 cmd.Parameters.AddWithValue("@TipoLugar", modelo.TipoLugar ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Hora", modelo.Hora ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Cant", modelo.CantidadAsistentes);
+                cmd.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                cmd.Parameters.AddWithValue("@RowVersion", modelo.RowVersion ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@IdEvento", modelo.IdEvento);
-                cmd.ExecuteNonQuery();
+
+                int rowsAffected = cmd.ExecuteNonQuery();
+                if (rowsAffected == 0)
+                {
+                    TempData["MensajeError"] = "Conflicto de concurrencia: El evento fue modificado concurrentemente por otro usuario. Actualice la información antes de continuar.";
+                    return RedirectToAction("Index");
+                }
             }
 
+            SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Evento", modelo.IdEvento.ToString(), "Edición de evento: " + modelo.NombreEvento);
             TempData["MensajeExito"] = "Evento actualizado correctamente.";
             return RedirectToAction("Index");
         }
 
         // POST: Eventos/Eliminar
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Eliminar(int idEvento)
         {
             Usuario u = (Usuario)Session["usuario"];

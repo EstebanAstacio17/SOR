@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using SOR.Models;
+using SOR.Helpers;
 
 namespace SOR.Repositories
 {
@@ -232,7 +233,11 @@ namespace SOR.Repositories
                                 Ref1Nombre = dr["Ref1Nombre"] != DBNull.Value ? dr["Ref1Nombre"].ToString() : "",
                                 Ref1Contacto = dr["Ref1Contacto"] != DBNull.Value ? dr["Ref1Contacto"].ToString() : "",
                                 Ref2Nombre = dr["Ref2Nombre"] != DBNull.Value ? dr["Ref2Nombre"].ToString() : "",
-                                Ref2Contacto = dr["Ref2Contacto"] != DBNull.Value ? dr["Ref2Contacto"].ToString() : ""
+                                Ref2Contacto = dr["Ref2Contacto"] != DBNull.Value ? dr["Ref2Contacto"].ToString() : "",
+
+                                RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null,
+                                FechaModificacion = dr.TableHasColumn("FechaModificacion") && dr["FechaModificacion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaModificacion"]) : null,
+                                UsuarioModificacion = dr.TableHasColumn("UsuarioModificacion") && dr["UsuarioModificacion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["UsuarioModificacion"]) : null
                             };
                         }
                     }
@@ -602,7 +607,7 @@ namespace SOR.Repositories
                 {
                     try
                     {
-                        // 1. Actualizar Iglesia
+                        // 1. Actualizar Iglesia con control de concurrencia optimista
                         string sqlIglesia = @"
                             UPDATE dbo.Iglesias SET
                                 NombreIglesia = @NombreIglesia,
@@ -623,8 +628,11 @@ namespace SOR.Repositories
                                 Ref1Nombre = @Ref1Nombre,
                                 Ref1Contacto = @Ref1Contacto,
                                 Ref2Nombre = @Ref2Nombre,
-                                Ref2Contacto = @Ref2Contacto
-                            WHERE IdIglesia = @IdIglesia;";
+                                Ref2Contacto = @Ref2Contacto,
+                                FechaModificacion = GETUTCDATE(),
+                                UsuarioModificacion = @IdUsuarioEdicion
+                            WHERE IdIglesia = @IdIglesia
+                              AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
 
                         using (SqlCommand cmdIg = new SqlCommand(sqlIglesia, cn, tran))
                         {
@@ -647,8 +655,16 @@ namespace SOR.Repositories
                             cmdIg.Parameters.AddWithValue("@Ref1Contacto", modelo.Ref1Contacto ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Ref2Nombre", modelo.Ref2Nombre ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Ref2Contacto", modelo.Ref2Contacto ?? (object)DBNull.Value);
+                            cmdIg.Parameters.AddWithValue("@IdUsuarioEdicion", idUsuarioEdicion);
+                            cmdIg.Parameters.AddWithValue("@RowVersion", modelo.RowVersion ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
-                            cmdIg.ExecuteNonQuery();
+
+                            int filas = cmdIg.ExecuteNonQuery();
+                            if (filas == 0)
+                            {
+                                tran.Rollback();
+                                throw new System.Data.DBConcurrencyException("El registro de esta iglesia fue modificado concurrentemente por otro usuario. Actualice el expediente antes de continuar.");
+                            }
                         }
 
                         // 2. Actualizar o Insertar Pastor

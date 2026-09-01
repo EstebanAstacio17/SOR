@@ -18,6 +18,7 @@ namespace SOR
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
             InicializarColumnasBloqueo();
+            SOR.Helpers.DatabaseSchemaHelper.AsegurarIntegridadYConcurrencia();
         }
 
         private void InicializarColumnasBloqueo()

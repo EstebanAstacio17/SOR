@@ -31,6 +31,16 @@ namespace SOR.Models
         public string Ref2Nombre { get; set; }
         public string Ref2Contacto { get; set; }
 
+        // Control de concurrencia optimista y auditoría
+        public byte[] RowVersion { get; set; }
+        public string RowVersionString
+        {
+            get => RowVersion != null ? Convert.ToBase64String(RowVersion) : "";
+            set => RowVersion = !string.IsNullOrEmpty(value) ? Convert.FromBase64String(value) : null;
+        }
+        public DateTime? FechaModificacion { get; set; }
+        public int? UsuarioModificacion { get; set; }
+
         // Personas asociadas (Pastor, Líder, Maestros)
         public PersonaIglesia Pastor { get; set; } = new PersonaIglesia { TipoPersona = "Pastor" };
         public PersonaIglesia LiderMinisterial { get; set; } = new PersonaIglesia { TipoPersona = "LiderMinisterial" };
@@ -153,6 +163,16 @@ namespace SOR.Models
         public int? IdEquipoCreador { get; set; }
         public string CorreoCreador { get; set; }
         public DateTime FechaCreacion { get; set; }
+
+        // Control de concurrencia optimista y auditoría
+        public byte[] RowVersion { get; set; }
+        public string RowVersionString
+        {
+            get => RowVersion != null ? Convert.ToBase64String(RowVersion) : "";
+            set => RowVersion = !string.IsNullOrEmpty(value) ? Convert.FromBase64String(value) : null;
+        }
+        public DateTime? FechaModificacion { get; set; }
+        public int? UsuarioModificacion { get; set; }
     }
 
     public class AsistenciaMaestro

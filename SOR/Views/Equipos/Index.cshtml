@@ -216,6 +216,7 @@
             <form action="@Url.Action("Editar", "Equipos")" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="IdEquipo" id="editIdEquipo" />
+                <input type="hidden" name="RowVersionString" id="editRowVersion" />
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label font-semibold text-slate-700">Nombre del Equipo</label>
@@ -310,6 +311,7 @@
                         if (res.success) {
                             var eq = res.data;
                             $('#editIdEquipo').val(eq.IdEquipo);
+                            $('#editRowVersion').val(eq.RowVersionString || '');
                             $('#editNombreEquipo').val(eq.NombreEquipo);
                             $('#editSelectNivel').val(eq.IdNivelEquipo);
                             $('#editActivo').val(eq.Activo ? 'true' : 'false');

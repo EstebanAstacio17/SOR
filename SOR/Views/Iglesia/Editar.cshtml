@@ -28,6 +28,7 @@
 <form id="formEditarIglesia" action="@Url.Action("Editar", "Iglesia")" method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.IdIglesia)
+    @Html.HiddenFor(m => m.RowVersionString)
 
     <!-- 1. DATOS DE LA INSTITUCIÓN -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">

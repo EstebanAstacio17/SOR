@@ -1646,7 +1646,13 @@ namespace SOR.Controllers
                     }
                 }
 
+                SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Iglesia", modelo.IdIglesia.ToString(), "Edición de iglesia: " + modelo.NombreIglesia);
                 TempData["MensajeExito"] = "Expediente de la iglesia actualizado exitosamente.";
+                return RedirectToAction("Detalle", new { id = modelo.IdIglesia });
+            }
+            catch (System.Data.DBConcurrencyException exConc)
+            {
+                TempData["MensajeError"] = exConc.Message;
                 return RedirectToAction("Detalle", new { id = modelo.IdIglesia });
             }
             catch (Exception ex)

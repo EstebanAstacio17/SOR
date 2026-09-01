@@ -85,6 +85,10 @@ namespace SOR.Controllers
                 _equipoService.ActualizarEquipo(modelo);
                 TempData["MensajeExito"] = "Equipo actualizado correctamente.";
             }
+            catch (System.Data.DBConcurrencyException exConc)
+            {
+                TempData["MensajeError"] = "Conflicto de concurrencia: " + exConc.Message;
+            }
             catch (Exception ex)
             {
                 TempData["MensajeError"] = "Error al actualizar equipo: " + ex.Message;
