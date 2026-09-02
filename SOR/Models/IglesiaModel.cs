@@ -182,6 +182,12 @@ namespace SOR.Models
         }
         public DateTime? FechaModificacion { get; set; }
         public int? UsuarioModificacion { get; set; }
+
+        // Propiedades de Despacho Presencial
+        public string EstadoDespachoEvento { get; set; }
+        public int TotalIglesiasAsignadas { get; set; }
+        public int TotalIglesiasDespachadas { get; set; }
+        public int PorcentajeDespachado => TotalIglesiasAsignadas > 0 ? (TotalIglesiasDespachadas * 100 / TotalIglesiasAsignadas) : 0;
     }
 
     public class AsistenciaMaestro

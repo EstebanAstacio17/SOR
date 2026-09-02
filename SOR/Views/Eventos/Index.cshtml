@@ -1,6 +1,6 @@
 @model IEnumerable<SOR.Models.Evento>
 @{
-    ViewBag.Title = "Eventos y Asistencia";
+    ViewBag.Title = "Eventos y Participación";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var temporadas = (List<SelectListItem>)ViewBag.ListaTemporadas;
     var tipos = (List<SelectListItem>)ViewBag.ListaTipos;
@@ -8,12 +8,14 @@
     var equiposPermitidosEv = (HashSet<int>)ViewBag.EquiposPermitidos ?? new HashSet<int>();
     bool esAdminEv = uEv != null && (uEv.IdRolSeguridad == 1 || uEv.IdRolSeguridad == 2);
     var integrantesEquipo = (List<SelectListItem>)ViewBag.ListaIntegrantesEquipo ?? new List<SelectListItem>();
+
+    string filtroInicial = ViewBag.FiltroTipoInicial as string ?? "";
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
     <div>
         <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-calendar3 text-primary me-2"></i>Eventos y Participación</h2>
-        <p class="text-muted mb-0">Control de asistencia y capacitaciones de iglesias y maestros por temporada.</p>
+        <p class="text-muted mb-0">Control de asistencia, capacitaciones y despacho de materiales de iglesias y maestros por temporada.</p>
     </div>
     <div>
         <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
@@ -43,7 +45,7 @@
         </div>
         <div class="col-md-2">
             <label class="form-label text-xs fw-semibold mb-1 text-muted">Tipo de Evento</label>
-            <select id="filtroTipo" class="form-select form-select-sm bg-light" onchange="filtrarTablaEventos()">
+            <select id="filtroTipo" class="form-select form-select-sm bg-light" onchange="filtrarTablaEventos(true)">
                 <option value="">Todos</option>
                 <option value="Visión">Visión</option>
                 <option value="Taller OCC">Taller OCC</option>
@@ -75,7 +77,7 @@
                         <th>Temporada</th>
                         <th>Fecha</th>
                         <th>Lugar / Responsable</th>
-                        <th class="text-end pe-4" style="width: 200px;">Acciones</th>
+                        <th class="text-end pe-4" style="width: 220px;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,10 +95,31 @@
                         foreach (var item in Model)
                         {
                             bool puedeEditarEvento = esAdminEv || (uEv != null && uEv.IdUsuario == item.IdUsuarioCreacion) || (item.IdEquipoCreador.HasValue && equiposPermitidosEv.Contains(item.IdEquipoCreador.Value));
-                            <tr>
+                            <tr data-tipo-evento="@item.TipoEvento">
                                 <td class="ps-4">
                                     <div class="fw-bold text-dark fs-6">@item.NombreEvento</div>
                                     <small class="text-muted">Creado por: @item.CorreoCreador</small>
+                                    @if (item.TipoEvento == "Despacho")
+                                    {
+                                        <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
+                                            @if (item.TotalIglesiasAsignadas > 0)
+                                            {
+                                                <span class="small text-muted">
+                                                    <strong class="text-success">@item.TotalIglesiasDespachadas</strong> de <strong>@item.TotalIglesiasAsignadas</strong> iglesias despachadas (@item.PorcentajeDespachado%)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="small text-muted fst-italic">Sin iglesias programadas aún</span>
+                                            }
+                                        </div>
+                                        if (item.TotalIglesiasAsignadas > 0)
+                                        {
+                                            <div class="progress mt-1" style="height: 5px; max-width: 160px;">
+                                                <div class="progress-bar bg-success" style="width: @(item.PorcentajeDespachado)%"></div>
+                                            </div>
+                                        }
+                                    }
                                 </td>
                                 <td>
                                     @if (item.TipoEvento == "Vision")
@@ -110,6 +133,13 @@
                                     else if (item.TipoEvento == "Despacho")
                                     {
                                         <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-send-check me-1"></i>Despacho</span>
+                                        if (!string.IsNullOrEmpty(item.EstadoDespachoEvento))
+                                        {
+                                            string badgeCls = item.EstadoDespachoEvento == "FINALIZADO" ? "bg-success" :
+                                                              item.EstadoDespachoEvento == "EN_CURSO" ? "bg-warning text-dark" :
+                                                              item.EstadoDespachoEvento == "CANCELADO" ? "bg-danger" : "bg-primary";
+                                            <span class="badge @badgeCls ms-1 text-xs">@item.EstadoDespachoEvento</span>
+                                        }
                                     }
                                     else if (item.TipoEvento == "Evangelistico")
                                     {
@@ -146,9 +176,18 @@
                                 </td>
                                 <td class="text-end pe-4">
                                     <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                                        <a href="@Url.Action("Detalle", "Eventos", new { id = item.IdEvento })" class="btn btn-sm btn-outline-primary font-semibold">
-                                            <i class="bi bi-check2-square me-1"></i>Ver / Asistencia
-                                        </a>
+                                        @if (item.TipoEvento == "Despacho")
+                                        {
+                                            <a href="@Url.Action("Detalle", "Eventos", new { id = item.IdEvento })" class="btn btn-sm btn-success font-semibold text-white shadow-sm">
+                                                <i class="bi bi-truck-front me-1"></i>Gestionar Despacho
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a href="@Url.Action("Detalle", "Eventos", new { id = item.IdEvento })" class="btn btn-sm btn-outline-primary font-semibold">
+                                                <i class="bi bi-check2-square me-1"></i>Ver / Asistencia
+                                            </a>
+                                        }
                                         @if (puedeEditarEvento)
                                         {
                                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditarEvento_@item.IdEvento">
@@ -371,8 +410,7 @@
         var filtroTemporada = document.getElementById("filtroTemporada").value.toLowerCase();
         var filtroTipo = document.getElementById("filtroTipo").value.toLowerCase();
         var filtroFecha = document.getElementById("filtroFecha").value; // YYYY-MM-DD
-        
-        // Convertir formato de filtroFecha de YYYY-MM-DD a DD/MM/YYYY para comparar
+
         var fechaComparar = "";
         if (filtroFecha) {
             var partes = filtroFecha.split('-');
@@ -383,7 +421,6 @@
         var tr = tbody.getElementsByTagName("tr");
 
         for (var i = 0; i < tr.length; i++) {
-            // Ignorar la fila de "no hay eventos"
             if (tr[i].getElementsByTagName("td").length === 1) continue;
 
             var tdEventoResp = tr[i].getElementsByTagName("td")[0];
@@ -422,4 +459,16 @@
         document.getElementById("filtroFecha").value = "";
         filtrarTablaEventos();
     }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var params = new URLSearchParams(window.location.search);
+        var tipoParam = params.get("tipo") || "@Html.Raw(filtroInicial)";
+        if (tipoParam) {
+            var selTipo = document.getElementById("filtroTipo");
+            if (selTipo) {
+                selTipo.value = tipoParam;
+                filtrarTablaEventos();
+            }
+        }
+    });
 </script>

@@ -219,7 +219,7 @@ namespace SOR.Controllers
         }
 
         // GET: Eventos
-        public ActionResult Index()
+        public ActionResult Index(string tipo = null)
         {
             AsegurarEsquemaEventos();
             Usuario u = (Usuario)Session["usuario"];
@@ -228,11 +228,22 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = @"
-                    SELECT e.*, t.NombreTemporada, u.Correo AS CorreoCreador, a.IdEquipo AS IdEquipoCreador
+                    SELECT e.*, t.NombreTemporada, u.Correo AS CorreoCreador, a.IdEquipo AS IdEquipoCreador,
+                           ed.EstadoDespachoEvento,
+                           ISNULL(m.TotalAsignadas, 0) AS TotalIglesiasAsignadas,
+                           ISNULL(m.TotalDespachadas, 0) AS TotalIglesiasDespachadas
                     FROM dbo.Eventos e
                     INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada
                     INNER JOIN dbo.Usuarios u ON e.IdUsuarioCreacion = u.IdUsuario
                     LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                    LEFT JOIN dbo.EventosDespacho ed ON e.IdEvento = ed.IdEvento
+                    LEFT JOIN (
+                        SELECT d.IdEvento,
+                               COUNT(d.IdDespachoIglesia) AS TotalAsignadas,
+                               SUM(CASE WHEN d.EstadoDespacho = 'DESPACHADA' THEN 1 ELSE 0 END) AS TotalDespachadas
+                        FROM dbo.DespachosIglesia d
+                        GROUP BY d.IdEvento
+                    ) m ON e.IdEvento = m.IdEvento
                     ORDER BY e.Fecha DESC;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -258,7 +269,10 @@ namespace SOR.Controllers
                             IdEquipoCreador = dr["IdEquipoCreador"] != DBNull.Value ? Convert.ToInt32(dr["IdEquipoCreador"]) : (int?)null,
                             CorreoCreador = dr["CorreoCreador"].ToString(),
                             FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]),
-                            RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
+                            RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null,
+                            EstadoDespachoEvento = dr["EstadoDespachoEvento"] != DBNull.Value ? dr["EstadoDespachoEvento"].ToString() : (dr["TipoEvento"].ToString() == "Despacho" ? "PROGRAMADO" : null),
+                            TotalIglesiasAsignadas = dr["TotalIglesiasAsignadas"] != DBNull.Value ? Convert.ToInt32(dr["TotalIglesiasAsignadas"]) : 0,
+                            TotalIglesiasDespachadas = dr["TotalIglesiasDespachadas"] != DBNull.Value ? Convert.ToInt32(dr["TotalIglesiasDespachadas"]) : 0
                         });
                     }
                 }
@@ -274,6 +288,7 @@ namespace SOR.Controllers
 
             CargarTemporadasYTipos(u);
             ViewBag.UsuarioActual = u;
+            ViewBag.FiltroTipoInicial = tipo;
             return View(lista);
         }
 
@@ -781,20 +796,17 @@ namespace SOR.Controllers
                     {
                         int idIg = Convert.ToInt32(drM["IdIglesia"]);
                         var target = lista.FirstOrDefault(x => x.IdIglesia == idIg);
-                        if (target != null)
+                        target?.Maestros.Add(new Maestro
                         {
-                            target.Maestros.Add(new Maestro
-                            {
-                                IdMaestro = Convert.ToInt32(drM["IdMaestro"]),
-                                IdIglesia = idIg,
-                                Nombres = drM["Nombres"].ToString(),
-                                Apellidos = drM["Apellidos"].ToString(),
-                                DocumentoIdentidad = drM["DocumentoIdentidad"] != DBNull.Value ? drM["DocumentoIdentidad"].ToString() : "",
-                                Celular = drM["Celular"] != DBNull.Value ? drM["Celular"].ToString() : "",
-                                Correo = drM["Correo"] != DBNull.Value ? drM["Correo"].ToString() : "",
-                                Activo = Convert.ToBoolean(drM["Activo"])
-                            });
-                        }
+                            IdMaestro = Convert.ToInt32(drM["IdMaestro"]),
+                            IdIglesia = idIg,
+                            Nombres = drM["Nombres"].ToString(),
+                            Apellidos = drM["Apellidos"].ToString(),
+                            DocumentoIdentidad = drM["DocumentoIdentidad"] != DBNull.Value ? drM["DocumentoIdentidad"].ToString() : "",
+                            Celular = drM["Celular"] != DBNull.Value ? drM["Celular"].ToString() : "",
+                            Correo = drM["Correo"] != DBNull.Value ? drM["Correo"].ToString() : "",
+                            Activo = Convert.ToBoolean(drM["Activo"])
+                        });
                     }
                 }
 
@@ -814,19 +826,16 @@ namespace SOR.Controllers
                         {
                             int idPart = Convert.ToInt32(drA["IdParticipacion"]);
                             var target = lista.FirstOrDefault(x => x.IdParticipacion == idPart);
-                            if (target != null)
+                            target?.AsistentesDetalle.Add(new EventoAsistenteViewModel
                             {
-                                target.AsistentesDetalle.Add(new EventoAsistenteViewModel
-                                {
-                                    IdAsistente = Convert.ToInt32(drA["IdAsistente"]),
-                                    IdEvento = Convert.ToInt32(drA["IdEvento"]),
-                                    IdParticipacion = idPart,
-                                    NombreCompleto = drA["NombreCompleto"].ToString(),
-                                    Identificacion = drA["Identificacion"] != DBNull.Value ? drA["Identificacion"].ToString() : "",
-                                    Telefono = drA["Telefono"] != DBNull.Value ? drA["Telefono"].ToString() : "",
-                                    Correo = drA["Correo"] != DBNull.Value ? drA["Correo"].ToString() : ""
-                                });
-                            }
+                                IdAsistente = Convert.ToInt32(drA["IdAsistente"]),
+                                IdEvento = Convert.ToInt32(drA["IdEvento"]),
+                                IdParticipacion = idPart,
+                                NombreCompleto = drA["NombreCompleto"].ToString(),
+                                Identificacion = drA["Identificacion"] != DBNull.Value ? drA["Identificacion"].ToString() : "",
+                                Telefono = drA["Telefono"] != DBNull.Value ? drA["Telefono"].ToString() : "",
+                                Correo = drA["Correo"] != DBNull.Value ? drA["Correo"].ToString() : ""
+                            });
                         }
                     }
                 }
