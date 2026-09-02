@@ -215,3 +215,16 @@ BEGIN
 END
 GO
 
+-- 7. ÍNDICE ÚNICO FILTRADO: MÁXIMO 1 SUPERADMIN ACTIVO EN TODA LA PLATAFORMA
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'UQ_Usuarios_UnicoSuperAdminActivo' AND object_id = OBJECT_ID('dbo.Usuarios')
+)
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Usuarios_UnicoSuperAdminActivo
+    ON dbo.Usuarios(IdRolSeguridad)
+    WHERE IdRolSeguridad = 1 AND IdEstado = 4;
+END
+GO
+
+

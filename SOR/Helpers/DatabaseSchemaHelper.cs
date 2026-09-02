@@ -206,6 +206,23 @@ namespace SOR.Helpers
                     {
                         cmd.ExecuteNonQuery();
                     }
+
+                    // 7. Índice Único Filtrado: Máximo 1 Superadmin Activo simultáneamente en toda la plataforma
+                    string sqlUnicoSuperAdmin = @"
+                        IF NOT EXISTS (
+                            SELECT 1 FROM sys.indexes 
+                            WHERE name = 'UQ_Usuarios_UnicoSuperAdminActivo' AND object_id = OBJECT_ID('dbo.Usuarios')
+                        )
+                        BEGIN
+                            CREATE UNIQUE NONCLUSTERED INDEX UQ_Usuarios_UnicoSuperAdminActivo
+                            ON dbo.Usuarios(IdRolSeguridad)
+                            WHERE IdRolSeguridad = 1 AND IdEstado = 4;
+                        END";
+
+                    using (SqlCommand cmd = new SqlCommand(sqlUnicoSuperAdmin, cn))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception ex)

@@ -92,11 +92,19 @@
     }
 </style>
 
-<div class="d-flex align-items-center justify-content-between mb-4">
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
     <div>
         <h2 class="h3 font-bold mb-1 text-slate-800"><i class="bi bi-people-fill text-primary me-2"></i>Gestión de Usuarios y Permisos</h2>
         <p class="text-muted mb-0">Revisa expedientes, aprueba solicitudes, administra estados y asigna roles/posiciones en los equipos OCC RD.</p>
     </div>
+    @if (uActual != null && uActual.IdRolSeguridad == 1)
+    {
+        <div>
+            <button type="button" class="btn btn-outline-danger font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTransferirSuperadmin">
+                <i class="bi bi-shield-lock me-1"></i>Transferir Titularidad Superadmin
+            </button>
+        </div>
+    }
 </div>
 
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
@@ -230,9 +238,18 @@
                                     }
                                 </td>
                                 <td>
-                                    <span class="badge-rol @(u.NombreRol == "SuperAdmin" ? "bg-danger text-white" : u.NombreRol == "Administrador" ? "bg-warning text-dark" : "bg-light text-slate-600 border")">
-                                        @u.NombreRol
-                                    </span>
+                                    @if (u.IdRolSeguridad == 1)
+                                    {
+                                        <span class="badge bg-danger text-white py-1 px-2 font-bold"><i class="bi bi-shield-lock-fill me-1"></i>SuperAdmin</span>
+                                    }
+                                    else if (u.IdRolSeguridad == 2)
+                                    {
+                                        <span class="badge bg-warning text-dark py-1 px-2 font-bold"><i class="bi bi-shield-check me-1"></i>Administrador</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-slate-600 border py-1 px-2 font-semibold">@u.NombreRol</span>
+                                    }
                                 </td>
                                 <td class="text-end pe-4">
                                     <div class="dropdown d-inline-block">
@@ -245,73 +262,86 @@
                                                     <i class="bi bi-eye text-info"></i> Ver Perfil
                                                 </button>
                                             </li>
-                                            <li>
-                                                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalEditarUsuario_@u.IdUsuario">
-                                                    <i class="bi bi-gear text-primary"></i> Editar Puesto / Estado
-                                                </button>
-                                            </li>
-                                            
-                                            @if (u.IdEstado == 1)
+
+                                            @if (u.IdRolSeguridad == 1 && (uActual == null || uActual.IdRolSeguridad != 1))
                                             {
                                                 <li><hr class="dropdown-divider border-slate-100"></li>
                                                 <li>
-                                                    <button type="button" class="dropdown-item text-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAprobarCorreo_@u.IdUsuario">
-                                                        <i class="bi bi-check-lg"></i> Aprobar Correo
+                                                    <span class="dropdown-item text-muted disabled bg-light" title="Solo un Superadmin puede administrar este usuario">
+                                                        <i class="bi bi-shield-lock-fill text-danger me-1"></i>Protegido (Superadmin)
+                                                    </span>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li>
+                                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalEditarUsuario_@u.IdUsuario">
+                                                        <i class="bi bi-gear text-primary"></i> Editar Puesto / Estado
                                                     </button>
                                                 </li>
-                                                <li>
-                                                    <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar esta solicitud de registro de correo?');">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
-                                                        <button type="submit" class="dropdown-item text-danger">
-                                                            <i class="bi bi-x-lg"></i> Rechazar Registro
+                                                
+                                                if (u.IdEstado == 1)
+                                                {
+                                                    <li><hr class="dropdown-divider border-slate-100"></li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item text-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAprobarCorreo_@u.IdUsuario">
+                                                            <i class="bi bi-check-lg"></i> Aprobar Correo
                                                         </button>
-                                                    </form>
-                                                </li>
-                                            }
-                                            else if (u.IdEstado == 3)
-                                            {
-                                                <li><hr class="dropdown-divider border-slate-100"></li>
-                                                <li>
-                                                    <form action="@Url.Action("AprobarPerfil", "Admin")" method="post" class="d-block">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
-                                                        <button type="submit" class="dropdown-item text-success fw-semibold">
-                                                            <i class="bi bi-check-circle"></i> Aprobar Perfil
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar este expediente de coordinador?');">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
-                                                        <button type="submit" class="dropdown-item text-danger">
-                                                            <i class="bi bi-x-circle"></i> Rechazar Perfil
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            }
-                                            else if (u.IdEstado == 7)
-                                            {
-                                                <li><hr class="dropdown-divider border-slate-100"></li>
-                                                <li>
-                                                    <form action="@Url.Action("AprobarRestablecimiento", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de aprobar la solicitud de recuperación de contraseña de este usuario?');">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
-                                                        <button type="submit" class="dropdown-item text-success fw-semibold">
-                                                            <i class="bi bi-unlock-fill"></i> Aprobar Restablecimiento
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form action="@Url.Action("RechazarRestablecimiento", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar la solicitud de recuperación de contraseña? (La cuenta del usuario se suspenderá y se liberará su rol)');">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
-                                                        <button type="submit" class="dropdown-item text-danger">
-                                                            <i class="bi bi-slash-circle-fill"></i> Rechazar Restablecimiento
-                                                        </button>
-                                                    </form>
-                                                </li>
+                                                    </li>
+                                                    <li>
+                                                        <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar esta solicitud de registro de correo?');">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                <i class="bi bi-x-lg"></i> Rechazar Registro
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                                else if (u.IdEstado == 3)
+                                                {
+                                                    <li><hr class="dropdown-divider border-slate-100"></li>
+                                                    <li>
+                                                        <form action="@Url.Action("AprobarPerfil", "Admin")" method="post" class="d-block">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                            <button type="submit" class="dropdown-item text-success fw-semibold">
+                                                                <i class="bi bi-check-circle"></i> Aprobar Perfil
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form action="@Url.Action("RechazarUsuario", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar este expediente de coordinador?');">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                <i class="bi bi-x-circle"></i> Rechazar Perfil
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                                else if (u.IdEstado == 7)
+                                                {
+                                                    <li><hr class="dropdown-divider border-slate-100"></li>
+                                                    <li>
+                                                        <form action="@Url.Action("AprobarRestablecimiento", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de aprobar la solicitud de recuperación de contraseña de este usuario?');">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                            <button type="submit" class="dropdown-item text-success fw-semibold">
+                                                                <i class="bi bi-unlock-fill"></i> Aprobar Restablecimiento
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form action="@Url.Action("RechazarRestablecimiento", "Admin")" method="post" class="d-block" onsubmit="return confirm('¿Está seguro de rechazar la solicitud de recuperación de contraseña? (La cuenta del usuario se suspenderá y se liberará su rol)');">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="idUsuario" value="@u.IdUsuario" />
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                <i class="bi bi-slash-circle-fill"></i> Rechazar Restablecimiento
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                }
                                             }
                                         </ul>
                                     </div>
@@ -398,6 +428,13 @@
                                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body p-4">
+                                                        @if (u.IdRolSeguridad == 1)
+                                                        {
+                                                            <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2 rounded-3 text-xs">
+                                                                <i class="bi bi-shield-exclamation text-danger flex-shrink-0 fs-6"></i>
+                                                                <span><strong>Cuenta Superadmin:</strong> Si revoca el rol de Superadmin o suspende esta cuenta sin haber transferido o designado otro Superadmin activo, la operación será denegada por seguridad.</span>
+                                                            </div>
+                                                        }
                                                         <div class="mb-3">
                                                             <label class="form-label font-semibold text-slate-700">Correo:</label>
                                                             <input type="text" class="form-control bg-light" value="@u.Correo" readonly />
@@ -464,6 +501,63 @@
         </div>
     </div>
 </div>
+
+@if (uActual != null && uActual.IdRolSeguridad == 1)
+{
+    <!-- MODAL TRANSFERIR TITULARIDAD DE SUPERADMIN -->
+    <div class="modal fade" id="modalTransferirSuperadmin" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("ReemplazarSuperadmin", "Admin")" method="post" class="needs-validation" novalidate onsubmit="if(!this.checkValidity()){this.classList.add('was-validated'); return false;}">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-shield-lock me-2"></i>Transferir Titularidad de Superadmin</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2 rounded-3 text-xs">
+                            <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0 fs-6"></i>
+                            <span>Esta operación transferirá la titularidad de <strong>Superadmin</strong> a otro usuario de forma <strong>atómica e irreversible</strong>. La plataforma conservará exactamente 1 Superadmin activo.</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-slate-700">Seleccionar Nuevo Superadmin <span class="text-danger">*</span></label>
+                            <select name="idNuevoSuperadmin" class="form-select" required>
+                                <option value="">-- Seleccione el usuario sucesor --</option>
+                                @foreach (var us in Model.Where(m => m.IdUsuario != uActual.IdUsuario && m.IdEstado == 4))
+                                {
+                                    <option value="@us.IdUsuario">@us.Correo (@us.NombreRol - @us.NombreEstado)</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">Debe seleccionar el usuario que asumirá la titularidad de Superadmin.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-slate-700">Nuevo Rol para su Cuenta Actual <span class="text-danger">*</span></label>
+                            <select name="idRolAnteriorSuperadmin" class="form-select" required>
+                                <option value="2" selected>Administrador</option>
+                                <option value="3">Coordinador</option>
+                            </select>
+                            <small class="text-muted text-xxs">Su cuenta conservará acceso con el nivel de permisos seleccionado.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-slate-700">Motivo de la Transferencia <span class="text-danger">*</span></label>
+                            <textarea name="motivoTransferencia" class="form-control" rows="3" required placeholder="Indique la justificación institucional o motivo de este cambio de titularidad..."></textarea>
+                            <div class="invalid-feedback">Debe especificar el motivo para fines de auditoría.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger font-semibold shadow-sm" onclick="return confirm('¿Está completamente seguro de transferir la titularidad de Superadmin? Su rol actual cambiará inmediatamente.');">
+                            <i class="bi bi-check-circle me-1"></i>Confirmar Transferencia
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 
 @section Scripts {
     <script>

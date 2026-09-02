@@ -132,9 +132,88 @@ namespace SOR.Controllers
                 }
             }
 
-            CargarCombosAdmin();
+            CargarCombosAdmin(usuarioActual);
             ViewBag.UsuarioActual = usuarioActual;
             return View(listaUsuarios);
+        }
+
+        // ============================================================================
+        // MÉTODOS AUXILIARES DE SEGURIDAD Y PROTECCIÓN DE SUPERADMIN
+        // ============================================================================
+
+        private bool PuedeModificarUsuarioObjetivo(Usuario usuarioActual, int idUsuarioObjetivo, out string mensajeError)
+        {
+            mensajeError = null;
+            if (usuarioActual == null)
+            {
+                mensajeError = "No hay sesión de usuario activa.";
+                return false;
+            }
+
+            // Si el usuario actual es Superadmin, tiene facultad total para administrar usuarios
+            if (usuarioActual.IdRolSeguridad == 1)
+            {
+                return true;
+            }
+
+            // Consultar el rol del usuario objetivo directamente de la base de datos (seguridad server-side)
+            int rolObjetivo = 0;
+            string correoObjetivo = "";
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "SELECT IdRolSeguridad, Correo FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;";
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuarioObjetivo);
+                    cn.Open();
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            rolObjetivo = Convert.ToInt32(dr["IdRolSeguridad"]);
+                            correoObjetivo = dr["Correo"].ToString();
+                        }
+                    }
+                }
+            }
+
+            // Regla 1: Si el usuario objetivo es Superadmin (1), solo otro Superadmin puede modificarlo
+            if (rolObjetivo == 1)
+            {
+                mensajeError = $"Acceso denegado: El usuario Superadmin ({correoObjetivo}) únicamente puede ser modificado o administrado por otro Superadmin.";
+                SOR.Helpers.AuditoriaHelper.Registrar(
+                    usuarioActual.IdUsuario,
+                    usuarioActual.Correo,
+                    "INTENTO_NO_AUTORIZADO_SUPERADMIN",
+                    "ADMINISTRACION_USUARIOS",
+                    idUsuarioObjetivo.ToString(),
+                    $"El usuario '{usuarioActual.Correo}' (Rol: {usuarioActual.IdRolSeguridad}) intentó realizar una operación administrativa no autorizada sobre el Superadmin #{idUsuarioObjetivo} ({correoObjetivo})."
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool EsUnicoSuperadminActivo(int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = @"
+                    SELECT CASE 
+                        WHEN u.IdRolSeguridad = 1 AND u.IdEstado = 4 AND 
+                             (SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario) = 0 
+                        THEN 1 ELSE 0 END
+                    FROM dbo.Usuarios u 
+                    WHERE u.IdUsuario = @IdUsuario;";
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                    object val = cmd.ExecuteScalar();
+                    return val != null && Convert.ToInt32(val) == 1;
+                }
+            }
         }
 
         [HttpPost]
@@ -145,6 +224,12 @@ namespace SOR.Controllers
             if (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2)
             {
                 return RedirectToAction("Index", "Home");
+            }
+
+            if (!PuedeModificarUsuarioObjetivo(usuarioActual, idUsuario, out string errPermiso))
+            {
+                TempData["MensajeError"] = errPermiso;
+                return RedirectToAction("Usuarios");
             }
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -173,6 +258,18 @@ namespace SOR.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
+            if (!PuedeModificarUsuarioObjetivo(usuarioActual, idUsuario, out string errPermiso))
+            {
+                TempData["MensajeError"] = errPermiso;
+                return RedirectToAction("Usuarios");
+            }
+
+            if (EsUnicoSuperadminActivo(idUsuario))
+            {
+                TempData["MensajeError"] = "Operación denegada: No se puede rechazar ni suspender al único Superadmin activo del sistema.";
+                return RedirectToAction("Usuarios");
+            }
+
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -192,6 +289,9 @@ namespace SOR.Controllers
                         cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
                         cmdDis.ExecuteNonQuery();
                     }
+
+                    SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                        "RECHAZAR_USUARIO", "ADMINISTRACION_USUARIOS", idUsuario.ToString(), $"Solicitud de usuario #{idUsuario} rechazada.");
 
                     tran.Commit();
                 }
@@ -215,6 +315,12 @@ namespace SOR.Controllers
             if (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2)
             {
                 return RedirectToAction("Index", "Home");
+            }
+
+            if (!PuedeModificarUsuarioObjetivo(usuarioActual, idUsuario, out string errPermiso))
+            {
+                TempData["MensajeError"] = errPermiso;
+                return RedirectToAction("Usuarios");
             }
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -330,10 +436,20 @@ namespace SOR.Controllers
                 return RedirectToAction("Usuarios");
             }
 
-            // Solo SuperAdmin (1) puede asignar o quitar roles de Admin / SuperAdmin
+            // Regla 1: Superadmin solo puede ser editado por otro Superadmin
+            if (!PuedeModificarUsuarioObjetivo(usuarioActual, idUsuario, out string errPermiso))
+            {
+                TempData["MensajeError"] = errPermiso;
+                return RedirectToAction("Usuarios");
+            }
+
+            // Prevención de Escalamiento de Privilegios: Solo Superadmin (1) puede asignar o quitar roles de Admin / SuperAdmin
             if (idRolSeguridad != 3 && usuarioActual.IdRolSeguridad != 1)
             {
-                TempData["MensajeError"] = "Solo un Super Admin puede asignar roles de Administrador o Super Admin.";
+                TempData["MensajeError"] = "Acceso denegado: Solo un Superadmin puede asignar roles de Administrador o Superadmin.";
+                SOR.Helpers.AuditoriaHelper.Registrar(usuarioActual.IdUsuario, usuarioActual.Correo,
+                    "INTENTO_ESCALAMIENTO_ROL", "ADMINISTRACION_USUARIOS", idUsuario.ToString(),
+                    $"Intento no autorizado de asignar rol {idRolSeguridad} al usuario #{idUsuario}.");
                 return RedirectToAction("Usuarios");
             }
 
@@ -344,6 +460,67 @@ namespace SOR.Controllers
 
                 try
                 {
+                    // 0. Obtener estado actual del usuario objetivo en la base de datos
+                    int rolAnterior = 0;
+                    int estadoAnterior = 0;
+                    string correoUsuario = "";
+                    using (SqlCommand cmdGet = new SqlCommand("SELECT IdRolSeguridad, IdEstado, Correo FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;", cn, tran))
+                    {
+                        cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                        using (SqlDataReader dr = cmdGet.ExecuteReader())
+                        {
+                            if (dr.Read())
+                            {
+                                rolAnterior = Convert.ToInt32(dr["IdRolSeguridad"]);
+                                estadoAnterior = Convert.ToInt32(dr["IdEstado"]);
+                                correoUsuario = dr["Correo"].ToString();
+                            }
+                            else
+                            {
+                                tran.Rollback();
+                                TempData["MensajeError"] = "El usuario seleccionado no existe.";
+                                return RedirectToAction("Usuarios");
+                            }
+                        }
+                    }
+
+                    // Regla de Prevención de Orfandad: Si el usuario es el único Superadmin activo, no permitir quitarle el rol ni suspenderlo
+                    if (rolAnterior == 1 && estadoAnterior == 4 && (idRolSeguridad != 1 || idEstado != 4))
+                    {
+                        int otrosSuperadminsActivos = 0;
+                        using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
+                        {
+                            cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            otrosSuperadminsActivos = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                        }
+
+                        if (otrosSuperadminsActivos == 0)
+                        {
+                            tran.Rollback();
+                            TempData["MensajeError"] = "Operación denegada: No se puede revocar el rol ni suspender al único Superadmin activo del sistema. La plataforma requiere obligatoriamente un Superadmin activo. Para cambiar de titular, utilice la opción de Reemplazo / Transferencia de Superadmin.";
+                            return RedirectToAction("Usuarios");
+                        }
+                    }
+
+                    // Regla 2: Máximo 1 Superadmin activo simultáneamente
+                    // Si se intenta activar un Superadmin cuando ya existe uno activo diferente
+                    if (idRolSeguridad == 1 && idEstado == 4 && !(rolAnterior == 1 && estadoAnterior == 4))
+                    {
+                        int superadminsActivosActuales = 0;
+                        using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
+                        {
+                            cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            superadminsActivosActuales = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                        }
+
+                        if (superadminsActivosActuales > 0)
+                        {
+                            tran.Rollback();
+                            TempData["MensajeError"] = "Operación denegada: Ya existe un Superadmin activo en la plataforma. Debe transferir o reemplazar al Superadmin actual antes de activar uno nuevo.";
+                            return RedirectToAction("Usuarios");
+                        }
+                    }
+
                     // 1. Actualizar Rol y Estado de Usuario
                     string sqlUser = "UPDATE dbo.Usuarios SET IdRolSeguridad = @IdRolSeguridad, IdEstado = @IdEstado WHERE IdUsuario = @IdUsuario;";
                     using (SqlCommand cmdU = new SqlCommand(sqlUser, cn, tran))
@@ -430,8 +607,28 @@ namespace SOR.Controllers
                         }
                     }
 
+                    // 3. Registrar auditoría exhaustiva
+                    string operacionAuditoria = (rolAnterior == 1 || idRolSeguridad == 1) ? "EDITAR_SUPERADMIN" : "EDITAR_USUARIO";
+                    string detalleAuditoria = $"Edición de usuario #{idUsuario} ({correoUsuario}): Rol anterior: {rolAnterior} -> Rol nuevo: {idRolSeguridad}, Estado anterior: {estadoAnterior} -> Estado nuevo: {idEstado}.";
+                    SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                        operacionAuditoria, "ADMINISTRACION_USUARIOS", idUsuario.ToString(), detalleAuditoria);
+
                     tran.Commit();
+
+                    // Si el usuario modificó su propia cuenta, refrescar la sesión
+                    if (usuarioActual.IdUsuario == idUsuario)
+                    {
+                        usuarioActual.IdRolSeguridad = idRolSeguridad;
+                        usuarioActual.IdEstado = idEstado;
+                        Session["usuario"] = usuarioActual;
+                    }
+
                     TempData["MensajeExito"] = "Datos y permisos de usuario actualizados correctamente.";
+                }
+                catch (SqlException sqlEx) when (sqlEx.Number == 2601 || sqlEx.Number == 2627)
+                {
+                    tran.Rollback();
+                    TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
                 }
                 catch (Exception ex)
                 {
@@ -443,7 +640,117 @@ namespace SOR.Controllers
             return RedirectToAction("Usuarios");
         }
 
-        private void CargarCombosAdmin()
+        // ============================================================================
+        // REEMPLAZO / TRANSFERENCIA ATÓMICA DE TITULARIDAD DE SUPERADMIN
+        // ============================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ReemplazarSuperadmin(int idNuevoSuperadmin, int idRolAnteriorSuperadmin, string motivoTransferencia)
+        {
+            Usuario usuarioActual = (Usuario)Session["usuario"];
+
+            // Solo el Superadmin activo actual puede transferir la titularidad
+            if (usuarioActual == null || usuarioActual.IdRolSeguridad != 1)
+            {
+                TempData["MensajeError"] = "Acceso denegado: Solo el Superadmin activo puede transferir la titularidad de la cuenta Superadmin.";
+                return RedirectToAction("Usuarios");
+            }
+
+            if (usuarioActual.IdUsuario == idNuevoSuperadmin)
+            {
+                TempData["MensajeError"] = "No puede transferir la titularidad de Superadmin a usted mismo. Seleccione a otro usuario de la plataforma.";
+                return RedirectToAction("Usuarios");
+            }
+
+            if (string.IsNullOrWhiteSpace(motivoTransferencia))
+            {
+                TempData["MensajeError"] = "Debe indicar obligatoriamente el motivo de la transferencia de Superadmin.";
+                return RedirectToAction("Usuarios");
+            }
+
+            // El rol al que pasará el Superadmin anterior debe ser Administrador (2) o Coordinador (3)
+            if (idRolAnteriorSuperadmin != 2 && idRolAnteriorSuperadmin != 3)
+            {
+                idRolAnteriorSuperadmin = 2; // Default a Administrador
+            }
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Verificar existencia y estado del nuevo usuario
+                        string correoNuevo = "";
+                        int estadoNuevo = 0;
+                        using (SqlCommand cmdGet = new SqlCommand("SELECT Correo, IdEstado FROM dbo.Usuarios WHERE IdUsuario = @IdNuevo;", cn, tran))
+                        {
+                            cmdGet.Parameters.AddWithValue("@IdNuevo", idNuevoSuperadmin);
+                            using (SqlDataReader dr = cmdGet.ExecuteReader())
+                            {
+                                if (dr.Read())
+                                {
+                                    correoNuevo = dr["Correo"].ToString();
+                                    estadoNuevo = Convert.ToInt32(dr["IdEstado"]);
+                                }
+                                else
+                                {
+                                    tran.Rollback();
+                                    TempData["MensajeError"] = "El usuario seleccionado como nuevo Superadmin no existe.";
+                                    return RedirectToAction("Usuarios");
+                                }
+                            }
+                        }
+
+                        // 2. Degradar al Superadmin anterior en la misma transacción atómica
+                        string sqlAnterior = "UPDATE dbo.Usuarios SET IdRolSeguridad = @IdRolAnterior WHERE IdUsuario = @IdActual;";
+                        using (SqlCommand cmdAnt = new SqlCommand(sqlAnterior, cn, tran))
+                        {
+                            cmdAnt.Parameters.AddWithValue("@IdRolAnterior", idRolAnteriorSuperadmin);
+                            cmdAnt.Parameters.AddWithValue("@IdActual", usuarioActual.IdUsuario);
+                            cmdAnt.ExecuteNonQuery();
+                        }
+
+                        // 3. Asignar el rol Superadmin (1) y activar (4) al nuevo Superadmin
+                        string sqlNuevo = "UPDATE dbo.Usuarios SET IdRolSeguridad = 1, IdEstado = 4 WHERE IdUsuario = @IdNuevo;";
+                        using (SqlCommand cmdNue = new SqlCommand(sqlNuevo, cn, tran))
+                        {
+                            cmdNue.Parameters.AddWithValue("@IdNuevo", idNuevoSuperadmin);
+                            cmdNue.ExecuteNonQuery();
+                        }
+
+                        // 4. Registrar auditoría atómica
+                        string detalleAuditoria = $"Transferencia formal de titularidad de Superadmin. Titular anterior: #{usuarioActual.IdUsuario} ({usuarioActual.Correo}) pasa a rol {idRolAnteriorSuperadmin}. Nuevo titular: #{idNuevoSuperadmin} ({correoNuevo}) pasa a SuperAdmin Activo. Motivo: {motivoTransferencia.Trim()}.";
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                            "TRANSFERENCIA_SUPERADMIN", "ADMINISTRACION_USUARIOS", idNuevoSuperadmin.ToString(), detalleAuditoria);
+
+                        tran.Commit();
+
+                        // Actualizar la sesión del usuario actual que cedió el rol
+                        usuarioActual.IdRolSeguridad = idRolAnteriorSuperadmin;
+                        Session["usuario"] = usuarioActual;
+
+                        TempData["MensajeExito"] = $"La titularidad de Superadmin ha sido transferida exitosamente a '{correoNuevo}'. Su usuario ahora tiene rol de {(idRolAnteriorSuperadmin == 2 ? "Administrador" : "Coordinador")}.";
+                    }
+                    catch (SqlException sqlEx) when (sqlEx.Number == 2601 || sqlEx.Number == 2627)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
+                    }
+                    catch (Exception ex)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Error al transferir la titularidad de Superadmin: " + ex.Message;
+                    }
+                }
+            }
+
+            return RedirectToAction("Usuarios");
+        }
+
+        private void CargarCombosAdmin(Usuario usuarioActual = null)
         {
             List<SelectListItem> listaRoles = new List<SelectListItem>();
             List<SelectListItem> listaEstados = new List<SelectListItem>();
@@ -457,7 +764,15 @@ namespace SOR.Controllers
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
                     while (dr.Read())
-                        listaRoles.Add(new SelectListItem { Value = dr["IdRolSeguridad"].ToString(), Text = dr["NombreRol"].ToString() });
+                    {
+                        int idRol = Convert.ToInt32(dr["IdRolSeguridad"]);
+                        // Si el usuario actual no es Superadmin, no mostrar la opción de Superadmin para asignar
+                        if (idRol == 1 && (usuarioActual == null || usuarioActual.IdRolSeguridad != 1))
+                        {
+                            continue;
+                        }
+                        listaRoles.Add(new SelectListItem { Value = idRol.ToString(), Text = dr["NombreRol"].ToString() });
+                    }
                 }
 
                 using (SqlCommand cmd = new SqlCommand("SELECT IdEstado, NombreEstado FROM dbo.EstadosCuenta ORDER BY IdEstado;", cn))
@@ -492,6 +807,18 @@ namespace SOR.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult AprobarRestablecimiento(int idUsuario)
         {
+            Usuario usuarioActual = (Usuario)Session["usuario"];
+            if (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (!PuedeModificarUsuarioObjetivo(usuarioActual, idUsuario, out string errPermiso))
+            {
+                TempData["MensajeError"] = errPermiso;
+                return RedirectToAction("Usuarios");
+            }
+
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -541,6 +868,9 @@ namespace SOR.Controllers
                             }
                         }
 
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                            "APROBAR_RESTABLECIMIENTO", "ADMINISTRACION_USUARIOS", idUsuario.ToString(), $"Aprobada solicitud de restablecimiento para usuario #{idUsuario}.");
+
                         tran.Commit();
                     }
                     catch (Exception)
@@ -560,6 +890,24 @@ namespace SOR.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult RechazarRestablecimiento(int idUsuario)
         {
+            Usuario usuarioActual = (Usuario)Session["usuario"];
+            if (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (!PuedeModificarUsuarioObjetivo(usuarioActual, idUsuario, out string errPermiso))
+            {
+                TempData["MensajeError"] = errPermiso;
+                return RedirectToAction("Usuarios");
+            }
+
+            if (EsUnicoSuperadminActivo(idUsuario))
+            {
+                TempData["MensajeError"] = "Operación denegada: No se puede suspender al único Superadmin activo del sistema mediante rechazo de restablecimiento.";
+                return RedirectToAction("Usuarios");
+            }
+
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -582,6 +930,9 @@ namespace SOR.Controllers
                             cmdAsig.Parameters.AddWithValue("@IdUsuario", idUsuario);
                             cmdAsig.ExecuteNonQuery();
                         }
+
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                            "RECHAZAR_RESTABLECIMIENTO", "ADMINISTRACION_USUARIOS", idUsuario.ToString(), $"Rechazada solicitud de restablecimiento para usuario #{idUsuario}. Cuenta suspendida.");
 
                         tran.Commit();
                     }
