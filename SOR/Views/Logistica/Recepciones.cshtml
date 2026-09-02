@@ -123,27 +123,38 @@
                     </div>
 
                     <!-- Líneas de materiales -->
-                    <div class="border rounded-3 p-3">
+                    <div class="border rounded-3 p-3 bg-light bg-opacity-10">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-semibold mb-0">Materiales del Contenedor</h6>
+                            <div>
+                                <h6 class="fw-semibold mb-0">Materiales del Contenedor</h6>
+                                <small class="text-muted">Seleccione el material, el tipo de empaque/presentación y la cantidad recibida</small>
+                            </div>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="btnAgregarLinea">
-                                <i class="bi bi-plus me-1"></i>Agregar Material
+                                <i class="bi bi-plus-circle me-1"></i>Agregar Material
                             </button>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0" id="tablaLineas">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Material</th>
-                                        <th>Presentación / Empaque</th>
-                                        <th style="width:130px">Cant. Empaques</th>
-                                        <th class="text-center">Unidades</th>
-                                        <th></th>
+                                        <th style="min-width: 220px;">Material</th>
+                                        <th style="min-width: 200px;">Presentación / Empaque</th>
+                                        <th style="width: 140px;">Cant. Empaques</th>
+                                        <th class="text-center" style="width: 130px;">Total Unidades</th>
+                                        <th style="width: 50px;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="cuerpoLineas">
-                                    <tr id="placeholder-linea"><td colspan="5" class="text-center text-muted py-3">Agregue al menos un material</td></tr>
+                                    <tr id="placeholder-linea"><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>Agregue al menos un material al contenedor</td></tr>
                                 </tbody>
+                                <tfoot id="tfootLineas" class="table-light d-none">
+                                    <tr class="fw-semibold">
+                                        <td colspan="2" class="text-end">Totales Estimados del Contenedor:</td>
+                                        <td id="totalEmpaquesBadge" class="text-center text-primary">0 empaques</td>
+                                        <td id="totalUnidadesBadge" class="text-center text-success">0 uds</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                         <input type="hidden" name="detallesJson" id="detallesJson" />
@@ -165,29 +176,73 @@
 (function () {
     var materiales = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
         ((IEnumerable<SOR.Models.Material>)ViewBag.Materiales).Select(m => new {
-            m.IdMaterial, m.NombreMaterial, m.Codigo,
-            presentaciones = m.Presentaciones.Select(p => new { p.IdPresentacion, p.TipoEmpaque, p.UnidadesPorEmpaque })
+            m.IdMaterial,
+            m.NombreMaterial,
+            m.Codigo,
+            m.UnidadEntrega,
+            presentaciones = (m.Presentaciones != null
+                ? (m.Presentaciones.Any(p => p.Activo) ? m.Presentaciones.Where(p => p.Activo) : m.Presentaciones)
+                : Enumerable.Empty<SOR.Models.PresentacionMaterial>()).Select(p => new {
+                    p.IdPresentacion,
+                    p.TipoEmpaque,
+                    p.UnidadesPorEmpaque,
+                    p.Activo
+                }).ToList()
         })
     ));
-    var lineas = [];
 
-    document.getElementById('btnAgregarLinea').addEventListener('click', function () {
-        var fila = document.createElement('tr');
+    var btnAgregar = document.getElementById('btnAgregarLinea');
+    var cuerpoLineas = document.getElementById('cuerpoLineas');
+    var tfootLineas = document.getElementById('tfootLineas');
+    var totalEmpaquesBadge = document.getElementById('totalEmpaquesBadge');
+    var totalUnidadesBadge = document.getElementById('totalUnidadesBadge');
+
+    function obtenerMaterial(id) {
+        return materiales.find(function(m) { return m.IdMaterial == id; });
+    }
+
+    btnAgregar.addEventListener('click', function () {
         var id = Date.now();
+        var fila = document.createElement('tr');
         fila.id = 'linea-' + id;
+        fila.className = 'fila-material-linea';
+
+        var optionsMateriales = '<option value="">— Seleccionar Material —</option>' +
+            materiales.map(function(m) {
+                return '<option value="' + m.IdMaterial + '">' + m.Codigo + ' — ' + m.NombreMaterial + '</option>';
+            }).join('');
+
         fila.innerHTML =
-            '<td><select class="form-select form-select-sm sel-material" data-id="' + id + '">' +
-                '<option value="">— Material —</option>' +
-                materiales.map(function(m){ return '<option value="' + m.IdMaterial + '" data-presentaciones=\'' + JSON.stringify(m.presentaciones) + '\'>' + m.Codigo + ' — ' + m.NombreMaterial + '</option>'; }).join('') +
-            '</select></td>' +
-            '<td><select class="form-select form-select-sm sel-presentacion" data-id="' + id + '"><option value="">— Presentación —</option></select></td>' +
-            '<td><input type="number" class="form-control form-control-sm inp-empaques" data-id="' + id + '" min="1" value="1" /></td>' +
-            '<td class="text-center"><span class="badge bg-secondary lbl-unidades" data-id="' + id + '">—</span></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById(\'linea-' + id + '\').remove(); actualizarJson();"><i class="bi bi-trash3"></i></button></td>';
+            '<td>' +
+                '<select class="form-select form-select-sm sel-material" data-id="' + id + '" required>' +
+                    optionsMateriales +
+                '</select>' +
+            '</td>' +
+            '<td>' +
+                '<select class="form-select form-select-sm sel-presentacion" data-id="' + id + '" required disabled>' +
+                    '<option value="">— Seleccione Material primero —</option>' +
+                '</select>' +
+            '</td>' +
+            '<td>' +
+                '<input type="number" class="form-control form-control-sm inp-empaques" data-id="' + id + '" min="1" value="1" required />' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<span class="badge bg-secondary lbl-unidades" data-id="' + id + '">—</span>' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea" data-id="' + id + '" title="Eliminar fila">' +
+                    '<i class="bi bi-trash3"></i>' +
+                '</button>' +
+            '</td>';
+
         var ph = document.getElementById('placeholder-linea');
         if (ph) ph.remove();
-        document.getElementById('cuerpoLineas').appendChild(fila);
+
+        cuerpoLineas.appendChild(fila);
+        if (tfootLineas) tfootLineas.classList.remove('d-none');
+
         attachHandlers(id);
+        actualizarJson();
     });
 
     function attachHandlers(id) {
@@ -195,55 +250,164 @@
         var selPres = document.querySelector('.sel-presentacion[data-id="' + id + '"]');
         var inpEmp = document.querySelector('.inp-empaques[data-id="' + id + '"]');
         var lblUds = document.querySelector('.lbl-unidades[data-id="' + id + '"]');
+        var btnDel = document.querySelector('.btn-eliminar-linea[data-id="' + id + '"]');
 
         selMat.addEventListener('change', function () {
-            var opt = selMat.options[selMat.selectedIndex];
-            var pres = opt.dataset.presentaciones ? JSON.parse(opt.dataset.presentaciones) : [];
-            selPres.innerHTML = '<option value="">— Presentación —</option>' +
-                pres.map(function(p){ return '<option value="' + p.idPresentacion + '" data-uds="' + p.unidadesPorEmpaque + '">' + p.tipoEmpaque + ' (' + p.unidadesPorEmpaque + ' unidades)</option>'; }).join('');
-            calcularUnidades(inpEmp, selPres, lblUds);
+            selMat.classList.remove('is-invalid');
+            selPres.classList.remove('is-invalid');
+            var idMat = selMat.value;
+            if (!idMat) {
+                selPres.innerHTML = '<option value="">— Seleccione Material primero —</option>';
+                selPres.disabled = true;
+                calcularFila(inpEmp, selPres, lblUds);
+                actualizarJson();
+                return;
+            }
+
+            var mat = obtenerMaterial(idMat);
+            var presentaciones = (mat && mat.presentaciones) ? mat.presentaciones : [];
+
+            if (presentaciones.length === 0) {
+                selPres.innerHTML = '<option value="">⚠️ Sin presentaciones registradas</option>';
+                selPres.disabled = true;
+                selPres.classList.add('is-invalid');
+            } else {
+                selPres.disabled = false;
+                var htmlOptions = '<option value="">— Seleccionar Presentación —</option>';
+                htmlOptions += presentaciones.map(function (p) {
+                    var idPres = (p.IdPresentacion !== undefined && p.IdPresentacion !== null) ? p.IdPresentacion : p.idPresentacion;
+                    var tipoEmp = (p.TipoEmpaque !== undefined && p.TipoEmpaque !== null) ? p.TipoEmpaque : (p.tipoEmpaque || 'Empaque');
+                    var uds = (p.UnidadesPorEmpaque !== undefined && p.UnidadesPorEmpaque !== null) ? p.UnidadesPorEmpaque : (p.unidadesPorEmpaque || 0);
+                    return '<option value="' + idPres + '" data-uds="' + uds + '">' + tipoEmp + ' (' + Number(uds).toLocaleString() + ' uds/empaque)</option>';
+                }).join('');
+
+                selPres.innerHTML = htmlOptions;
+
+                // Si solo tiene una presentación registrada, auto-seleccionarla para mayor agilidad
+                if (presentaciones.length === 1) {
+                    selPres.selectedIndex = 1;
+                }
+            }
+
+            calcularFila(inpEmp, selPres, lblUds);
             actualizarJson();
         });
-        selPres.addEventListener('change', function () { calcularUnidades(inpEmp, selPres, lblUds); actualizarJson(); });
-        inpEmp.addEventListener('input', function () { calcularUnidades(inpEmp, selPres, lblUds); actualizarJson(); });
+
+        selPres.addEventListener('change', function () {
+            selPres.classList.remove('is-invalid');
+            calcularFila(inpEmp, selPres, lblUds);
+            actualizarJson();
+        });
+
+        inpEmp.addEventListener('input', function () {
+            if (parseInt(inpEmp.value) < 1) inpEmp.value = 1;
+            calcularFila(inpEmp, selPres, lblUds);
+            actualizarJson();
+        });
+
+        btnDel.addEventListener('click', function () {
+            var fila = document.getElementById('linea-' + id);
+            if (fila) fila.remove();
+
+            var filasRestantes = cuerpoLineas.querySelectorAll('.fila-material-linea');
+            if (filasRestantes.length === 0) {
+                cuerpoLineas.innerHTML = '<tr id="placeholder-linea"><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>Agregue al menos un material al contenedor</td></tr>';
+                if (tfootLineas) tfootLineas.classList.add('d-none');
+            }
+            actualizarJson();
+        });
     }
 
-    function calcularUnidades(inpEmp, selPres, lblUds) {
+    function calcularFila(inpEmp, selPres, lblUds) {
         var opt = selPres.options[selPres.selectedIndex];
         var uds = opt && opt.dataset.uds ? parseInt(opt.dataset.uds) : 0;
         var empaques = parseInt(inpEmp.value) || 0;
         var total = uds * empaques;
-        lblUds.textContent = total > 0 ? total.toLocaleString() : '—';
-        lblUds.className = 'badge ' + (total > 0 ? 'bg-primary' : 'bg-secondary') + ' lbl-unidades';
+
+        if (total > 0) {
+            lblUds.textContent = total.toLocaleString() + ' uds';
+            lblUds.className = 'badge bg-primary lbl-unidades';
+        } else {
+            lblUds.textContent = '—';
+            lblUds.className = 'badge bg-secondary lbl-unidades';
+        }
     }
 
     window.actualizarJson = function () {
         var result = [];
-        document.querySelectorAll('[data-id]').forEach(function (el) {
-            if (el.classList.contains('sel-material')) {
-                var id = el.dataset.id;
-                var idMat = el.value;
-                var selPres = document.querySelector('.sel-presentacion[data-id="' + id + '"]');
-                var inpEmp = document.querySelector('.inp-empaques[data-id="' + id + '"]');
-                if (!idMat || !selPres || !selPres.value) return;
-                var opt = selPres.options[selPres.selectedIndex];
+        var totalEmpaques = 0;
+        var totalUnidades = 0;
+
+        document.querySelectorAll('.fila-material-linea').forEach(function (fila) {
+            var selMat = fila.querySelector('.sel-material');
+            var selPres = fila.querySelector('.sel-presentacion');
+            var inpEmp = fila.querySelector('.inp-empaques');
+
+            if (!selMat || !selPres || !inpEmp) return;
+
+            var idMat = parseInt(selMat.value);
+            var idPres = parseInt(selPres.value);
+            var cantEmp = parseInt(inpEmp.value) || 0;
+            var opt = selPres.options[selPres.selectedIndex];
+            var udsPorEmp = opt && opt.dataset.uds ? parseInt(opt.dataset.uds) : 0;
+
+            if (idMat && idPres && cantEmp > 0) {
                 result.push({
-                    IdMaterial: parseInt(idMat),
-                    IdPresentacion: parseInt(selPres.value),
-                    CantidadEmpaques: parseInt(inpEmp.value) || 0,
-                    UnidadesPorEmpaque: opt ? parseInt(opt.dataset.uds) : 0
+                    IdMaterial: idMat,
+                    IdPresentacion: idPres,
+                    CantidadEmpaques: cantEmp,
+                    UnidadesPorEmpaque: udsPorEmp
                 });
+                totalEmpaques += cantEmp;
+                totalUnidades += (cantEmp * udsPorEmp);
             }
         });
+
         document.getElementById('detallesJson').value = JSON.stringify(result);
+
+        if (totalEmpaquesBadge) totalEmpaquesBadge.textContent = totalEmpaques.toLocaleString() + ' empaques';
+        if (totalUnidadesBadge) totalUnidadesBadge.textContent = totalUnidades.toLocaleString() + ' uds';
     };
 
     document.getElementById('formRecepcion').addEventListener('submit', function (e) {
+        var filas = cuerpoLineas.querySelectorAll('.fila-material-linea');
+        if (filas.length === 0) {
+            e.preventDefault();
+            alert('Debe agregar al menos un material al contenedor.');
+            return;
+        }
+
+        var tieneErrores = false;
+        filas.forEach(function (fila) {
+            var selMat = fila.querySelector('.sel-material');
+            var selPres = fila.querySelector('.sel-presentacion');
+            var inpEmp = fila.querySelector('.inp-empaques');
+
+            if (!selMat.value) {
+                selMat.classList.add('is-invalid');
+                tieneErrores = true;
+            }
+            if (!selPres.value || selPres.disabled) {
+                selPres.classList.add('is-invalid');
+                tieneErrores = true;
+            }
+            if (!inpEmp.value || parseInt(inpEmp.value) <= 0) {
+                inpEmp.classList.add('is-invalid');
+                tieneErrores = true;
+            }
+        });
+
+        if (tieneErrores) {
+            e.preventDefault();
+            alert('Por favor complete todos los materiales y presentaciones requeridos antes de registrar el contenedor.');
+            return;
+        }
+
         actualizarJson();
         var detalles = JSON.parse(document.getElementById('detallesJson').value || '[]');
         if (detalles.length === 0) {
             e.preventDefault();
-            alert('Debe agregar al menos un material al contenedor.');
+            alert('Debe especificar al menos un material con presentación y cantidad válida.');
         }
     });
 })();

@@ -183,7 +183,7 @@
         fila.innerHTML =
             '<td><select class="form-select form-select-sm sel-transf-mat" data-id="' + id + '">' +
                 '<option value="">— Material —</option>' +
-                materialesDisp.map(function(m){ return '<option value="' + m.IdMaterial + '" data-uds="' + m.unidadEntrega + '">' + m.Codigo + ' — ' + m.NombreMaterial + '</option>'; }).join('') +
+                materialesDisp.map(function(m){ return '<option value="' + m.IdMaterial + '" data-uds="' + (m.UnidadEntrega || m.unidadEntrega || 'uds') + '">' + m.Codigo + ' — ' + m.NombreMaterial + '</option>'; }).join('') +
             '</select></td>' +
             '<td><div class="input-group input-group-sm">' +
                 '<input type="number" class="form-control inp-transf-cant" data-id="' + id + '" min="1" value="1" />' +
