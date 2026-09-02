@@ -74,13 +74,23 @@ namespace SOR.Controllers
         }
 
         // =====================================================================
-        // ALMACENES
+        // ALMACENES (AUTORIZACIÓN ESTRICTA CL / CE)
         // =====================================================================
 
         public ActionResult Almacenes()
         {
-            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
-            ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect();
+            Usuario u = (Usuario)Session["usuario"];
+            bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+            bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
+
+            ViewBag.UsuarioActual = u;
+            ViewBag.EsAdmin = esAdmin;
+            ViewBag.EsCL = esCL;
+            ViewBag.EsCE = esCE;
+            ViewBag.IdEquipoUsuario = u?.IdEquipo;
+            ViewBag.NombreEquipoUsuario = u?.NombreEquipo;
+            ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect(esAdmin || esCL ? (int?)null : u?.IdEquipo);
             
             // Cargar Equipos disponibles
             var equipos = new List<SelectListItem>();
@@ -109,14 +119,41 @@ namespace SOR.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult GuardarAlmacen(Almacen modelo, int[] idsEquiposSeleccionados)
         {
+            Usuario u = (Usuario)Session["usuario"];
             try
             {
-                if (idsEquiposSeleccionados != null && idsEquiposSeleccionados.Length > 0)
+                bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+                bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                if (!esAdmin && !esCL && !esCE)
                 {
-                    modelo.IdsEquipos = new List<int>(idsEquiposSeleccionados);
+                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) pueden crear o editar almacenes.";
+                    return RedirectToAction("Almacenes");
                 }
+
+                if (esCE && !esCL && !esAdmin)
+                {
+                    // Coordinador de Equipo: forzar almacén local de su propio equipo
+                    if (!u.IdEquipo.HasValue || u.IdEquipo.Value <= 0)
+                    {
+                        TempData["MensajeError"] = "Su usuario no tiene un equipo asignado para vincular el almacén.";
+                        return RedirectToAction("Almacenes");
+                    }
+                    modelo.EsCentral = false;
+                    modelo.IdsEquipos = new List<int> { u.IdEquipo.Value };
+                }
+                else
+                {
+                    // CL o Admin: asignar equipos seleccionados si no es central
+                    if (!modelo.EsCentral && idsEquiposSeleccionados != null && idsEquiposSeleccionados.Length > 0)
+                    {
+                        modelo.IdsEquipos = new List<int>(idsEquiposSeleccionados);
+                    }
+                }
+
                 _svc.GuardarAlmacen(modelo);
-                TempData["MensajeExito"] = modelo.IdAlmacen == 0 ? "Almacén creado exitosamente." : "Almacén actualizado correctamente.";
+                TempData["MensajeExito"] = modelo.IdAlmacen == 0 ? "Almacén registrado exitosamente." : "Almacén actualizado correctamente.";
             }
             catch (Exception ex)
             {
@@ -206,19 +243,42 @@ namespace SOR.Controllers
         {
             Usuario u = (Usuario)Session["usuario"];
             int idTemp = ObtenerTemporadaActiva();
+            bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+
             ViewBag.UsuarioActual = u;
+            ViewBag.EsAdmin = esAdmin;
+            ViewBag.EsCL = esCL;
             ViewBag.Materiales = _svc.ObtenerMateriales();
             ViewBag.Presentaciones = _svc.ObtenerPresentaciones();
-            ViewBag.Almacenes = _svc.ObtenerAlmacenes();
+            ViewBag.Almacenes = _svc.ObtenerAlmacenesPorEquipo(esAdmin || esCL ? (int?)null : u?.IdEquipo);
             ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect();
             ViewBag.IdTemporadaActiva = idTemp;
-            return View(_svc.ObtenerRecepciones(idTemp));
+
+            // Cargar Equipos para destino opcional
+            var equipos = new List<SelectListItem>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;", cn))
+                using (var dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+                    }
+                }
+            }
+            ViewBag.Equipos = equipos;
+
+            return View(_svc.ObtenerRecepciones(idTemp, null, esAdmin || esCL ? (int?)null : u?.IdEquipo));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult RegistrarRecepcion(string numeroContenedor, int idAlmacen, DateTime fechaRecepcion,
-            string responsableRecepcion, string observaciones, string detallesJson)
+            string horaRecepcion, int? idEquipoReceptor, string responsableRecepcion, string observaciones, 
+            string detallesJson, System.Web.HttpPostedFileBase[] evidenciasArchivos)
         {
             Usuario u = (Usuario)Session["usuario"];
             try
@@ -227,18 +287,50 @@ namespace SOR.Controllers
                     ? new List<RecepcionContenedorDetalle>()
                     : JsonConvert.DeserializeObject<List<RecepcionContenedorDetalle>>(detallesJson);
 
+                var listaEvidencias = new List<EvidenciaRecepcion>();
+                if (evidenciasArchivos != null && evidenciasArchivos.Length > 0)
+                {
+                    string uploadDir = Server.MapPath("~/Uploads/Recepciones/");
+                    if (!System.IO.Directory.Exists(uploadDir))
+                    {
+                        System.IO.Directory.CreateDirectory(uploadDir);
+                    }
+
+                    foreach (var file in evidenciasArchivos)
+                    {
+                        if (file != null && file.ContentLength > 0)
+                        {
+                            string fileName = System.IO.Path.GetFileName(file.FileName);
+                            string uniqueName = $"{Guid.NewGuid()}_{fileName}";
+                            string fullPath = System.IO.Path.Combine(uploadDir, uniqueName);
+                            file.SaveAs(fullPath);
+
+                            listaEvidencias.Add(new EvidenciaRecepcion
+                            {
+                                NombreArchivo = fileName,
+                                RutaArchivo = $"/Uploads/Recepciones/{uniqueName}",
+                                TipoContenido = file.ContentType,
+                                TamanoBytes = file.ContentLength
+                            });
+                        }
+                    }
+                }
+
                 var modelo = new RecepcionContenedor
                 {
                     NumeroContenedor = numeroContenedor,
                     IdAlmacen = idAlmacen,
                     FechaRecepcion = fechaRecepcion,
+                    HoraRecepcion = !string.IsNullOrWhiteSpace(horaRecepcion) ? horaRecepcion : DateTime.Now.ToString("hh:mm tt"),
+                    IdEquipoReceptor = idEquipoReceptor,
                     ResponsableRecepcion = responsableRecepcion,
                     Observaciones = observaciones,
-                    Detalles = detalles
+                    Detalles = detalles,
+                    Evidencias = listaEvidencias
                 };
 
                 int idRec = _svc.RegistrarRecepcion(modelo, u.IdUsuario);
-                TempData["MensajeExito"] = $"Contenedor registrado exitosamente (ID #{idRec}).";
+                TempData["MensajeExito"] = $"Contenedor '{numeroContenedor}' registrado y confirmado exitosamente (Recepción #{idRec}).";
             }
             catch (Exception ex)
             {
@@ -491,7 +583,7 @@ namespace SOR.Controllers
         }
 
         // =====================================================================
-        // CONFIRMAR DESPACHO (CÉDULA EN MANO)
+        // CONFIRMAR DESPACHO (EXCLUSIVO COORDINADOR DE LOGÍSTICA — CL)
         // =====================================================================
 
         [HttpPost]
@@ -501,11 +593,20 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             try
             {
+                bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                if (!esAdmin && !esCL)
+                {
+                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) tiene autorización para confirmar y ejecutar el despacho de materiales.";
+                    return RedirectToAction("DetalleEventoDespacho", new { id = idEvento });
+                }
+
                 int idTemp = ObtenerTemporadaActiva();
                 if (!u.IdEquipo.HasValue) throw new InvalidOperationException("El usuario no tiene un equipo asignado.");
-                string nombre = u.Correo ?? "Coordinador";
-                _svc.ConfirmarDespacho(vm, u.IdEquipo.Value, idTemp, u.IdUsuario, nombre);
-                TempData["MensajeExito"] = "Despacho confirmado exitosamente.";
+                string nombre = !string.IsNullOrEmpty(u.PrimerNombre) ? $"{u.PrimerNombre} {u.PrimerApellido}".Trim() : (u.Correo ?? "Coordinador de Logística");
+                _svc.ConfirmarDespacho(vm, u.IdEquipo.Value, idTemp, u.IdUsuario, nombre, u.IdRolSeguridad, u.IdPosicion);
+                TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
             }
             catch (Exception ex)
             {

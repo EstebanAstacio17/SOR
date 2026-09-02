@@ -332,6 +332,8 @@ namespace SOR.Helpers
                         IdTemporada         INT             NOT NULL FOREIGN KEY REFERENCES dbo.Temporadas(IdTemporada),
                         IdAlmacen           INT             NOT NULL FOREIGN KEY REFERENCES dbo.Almacenes(IdAlmacen),
                         FechaRecepcion      DATETIME2       NOT NULL,
+                        HoraRecepcion       VARCHAR(50)     NULL,
+                        IdEquipoReceptor    INT             NULL FOREIGN KEY REFERENCES dbo.Equipos(IdEquipo),
                         ResponsableRecepcion VARCHAR(150)   NULL,
                         Observaciones       NVARCHAR(MAX)   NULL,
                         EstadoRecepcion     VARCHAR(30)     NOT NULL DEFAULT 'CONFIRMADA',
@@ -339,6 +341,28 @@ namespace SOR.Helpers
                         FechaRegistro       DATETIME2       NOT NULL DEFAULT GETDATE()
                     );
                     CREATE NONCLUSTERED INDEX IX_Recepciones_Temporada ON dbo.RecepcionesContenedor(IdTemporada, IdAlmacen);
+                END
+                ELSE
+                BEGIN
+                    IF COL_LENGTH('dbo.RecepcionesContenedor', 'HoraRecepcion') IS NULL
+                        ALTER TABLE dbo.RecepcionesContenedor ADD HoraRecepcion VARCHAR(50) NULL;
+                    IF COL_LENGTH('dbo.RecepcionesContenedor', 'IdEquipoReceptor') IS NULL
+                        ALTER TABLE dbo.RecepcionesContenedor ADD IdEquipoReceptor INT NULL FOREIGN KEY REFERENCES dbo.Equipos(IdEquipo);
+                END
+
+                -- 8.4.1 Evidencias de Recepción de Contenedor
+                IF OBJECT_ID('dbo.EvidenciasRecepcionContenedor', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.EvidenciasRecepcionContenedor (
+                        IdEvidencia          INT IDENTITY(1,1) PRIMARY KEY,
+                        IdRecepcion          INT             NOT NULL FOREIGN KEY REFERENCES dbo.RecepcionesContenedor(IdRecepcion) ON DELETE CASCADE,
+                        NombreArchivo        VARCHAR(255)    NOT NULL,
+                        RutaArchivo          VARCHAR(500)    NOT NULL,
+                        TipoContenido        VARCHAR(100)    NULL,
+                        TamanoBytes          BIGINT          NULL,
+                        IdUsuarioRegistro    INT             NOT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                        FechaRegistro        DATETIME2       NOT NULL DEFAULT GETDATE()
+                    );
                 END
 
                 -- 8.5 Detalle de Recepciones

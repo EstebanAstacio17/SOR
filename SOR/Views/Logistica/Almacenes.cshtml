@@ -5,6 +5,12 @@
     var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
     var equiposDisp = ViewBag.EquiposDisponibles as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
     var lista = Model ?? new List<SOR.Models.Almacen>();
+    bool esAdmin = ViewBag.EsAdmin == true;
+    bool esCL = ViewBag.EsCL == true;
+    bool esCE = ViewBag.EsCE == true;
+    bool puedeGestionar = esAdmin || esCL || esCE;
+    string nombreEquipoUsuario = ViewBag.NombreEquipoUsuario as string ?? "Mi Equipo";
+    int? idEquipoUsuario = ViewBag.IdEquipoUsuario as int?;
 }
 
 <div class="container-fluid py-4">
@@ -18,9 +24,12 @@
                 </ol>
             </nav>
         </div>
-        <button class="btn btn-primary font-semibold shadow-sm" onclick="limpiarFormAlmacen()">
-            <i class="bi bi-plus-lg me-1"></i>Nuevo Almacén
-        </button>
+        @if (puedeGestionar)
+        {
+            <button class="btn btn-primary font-semibold shadow-sm" onclick="limpiarFormAlmacen()">
+                <i class="bi bi-plus-lg me-1"></i>Nuevo Almacén
+            </button>
+        }
     </div>
 
     @if (TempData["MensajeExito"] != null)
@@ -102,26 +111,31 @@
                             </div>
                         }
                     </div>
-                    <div class="card-footer bg-light rounded-bottom-4 border-top-0 p-3">
-                        <button type="button" class="btn btn-sm btn-outline-primary w-100 font-semibold"
-                                onclick="editarAlmacen(@a.IdAlmacen, 
-                                '@Html.Raw(a.NombreAlmacen.Replace("'", "\\'"))', 
-                                '@Html.Raw((a.Direccion ?? "").Replace("'", "\\'"))', 
-                                '@(a.IdUsuarioResponsable.HasValue ? a.IdUsuarioResponsable.Value.ToString() : "")', 
-                                '@Html.Raw((a.Responsable ?? "").Replace("'", "\\'"))', 
-                                '@Html.Raw((a.Telefono ?? "").Replace("'", "\\'"))', 
-                                @(a.EsCentral ? "true" : "false"), 
-                                @(a.Activo ? "true" : "false"), 
-                                '@string.Join(",", a.IdsEquipos)')">
-                            <i class="bi bi-pencil-square me-1"></i>Editar Almacén
-                        </button>
-                    </div>
+                    @if (puedeGestionar)
+                    {
+                        <div class="card-footer bg-light rounded-bottom-4 border-top-0 p-3">
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100 font-semibold"
+                                    onclick="editarAlmacen(@a.IdAlmacen, 
+                                    '@Html.Raw(a.NombreAlmacen.Replace("'", "\\'"))', 
+                                    '@Html.Raw((a.Direccion ?? "").Replace("'", "\\'"))', 
+                                    '@(a.IdUsuarioResponsable.HasValue ? a.IdUsuarioResponsable.Value.ToString() : "")', 
+                                    '@Html.Raw((a.Responsable ?? "").Replace("'", "\\'"))', 
+                                    '@Html.Raw((a.Telefono ?? "").Replace("'", "\\'"))', 
+                                    @(a.EsCentral ? "true" : "false"), 
+                                    @(a.Activo ? "true" : "false"), 
+                                    '@string.Join(",", a.IdsEquipos)')">
+                                <i class="bi bi-pencil-square me-1"></i>Editar Almacén
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
         }
     </div>
 </div>
 
+@if (puedeGestionar)
+{
 <!-- Modal Crear / Editar Almacén -->
 <div class="modal fade" id="modalAlmacen" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -136,6 +150,12 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="IdAlmacen" id="hdIdAlmacen" value="0" />
                 <div class="modal-body p-4">
+                    @if (esCE && !esCL && !esAdmin)
+                    {
+                        <div class="alert alert-info py-2 px-3 small mb-3 rounded-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>Como <strong>Coordinador de Equipo (CE)</strong>, este almacén quedará asociado directamente a su equipo: <strong>@nombreEquipoUsuario</strong>.
+                        </div>
+                    }
                     <div class="row g-3">
                         <!-- Nombre del Almacén -->
                         <div class="col-12">
@@ -175,36 +195,52 @@
                                 <i class="bi bi-people me-1 text-primary"></i>Uso y Asignación de Equipos
                             </label>
 
-                            <div class="form-check form-switch mb-3 p-3 bg-light rounded-3 border">
-                                <input class="form-check-input ms-0 me-2" type="checkbox" name="EsCentral" id="chkEsCentral" value="true" checked onchange="alCambiarEsCentral()" />
+                            @if (esCE && !esCL && !esAdmin)
+                            {
                                 <input type="hidden" name="EsCentral" value="false" />
-                                <label class="form-check-label fw-bold text-slate-800" for="chkEsCentral">
-                                    Almacén Central / Compartido por Todos los Equipos
-                                </label>
-                                <div class="form-text small text-muted ms-4">
-                                    Marque esta opción si el almacén es nacional o sirve a todos los equipos del país.
+                                <input type="hidden" name="idsEquiposSeleccionados" value="@(idEquipoUsuario ?? 0)" />
+                                <div class="p-3 bg-light rounded-3 border">
+                                    <span class="badge bg-info-soft text-info border fs-6">
+                                        <i class="bi bi-people-fill me-1"></i>Equipo Asignado: @nombreEquipoUsuario
+                                    </span>
+                                    <div class="form-text small text-muted mt-2">
+                                        El almacén servirá operativamente a las iglesias y actividades de este equipo.
+                                    </div>
                                 </div>
-                            </div>
+                            }
+                            else
+                            {
+                                <div class="form-check form-switch mb-3 p-3 bg-light rounded-3 border">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="EsCentral" id="chkEsCentral" value="true" checked onchange="alCambiarEsCentral()" />
+                                    <input type="hidden" name="EsCentral" value="false" />
+                                    <label class="form-check-label fw-bold text-slate-800" for="chkEsCentral">
+                                        Almacén Central / Compartido por Todos los Equipos
+                                    </label>
+                                    <div class="form-text small text-muted ms-4">
+                                        Marque esta opción si el almacén es nacional o sirve a todos los equipos del país.
+                                    </div>
+                                </div>
 
-                            <!-- Selector de Equipos Específicos (cuando no es central) -->
-                            <div id="divEquiposEspecificos" class="p-3 border rounded-3" style="display:none;">
-                                <label class="form-label fw-semibold small text-slate-700 mb-2">
-                                    Seleccione los equipos que tienen acceso a este almacén:
-                                </label>
-                                <div class="row g-2" style="max-height: 180px; overflow-y: auto;">
-                                    @foreach (var eq in equiposDisp)
-                                    {
-                                        <div class="col-sm-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input chk-equipo-alm" type="checkbox" name="idsEquiposSeleccionados" value="@eq.Value" id="chkEq_@eq.Value" />
-                                                <label class="form-check-label small text-slate-800" for="chkEq_@eq.Value">
-                                                    @eq.Text
-                                                </label>
+                                <!-- Selector de Equipos Específicos (cuando no es central) -->
+                                <div id="divEquiposEspecificos" class="p-3 border rounded-3" style="display:none;">
+                                    <label class="form-label fw-semibold small text-slate-700 mb-2">
+                                        Seleccione los equipos que tienen acceso a este almacén:
+                                    </label>
+                                    <div class="row g-2" style="max-height: 180px; overflow-y: auto;">
+                                        @foreach (var eq in equiposDisp)
+                                        {
+                                            <div class="col-sm-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input chk-equipo-alm" type="checkbox" name="idsEquiposSeleccionados" value="@eq.Value" id="chkEq_@eq.Value" />
+                                                    <label class="form-check-label small text-slate-800" for="chkEq_@eq.Value">
+                                                        @eq.Text
+                                                    </label>
+                                                </div>
                                             </div>
-                                        </div>
-                                    }
+                                        }
+                                    </div>
                                 </div>
-                            </div>
+                            }
                         </div>
 
                         <!-- Estado Activo -->
@@ -227,6 +263,7 @@
         </div>
     </div>
 </div>
+}
 
 <style>
     .bg-primary-soft {

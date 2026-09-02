@@ -63,13 +63,29 @@ namespace SOR.Models
         public string NombreTemporada { get; set; }
         public int IdAlmacen { get; set; }
         public string NombreAlmacen { get; set; }
+        public int? IdEquipoReceptor { get; set; }
+        public string NombreEquipoReceptor { get; set; }
+        public List<string> NombresEquiposAlmacen { get; set; } = new List<string>();
         public DateTime FechaRecepcion { get; set; }
+        public string HoraRecepcion { get; set; }
         public string ResponsableRecepcion { get; set; }
         public string Observaciones { get; set; }
         public string EstadoRecepcion { get; set; }
         public int IdUsuarioRegistro { get; set; }
         public DateTime FechaRegistro { get; set; }
         public List<RecepcionContenedorDetalle> Detalles { get; set; } = new List<RecepcionContenedorDetalle>();
+        public List<EvidenciaRecepcion> Evidencias { get; set; } = new List<EvidenciaRecepcion>();
+    }
+
+    public class EvidenciaRecepcion
+    {
+        public int IdEvidencia { get; set; }
+        public int IdRecepcion { get; set; }
+        public string NombreArchivo { get; set; }
+        public string RutaArchivo { get; set; }
+        public string TipoContenido { get; set; }
+        public long? TamanoBytes { get; set; }
+        public DateTime FechaRegistro { get; set; }
     }
 
     public class RecepcionContenedorDetalle

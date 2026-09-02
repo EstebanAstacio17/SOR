@@ -37,6 +37,9 @@ namespace SOR.Services
         public List<Almacen> ObtenerAlmacenes(bool soloActivos = true) =>
             _repo.ObtenerAlmacenes(soloActivos);
 
+        public List<Almacen> ObtenerAlmacenesPorEquipo(int? idEquipo, bool soloActivos = true) =>
+            _repo.ObtenerAlmacenesPorEquipo(idEquipo, soloActivos);
+
         public void GuardarAlmacen(Almacen modelo) =>
             _repo.GuardarAlmacen(modelo);
 
@@ -56,12 +59,14 @@ namespace SOR.Services
             {
                 if (det.CantidadEmpaques <= 0)
                     throw new ArgumentException($"La cantidad de empaques para el material ID {det.IdMaterial} debe ser mayor a 0.");
+                if (det.UnidadesPorEmpaque <= 0)
+                    throw new ArgumentException($"Las unidades por empaque para el material ID {det.IdMaterial} deben ser mayores a 0.");
             }
             return _repo.RegistrarRecepcion(modelo, idUsuario);
         }
 
-        public List<RecepcionContenedor> ObtenerRecepciones(int? idTemporada = null) =>
-            _repo.ObtenerRecepciones(idTemporada);
+        public List<RecepcionContenedor> ObtenerRecepciones(int? idTemporada = null, int? idAlmacen = null, int? idEquipo = null) =>
+            _repo.ObtenerRecepciones(idTemporada, idAlmacen, idEquipo);
 
         public RecepcionContenedor ObtenerRecepcionDetalle(int id) =>
             _repo.ObtenerRecepcionDetalle(id);
@@ -150,10 +155,10 @@ namespace SOR.Services
             _repo.ObtenerIglesiasDisponiblesDespacho(idEquipo, idTemporada);
 
         // =====================================================================
-        // DESPACHO PRESENCIAL
+        // DESPACHO PRESENCIAL (EXCLUSIVO COORDINADOR DE LOGÍSTICA — CL)
         // =====================================================================
 
-        public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador)
+        public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador, int? idRolSeguridad = null, int? idPosicion = null)
         {
             if (string.IsNullOrWhiteSpace(vm.TipoReceptor) || 
                 (vm.TipoReceptor != "PASTOR" && vm.TipoReceptor != "LIDER_MINISTERIAL" && vm.TipoReceptor != "AMBOS"))
@@ -171,7 +176,7 @@ namespace SOR.Services
                 throw new ArgumentException("Debe especificar las cantidades despachadas.");
             }
 
-            _repo.ConfirmarDespacho(vm, idEquipo, idTemporada, idUsuario, nombreCoordinador);
+            _repo.ConfirmarDespacho(vm, idEquipo, idTemporada, idUsuario, nombreCoordinador, idRolSeguridad, idPosicion);
         }
 
         public void MarcarNoDespacho(NoDespachoBecauseViewModel vm, int idUsuario)

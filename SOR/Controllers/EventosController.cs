@@ -456,10 +456,15 @@ namespace SOR.Controllers
             // Cargar maestros de estas iglesias
             List<MaestroAsistenciaViewModel> maestros = ObtenerMaestrosYAsistencia(id, evento.IdTemporada);
 
+            bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+
             ViewBag.Evento = evento;
             ViewBag.Iglesias = iglesias;
             ViewBag.Maestros = maestros;
             ViewBag.UsuarioActual = u;
+            ViewBag.EsAdmin = esAdmin;
+            ViewBag.EsCL = esCL;
             ViewBag.PuedeEditar = PuedeEditarEvento(u, id);
 
             return View();
@@ -505,6 +510,15 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             try
             {
+                bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                if (!esAdmin && !esCL)
+                {
+                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) tiene autorización para confirmar y ejecutar el despacho de materiales.";
+                    return RedirectToAction("Detalle", new { id = idEvento });
+                }
+
                 var logisticaSvc = new SOR.Services.LogisticaService();
                 int idEquipo = u.IdEquipo.GetValueOrDefault(1);
                 int idTemporada = 0;
@@ -517,8 +531,8 @@ namespace SOR.Controllers
                         idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
-                string nombre = u.Correo ?? "Coordinador";
-                logisticaSvc.ConfirmarDespacho(vm, idEquipo, idTemporada, u.IdUsuario, nombre);
+                string nombre = !string.IsNullOrEmpty(u.PrimerNombre) ? $"{u.PrimerNombre} {u.PrimerApellido}".Trim() : (u.Correo ?? "Coordinador de Logística");
+                logisticaSvc.ConfirmarDespacho(vm, idEquipo, idTemporada, u.IdUsuario, nombre, u.IdRolSeguridad, u.IdPosicion);
                 TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
             }
             catch (Exception ex)

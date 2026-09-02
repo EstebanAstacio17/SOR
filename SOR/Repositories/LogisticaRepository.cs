@@ -271,6 +271,13 @@ namespace SOR.Repositories
             return lista;
         }
 
+        public List<Almacen> ObtenerAlmacenesPorEquipo(int? idEquipo, bool soloActivos = true)
+        {
+            var todos = ObtenerAlmacenes(soloActivos);
+            if (!idEquipo.HasValue || idEquipo.Value <= 0) return todos;
+            return todos.Where(a => a.EsCentral || a.IdsEquipos.Contains(idEquipo.Value)).ToList();
+        }
+
         public void GuardarAlmacen(Almacen modelo)
         {
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -385,7 +392,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // RECEPCIÓN DE CONTENEDORES (TRANSACCIÓN ACID)
+        // RECEPCIÓN DE CONTENEDORES (TRANSACCIÓN ACID Y CONTROL DE DUPLICIDAD)
         // =====================================================================
 
         public int RegistrarRecepcion(RecepcionContenedor modelo, int idUsuario)
@@ -398,26 +405,57 @@ namespace SOR.Repositories
                     try
                     {
                         // 1. Obtener temporada activa
-                        int idTemporada = 0;
-                        using (var cmd = new SqlCommand("SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;", cn, tran))
+                        int idTemporada = modelo.IdTemporada;
+                        if (idTemporada <= 0)
                         {
-                            object val = cmd.ExecuteScalar();
-                            if (val == null) throw new InvalidOperationException("No hay temporada activa.");
-                            idTemporada = Convert.ToInt32(val);
+                            using (var cmd = new SqlCommand("SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;", cn, tran))
+                            {
+                                object val = cmd.ExecuteScalar();
+                                if (val == null || val == DBNull.Value) throw new InvalidOperationException("No hay una temporada activa en el sistema.");
+                                idTemporada = Convert.ToInt32(val);
+                            }
                         }
 
-                        // 2. Insertar encabezado
+                        // 1b. Validar que el almacén exista y esté activo
+                        using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.Almacenes WHERE IdAlmacen = @IdAlm AND Activo = 1;", cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
+                            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                                throw new InvalidOperationException("El almacén seleccionado no es válido o está inactivo.");
+                        }
+
+                        // 1c. Control de concurrencia e Idempotencia (Evitar doble recepción)
+                        using (var cmd = new SqlCommand(
+                            "SELECT COUNT(1) FROM dbo.RecepcionesContenedor WITH (UPDLOCK, HOLDLOCK) WHERE IdTemporada = @IdTemp AND LOWER(LTRIM(RTRIM(NumeroContenedor))) = LOWER(LTRIM(RTRIM(@Num))) AND IdAlmacen = @IdAlm AND EstadoRecepcion != 'ANULADA';", cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
+                            cmd.Parameters.AddWithValue("@Num", modelo.NumeroContenedor ?? "");
+                            cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
+                            if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
+                            {
+                                throw new InvalidOperationException($"El contenedor '{modelo.NumeroContenedor}' ya fue recibido y confirmado previamente en este almacén para la temporada actual.");
+                            }
+                        }
+
+                        // 2. Insertar encabezado de recepción
                         int idRecepcion = 0;
                         string sqlRecep = @"
-                            INSERT INTO dbo.RecepcionesContenedor (NumeroContenedor, IdTemporada, IdAlmacen, FechaRecepcion, ResponsableRecepcion, Observaciones, EstadoRecepcion, IdUsuarioRegistro)
+                            INSERT INTO dbo.RecepcionesContenedor 
+                                (NumeroContenedor, IdTemporada, IdAlmacen, FechaRecepcion, HoraRecepcion, IdEquipoReceptor, 
+                                 ResponsableRecepcion, Observaciones, EstadoRecepcion, IdUsuarioRegistro, FechaRegistro)
                             OUTPUT INSERTED.IdRecepcion
-                            VALUES (@Num, @IdTemp, @IdAlm, @Fecha, @Resp, @Obs, 'CONFIRMADA', @IdUser);";
+                            VALUES 
+                                (@Num, @IdTemp, @IdAlm, @Fecha, @Hora, @IdEq, 
+                                 @Resp, @Obs, 'CONFIRMADA', @IdUser, GETDATE());";
+
                         using (var cmd = new SqlCommand(sqlRecep, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Num", modelo.NumeroContenedor);
+                            cmd.Parameters.AddWithValue("@Num", modelo.NumeroContenedor.Trim());
                             cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
                             cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
-                            cmd.Parameters.AddWithValue("@Fecha", modelo.FechaRecepcion);
+                            cmd.Parameters.AddWithValue("@Fecha", modelo.FechaRecepcion != DateTime.MinValue ? modelo.FechaRecepcion : DateTime.Now.Date);
+                            cmd.Parameters.AddWithValue("@Hora", !string.IsNullOrWhiteSpace(modelo.HoraRecepcion) ? (object)modelo.HoraRecepcion.Trim() : DateTime.Now.ToString("hh:mm tt"));
+                            cmd.Parameters.AddWithValue("@IdEq", modelo.IdEquipoReceptor.HasValue && modelo.IdEquipoReceptor.Value > 0 ? (object)modelo.IdEquipoReceptor.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@Resp", modelo.ResponsableRecepcion ?? (object)DBNull.Value);
                             cmd.Parameters.AddWithValue("@Obs", modelo.Observaciones ?? (object)DBNull.Value);
                             cmd.Parameters.AddWithValue("@IdUser", idUsuario);
@@ -425,9 +463,14 @@ namespace SOR.Repositories
                         }
 
                         // 3. Insertar detalles y actualizar inventario central
+                        if (modelo.Detalles == null || modelo.Detalles.Count == 0)
+                            throw new InvalidOperationException("Debe agregar al menos un material con empaques y unidades recibidas.");
+
                         foreach (var det in modelo.Detalles)
                         {
-                            // 3a. Guardar detalle (inmutable)
+                            if (det.CantidadEmpaques <= 0 || det.UnidadesPorEmpaque <= 0) continue;
+
+                            // 3a. Guardar detalle
                             string sqlDet = @"
                                 INSERT INTO dbo.RecepcionesContenedorDetalle (IdRecepcion, IdMaterial, IdPresentacion, CantidadEmpaques, UnidadesPorEmpaque)
                                 VALUES (@IdRec, @IdMat, @IdPres, @Empaques, @Uds);";
@@ -443,9 +486,9 @@ namespace SOR.Repositories
 
                             int totalUnidades = det.CantidadEmpaques * det.UnidadesPorEmpaque;
 
-                            // 3b. Upsert en InventarioCentral
+                            // 3b. Upsert en InventarioCentral con bloqueo
                             string sqlInv = @"
-                                MERGE dbo.InventarioCentral AS tgt
+                                MERGE dbo.InventarioCentral WITH (UPDLOCK, ROWLOCK) AS tgt
                                 USING (SELECT @IdTemp AS IdTemporada, @IdAlm AS IdAlmacen, @IdMat AS IdMaterial) AS src
                                 ON tgt.IdTemporada = src.IdTemporada AND tgt.IdAlmacen = src.IdAlmacen AND tgt.IdMaterial = src.IdMaterial
                                 WHEN MATCHED THEN
@@ -463,15 +506,38 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 3c. Kárdex
+                            // 3c. Kárdex de entrada
                             RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_CONTENEDOR", det.IdMaterial,
                                 totalUnidades, null, modelo.IdAlmacen, null, null,
-                                "REC-" + idRecepcion, idUsuario, "Recepción contenedor #" + modelo.NumeroContenedor);
+                                "REC-" + idRecepcion, idUsuario, $"Recepción de contenedor #{modelo.NumeroContenedor} en almacén ID {modelo.IdAlmacen}");
+                        }
+
+                        // 4. Guardar evidencias adjuntas (si existen)
+                        if (modelo.Evidencias != null && modelo.Evidencias.Count > 0)
+                        {
+                            string sqlEv = @"
+                                INSERT INTO dbo.EvidenciasRecepcionContenedor 
+                                    (IdRecepcion, NombreArchivo, RutaArchivo, TipoContenido, TamanoBytes, IdUsuarioRegistro, FechaRegistro)
+                                VALUES 
+                                    (@IdRec, @Nom, @Ruta, @Tipo, @Size, @IdUser, GETDATE());";
+                            foreach (var ev in modelo.Evidencias)
+                            {
+                                using (var cmdEv = new SqlCommand(sqlEv, cn, tran))
+                                {
+                                    cmdEv.Parameters.AddWithValue("@IdRec", idRecepcion);
+                                    cmdEv.Parameters.AddWithValue("@Nom", ev.NombreArchivo ?? "Evidencia");
+                                    cmdEv.Parameters.AddWithValue("@Ruta", ev.RutaArchivo ?? "");
+                                    cmdEv.Parameters.AddWithValue("@Tipo", ev.TipoContenido ?? (object)DBNull.Value);
+                                    cmdEv.Parameters.AddWithValue("@Size", ev.TamanoBytes.HasValue ? (object)ev.TamanoBytes.Value : DBNull.Value);
+                                    cmdEv.Parameters.AddWithValue("@IdUser", idUsuario);
+                                    cmdEv.ExecuteNonQuery();
+                                }
+                            }
                         }
 
                         tran.Commit();
                         AuditoriaHelper.Registrar("Recepción Contenedor", "Logistica", idRecepcion.ToString(), idUsuario,
-                            $"Contenedor {modelo.NumeroContenedor} registrado con {modelo.Detalles.Count} materiales.");
+                            $"Contenedor {modelo.NumeroContenedor} recibido y confirmado exitosamente en almacén ID {modelo.IdAlmacen}. Total materiales: {modelo.Detalles.Count}.");
                         return idRecepcion;
                     }
                     catch
@@ -1113,22 +1179,27 @@ namespace SOR.Repositories
         // RECEPCIONES — CONSULTA
         // =====================================================================
 
-        public List<RecepcionContenedor> ObtenerRecepciones(int? idTemporada = null)
+        public List<RecepcionContenedor> ObtenerRecepciones(int? idTemporada = null, int? idAlmacen = null, int? idEquipo = null)
         {
             var lista = new List<RecepcionContenedor>();
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = @"
-                    SELECT rc.*, t.NombreTemporada, a.NombreAlmacen
+                    SELECT rc.*, t.NombreTemporada, a.NombreAlmacen, eq.NombreEquipo AS NombreEquipoReceptor
                     FROM dbo.RecepcionesContenedor rc
                     INNER JOIN dbo.Temporadas t ON rc.IdTemporada = t.IdTemporada
                     INNER JOIN dbo.Almacenes a ON rc.IdAlmacen = a.IdAlmacen
+                    LEFT JOIN dbo.Equipos eq ON rc.IdEquipoReceptor = eq.IdEquipo
                     WHERE (@IdTemp IS NULL OR rc.IdTemporada = @IdTemp)
+                      AND (@IdAlm IS NULL OR rc.IdAlmacen = @IdAlm)
+                      AND (@IdEq IS NULL OR rc.IdEquipoReceptor = @IdEq OR a.EsCentral = 1 OR EXISTS (SELECT 1 FROM dbo.AlmacenesEquipos ae WHERE ae.IdAlmacen = rc.IdAlmacen AND ae.IdEquipo = @IdEq))
                     ORDER BY rc.FechaRegistro DESC;";
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue && idAlmacen.Value > 0 ? (object)idAlmacen.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue && idEquipo.Value > 0 ? (object)idEquipo.Value : DBNull.Value);
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1141,8 +1212,12 @@ namespace SOR.Repositories
                                 NombreTemporada = dr["NombreTemporada"].ToString(),
                                 IdAlmacen = Convert.ToInt32(dr["IdAlmacen"]),
                                 NombreAlmacen = dr["NombreAlmacen"].ToString(),
+                                IdEquipoReceptor = dr["IdEquipoReceptor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoReceptor"]) : null,
+                                NombreEquipoReceptor = dr["NombreEquipoReceptor"] != DBNull.Value ? dr["NombreEquipoReceptor"].ToString() : "",
                                 FechaRecepcion = Convert.ToDateTime(dr["FechaRecepcion"]),
+                                HoraRecepcion = dr["HoraRecepcion"] != DBNull.Value ? dr["HoraRecepcion"].ToString() : "",
                                 ResponsableRecepcion = dr["ResponsableRecepcion"] != DBNull.Value ? dr["ResponsableRecepcion"].ToString() : "",
+                                Observaciones = dr["Observaciones"] != DBNull.Value ? dr["Observaciones"].ToString() : "",
                                 EstadoRecepcion = dr["EstadoRecepcion"].ToString(),
                                 FechaRegistro = Convert.ToDateTime(dr["FechaRegistro"])
                             });
@@ -1160,10 +1235,11 @@ namespace SOR.Repositories
             {
                 cn.Open();
                 string sqlHead = @"
-                    SELECT rc.*, t.NombreTemporada, a.NombreAlmacen
+                    SELECT rc.*, t.NombreTemporada, a.NombreAlmacen, eq.NombreEquipo AS NombreEquipoReceptor
                     FROM dbo.RecepcionesContenedor rc
                     INNER JOIN dbo.Temporadas t ON rc.IdTemporada = t.IdTemporada
                     INNER JOIN dbo.Almacenes a ON rc.IdAlmacen = a.IdAlmacen
+                    LEFT JOIN dbo.Equipos eq ON rc.IdEquipoReceptor = eq.IdEquipo
                     WHERE rc.IdRecepcion = @Id;";
                 using (var cmd = new SqlCommand(sqlHead, cn))
                 {
@@ -1176,9 +1252,14 @@ namespace SOR.Repositories
                             {
                                 IdRecepcion = Convert.ToInt32(dr["IdRecepcion"]),
                                 NumeroContenedor = dr["NumeroContenedor"].ToString(),
+                                IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
                                 NombreTemporada = dr["NombreTemporada"].ToString(),
+                                IdAlmacen = Convert.ToInt32(dr["IdAlmacen"]),
                                 NombreAlmacen = dr["NombreAlmacen"].ToString(),
+                                IdEquipoReceptor = dr["IdEquipoReceptor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoReceptor"]) : null,
+                                NombreEquipoReceptor = dr["NombreEquipoReceptor"] != DBNull.Value ? dr["NombreEquipoReceptor"].ToString() : "",
                                 FechaRecepcion = Convert.ToDateTime(dr["FechaRecepcion"]),
+                                HoraRecepcion = dr["HoraRecepcion"] != DBNull.Value ? dr["HoraRecepcion"].ToString() : "",
                                 ResponsableRecepcion = dr["ResponsableRecepcion"] != DBNull.Value ? dr["ResponsableRecepcion"].ToString() : "",
                                 Observaciones = dr["Observaciones"] != DBNull.Value ? dr["Observaciones"].ToString() : "",
                                 EstadoRecepcion = dr["EstadoRecepcion"].ToString(),
@@ -1189,6 +1270,26 @@ namespace SOR.Repositories
                 }
                 if (recep == null) return null;
 
+                // Cargar equipos servidos por el almacén
+                string sqlEq = @"
+                    SELECT e.NombreEquipo 
+                    FROM dbo.AlmacenesEquipos ae
+                    INNER JOIN dbo.Equipos e ON ae.IdEquipo = e.IdEquipo
+                    WHERE ae.IdAlmacen = @IdAlm
+                    ORDER BY e.NombreEquipo;";
+                using (var cmdEq = new SqlCommand(sqlEq, cn))
+                {
+                    cmdEq.Parameters.AddWithValue("@IdAlm", recep.IdAlmacen);
+                    using (var drEq = cmdEq.ExecuteReader())
+                    {
+                        while (drEq.Read())
+                        {
+                            recep.NombresEquiposAlmacen.Add(drEq["NombreEquipo"].ToString());
+                        }
+                    }
+                }
+
+                // Cargar Detalles de Materiales
                 string sqlDet = @"
                     SELECT d.*, m.Codigo, m.NombreMaterial, m.UnidadEntrega, p.TipoEmpaque
                     FROM dbo.RecepcionesContenedorDetalle d
@@ -1213,6 +1314,33 @@ namespace SOR.Repositories
                                 CantidadEmpaques = Convert.ToInt32(dr["CantidadEmpaques"]),
                                 UnidadesPorEmpaque = Convert.ToInt32(dr["UnidadesPorEmpaque"]),
                                 CantidadTotalUnidades = Convert.ToInt32(dr["CantidadTotalUnidades"])
+                            });
+                        }
+                    }
+                }
+
+                // Cargar Evidencias
+                string sqlEv = @"
+                    SELECT IdEvidencia, IdRecepcion, NombreArchivo, RutaArchivo, TipoContenido, TamanoBytes, FechaRegistro
+                    FROM dbo.EvidenciasRecepcionContenedor
+                    WHERE IdRecepcion = @Id
+                    ORDER BY FechaRegistro;";
+                using (var cmd = new SqlCommand(sqlEv, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idRecepcion);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            recep.Evidencias.Add(new EvidenciaRecepcion
+                            {
+                                IdEvidencia = Convert.ToInt32(dr["IdEvidencia"]),
+                                IdRecepcion = Convert.ToInt32(dr["IdRecepcion"]),
+                                NombreArchivo = dr["NombreArchivo"].ToString(),
+                                RutaArchivo = dr["RutaArchivo"].ToString(),
+                                TipoContenido = dr["TipoContenido"] != DBNull.Value ? dr["TipoContenido"].ToString() : "",
+                                TamanoBytes = dr["TamanoBytes"] != DBNull.Value ? (long?)Convert.ToInt64(dr["TamanoBytes"]) : null,
+                                FechaRegistro = Convert.ToDateTime(dr["FechaRegistro"])
                             });
                         }
                     }
@@ -1514,11 +1642,57 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // CONFIRMAR DESPACHO CON CÉDULA EN MANO (TRANSACCIÓN ACID)
+        // CONFIRMAR DESPACHO CON CÉDULA EN MANO (TRANSACCIÓN ACID Y CONTROL DE ROL CL)
         // =====================================================================
 
-        public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador)
+        public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador, int? idRolSeguridad = null, int? idPosicion = null)
         {
+            // Validar autorización estricta: Solo CL (IdPosicion == 6) o Admin (IdRolSeguridad in (1, 2))
+            using (var cnAuth = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cnAuth.Open();
+                bool esAutorizado = false;
+                if (idRolSeguridad.HasValue && (idRolSeguridad.Value == 1 || idRolSeguridad.Value == 2))
+                {
+                    esAutorizado = true;
+                }
+                else if (idPosicion.HasValue && idPosicion.Value == 6)
+                {
+                    esAutorizado = true;
+                }
+                else
+                {
+                    string sqlCheckCL = @"
+                        SELECT u.IdRolSeguridad, a.IdPosicion, p.NombrePosicion
+                        FROM dbo.Usuarios u
+                        LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                        LEFT JOIN dbo.PosicionesOCC p ON a.IdPosicion = p.IdPosicion
+                        WHERE u.IdUsuario = @IdU;";
+                    using (var cmdAuth = new SqlCommand(sqlCheckCL, cnAuth))
+                    {
+                        cmdAuth.Parameters.AddWithValue("@IdU", idUsuario);
+                        using (var drAuth = cmdAuth.ExecuteReader())
+                        {
+                            if (drAuth.Read())
+                            {
+                                int rol = Convert.ToInt32(drAuth["IdRolSeguridad"]);
+                                int? pos = drAuth["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(drAuth["IdPosicion"]) : null;
+                                string nomPos = drAuth["NombrePosicion"] != DBNull.Value ? drAuth["NombrePosicion"].ToString() : "";
+                                if (rol == 1 || rol == 2 || pos == 6 || nomPos.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || nomPos.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    esAutorizado = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!esAutorizado)
+                {
+                    throw new UnauthorizedAccessException("Acceso denegado: Únicamente el Coordinador de Logística (CL) tiene autorización para confirmar y ejecutar el despacho de materiales.");
+                }
+            }
+
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();

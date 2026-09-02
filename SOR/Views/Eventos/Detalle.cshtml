@@ -9,6 +9,8 @@
     bool eventoPasado = evento != null && evento.Fecha.Date < DateTime.Today;
     var eventoDespacho = ViewBag.EventoDespacho as SOR.Models.EventoDespacho;
     var iglesiasDisponibles = ViewBag.IglesiasDisponibles as IEnumerable<SOR.Models.DespachoIglesiaItem> ?? new List<SOR.Models.DespachoIglesiaItem>();
+    bool esAdmin = ViewBag.EsAdmin == true || u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+    bool esCL = ViewBag.EsCL == true || u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0);
 }
 
 @Html.AntiForgeryToken()
@@ -250,14 +252,23 @@
                                     </td>
                                     <td class="text-end">
                                         <div class="d-flex align-items-center justify-content-end gap-1 flex-wrap">
-                                            @if (ig.EstadoDespacho == "PROGRAMADA" && puedeEditar)
+                                            @if (ig.EstadoDespacho == "PROGRAMADA")
                                             {
-                                                <button class="btn btn-sm btn-success font-semibold shadow-sm" onclick="abrirModalConfirmarDespacho(@ig.IdDespachoIglesia, '@Html.Raw(ig.NombreIglesia.Replace("'","\\'"))')">
-                                                    <i class="bi bi-check2-circle me-1"></i>Despachar
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="abrirModalNoDespacho(@ig.IdDespachoIglesia, '@Html.Raw(ig.NombreIglesia.Replace("'","\\'"))')" title="Marcar como No Despachada">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
+                                                if (esCL || esAdmin)
+                                                {
+                                                    <button class="btn btn-sm btn-success font-semibold shadow-sm" onclick="abrirModalConfirmarDespacho(@ig.IdDespachoIglesia, '@Html.Raw(ig.NombreIglesia.Replace("'","\\'"))')">
+                                                        <i class="bi bi-check2-circle me-1"></i>Despachar
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="abrirModalNoDespacho(@ig.IdDespachoIglesia, '@Html.Raw(ig.NombreIglesia.Replace("'","\\'"))')" title="Marcar como No Despachada">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-light text-muted border py-1.5 px-2" title="Solo el Coordinador de Logística (CL) puede ejecutar despachos">
+                                                        <i class="bi bi-shield-lock me-1 text-secondary"></i>Exclusivo CL
+                                                    </span>
+                                                }
                                             }
                                             @if (ig.EstadoDespacho == "DESPACHADA")
                                             {
