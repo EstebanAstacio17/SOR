@@ -251,13 +251,22 @@ namespace SOR.Helpers
                         CONSTRAINT UQ_Materiales_Codigo UNIQUE (Codigo)
                     );
                     INSERT INTO dbo.Materiales (Codigo, NombreMaterial, UnidadEntrega, MomentoEntrega) VALUES
-                        ('GM',  'Guías del Maestro',             'Guía',     'TALLER_OCC'),
-                        ('GA',  'Guías del Alumno',              'Guía',     'TALLER_OCC'),
-                        ('OE',  'Oportunidades Evangelísticas',  'Libro',    'DESPACHO'),
-                        ('MR',  'El Mejor Regalo',               'Libro',    'DESPACHO'),
-                        ('PO',  'Posters',                       'Poster',   'DESPACHO'),
-                        ('NT',  'Nuevos Testamentos',            'Ejemplar', 'DESPACHO'),
-                        ('BR',  'Brochures',                     'Brochure', 'PRESENTACION_VISION');
+                        ('OE',  'Oportunidades Evangelísticas', 'Cajita',   'DESPACHO'),
+                        ('MR',  'El Mejor Regalo',              'Libro',    'DESPACHO'),
+                        ('GA',  'Guías del Alumno',             'Guía',     'DESPACHO'),
+                        ('GM',  'Guía del Maestro',             'Guía',     'DESPACHO'),
+                        ('NT',  'Nuevos Testamentos',           'Ejemplar', 'DESPACHO'),
+                        ('PO',  'Poster',                       'Poster',   'DESPACHO'),
+                        ('BR',  'Brochures',                    'Brochure', 'PRESENTACION_VISION');
+                END
+                ELSE
+                BEGIN
+                    UPDATE dbo.Materiales SET NombreMaterial = 'Oportunidades Evangelísticas', UnidadEntrega = 'Cajita', MomentoEntrega = 'DESPACHO' WHERE Codigo = 'OE';
+                    UPDATE dbo.Materiales SET NombreMaterial = 'El Mejor Regalo', UnidadEntrega = 'Libro', MomentoEntrega = 'DESPACHO' WHERE Codigo = 'MR';
+                    UPDATE dbo.Materiales SET NombreMaterial = 'Guías del Alumno', UnidadEntrega = 'Guía', MomentoEntrega = 'DESPACHO' WHERE Codigo = 'GA';
+                    UPDATE dbo.Materiales SET NombreMaterial = 'Guía del Maestro', UnidadEntrega = 'Guía', MomentoEntrega = 'DESPACHO' WHERE Codigo = 'GM';
+                    UPDATE dbo.Materiales SET NombreMaterial = 'Poster', UnidadEntrega = 'Poster', MomentoEntrega = 'DESPACHO' WHERE Codigo = 'PO';
+                    UPDATE dbo.Materiales SET NombreMaterial = 'Nuevos Testamentos', UnidadEntrega = 'Ejemplar', MomentoEntrega = 'DESPACHO' WHERE Codigo = 'NT';
                 END
 
                 -- 8.2 Presentaciones / Empaques por Material
@@ -557,6 +566,45 @@ namespace SOR.Helpers
 
                 IF COL_LENGTH('dbo.AsignacionesRecursos', 'IdEventoDespachoActual') IS NULL
                     ALTER TABLE dbo.AsignacionesRecursos ADD IdEventoDespachoActual INT NULL;
+
+                -- 8.16 Sincronización automática de recepciones de contenedor y transferencias hacia InventarioEquipo
+                MERGE dbo.InventarioEquipo AS tgt
+                USING (
+                    SELECT t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial, SUM(t_all.TotalRecibido) AS TotalRecibido
+                    FROM (
+                        -- 1. Recepciones directas de contenedor
+                        SELECT rc.IdTemporada, 
+                               COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) AS IdEquipo, 
+                               rd.IdMaterial,
+                               SUM(rd.CantidadEmpaques * rd.UnidadesPorEmpaque) AS TotalRecibido
+                        FROM dbo.RecepcionesContenedor rc
+                        INNER JOIN dbo.RecepcionesContenedorDetalle rd ON rc.IdRecepcion = rd.IdRecepcion
+                        LEFT JOIN dbo.AlmacenesEquipos ae ON rc.IdAlmacen = ae.IdAlmacen
+                        WHERE rc.EstadoRecepcion != 'ANULADA'
+                          AND COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) IS NOT NULL
+                        GROUP BY rc.IdTemporada, COALESCE(rc.IdEquipoReceptor, ae.IdEquipo), rd.IdMaterial
+
+                        UNION ALL
+
+                        -- 2. Transferencias recibidas
+                        SELECT te.IdTemporada,
+                               te.IdEquipo AS IdEquipo,
+                               td.IdMaterial,
+                               SUM(td.CantidadUnidades) AS TotalRecibido
+                        FROM dbo.TransferenciasEquipo te
+                        INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
+                        WHERE te.Estado IN ('RECIBIDA', 'COMPLETADA')
+                        GROUP BY te.IdTemporada, te.IdEquipo, td.IdMaterial
+                    ) t_all
+                    GROUP BY t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial
+                ) AS src
+                ON tgt.IdTemporada = src.IdTemporada AND tgt.IdEquipo = src.IdEquipo AND tgt.IdMaterial = src.IdMaterial
+                WHEN MATCHED THEN
+                    UPDATE SET CantidadRecibida = src.TotalRecibido,
+                               CantidadDisponible = src.TotalRecibido - tgt.CantidadDespachada
+                WHEN NOT MATCHED THEN
+                    INSERT (IdTemporada, IdEquipo, IdMaterial, CantidadRecibida, CantidadAsignada, CantidadDespachada, CantidadDisponible)
+                    VALUES (src.IdTemporada, src.IdEquipo, src.IdMaterial, src.TotalRecibido, 0, 0, src.TotalRecibido);
             ";
 
             using (SqlCommand cmd = new SqlCommand(sqlLogistica, cn))

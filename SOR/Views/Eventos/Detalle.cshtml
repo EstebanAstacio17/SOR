@@ -1062,8 +1062,17 @@
                     tr.className = 'fila-material-despacho';
                     tr.dataset.id = m.IdMaterial;
                     tr.dataset.asignada = m.CantidadAsignada;
+
+                    var badgeClass = 'bg-primary-soft text-primary border border-primary-subtle';
+                    if (m.CodigoMaterial === 'OE') badgeClass = 'bg-info-soft text-info border border-info-subtle';
+                    else if (m.CodigoMaterial === 'MR') badgeClass = 'bg-primary-soft text-primary border border-primary-subtle';
+                    else if (m.CodigoMaterial === 'GA') badgeClass = 'bg-success-soft text-success border border-success-subtle';
+                    else if (m.CodigoMaterial === 'GM') badgeClass = 'bg-warning-soft text-warning border border-warning-subtle';
+                    else if (m.CodigoMaterial === 'NT') badgeClass = 'bg-secondary-soft text-secondary border border-secondary-subtle';
+                    else if (m.CodigoMaterial === 'PO') badgeClass = 'bg-purple-soft text-purple border border-purple-subtle';
+
                     tr.innerHTML = `
-                        <td><span class="badge bg-primary me-1">${m.CodigoMaterial}</span><strong>${m.NombreMaterial}</strong></td>
+                        <td><span class="badge ${badgeClass} me-2 font-mono">${m.CodigoMaterial}</span><strong class="text-slate-800">${m.NombreMaterial}</strong></td>
                         <td class="text-center text-muted">${m.UnidadEntrega}</td>
                         <td class="text-center fw-semibold">${m.CantidadAsignada}</td>
                         <td style="max-width:130px">

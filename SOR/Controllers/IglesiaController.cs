@@ -214,13 +214,12 @@ namespace SOR.Controllers
             }
 
             // Validar seguridad de archivos adjuntos
-            string errPastor, errLider;
-            if (!ValidarArchivoSeguroIglesia(docPastor, out errPastor))
+            if (!ValidarArchivoSeguroIglesia(docPastor, out string errPastor))
             {
                 ViewData["MensajeError"] = "Cédula del Pastor: " + errPastor;
                 return View(modelo);
             }
-            if (!ValidarArchivoSeguroIglesia(docLider, out errLider))
+            if (!ValidarArchivoSeguroIglesia(docLider, out string errLider))
             {
                 ViewData["MensajeError"] = "Cédula del Líder: " + errLider;
                 return View(modelo);
@@ -322,16 +321,20 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = @"
-                    SELECT e.IdEvento, e.NombreEvento, e.Fecha, e.Lugar, e.TipoEvento
+                    SELECT e.IdEvento, e.NombreEvento, e.Fecha, e.Lugar, e.TipoEvento,
+                           ISNULL(ed.EstadoDespachoEvento, 'PROGRAMADO') AS EstadoDespachoEvento,
+                           COALESCE(ed.IdEquipo, a.IdEquipo) AS IdEquipoEvento
                     FROM dbo.Eventos e 
                     INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada 
-                    LEFT JOIN dbo.PerfilesCoordinador pc ON e.IdUsuarioCreacion = pc.IdUsuario
+                    LEFT JOIN dbo.EventosDespacho ed ON e.IdEvento = ed.IdEvento
+                    LEFT JOIN dbo.Usuarios u_creador ON e.IdUsuarioCreacion = u_creador.IdUsuario
+                    LEFT JOIN dbo.AsignacionesEquipo a ON u_creador.IdUsuario = a.IdUsuario AND a.Activo = 1
                     WHERE e.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC)
                       AND e.TipoEvento IN ('Vision', 'Taller', 'Despacho')";
 
                 if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue)
                 {
-                    sql += " AND (pc.IdEquipo = @IdEquipo OR pc.IdEquipo IS NULL)";
+                    sql += " AND (COALESCE(ed.IdEquipo, a.IdEquipo) = @IdEquipo OR (e.TipoEvento <> 'Despacho' AND (a.IdEquipo = @IdEquipo OR a.IdEquipo IS NULL)))";
                 }
 
                 sql += " ORDER BY e.Fecha DESC;";
@@ -352,11 +355,12 @@ namespace SOR.Controllers
                         DateTime f = Convert.ToDateTime(dr["Fecha"]);
                         string lug = dr["Lugar"] != DBNull.Value ? dr["Lugar"].ToString() : "";
                         string tipo = dr["TipoEvento"].ToString();
+                        string estadoDesp = dr["EstadoDespachoEvento"] != DBNull.Value ? dr["EstadoDespachoEvento"].ToString() : "PROGRAMADO";
 
                         var item = new SelectListItem
                         {
                             Value = idEv.ToString(),
-                            Text = $"{nom} - {f:dd/MM/yyyy} ({lug})"
+                            Text = $"{nom} | {f:dd/MM/yyyy}" + (!string.IsNullOrEmpty(lug) ? $" ({lug})" : "")
                         };
                         
                         // CMI (2) ve Visión, CD (3) ve Taller, CE (1) / Admin (Rol 1,2) ve ambos
@@ -365,7 +369,13 @@ namespace SOR.Controllers
                         
                         if (tipo == "Vision" && !esCD) eventosVision.Add(item);
                         else if (tipo == "Taller" && !esCMI) eventosTaller.Add(item);
-                        else if (tipo == "Despacho") eventosDespacho.Add(item);
+                        else if (tipo == "Despacho")
+                        {
+                            if (estadoDesp != "CANCELADO" && estadoDesp != "CERRADO" && estadoDesp != "FINALIZADO")
+                            {
+                                eventosDespacho.Add(item);
+                            }
+                        }
 
                         eventosDisponiblesDetalle.Add(new
                         {
@@ -373,7 +383,7 @@ namespace SOR.Controllers
                             nombre = nom,
                             fecha = f.ToString("yyyy-MM-dd"),
                             lugar = lug,
-                            tipo = tipo
+                            tipo
                         });
                     }
                 }
@@ -946,23 +956,24 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult CompletarTallerOCC(
             int idParticipacion, 
             int idIglesia, 
-            string tallerNombre, 
-            DateTime? tallerFecha, 
-            string tallerLugar, 
-            int cantNinos, 
-            int cantMaestrosReg, 
-            int cantMaestrosAsist, 
-            int cantMaestrosAus,
-            int? idEventoDespacho,
-            int? oportunidadesEvangelisticas,
-            int? librosMejorRegalo,
-            int? librosMaestros,
-            int? librosAlumno,
-            int? posters,
-            int? nuevosTestamentos)
+            string tallerNombre = null, 
+            DateTime? tallerFecha = null, 
+            string tallerLugar = null, 
+            int? cantNinos = null, 
+            int? cantMaestrosReg = null, 
+            int? cantMaestrosAsist = null, 
+            int? cantMaestrosAus = null,
+            int? idEventoDespacho = null,
+            int? oportunidadesEvangelisticas = null,
+            int? librosMejorRegalo = null,
+            int? librosMaestros = null,
+            int? librosAlumno = null,
+            int? posters = null,
+            int? nuevosTestamentos = null)
         {
             Usuario u = (Usuario)Session["usuario"];
             Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
@@ -975,7 +986,88 @@ namespace SOR.Controllers
 
             try
             {
-                _iglesiaService.AvanzarEtapa5(idParticipacion, tallerNombre, tallerFecha, tallerLugar, cantNinos, cantMaestrosReg, cantMaestrosAsist, cantMaestrosAus, u.IdUsuario);
+                int cantOp = oportunidadesEvangelisticas.GetValueOrDefault(cantNinos.HasValue && cantNinos.Value > 0 ? cantNinos.Value : 50);
+                int cantRegalo = librosMejorRegalo.GetValueOrDefault(cantNinos.HasValue && cantNinos.Value > 0 ? cantNinos.Value : 50);
+                int cantAlum = librosAlumno.GetValueOrDefault(cantNinos.HasValue && cantNinos.Value > 0 ? cantNinos.Value : 50);
+                int cantMaest = librosMaestros.GetValueOrDefault(cantMaestrosAsist.HasValue && cantMaestrosAsist.Value > 0 ? cantMaestrosAsist.Value : (iglesia.Maestros.Any() ? iglesia.Maestros.Count : 5));
+                int cantNt = nuevosTestamentos.GetValueOrDefault(cantNinos.HasValue && cantNinos.Value > 0 ? cantNinos.Value : 50);
+                int cantPost = posters.GetValueOrDefault(10);
+
+                // Si se seleccionó un evento de despacho opcional, validar exhaustivamente en backend
+                if (idEventoDespacho.HasValue && idEventoDespacho.Value > 0)
+                {
+                    using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+                    {
+                        cn.Open();
+                        string sqlValEv = @"
+                            SELECT TOP 1 e.IdEvento, e.IdTemporada, e.TipoEvento, 
+                                   COALESCE(ed.IdEquipo, a.IdEquipo) AS IdEquipoEvento,
+                                   ISNULL(ed.EstadoDespachoEvento, 'PROGRAMADO') AS EstadoDespachoEvento
+                            FROM dbo.Eventos e
+                            LEFT JOIN dbo.EventosDespacho ed ON e.IdEvento = ed.IdEvento
+                            LEFT JOIN dbo.Usuarios u_cr ON e.IdUsuarioCreacion = u_cr.IdUsuario
+                            LEFT JOIN dbo.AsignacionesEquipo a ON u_cr.IdUsuario = a.IdUsuario AND a.Activo = 1
+                            WHERE e.IdEvento = @IdEv;";
+
+                        using (var cmdVal = new SqlCommand(sqlValEv, cn))
+                        {
+                            cmdVal.Parameters.AddWithValue("@IdEv", idEventoDespacho.Value);
+                            using (var drVal = cmdVal.ExecuteReader())
+                            {
+                                if (!drVal.Read())
+                                {
+                                    TempData["MensajeError"] = "El evento de despacho seleccionado no existe.";
+                                    return RedirectToAction("Detalle", new { id = idIglesia });
+                                }
+
+                                string tipoEv = drVal["TipoEvento"].ToString();
+                                if (!string.Equals(tipoEv, "Despacho", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    TempData["MensajeError"] = "El evento seleccionado no es de tipo Despacho de Materiales.";
+                                    return RedirectToAction("Detalle", new { id = idIglesia });
+                                }
+
+                                int idTempEv = Convert.ToInt32(drVal["IdTemporada"]);
+                                int idTempActiva = iglesia.ParticipacionActual != null ? iglesia.ParticipacionActual.IdTemporada : 1;
+                                if (idTempEv != idTempActiva)
+                                {
+                                    TempData["MensajeError"] = "El evento de despacho pertenece a una temporada diferente a la actual.";
+                                    return RedirectToAction("Detalle", new { id = idIglesia });
+                                }
+
+                                string estadoEv = drVal["EstadoDespachoEvento"].ToString();
+                                if (estadoEv == "CANCELADO" || estadoEv == "CERRADO" || estadoEv == "FINALIZADO")
+                                {
+                                    TempData["MensajeError"] = "El evento de despacho seleccionado se encuentra cerrado o finalizado y no puede recibir nuevas iglesias.";
+                                    return RedirectToAction("Detalle", new { id = idIglesia });
+                                }
+
+                                // Validación estricta del equipo del usuario autenticado
+                                if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue)
+                                {
+                                    int? idEquipoEvento = drVal["IdEquipoEvento"] != DBNull.Value ? Convert.ToInt32(drVal["IdEquipoEvento"]) : (int?)null;
+                                    if (idEquipoEvento.HasValue && idEquipoEvento.Value != u.IdEquipo.Value)
+                                    {
+                                        TempData["MensajeError"] = "Acceso denegado: El evento de despacho pertenece a otro equipo.";
+                                        return RedirectToAction("Detalle", new { id = idIglesia });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Preservar datos de participación existente al avanzar de etapa
+                var part = iglesia.ParticipacionActual;
+                string nombreTaller = !string.IsNullOrEmpty(tallerNombre) ? tallerNombre : ((part != null && !string.IsNullOrEmpty(part.TallerNombre)) ? part.TallerNombre : "Taller OCC");
+                DateTime? fechaTaller = tallerFecha.HasValue ? tallerFecha : ((part != null && part.TallerFecha.HasValue) ? part.TallerFecha : DateTime.Today);
+                string lugarTaller = !string.IsNullOrEmpty(tallerLugar) ? tallerLugar : ((part != null && !string.IsNullOrEmpty(part.TallerLugar)) ? part.TallerLugar : "Sede Central");
+                int ninosVal = (cantNinos.HasValue && cantNinos.Value > 0) ? cantNinos.Value : ((part != null && part.TallerCantNinos > 0) ? part.TallerCantNinos : cantOp);
+                int maestrosRegVal = (cantMaestrosReg.HasValue && cantMaestrosReg.Value > 0) ? cantMaestrosReg.Value : ((part != null && part.TallerCantMaestrosReg > 0) ? part.TallerCantMaestrosReg : (iglesia.Maestros.Any() ? iglesia.Maestros.Count : 1));
+                int maestrosAsistVal = (cantMaestrosAsist.HasValue && cantMaestrosAsist.Value > 0) ? cantMaestrosAsist.Value : ((part != null && part.TallerCantMaestrosAsist > 0) ? part.TallerCantMaestrosAsist : maestrosRegVal);
+                int maestrosAusVal = (cantMaestrosAus.HasValue && cantMaestrosAus.Value >= 0) ? cantMaestrosAus.Value : (part != null ? part.TallerCantMaestrosAus : 0);
+
+                _iglesiaService.AvanzarEtapa5(idParticipacion, nombreTaller, fechaTaller, lugarTaller, ninosVal, maestrosRegVal, maestrosAsistVal, maestrosAusVal, u.IdUsuario);
 
                 // Guardar / actualizar la asignación de materiales para despacho
                 using (var cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -1007,31 +1099,30 @@ namespace SOR.Controllers
                     using (var cmd = new SqlCommand(sqlAsig, cn))
                     {
                         cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
-                        cmd.Parameters.AddWithValue("@Oportunidades", oportunidadesEvangelisticas.HasValue ? oportunidadesEvangelisticas.Value : cantNinos);
-                        cmd.Parameters.AddWithValue("@Regalo", librosMejorRegalo.HasValue ? librosMejorRegalo.Value : cantNinos);
-                        cmd.Parameters.AddWithValue("@Maestros", librosMaestros.HasValue ? librosMaestros.Value : (cantMaestrosAsist > 0 ? cantMaestrosAsist : 5));
-                        cmd.Parameters.AddWithValue("@Alumno", librosAlumno.HasValue ? librosAlumno.Value : cantNinos);
-                        cmd.Parameters.AddWithValue("@Posters", posters.HasValue ? posters.Value : 10);
-                        cmd.Parameters.AddWithValue("@Testamentos", nuevosTestamentos.HasValue ? nuevosTestamentos.Value : cantNinos);
+                        cmd.Parameters.AddWithValue("@Oportunidades", cantOp);
+                        cmd.Parameters.AddWithValue("@Regalo", cantRegalo);
+                        cmd.Parameters.AddWithValue("@Maestros", cantMaest);
+                        cmd.Parameters.AddWithValue("@Alumno", cantAlum);
+                        cmd.Parameters.AddWithValue("@Posters", cantPost);
+                        cmd.Parameters.AddWithValue("@Testamentos", cantNt);
                         cmd.Parameters.AddWithValue("@IdEventoDespacho", idEventoDespacho.HasValue && idEventoDespacho.Value > 0 ? (object)idEventoDespacho.Value : DBNull.Value);
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Si se seleccionó un evento de despacho específico, programar la iglesia automáticamente
+                    // Si se seleccionó un evento de despacho específico, programar la iglesia de forma atómica
                     if (idEventoDespacho.HasValue && idEventoDespacho.Value > 0)
                     {
-                        try
-                        {
-                            var logisticaSvc = new SOR.Services.LogisticaService();
-                            int idEquipo = iglesia.IdEquipo;
-                            int idTemporada = iglesia.ParticipacionActual != null ? iglesia.ParticipacionActual.IdTemporada : 1;
-                            logisticaSvc.ProgramarIglesiaEnDespacho(idEventoDespacho.Value, idParticipacion, idIglesia, idEquipo, idTemporada, u.IdUsuario);
-                        }
-                        catch { /* Continuar sin error bloqueante */ }
+                        var logisticaSvc = new SOR.Services.LogisticaService();
+                        int idEquipo = iglesia.IdEquipo;
+                        int idTemporada = iglesia.ParticipacionActual != null ? iglesia.ParticipacionActual.IdTemporada : 1;
+                        logisticaSvc.ProgramarIglesiaEnDespacho(idEventoDespacho.Value, idParticipacion, idIglesia, idEquipo, idTemporada, u.IdUsuario);
+                        TempData["MensajeExito"] = "Materiales asignados y programación en el Evento de Despacho confirmada exitosamente.";
+                    }
+                    else
+                    {
+                        TempData["MensajeExito"] = "Materiales asignados exitosamente. La iglesia queda habilitada y disponible para posterior programación en un Evento de Despacho.";
                     }
                 }
-
-                TempData["MensajeExito"] = "Taller completado y materiales asignados exitosamente. La iglesia está lista y habilitada para despacho.";
             }
             catch (Exception ex)
             {
@@ -1736,7 +1827,7 @@ namespace SOR.Controllers
                         return Json(new
                         {
                             existe = true,
-                            mismoEquipo = mismoEquipo,
+                            mismoEquipo,
                             idIglesia = idIg,
                             nombreIglesia = nombreIg,
                             idEquipo = idEq,
@@ -1795,13 +1886,13 @@ namespace SOR.Controllers
                                 {
                                     existe = false,
                                     requiereExcepcion = true,
-                                    excepcionAprobada = excepcionAprobada,
+                                    excepcionAprobada,
                                     idIglesiaPrevia = idIgAnt,
                                     nombreIglesiaPrevia = nomIgAnt,
                                     nombreEquipoPrevia = nomEqAnt,
                                     temporadaPrevia = nomPrev,
                                     diferenciaTemporadas = diff,
-                                    minAnios = minAnios,
+                                    minAnios,
                                     mensaje = excepcionAprobada
                                         ? $"La iglesia '{nomIgAnt}' participó en la temporada '{nomPrev}' ({diff} temp. de diferencia), pero cuenta con una EXCEPCIÓN APROBADA (CE y CMI) para esta temporada."
                                         : $"ATENCIÓN: La iglesia '{nomIgAnt}' participó en la temporada reciente '{nomPrev}' ({diff} temp. de diferencia; mínimo requerido: {minAnios}). Requiere una excepción formal aprobada por CE y CMI para poder participar."
@@ -1899,8 +1990,7 @@ namespace SOR.Controllers
             }
 
             // Validar seguridad de archivos adjuntos
-            string errPastor, errLider;
-            if (!ValidarArchivoSeguroIglesia(docPastor, out errPastor))
+            if (!ValidarArchivoSeguroIglesia(docPastor, out string errPastor))
             {
                 TempData["MensajeError"] = "Cédula del Pastor: " + errPastor;
                 CargarEquiposDisponibles();
@@ -1908,7 +1998,7 @@ namespace SOR.Controllers
                 ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
                 return View(modelo);
             }
-            if (!ValidarArchivoSeguroIglesia(docLider, out errLider))
+            if (!ValidarArchivoSeguroIglesia(docLider, out string errLider))
             {
                 TempData["MensajeError"] = "Cédula del Líder: " + errLider;
                 CargarEquiposDisponibles();

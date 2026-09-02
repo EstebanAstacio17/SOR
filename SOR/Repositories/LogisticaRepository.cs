@@ -506,9 +506,46 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 3c. Kárdex de entrada
+                            // 3c. Si la recepción está asignada a un equipo o almacén de equipo, acreditar en InventarioEquipo
+                            int? idEquipoReceptorFinal = (modelo.IdEquipoReceptor.HasValue && modelo.IdEquipoReceptor.Value > 0) ? modelo.IdEquipoReceptor : null;
+                            if (!idEquipoReceptorFinal.HasValue)
+                            {
+                                using (var cmdAlmEq = new SqlCommand("SELECT TOP 1 IdEquipo FROM dbo.AlmacenesEquipos WHERE IdAlmacen = @IdAlm;", cn, tran))
+                                {
+                                    cmdAlmEq.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
+                                    object valEq = cmdAlmEq.ExecuteScalar();
+                                    if (valEq != null && valEq != DBNull.Value)
+                                    {
+                                        idEquipoReceptorFinal = Convert.ToInt32(valEq);
+                                    }
+                                }
+                            }
+
+                            if (idEquipoReceptorFinal.HasValue && idEquipoReceptorFinal.Value > 0)
+                            {
+                                string sqlEquipo = @"
+                                    MERGE dbo.InventarioEquipo WITH (UPDLOCK, ROWLOCK) AS tgt
+                                    USING (SELECT @IdTemp AS IdTemporada, @IdEq AS IdEquipo, @IdMat AS IdMaterial) AS src
+                                    ON tgt.IdTemporada = src.IdTemporada AND tgt.IdEquipo = src.IdEquipo AND tgt.IdMaterial = src.IdMaterial
+                                    WHEN MATCHED THEN
+                                        UPDATE SET CantidadRecibida = tgt.CantidadRecibida + @Total,
+                                                   CantidadDisponible = tgt.CantidadDisponible + @Total
+                                    WHEN NOT MATCHED THEN
+                                        INSERT (IdTemporada, IdEquipo, IdMaterial, CantidadRecibida, CantidadAsignada, CantidadDespachada, CantidadDisponible)
+                                        VALUES (@IdTemp, @IdEq, @IdMat, @Total, 0, 0, @Total);";
+                                using (var cmdEquipo = new SqlCommand(sqlEquipo, cn, tran))
+                                {
+                                    cmdEquipo.Parameters.AddWithValue("@IdTemp", idTemporada);
+                                    cmdEquipo.Parameters.AddWithValue("@IdEq", idEquipoReceptorFinal.Value);
+                                    cmdEquipo.Parameters.AddWithValue("@IdMat", det.IdMaterial);
+                                    cmdEquipo.Parameters.AddWithValue("@Total", totalUnidades);
+                                    cmdEquipo.ExecuteNonQuery();
+                                }
+                            }
+
+                            // 3d. Kárdex de entrada
                             RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_CONTENEDOR", det.IdMaterial,
-                                totalUnidades, null, modelo.IdAlmacen, null, null,
+                                totalUnidades, null, modelo.IdAlmacen, idEquipoReceptorFinal, null,
                                 "REC-" + idRecepcion, idUsuario, $"Recepción de contenedor #{modelo.NumeroContenedor} en almacén ID {modelo.IdAlmacen}");
                         }
 
@@ -1134,6 +1171,58 @@ namespace SOR.Repositories
             var lista = new List<ItemInventarioEquipo>();
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
+                cn.Open();
+
+                // Asegurar columna e índices si faltaran
+                using (var cmdCol = new SqlCommand("IF COL_LENGTH('dbo.RecepcionesContenedor', 'IdEquipoReceptor') IS NULL ALTER TABLE dbo.RecepcionesContenedor ADD IdEquipoReceptor INT NULL;", cn))
+                {
+                    cmdCol.ExecuteNonQuery();
+                }
+
+                // Auto-sincronizar recepciones de contenedor y transferencias hacia InventarioEquipo
+                string sqlSync = @"
+                    MERGE dbo.InventarioEquipo AS tgt
+                    USING (
+                        SELECT t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial, SUM(t_all.TotalRecibido) AS TotalRecibido
+                        FROM (
+                            -- 1. Recepciones directas de contenedor
+                            SELECT rc.IdTemporada, 
+                                   COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) AS IdEquipo, 
+                                   rd.IdMaterial,
+                                   SUM(rd.CantidadEmpaques * rd.UnidadesPorEmpaque) AS TotalRecibido
+                            FROM dbo.RecepcionesContenedor rc
+                            INNER JOIN dbo.RecepcionesContenedorDetalle rd ON rc.IdRecepcion = rd.IdRecepcion
+                            LEFT JOIN dbo.AlmacenesEquipos ae ON rc.IdAlmacen = ae.IdAlmacen
+                            WHERE rc.EstadoRecepcion != 'ANULADA'
+                              AND COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) IS NOT NULL
+                            GROUP BY rc.IdTemporada, COALESCE(rc.IdEquipoReceptor, ae.IdEquipo), rd.IdMaterial
+
+                            UNION ALL
+
+                            -- 2. Transferencias recibidas
+                            SELECT te.IdTemporada,
+                                   te.IdEquipo AS IdEquipo,
+                                   td.IdMaterial,
+                                   SUM(td.CantidadUnidades) AS TotalRecibido
+                            FROM dbo.TransferenciasEquipo te
+                            INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
+                            WHERE te.Estado IN ('RECIBIDA', 'COMPLETADA')
+                            GROUP BY te.IdTemporada, te.IdEquipo, td.IdMaterial
+                        ) t_all
+                        GROUP BY t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial
+                    ) AS src
+                    ON tgt.IdTemporada = src.IdTemporada AND tgt.IdEquipo = src.IdEquipo AND tgt.IdMaterial = src.IdMaterial
+                    WHEN MATCHED THEN
+                        UPDATE SET CantidadRecibida = src.TotalRecibido,
+                                   CantidadDisponible = src.TotalRecibido - tgt.CantidadDespachada
+                    WHEN NOT MATCHED THEN
+                        INSERT (IdTemporada, IdEquipo, IdMaterial, CantidadRecibida, CantidadAsignada, CantidadDespachada, CantidadDisponible)
+                        VALUES (src.IdTemporada, src.IdEquipo, src.IdMaterial, src.TotalRecibido, 0, 0, src.TotalRecibido);";
+                using (var cmdSync = new SqlCommand(sqlSync, cn))
+                {
+                    cmdSync.ExecuteNonQuery();
+                }
+
                 string sql = @"
                     SELECT ie.*, t.NombreTemporada, eq.NombreEquipo, m.Codigo, m.NombreMaterial, m.UnidadEntrega
                     FROM dbo.InventarioEquipo ie
@@ -1143,7 +1232,6 @@ namespace SOR.Repositories
                     WHERE (@IdTemp IS NULL OR ie.IdTemporada = @IdTemp)
                       AND (@IdEq IS NULL OR ie.IdEquipo = @IdEq)
                     ORDER BY eq.NombreEquipo, m.Codigo;";
-                cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
                     cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
@@ -1593,9 +1681,11 @@ namespace SOR.Repositories
                     SELECT 
                         (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='OE') AS IdMat_OE,
                         (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='MR') AS IdMat_MR,
-                        (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='PO') AS IdMat_PO,
+                        (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='GA') AS IdMat_GA,
+                        (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='GM') AS IdMat_GM,
                         (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='NT') AS IdMat_NT,
-                        ar.OportunidadesEvangelisticas, ar.LibrosMejorRegalo, ar.Posters, ar.NuevosTestamentos
+                        (SELECT IdMaterial FROM dbo.Materiales WHERE Codigo='PO') AS IdMat_PO,
+                        ar.OportunidadesEvangelisticas, ar.LibrosMejorRegalo, ar.LibrosAlumno, ar.LibrosMaestros, ar.NuevosTestamentos, ar.Posters
                     FROM dbo.AsignacionesRecursos ar WHERE ar.IdParticipacion = @IdPart;";
                 using (var cmd = new SqlCommand(sqlMats, cn))
                 {
@@ -1608,14 +1698,16 @@ namespace SOR.Repositories
                             {
                                 (dr["IdMat_OE"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_OE"]) : 0, Convert.ToInt32(dr["OportunidadesEvangelisticas"])),
                                 (dr["IdMat_MR"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_MR"]) : 0, Convert.ToInt32(dr["LibrosMejorRegalo"])),
-                                (dr["IdMat_PO"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_PO"]) : 0, Convert.ToInt32(dr["Posters"])),
-                                (dr["IdMat_NT"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_NT"]) : 0, Convert.ToInt32(dr["NuevosTestamentos"]))
+                                (dr["IdMat_GA"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_GA"]) : 0, Convert.ToInt32(dr["LibrosAlumno"])),
+                                (dr["IdMat_GM"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_GM"]) : 0, Convert.ToInt32(dr["LibrosMaestros"])),
+                                (dr["IdMat_NT"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_NT"]) : 0, Convert.ToInt32(dr["NuevosTestamentos"])),
+                                (dr["IdMat_PO"] != DBNull.Value ? Convert.ToInt32(dr["IdMat_PO"]) : 0, Convert.ToInt32(dr["Posters"]))
                             };
                             dr.Close();
                             string sqlDetIns = @"INSERT INTO dbo.DespachosIglesiaDetalle (IdDespachoIglesia, IdMaterial, CantidadAsignada, CantidadDespachada) VALUES (@IdD, @IdM, @Cant, 0);";
                             foreach (var (idMat, cant) in pares)
                             {
-                                if (idMat == 0 || cant <= 0) continue;
+                                if (idMat == 0 || cant < 0) continue;
                                 using (var cmdIns = new SqlCommand(sqlDetIns, cn))
                                 {
                                     cmdIns.Parameters.AddWithValue("@IdD", idDespacho);
@@ -2155,12 +2247,48 @@ namespace SOR.Repositories
                 }
                 if (item == null) return null;
 
-                // Cargar materiales
+                // Sincronizar / auto-completar materiales asignados que falten en el detalle del despacho
+                string sqlSync = @"
+                    INSERT INTO dbo.DespachosIglesiaDetalle (IdDespachoIglesia, IdMaterial, CantidadAsignada, CantidadDespachada)
+                    SELECT di.IdDespachoIglesia, m.IdMaterial, 
+                           CASE m.Codigo
+                               WHEN 'OE' THEN ISNULL(ar.OportunidadesEvangelisticas, 0)
+                               WHEN 'MR' THEN ISNULL(ar.LibrosMejorRegalo, 0)
+                               WHEN 'GA' THEN ISNULL(ar.LibrosAlumno, 0)
+                               WHEN 'GM' THEN ISNULL(ar.LibrosMaestros, 0)
+                               WHEN 'NT' THEN ISNULL(ar.NuevosTestamentos, 0)
+                               WHEN 'PO' THEN ISNULL(ar.Posters, 0)
+                               ELSE 0
+                           END, 0
+                    FROM dbo.DespachosIglesia di
+                    INNER JOIN dbo.AsignacionesRecursos ar ON di.IdParticipacion = ar.IdParticipacion
+                    CROSS JOIN dbo.Materiales m
+                    WHERE di.IdDespachoIglesia = @Id
+                      AND m.Codigo IN ('OE', 'MR', 'GA', 'GM', 'NT', 'PO')
+                      AND NOT EXISTS (
+                          SELECT 1 FROM dbo.DespachosIglesiaDetalle dd 
+                          WHERE dd.IdDespachoIglesia = di.IdDespachoIglesia AND dd.IdMaterial = m.IdMaterial
+                      );";
+                using (var cmdSync = new SqlCommand(sqlSync, cn))
+                {
+                    cmdSync.Parameters.AddWithValue("@Id", idDespachoIglesia);
+                    cmdSync.ExecuteNonQuery();
+                }
+
+                // Cargar materiales ordenados según flujo oficial
                 string sqlDet = @"
                     SELECT d.*, m.Codigo, m.NombreMaterial, m.UnidadEntrega
                     FROM dbo.DespachosIglesiaDetalle d
                     INNER JOIN dbo.Materiales m ON d.IdMaterial = m.IdMaterial
-                    WHERE d.IdDespachoIglesia = @Id;";
+                    WHERE d.IdDespachoIglesia = @Id
+                    ORDER BY CASE m.Codigo
+                        WHEN 'OE' THEN 1
+                        WHEN 'MR' THEN 2
+                        WHEN 'GA' THEN 3
+                        WHEN 'GM' THEN 4
+                        WHEN 'NT' THEN 5
+                        WHEN 'PO' THEN 6
+                        ELSE 7 END;";
                 using (var cmd = new SqlCommand(sqlDet, cn))
                 {
                     cmd.Parameters.AddWithValue("@Id", idDespachoIglesia);

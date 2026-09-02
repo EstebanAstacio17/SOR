@@ -400,9 +400,9 @@ namespace SOR.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult RegistrarTransferencia(int idEquipo, int idAlmacenOrigen, DateTime fechaTransferencia,
-            int? idEquipoEmisor, DateTime? fechaEmision, DateTime? fechaRecepcion,
-            string coordinadorEmisor, string personaReceptoraEquipo, string observaciones, string detallesJson)
+        public ActionResult RegistrarTransferencia(int idEquipo, int idAlmacenOrigen, DateTime? fechaTransferencia = null,
+            int? idEquipoEmisor = null, DateTime? fechaEmision = null, DateTime? fechaRecepcion = null,
+            string coordinadorEmisor = null, string personaReceptoraEquipo = null, string observaciones = null, string detallesJson = null)
         {
             Usuario u = (Usuario)Session["usuario"];
             try
@@ -422,7 +422,7 @@ namespace SOR.Controllers
                     return RedirectToAction("Transferencias");
                 }
 
-                DateTime fEmision = fechaEmision ?? (fechaTransferencia != DateTime.MinValue ? fechaTransferencia : DateTime.Now);
+                DateTime fEmision = fechaEmision ?? fechaTransferencia ?? DateTime.Now;
                 if (fechaRecepcion.HasValue && fechaRecepcion.Value < fEmision)
                 {
                     TempData["MensajeError"] = "La fecha de recepción no puede ser anterior a la fecha de emisión.";
@@ -465,12 +465,13 @@ namespace SOR.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult ConfirmarRecepcion(int idTransferencia, DateTime fechaRecepcion, string personaReceptora, int? idUsuarioReceptor)
+        public ActionResult ConfirmarRecepcion(int idTransferencia, DateTime? fechaRecepcion = null, string personaReceptora = null, int? idUsuarioReceptor = null)
         {
             Usuario u = (Usuario)Session["usuario"];
             try
             {
-                _svc.ConfirmarRecepcionTransferencia(idTransferencia, fechaRecepcion, personaReceptora, idUsuarioReceptor, u.IdUsuario);
+                DateTime fRec = fechaRecepcion ?? DateTime.Now;
+                _svc.ConfirmarRecepcionTransferencia(idTransferencia, fRec, personaReceptora, idUsuarioReceptor, u.IdUsuario);
                 TempData["MensajeExito"] = "Recepción de materiales confirmada exitosamente.";
             }
             catch (Exception ex)
@@ -516,6 +517,9 @@ namespace SOR.Controllers
             ViewBag.UsuarioActual = u;
             ViewBag.IdTemporadaActiva = idTemp;
 
+            bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+
             var equipos = new List<SelectListItem>();
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -526,7 +530,9 @@ namespace SOR.Controllers
                         equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
             }
             ViewBag.Equipos = equipos;
-            return View(_svc.ObtenerInventarioEquipo(idTemp, u?.IdEquipo));
+
+            int? idEquipoFiltro = (esAdmin || esCL) ? (int?)null : u?.IdEquipo;
+            return View(_svc.ObtenerInventarioEquipo(idTemp, idEquipoFiltro));
         }
 
         // =====================================================================

@@ -873,10 +873,8 @@ namespace SOR.Controllers
             // Asegurar objetos por defecto no nulos
             foreach (var item in lista)
             {
-                if (item.Pastor == null)
-                    item.Pastor = new PersonaIglesia { TipoPersona = "Pastor", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
-                if (item.LiderMinisterial == null)
-                    item.LiderMinisterial = new PersonaIglesia { TipoPersona = "LiderMinisterial", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
+                item.Pastor = item.Pastor ?? new PersonaIglesia { TipoPersona = "Pastor", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
+                item.LiderMinisterial = item.LiderMinisterial ?? new PersonaIglesia { TipoPersona = "LiderMinisterial", Nombres = "", Apellidos = "", DocumentoIdentidad = "", Celular = "", Correo = "" };
             }
 
             return lista;

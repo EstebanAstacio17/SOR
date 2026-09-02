@@ -71,18 +71,11 @@
                 <div class="info-item">
                     <label>Equipos Servidos / Alcance</label>
                     <span>
-                        @if (!string.IsNullOrEmpty(Model.NombreEquipoReceptor))
-                        {
-                            @Model.NombreEquipoReceptor
-                        }
-                        else if (Model.NombresEquiposAlmacen != null && Model.NombresEquiposAlmacen.Any())
-                        {
-                            @string.Join(", ", Model.NombresEquiposAlmacen)
-                        }
-                        else
-                        {
-                            @("Almacén Central / Uso Nacional")
-                        }
+                        @( !string.IsNullOrEmpty(Model.NombreEquipoReceptor)
+                            ? Model.NombreEquipoReceptor
+                            : (Model.NombresEquiposAlmacen != null && Model.NombresEquiposAlmacen.Any()
+                                ? string.Join(", ", Model.NombresEquiposAlmacen)
+                                : "Almacén Central / Uso Nacional") )
                     </span>
                 </div>
                 <div class="info-item" style="grid-column: span 2;"><label>Observaciones</label><span>@(string.IsNullOrEmpty(Model.Observaciones) ? "Sin observaciones adicionales registradas." : Model.Observaciones)</span></div>
