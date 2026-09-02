@@ -240,6 +240,9 @@ namespace SOR.Models
         public int NuevosTestamentos { get; set; }
         public DateTime? FechaDespacho { get; set; }
         public int? IdUsuarioDespacho { get; set; }
+        public string EstadoAsignacion { get; set; }
+        public DateTime? FechaDisponibleDespacho { get; set; }
+        public int? IdEventoDespachoActual { get; set; }
     }
 
     public class ComentarioIglesia

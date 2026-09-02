@@ -363,7 +363,10 @@ namespace SOR.Repositories
                                 LibrosMaestros = drPart["LibrosMaestros"] != DBNull.Value ? Convert.ToInt32(drPart["LibrosMaestros"]) : 0,
                                 LibrosAlumno = drPart["LibrosAlumno"] != DBNull.Value ? Convert.ToInt32(drPart["LibrosAlumno"]) : 0,
                                 Posters = drPart["Posters"] != DBNull.Value ? Convert.ToInt32(drPart["Posters"]) : 0,
-                                NuevosTestamentos = drPart["NuevosTestamentos"] != DBNull.Value ? Convert.ToInt32(drPart["NuevosTestamentos"]) : 0
+                                NuevosTestamentos = drPart["NuevosTestamentos"] != DBNull.Value ? Convert.ToInt32(drPart["NuevosTestamentos"]) : 0,
+                                EstadoAsignacion = drPart["EstadoAsignacion"] != DBNull.Value ? drPart["EstadoAsignacion"].ToString() : "ASIGNADO",
+                                FechaDisponibleDespacho = drPart["FechaDisponibleDespacho"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["FechaDisponibleDespacho"]) : null,
+                                IdEventoDespachoActual = drPart["IdEventoDespachoActual"] != DBNull.Value ? (int?)Convert.ToInt32(drPart["IdEventoDespachoActual"]) : null
                             };
                         }
                     }

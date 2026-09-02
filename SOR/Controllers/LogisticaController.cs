@@ -1,0 +1,705 @@
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Web.Mvc;
+using Newtonsoft.Json;
+using SOR.Models;
+using SOR.Permisos;
+using SOR.Services;
+
+namespace SOR.Controllers
+{
+    [ValidarSesion]
+    public class LogisticaController : Controller
+    {
+        private readonly LogisticaService _svc = new LogisticaService();
+
+        private static string ObtenerCadenaConexion()
+        {
+            if (ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
+                return ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
+            return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
+        }
+
+        private int ObtenerTemporadaActiva()
+        {
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var cmd = new SqlCommand("SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;", cn))
+                {
+                    object val = cmd.ExecuteScalar();
+                    return val != null ? Convert.ToInt32(val) : 0;
+                }
+            }
+        }
+
+        // =====================================================================
+        // DASHBOARD / INDEX
+        // =====================================================================
+
+        public ActionResult Index()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemporada = ObtenerTemporadaActiva();
+            int? idEquipo = u?.IdEquipo;
+
+            var vm = new DashboardLogistico
+            {
+                InventarioCentral = _svc.ObtenerInventarioCentral(idTemporada),
+                InventarioEquipo = _svc.ObtenerInventarioEquipo(idTemporada, idEquipo),
+                TotalEventosDespacho = _svc.ObtenerEventosDespacho(idTemporada, idEquipo).Count
+            };
+
+            // Contar iglesias disponibles y despachadas
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlTemp = "SELECT NombreTemporada FROM dbo.Temporadas WHERE IdTemporada=@Id;";
+                using (var cmd = new SqlCommand(sqlTemp, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idTemporada);
+                    object val = cmd.ExecuteScalar();
+                    vm.NombreTemporada = val != null ? val.ToString() : "";
+                }
+                using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.AsignacionesRecursos WHERE EstadoAsignacion IN ('ASIGNADO','DISPONIBLE_PARA_DESPACHO');", cn))
+                    vm.TotalIglesiasDisponiblesDespacho = Convert.ToInt32(cmd.ExecuteScalar());
+                using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.AsignacionesRecursos WHERE EstadoAsignacion='DESPACHADA';", cn))
+                    vm.TotalIglesiasDespachadas = Convert.ToInt32(cmd.ExecuteScalar());
+            }
+
+            ViewBag.UsuarioActual = u;
+            return View(vm);
+        }
+
+        // =====================================================================
+        // ALMACENES
+        // =====================================================================
+
+        public ActionResult Almacenes()
+        {
+            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect();
+            
+            // Cargar Equipos disponibles
+            var equipos = new List<SelectListItem>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;", cn))
+                using (var dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        equipos.Add(new SelectListItem 
+                        { 
+                            Value = dr["IdEquipo"].ToString(), 
+                            Text = dr["NombreEquipo"].ToString() 
+                        });
+                    }
+                }
+            }
+            ViewBag.EquiposDisponibles = equipos;
+
+            return View(_svc.ObtenerAlmacenes(false));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult GuardarAlmacen(Almacen modelo, int[] idsEquiposSeleccionados)
+        {
+            try
+            {
+                if (idsEquiposSeleccionados != null && idsEquiposSeleccionados.Length > 0)
+                {
+                    modelo.IdsEquipos = new List<int>(idsEquiposSeleccionados);
+                }
+                _svc.GuardarAlmacen(modelo);
+                TempData["MensajeExito"] = modelo.IdAlmacen == 0 ? "Almacén creado exitosamente." : "Almacén actualizado correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al guardar el almacén: " + ex.Message;
+            }
+            return RedirectToAction("Almacenes");
+        }
+
+        // =====================================================================
+        // PRESENTACIONES
+        // =====================================================================
+
+        public ActionResult Presentaciones(int? idTemporada)
+        {
+            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            ViewBag.Materiales = _svc.ObtenerMateriales(false);
+
+            // Cargar lista de Temporadas para el selector
+            var temporadas = new List<SelectListItem>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlT = "SELECT IdTemporada, NombreTemporada, Activa FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;";
+                using (var cmd = new SqlCommand(sqlT, cn))
+                using (var dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        bool activa = Convert.ToBoolean(dr["Activa"]);
+                        temporadas.Add(new SelectListItem
+                        {
+                            Value = dr["IdTemporada"].ToString(),
+                            Text = dr["NombreTemporada"].ToString() + (activa ? " (Activa)" : "")
+                        });
+                    }
+                }
+            }
+            ViewBag.Temporadas = temporadas;
+            ViewBag.IdTemporadaSeleccionada = idTemporada;
+
+            return View(_svc.ObtenerPresentaciones(false, idTemporada));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult GuardarPresentacion(PresentacionMaterial modelo)
+        {
+            try
+            {
+                if (modelo.UnidadesPorEmpaque <= 0)
+                {
+                    TempData["MensajeError"] = "Las unidades por empaque deben ser mayores a cero.";
+                    return RedirectToAction("Presentaciones", new { idTemporada = modelo.IdTemporadaVigencia });
+                }
+
+                _svc.GuardarPresentacion(modelo);
+                TempData["MensajeExito"] = modelo.IdPresentacion == 0 ? "Presentación registrada correctamente." : "Presentación actualizada correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al guardar la presentación: " + ex.Message;
+            }
+            return RedirectToAction("Presentaciones", new { idTemporada = modelo.IdTemporadaVigencia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AlternarEstadoPresentacion(int idPresentacion, bool activo, int? idTemporada)
+        {
+            try
+            {
+                _svc.AlternarEstadoPresentacion(idPresentacion, activo);
+                TempData["MensajeExito"] = activo ? "Presentación habilitada exitosamente." : "Presentación inhabilitada exitosamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al cambiar el estado: " + ex.Message;
+            }
+            return RedirectToAction("Presentaciones", new { idTemporada = idTemporada });
+        }
+
+        // =====================================================================
+        // RECEPCIONES DE CONTENEDORES
+        // =====================================================================
+
+        public ActionResult Recepciones()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            ViewBag.UsuarioActual = u;
+            ViewBag.Materiales = _svc.ObtenerMateriales();
+            ViewBag.Presentaciones = _svc.ObtenerPresentaciones();
+            ViewBag.Almacenes = _svc.ObtenerAlmacenes();
+            ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect();
+            ViewBag.IdTemporadaActiva = idTemp;
+            return View(_svc.ObtenerRecepciones(idTemp));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RegistrarRecepcion(string numeroContenedor, int idAlmacen, DateTime fechaRecepcion,
+            string responsableRecepcion, string observaciones, string detallesJson)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                var detalles = string.IsNullOrEmpty(detallesJson)
+                    ? new List<RecepcionContenedorDetalle>()
+                    : JsonConvert.DeserializeObject<List<RecepcionContenedorDetalle>>(detallesJson);
+
+                var modelo = new RecepcionContenedor
+                {
+                    NumeroContenedor = numeroContenedor,
+                    IdAlmacen = idAlmacen,
+                    FechaRecepcion = fechaRecepcion,
+                    ResponsableRecepcion = responsableRecepcion,
+                    Observaciones = observaciones,
+                    Detalles = detalles
+                };
+
+                int idRec = _svc.RegistrarRecepcion(modelo, u.IdUsuario);
+                TempData["MensajeExito"] = $"Contenedor registrado exitosamente (ID #{idRec}).";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar la recepción: " + ex.Message;
+            }
+            return RedirectToAction("Recepciones");
+        }
+
+        public ActionResult ComprobanteRecepcion(int id)
+        {
+            var modelo = _svc.ObtenerRecepcionDetalle(id);
+            if (modelo == null) return HttpNotFound();
+            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            return View(modelo);
+        }
+
+        // =====================================================================
+        // INVENTARIO CENTRAL
+        // =====================================================================
+
+        public ActionResult InventarioCentral()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            ViewBag.UsuarioActual = u;
+            ViewBag.Almacenes = _svc.ObtenerAlmacenes();
+            ViewBag.IdTemporadaActiva = idTemp;
+            return View(_svc.ObtenerInventarioCentral(idTemp));
+        }
+
+        // =====================================================================
+        // TRANSFERENCIAS A EQUIPOS
+        // =====================================================================
+
+        public ActionResult Transferencias()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            ViewBag.UsuarioActual = u;
+            ViewBag.Materiales = _svc.ObtenerMateriales();
+            ViewBag.Almacenes = _svc.ObtenerAlmacenes();
+            ViewBag.IdTemporadaActiva = idTemp;
+
+            // Equipos
+            var equipos = new List<SelectListItem>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;", cn))
+                using (var dr = cmd.ExecuteReader())
+                    while (dr.Read())
+                        equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+            }
+            ViewBag.Equipos = equipos;
+            ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect();
+            return View(_svc.ObtenerTransferencias(idTemp));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RegistrarTransferencia(int idEquipo, int idAlmacenOrigen, DateTime fechaTransferencia,
+            string coordinadorEmisor, string personaReceptoraEquipo, string observaciones, string detallesJson)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                var detalles = string.IsNullOrEmpty(detallesJson)
+                    ? new List<TransferenciaEquipoDetalle>()
+                    : JsonConvert.DeserializeObject<List<TransferenciaEquipoDetalle>>(detallesJson);
+
+                var modelo = new TransferenciaEquipo
+                {
+                    IdEquipo = idEquipo,
+                    IdAlmacenOrigen = idAlmacenOrigen,
+                    FechaTransferencia = fechaTransferencia,
+                    CoordinadorEmisor = coordinadorEmisor,
+                    PersonaReceptoraEquipo = personaReceptoraEquipo,
+                    Observaciones = observaciones,
+                    Detalles = detalles
+                };
+
+                int idTransf = _svc.RegistrarTransferencia(modelo, u.IdUsuario);
+                TempData["MensajeExito"] = $"Transferencia registrada exitosamente (ID #{idTransf}).";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar la transferencia: " + ex.Message;
+            }
+            return RedirectToAction("Transferencias");
+        }
+
+        public ActionResult ConstanciaEquipo(int id)
+        {
+            var modelo = _svc.ObtenerTransferenciaDetalle(id);
+            if (modelo == null) return HttpNotFound();
+            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            return View(modelo);
+        }
+
+        // =====================================================================
+        // INVENTARIO POR EQUIPO
+        // =====================================================================
+
+        public ActionResult InventarioEquipos()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            ViewBag.UsuarioActual = u;
+            ViewBag.IdTemporadaActiva = idTemp;
+
+            var equipos = new List<SelectListItem>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;", cn))
+                using (var dr = cmd.ExecuteReader())
+                    while (dr.Read())
+                        equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+            }
+            ViewBag.Equipos = equipos;
+            return View(_svc.ObtenerInventarioEquipo(idTemp, u?.IdEquipo));
+        }
+
+        // =====================================================================
+        // EVENTOS DE DESPACHO (REDIRECCIÓN AL MÓDULO CENTRAL DE EVENTOS)
+        // =====================================================================
+
+        public ActionResult EventosDespacho()
+        {
+            return RedirectToAction("Index", "Eventos");
+        }
+
+        public ActionResult DetalleEventoDespacho(int id)
+        {
+            return RedirectToAction("Detalle", "Eventos", new { id = id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CrearEventoDespacho(int idEvento, int? idAlmacen)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                if (!u.IdEquipo.HasValue) throw new InvalidOperationException("El usuario no tiene un equipo asignado.");
+                _svc.CrearEventoDespacho(idEvento, u.IdEquipo.Value, idAlmacen, u.IdUsuario);
+                TempData["MensajeExito"] = "Evento de despacho configurado correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error: " + ex.Message;
+            }
+            return RedirectToAction("EventosDespacho");
+        }
+
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ProgramarIglesiaEnDespacho(int idEvento, int idParticipacion, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                int idTemp = ObtenerTemporadaActiva();
+                if (!u.IdEquipo.HasValue) throw new InvalidOperationException("El usuario no tiene un equipo asignado.");
+                _svc.ProgramarIglesiaEnDespacho(idEvento, idParticipacion, idIglesia, u.IdEquipo.Value, idTemp, u.IdUsuario);
+                TempData["MensajeExito"] = "Iglesia agregada al evento de despacho.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error: " + ex.Message;
+            }
+            return RedirectToAction("DetalleEventoDespacho", new { id = idEvento });
+        }
+
+        // =====================================================================
+        // CONFIRMAR DESPACHO (CÉDULA EN MANO)
+        // =====================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEvento)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                int idTemp = ObtenerTemporadaActiva();
+                if (!u.IdEquipo.HasValue) throw new InvalidOperationException("El usuario no tiene un equipo asignado.");
+                string nombre = u.Correo ?? "Coordinador";
+                _svc.ConfirmarDespacho(vm, u.IdEquipo.Value, idTemp, u.IdUsuario, nombre);
+                TempData["MensajeExito"] = "Despacho confirmado exitosamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al confirmar el despacho: " + ex.Message;
+            }
+            return RedirectToAction("DetalleEventoDespacho", new { id = idEvento });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult MarcarNoDespacho(NoDespachoBecauseViewModel vm, int idEvento)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                _svc.MarcarNoDespacho(vm, u.IdUsuario);
+                TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. Queda disponible para reprogramación.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error: " + ex.Message;
+            }
+            return RedirectToAction("DetalleEventoDespacho", new { id = idEvento });
+        }
+
+        public ActionResult ComprobanteDespachoIglesia(int id)
+        {
+            var modelo = _svc.ObtenerDespachoDetalle(id);
+            if (modelo == null) return HttpNotFound();
+            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            return View(modelo);
+        }
+
+        // =====================================================================
+        // KÁRDEX
+        // =====================================================================
+
+        public ActionResult Kardex()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            ViewBag.UsuarioActual = u;
+            ViewBag.Materiales = _svc.ObtenerMateriales();
+            ViewBag.IdTemporadaActiva = idTemp;
+            return View(_svc.ObtenerKardex(idTemp));
+        }
+
+        // =====================================================================
+        // COORDINADORES EN EVENTO DE DESPACHO
+        // =====================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RegistrarCoordinadorEvento(int idEvento, int idUsuario)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    // Verificar no duplicado
+                    using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.CoordinadoresEventoDespacho WHERE IdEvento=@IdEv AND IdUsuario=@IdU;", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@IdEv", idEvento);
+                        cmd.Parameters.AddWithValue("@IdU", idUsuario);
+                        if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
+                        {
+                            TempData["MensajeError"] = "Este coordinador ya está registrado en el evento.";
+                            return RedirectToAction("DetalleEventoDespacho", new { id = idEvento });
+                        }
+                    }
+                    using (var cmd = new SqlCommand(
+                        "INSERT INTO dbo.CoordinadoresEventoDespacho (IdEvento, IdUsuario, Presente) VALUES (@IdEv, @IdU, 1);", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@IdEv", idEvento);
+                        cmd.Parameters.AddWithValue("@IdU", idUsuario);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                TempData["MensajeExito"] = "Coordinador registrado en el evento.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error: " + ex.Message;
+            }
+            return RedirectToAction("DetalleEventoDespacho", new { id = idEvento });
+        }
+
+        // =====================================================================
+        // API JSON — OBTENER INVENTARIO DEL EQUIPO (para dinámico en modal)
+        // =====================================================================
+
+        [HttpGet]
+        public JsonResult ObtenerStockEquipo(int idMaterial)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            int stock = 0;
+            if (u?.IdEquipo.HasValue == true)
+            {
+                using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    using (var cmd = new SqlCommand(
+                        "SELECT ISNULL(CantidadDisponible,0) FROM dbo.InventarioEquipo WHERE IdTemporada=@T AND IdEquipo=@Eq AND IdMaterial=@M;", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@T", idTemp);
+                        cmd.Parameters.AddWithValue("@Eq", u.IdEquipo.Value);
+                        cmd.Parameters.AddWithValue("@M", idMaterial);
+                        object val = cmd.ExecuteScalar();
+                        stock = val != null && val != DBNull.Value ? Convert.ToInt32(val) : 0;
+                    }
+                }
+            }
+            return Json(new { stock }, JsonRequestBehavior.AllowGet);
+        }
+
+        // =====================================================================
+        // API JSON — IGLESIAS DISPONIBLES PARA DESPACHO (para modal dinámico)
+        // =====================================================================
+
+        [HttpGet]
+        public JsonResult IglesiasDisponibles()
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            int idTemp = ObtenerTemporadaActiva();
+            if (u?.IdEquipo == null) return Json(new List<object>(), JsonRequestBehavior.AllowGet);
+
+            var lista = _svc.ObtenerIglesiasDisponiblesDespacho(u.IdEquipo.Value, idTemp);
+            var result = new List<object>();
+            foreach (var item in lista)
+            {
+                result.Add(new
+                {
+                    item.IdParticipacion,
+                    item.IdIglesia,
+                    item.NombreIglesia,
+                    item.DireccionIglesia
+                });
+            }
+            return Json(result, JsonRequestBehavior.AllowGet);
+        }
+
+        // =====================================================================
+        // API JSON — MATERIALES DE UN DESPACHO ESPECÍFICO
+        // =====================================================================
+
+        [HttpGet]
+        public JsonResult ObtenerDespachoMateriales(int id)
+        {
+            var despacho = _svc.ObtenerDespachoDetalle(id);
+            if (despacho == null) return Json(new { materiales = new List<object>() }, JsonRequestBehavior.AllowGet);
+            var mats = new List<object>();
+            foreach (var m in despacho.Materiales)
+            {
+                mats.Add(new
+                {
+                    m.IdMaterial,
+                    m.CodigoMaterial,
+                    m.NombreMaterial,
+                    m.UnidadEntrega,
+                    m.CantidadAsignada,
+                    m.CantidadDespachada
+                });
+            }
+            return Json(new
+            {
+                idDespacho = despacho.IdDespachoIglesia,
+                nombreIglesia = despacho.NombreIglesia,
+                nombrePastor = despacho.NombrePastor ?? "",
+                cedulaPastor = despacho.CedulaPastor ?? "",
+                telefonoPastor = despacho.TelefonoPastor ?? "",
+                nombreLider = despacho.NombreLiderMinisterial ?? "",
+                cedulaLider = despacho.CedulaLiderMinisterial ?? "",
+                telefonoLider = despacho.TelefonoLiderMinisterial ?? "",
+                tipoReceptor = despacho.TipoReceptor ?? "PASTOR",
+                nombreReceptor = despacho.NombreReceptor ?? "",
+                documentoIdentidadReceptor = despacho.DocumentoIdentidadReceptor ?? "",
+                telefonoReceptor = despacho.TelefonoReceptor ?? "",
+                materiales = mats
+            }, JsonRequestBehavior.AllowGet);
+        }
+
+        // =====================================================================
+        // API JSON — EVENTOS DISPONIBLES PARA DESPACHO (tipo Despacho)
+        // =====================================================================
+
+        [HttpGet]
+        public JsonResult EventosDisponiblesParaDespacho()
+        {
+            int idTemp = ObtenerTemporadaActiva();
+            var result = new List<object>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = @"
+                    SELECT e.IdEvento, e.NombreEvento, e.Fecha, e.Lugar
+                    FROM dbo.Eventos e
+                    WHERE e.IdTemporada = @IdTemp
+                      AND e.TipoEvento = 'Despacho'
+                      AND NOT EXISTS (SELECT 1 FROM dbo.EventosDespacho ed WHERE ed.IdEvento = e.IdEvento)
+                    ORDER BY e.Fecha DESC;";
+                using (var cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdTemp", idTemp);
+                    using (var dr = cmd.ExecuteReader())
+                        while (dr.Read())
+                            result.Add(new
+                            {
+                                IdEvento = Convert.ToInt32(dr["IdEvento"]),
+                                NombreEvento = dr["NombreEvento"].ToString(),
+                                Fecha = dr["Fecha"] != System.DBNull.Value ? Convert.ToDateTime(dr["Fecha"]).ToString("dd/MM/yyyy") : "",
+                                Lugar = dr["Lugar"] != System.DBNull.Value ? dr["Lugar"].ToString() : ""
+                            });
+                }
+            }
+            return Json(result, JsonRequestBehavior.AllowGet);
+        }
+
+        private List<SelectListItem> ObtenerUsuariosCoordinadoresSelect(int? idEquipo = null)
+        {
+            var lista = new List<SelectListItem>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = @"
+                    SELECT u.IdUsuario, u.Correo, p.PrimerNombre, p.PrimerApellido, eq.NombreEquipo, pos.NombrePosicion
+                    FROM dbo.Usuarios u
+                    LEFT JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
+                    LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                    LEFT JOIN dbo.Equipos eq ON a.IdEquipo = eq.IdEquipo
+                    LEFT JOIN dbo.PosicionesOCC pos ON COALESCE(a.IdPosicion, p.IdPosicion) = pos.IdPosicion
+                    WHERE u.IdEstado = 4 " +
+                    (idEquipo.HasValue ? " AND (a.IdEquipo = @IdEquipo OR a.IdEquipo IS NULL) " : "") +
+                    @"ORDER BY ISNULL(p.PrimerNombre, u.Correo);";
+
+                using (var cmd = new SqlCommand(sql, cn))
+                {
+                    if (idEquipo.HasValue) cmd.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            string correo = dr["Correo"].ToString();
+                            string pNombre = dr["PrimerNombre"] != DBNull.Value ? dr["PrimerNombre"].ToString().Trim() : "";
+                            string pApellido = dr["PrimerApellido"] != DBNull.Value ? dr["PrimerApellido"].ToString().Trim() : "";
+                            string nombreCompleto = (pNombre + " " + pApellido).Trim();
+                            string pos = dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString().Trim() : "";
+                            string equipo = dr["NombreEquipo"] != DBNull.Value ? dr["NombreEquipo"].ToString().Trim() : "";
+
+                            string val = !string.IsNullOrEmpty(nombreCompleto) ? nombreCompleto : correo;
+                            string label = !string.IsNullOrEmpty(nombreCompleto) ? nombreCompleto : correo;
+
+                            List<string> meta = new List<string>();
+                            if (!string.IsNullOrEmpty(pos)) meta.Add(pos);
+                            if (!string.IsNullOrEmpty(equipo)) meta.Add(equipo);
+
+                            if (meta.Count > 0)
+                            {
+                                label += " (" + string.Join(" - ", meta) + ")";
+                            }
+
+                            lista.Add(new SelectListItem { Value = val, Text = label });
+                        }
+                    }
+                }
+            }
+            return lista;
+        }
+    }
+}

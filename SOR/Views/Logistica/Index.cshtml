@@ -1,0 +1,179 @@
+@model SOR.Models.DashboardLogistico
+@{
+    ViewBag.Title = "Logística — Centro de Materiales OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var u = ViewBag.UsuarioActual as SOR.Models.Usuario;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1" style="color:var(--apple-text-primary)">
+                <i class="bi bi-boxes me-2" style="color:var(--apple-accent)"></i>Centro de Logística y Materiales
+            </h1>
+            <p class="text-muted mb-0 small">Temporada activa: <strong>@Model.NombreTemporada</strong></p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@Url.Action("Recepciones","Logistica")" class="btn btn-primary btn-sm">
+                <i class="bi bi-truck-front me-1"></i>Nueva Recepción
+            </a>
+            <a href="@Url.Action("EventosDespacho","Logistica")" class="btn btn-success btn-sm">
+                <i class="bi bi-send-check me-1"></i>Eventos de Despacho
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(0,113,227,0.1)">
+                            <i class="bi bi-archive fs-5" style="color:var(--apple-accent)"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted">Materiales en Central</div>
+                            <div class="h4 fw-bold mb-0">@(Model.InventarioCentral?.Count ?? 0)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(52,199,89,0.1)">
+                            <i class="bi bi-check2-circle fs-5" style="color:var(--apple-success)"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted">Iglesias Despachadas</div>
+                            <div class="h4 fw-bold mb-0">@Model.TotalIglesiasDespachadas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(255,149,0,0.1)">
+                            <i class="bi bi-hourglass-split fs-5" style="color:var(--apple-warning)"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted">Disponibles p/Despacho</div>
+                            <div class="h4 fw-bold mb-0">@Model.TotalIglesiasDisponiblesDespacho</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(0,113,227,0.08)">
+                            <i class="bi bi-calendar-event fs-5" style="color:var(--apple-accent)"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted">Eventos de Despacho</div>
+                            <div class="h4 fw-bold mb-0">@Model.TotalEventosDespacho</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventario Central -->
+    @if (Model.InventarioCentral != null && Model.InventarioCentral.Count > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Inventario Central</h6>
+                <a href="@Url.Action("InventarioCentral","Logistica")" class="btn btn-sm btn-outline-primary">Ver detalle</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Material</th>
+                            <th>Almacén</th>
+                            <th class="text-center">Físico</th>
+                            <th class="text-center">Transferido</th>
+                            <th class="text-center">Disponible</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.InventarioCentral)
+                        {
+                            <tr>
+                                <td><span class="badge bg-primary me-2">@item.CodigoMaterial</span>@item.NombreMaterial</td>
+                                <td class="text-muted">@item.NombreAlmacen</td>
+                                <td class="text-center">@item.CantidadFisica.ToString("N0") <small class="text-muted">@item.UnidadEntrega</small></td>
+                                <td class="text-center">@item.CantidadTransferida.ToString("N0")</td>
+                                <td class="text-center">
+                                    <span class="fw-semibold @(item.CantidadDisponible > 0 ? "text-success" : "text-danger")">
+                                        @item.CantidadDisponible.ToString("N0")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- Menú de Accesos Rápidos -->
+    <div class="row g-3">
+        @{
+            var modulos = new[]
+            {
+                new { Icon = "bi-building", Titulo = "Almacenes", Desc = "Gestionar puntos de recepción", Url = Url.Action("Almacenes","Logistica"), Color = "#5856D6" },
+                new { Icon = "bi-box-seam", Titulo = "Presentaciones", Desc = "Tipos de empaque por material", Url = Url.Action("Presentaciones","Logistica"), Color = "#FF9500" },
+                new { Icon = "bi-truck-front", Titulo = "Recepciones", Desc = "Registrar contenedores recibidos", Url = Url.Action("Recepciones","Logistica"), Color = "#007AFF" },
+                new { Icon = "bi-arrow-left-right", Titulo = "Transferencias", Desc = "Enviar materiales a equipos", Url = Url.Action("Transferencias","Logistica"), Color = "#34C759" },
+                new { Icon = "bi-layers", Titulo = "Inv. por Equipo", Desc = "Stock disponible en el equipo", Url = Url.Action("InventarioEquipos","Logistica"), Color = "#30B0C7" },
+                new { Icon = "bi-send-check", Titulo = "Eventos Despacho", Desc = "Gestionar entregas en módulo Eventos", Url = Url.Action("Index","Eventos"), Color = "#FF3B30" },
+                new { Icon = "bi-journal-text", Titulo = "Kárdex", Desc = "Trazabilidad de movimientos", Url = Url.Action("Kardex","Logistica"), Color = "#8E8E93" }
+            };
+        }
+        @foreach (var m in modulos)
+        {
+            <div class="col-sm-6 col-md-4 col-xl-3">
+                <a href="@m.Url" class="text-decoration-none">
+                    <div class="card h-100 modulo-card" style="border-left:3px solid @m.Color !important; transition:all .2s ease;">
+                        <div class="card-body p-3">
+                            <i class="bi @m.Icon fs-4 mb-2 d-block" style="color:@m.Color"></i>
+                            <div class="fw-semibold small">@m.Titulo</div>
+                            <div class="text-muted" style="font-size:0.75rem">@m.Desc</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .modulo-card:hover { transform:translateY(-3px); box-shadow:var(--apple-shadow-md) !important; }
+</style>

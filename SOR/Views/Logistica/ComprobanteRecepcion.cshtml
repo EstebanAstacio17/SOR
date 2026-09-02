@@ -1,0 +1,98 @@
+@model SOR.Models.RecepcionContenedor
+@{
+    ViewBag.Title = "Comprobante de Recepción — " + Model.NumeroContenedor;
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Comprobante de Recepción — @Model.NumeroContenedor</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Helvetica Neue',Arial,sans-serif; font-size:12px; color:#1a1a1a; background:#fff; }
+        .page { max-width:720px; margin:0 auto; padding:30px; }
+        .header { border-bottom:2px solid #003580; padding-bottom:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start; }
+        .logo-zona h1 { font-size:18px; font-weight:700; color:#003580; }
+        .logo-zona p { font-size:11px; color:#666; }
+        .doc-zona { text-align:right; }
+        .doc-zona .num { font-size:14px; font-weight:700; color:#003580; }
+        .section { margin-bottom:20px; }
+        .section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#003580; border-bottom:1px solid #e0e0e0; padding-bottom:4px; margin-bottom:10px; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; }
+        .info-item label { font-size:10px; color:#666; display:block; }
+        .info-item span { font-weight:600; }
+        table { width:100%; border-collapse:collapse; }
+        th { background:#f0f4ff; font-size:10px; font-weight:700; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid #ccc; }
+        td { padding:6px 8px; border-bottom:1px dotted #e0e0e0; }
+        .text-right { text-align:right; }
+        .footer { margin-top:30px; padding-top:12px; border-top:1px solid #eee; font-size:10px; color:#888; text-align:center; }
+        .no-print { margin:20px auto; max-width:720px; padding:0 30px; }
+        @@media print { .no-print { display:none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()" style="background:#003580;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:8px;">🖨️ Imprimir / PDF</button>
+        <button onclick="window.close()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Cerrar</button>
+    </div>
+    <div class="page">
+        <div class="header">
+            <div class="logo-zona">
+                <h1>OCC — Comprobante de Recepción</h1>
+                <p>Sistema de Gestión Logística</p>
+                <p>Temporada: @Model.NombreTemporada</p>
+            </div>
+            <div class="doc-zona">
+                <div class="num">Contenedor: @Model.NumeroContenedor</div>
+                <div>Recepción #@Model.IdRecepcion</div>
+                <div style="margin-top:4px"><span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">@Model.EstadoRecepcion</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Datos de la Recepción</div>
+            <div class="info-grid">
+                <div class="info-item"><label>Número de Contenedor</label><span>@Model.NumeroContenedor</span></div>
+                <div class="info-item"><label>Almacén de Destino</label><span>@Model.NombreAlmacen</span></div>
+                <div class="info-item"><label>Fecha de Recepción</label><span>@Model.FechaRecepcion.ToString("dd/MM/yyyy")</span></div>
+                <div class="info-item"><label>Fecha de Registro</label><span>@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</span></div>
+                <div class="info-item"><label>Responsable</label><span>@(string.IsNullOrEmpty(Model.ResponsableRecepcion) ? "—" : Model.ResponsableRecepcion)</span></div>
+                <div class="info-item"><label>Observaciones</label><span>@(string.IsNullOrEmpty(Model.Observaciones) ? "—" : Model.Observaciones)</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Detalle de Materiales Recibidos</div>
+            <table>
+                <thead>
+                    <tr><th>Código</th><th>Material</th><th>Empaque</th><th class="text-right">Empaques</th><th class="text-right">Uds/Empaque</th><th class="text-right">Total Unidades</th></tr>
+                </thead>
+                <tbody>
+                    @{ int totalGeneral = 0; }
+                    @foreach (var d in Model.Detalles)
+                    {
+                        totalGeneral += d.CantidadTotalUnidades;
+                        <tr>
+                            <td><strong>@d.CodigoMaterial</strong></td>
+                            <td>@d.NombreMaterial</td>
+                            <td>@d.TipoEmpaque</td>
+                            <td class="text-right">@d.CantidadEmpaques.ToString("N0")</td>
+                            <td class="text-right">@d.UnidadesPorEmpaque.ToString("N0")</td>
+                            <td class="text-right" style="font-weight:700">@d.CantidadTotalUnidades.ToString("N0")</td>
+                        </tr>
+                    }
+                    <tr style="background:#f0f4ff">
+                        <td colspan="5" style="font-weight:700;text-align:right">TOTAL DE UNIDADES RECIBIDAS:</td>
+                        <td class="text-right" style="font-weight:700;font-size:14px">@totalGeneral.ToString("N0")</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            Documento generado por el Sistema de Gestión OCC · @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+        </div>
+    </div>
+</body>
+</html>

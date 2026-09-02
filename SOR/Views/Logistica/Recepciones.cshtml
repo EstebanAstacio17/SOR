@@ -1,0 +1,251 @@
+@model IEnumerable<SOR.Models.RecepcionContenedor>
+@{
+    ViewBag.Title = "Recepción de Contenedores — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var materiales = ViewBag.Materiales as IEnumerable<SOR.Models.Material> ?? new List<SOR.Models.Material>();
+    var presentaciones = ViewBag.Presentaciones as IEnumerable<SOR.Models.PresentacionMaterial> ?? new List<SOR.Models.PresentacionMaterial>();
+    var almacenes = ViewBag.Almacenes as IEnumerable<SOR.Models.Almacen> ?? new List<SOR.Models.Almacen>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-truck-front me-2" style="color:var(--apple-accent)"></i>Recepción de Contenedores</h1>
+            <nav aria-label="breadcrumb"><ol class="breadcrumb small mb-0"><li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li><li class="breadcrumb-item active">Recepciones</li></ol></nav>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaRecepcion">
+            <i class="bi bi-plus-lg me-1"></i>Registrar Contenedor
+        </button>
+    </div>
+
+    @if (TempData["MensajeExito"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+    @if (TempData["MensajeError"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+    <div class="card">
+        <div class="card-header"><h6 class="mb-0 fw-semibold">Historial de Recepciones</h6></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaRecepciones">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Contenedor</th>
+                        <th>Almacén</th>
+                        <th>Temporada</th>
+                        <th>Fecha Recepción</th>
+                        <th>Responsable</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay recepciones registradas</td></tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td class="text-muted">#@r.IdRecepcion</td>
+                            <td class="fw-semibold">@r.NumeroContenedor</td>
+                            <td>@r.NombreAlmacen</td>
+                            <td>@r.NombreTemporada</td>
+                            <td>@r.FechaRecepcion.ToString("dd/MM/yyyy")</td>
+                            <td class="text-muted">@r.ResponsableRecepcion</td>
+                            <td><span class="badge @(r.EstadoRecepcion == "CONFIRMADA" ? "bg-success" : r.EstadoRecepcion == "ANULADA" ? "bg-danger" : "bg-warning")">@r.EstadoRecepcion</span></td>
+                            <td class="text-center">
+                                <a href="@Url.Action("ComprobanteRecepcion","Logistica", new{id=r.IdRecepcion})" class="btn btn-sm btn-outline-secondary" target="_blank" title="Ver Comprobante">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Recepción -->
+<div class="modal fade" id="modalNuevaRecepcion" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold"><i class="bi bi-truck-front me-2"></i>Registrar Recepción de Contenedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("RegistrarRecepcion", "Logistica", FormMethod.Post, new { id = "formRecepcion" }))
+            {
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Número de Contenedor <span class="text-danger">*</span></label>
+                            <input type="text" name="numeroContenedor" id="numeroContenedor" class="form-control" placeholder="ej. CONT-2025-001" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Almacén de Destino <span class="text-danger">*</span></label>
+                            <select name="idAlmacen" id="idAlmacen" class="form-select" required>
+                                <option value="">— Seleccionar —</option>
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.IdAlmacen">@a.NombreAlmacen</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha de Recepción <span class="text-danger">*</span></label>
+                            <input type="date" name="fechaRecepcion" id="fechaRecepcion" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Responsable de Recepción <span class="text-danger">*</span></label>
+                            @{
+                                var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+                            }
+                            @if (usuariosResp.Any())
+                            {
+                                <select name="responsableRecepcion" class="form-select" required>
+                                    <option value="">— Seleccionar Responsable / Coordinador —</option>
+                                    @foreach (var ur in usuariosResp)
+                                    {
+                                        <option value="@ur.Value">@ur.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" name="responsableRecepcion" class="form-control" placeholder="Nombre del responsable" required />
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Observaciones</label>
+                            <input type="text" name="observaciones" class="form-control" placeholder="Notas adicionales" />
+                        </div>
+                    </div>
+
+                    <!-- Líneas de materiales -->
+                    <div class="border rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-semibold mb-0">Materiales del Contenedor</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAgregarLinea">
+                                <i class="bi bi-plus me-1"></i>Agregar Material
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0" id="tablaLineas">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>Presentación / Empaque</th>
+                                        <th style="width:130px">Cant. Empaques</th>
+                                        <th class="text-center">Unidades</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoLineas">
+                                    <tr id="placeholder-linea"><td colspan="5" class="text-center text-muted py-3">Agregue al menos un material</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <input type="hidden" name="detallesJson" id="detallesJson" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarRecepcion">
+                        <i class="bi bi-save me-1"></i>Registrar Contenedor
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var materiales = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+        ((IEnumerable<SOR.Models.Material>)ViewBag.Materiales).Select(m => new {
+            m.IdMaterial, m.NombreMaterial, m.Codigo,
+            presentaciones = m.Presentaciones.Select(p => new { p.IdPresentacion, p.TipoEmpaque, p.UnidadesPorEmpaque })
+        })
+    ));
+    var lineas = [];
+
+    document.getElementById('btnAgregarLinea').addEventListener('click', function () {
+        var fila = document.createElement('tr');
+        var id = Date.now();
+        fila.id = 'linea-' + id;
+        fila.innerHTML =
+            '<td><select class="form-select form-select-sm sel-material" data-id="' + id + '">' +
+                '<option value="">— Material —</option>' +
+                materiales.map(function(m){ return '<option value="' + m.IdMaterial + '" data-presentaciones=\'' + JSON.stringify(m.presentaciones) + '\'>' + m.Codigo + ' — ' + m.NombreMaterial + '</option>'; }).join('') +
+            '</select></td>' +
+            '<td><select class="form-select form-select-sm sel-presentacion" data-id="' + id + '"><option value="">— Presentación —</option></select></td>' +
+            '<td><input type="number" class="form-control form-control-sm inp-empaques" data-id="' + id + '" min="1" value="1" /></td>' +
+            '<td class="text-center"><span class="badge bg-secondary lbl-unidades" data-id="' + id + '">—</span></td>' +
+            '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById(\'linea-' + id + '\').remove(); actualizarJson();"><i class="bi bi-trash3"></i></button></td>';
+        var ph = document.getElementById('placeholder-linea');
+        if (ph) ph.remove();
+        document.getElementById('cuerpoLineas').appendChild(fila);
+        attachHandlers(id);
+    });
+
+    function attachHandlers(id) {
+        var selMat = document.querySelector('.sel-material[data-id="' + id + '"]');
+        var selPres = document.querySelector('.sel-presentacion[data-id="' + id + '"]');
+        var inpEmp = document.querySelector('.inp-empaques[data-id="' + id + '"]');
+        var lblUds = document.querySelector('.lbl-unidades[data-id="' + id + '"]');
+
+        selMat.addEventListener('change', function () {
+            var opt = selMat.options[selMat.selectedIndex];
+            var pres = opt.dataset.presentaciones ? JSON.parse(opt.dataset.presentaciones) : [];
+            selPres.innerHTML = '<option value="">— Presentación —</option>' +
+                pres.map(function(p){ return '<option value="' + p.idPresentacion + '" data-uds="' + p.unidadesPorEmpaque + '">' + p.tipoEmpaque + ' (' + p.unidadesPorEmpaque + ' unidades)</option>'; }).join('');
+            calcularUnidades(inpEmp, selPres, lblUds);
+            actualizarJson();
+        });
+        selPres.addEventListener('change', function () { calcularUnidades(inpEmp, selPres, lblUds); actualizarJson(); });
+        inpEmp.addEventListener('input', function () { calcularUnidades(inpEmp, selPres, lblUds); actualizarJson(); });
+    }
+
+    function calcularUnidades(inpEmp, selPres, lblUds) {
+        var opt = selPres.options[selPres.selectedIndex];
+        var uds = opt && opt.dataset.uds ? parseInt(opt.dataset.uds) : 0;
+        var empaques = parseInt(inpEmp.value) || 0;
+        var total = uds * empaques;
+        lblUds.textContent = total > 0 ? total.toLocaleString() : '—';
+        lblUds.className = 'badge ' + (total > 0 ? 'bg-primary' : 'bg-secondary') + ' lbl-unidades';
+    }
+
+    window.actualizarJson = function () {
+        var result = [];
+        document.querySelectorAll('[data-id]').forEach(function (el) {
+            if (el.classList.contains('sel-material')) {
+                var id = el.dataset.id;
+                var idMat = el.value;
+                var selPres = document.querySelector('.sel-presentacion[data-id="' + id + '"]');
+                var inpEmp = document.querySelector('.inp-empaques[data-id="' + id + '"]');
+                if (!idMat || !selPres || !selPres.value) return;
+                var opt = selPres.options[selPres.selectedIndex];
+                result.push({
+                    IdMaterial: parseInt(idMat),
+                    IdPresentacion: parseInt(selPres.value),
+                    CantidadEmpaques: parseInt(inpEmp.value) || 0,
+                    UnidadesPorEmpaque: opt ? parseInt(opt.dataset.uds) : 0
+                });
+            }
+        });
+        document.getElementById('detallesJson').value = JSON.stringify(result);
+    };
+
+    document.getElementById('formRecepcion').addEventListener('submit', function (e) {
+        actualizarJson();
+        var detalles = JSON.parse(document.getElementById('detallesJson').value || '[]');
+        if (detalles.length === 0) {
+            e.preventDefault();
+            alert('Debe agregar al menos un material al contenedor.');
+        }
+    });
+})();
+</script>
+}

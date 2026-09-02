@@ -1,0 +1,221 @@
+@model IEnumerable<SOR.Models.TransferenciaEquipo>
+@{
+    ViewBag.Title = "Transferencias a Equipos — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var materiales = ViewBag.Materiales as IEnumerable<SOR.Models.Material> ?? new List<SOR.Models.Material>();
+    var almacenes = ViewBag.Almacenes as IEnumerable<SOR.Models.Almacen> ?? new List<SOR.Models.Almacen>();
+    var equipos = ViewBag.Equipos as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-arrow-left-right me-2" style="color:var(--apple-accent)"></i>Transferencias a Equipos</h1>
+            <nav aria-label="breadcrumb"><ol class="breadcrumb small mb-0">
+                <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                <li class="breadcrumb-item active">Transferencias</li>
+            </ol></nav>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTransf">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Transferencia
+        </button>
+    </div>
+
+    @if (TempData["MensajeExito"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+    @if (TempData["MensajeError"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+    <div class="card">
+        <div class="card-header"><h6 class="mb-0 fw-semibold">Historial de Transferencias</h6></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Constancia</th><th>Equipo</th><th>Almacén</th><th>Fecha</th><th>Receptor</th><th>Estado</th><th class="text-center">Comprobante</th></tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay transferencias registradas</td></tr>
+                    }
+                    @foreach (var t in Model)
+                    {
+                        <tr>
+                            <td><code>@t.NumeroConstancia</code></td>
+                            <td class="fw-semibold">@t.NombreEquipo</td>
+                            <td class="text-muted">@t.NombreAlmacenOrigen</td>
+                            <td>@t.FechaTransferencia.ToString("dd/MM/yyyy")</td>
+                            <td class="text-muted">@t.PersonaReceptoraEquipo</td>
+                            <td><span class="badge bg-success">@t.Estado</span></td>
+                            <td class="text-center">
+                                <a href="@Url.Action("ConstanciaEquipo","Logistica", new{id=t.IdTransferencia})" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Transferencia -->
+<div class="modal fade" id="modalNuevaTransf" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold"><i class="bi bi-arrow-left-right me-2"></i>Registrar Transferencia a Equipo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("RegistrarTransferencia", "Logistica", FormMethod.Post, new { id = "formTransf" }))
+            {
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Equipo Destino <span class="text-danger">*</span></label>
+                            <select name="idEquipo" class="form-select" required>
+                                <option value="">— Seleccionar —</option>
+                                @foreach (var eq in ViewBag.Equipos as IEnumerable<System.Web.Mvc.SelectListItem> ?? new List<System.Web.Mvc.SelectListItem>())
+                                {
+                                    <option value="@eq.Value">@eq.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Almacén Origen <span class="text-danger">*</span></label>
+                            <select name="idAlmacenOrigen" class="form-select" required>
+                                <option value="">— Seleccionar —</option>
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.IdAlmacen">@a.NombreAlmacen</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha de Transferencia <span class="text-danger">*</span></label>
+                            <input type="date" name="fechaTransferencia" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        @{
+                            var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+                        }
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Coordinador Emisor (Entrega)</label>
+                            @if (usuariosResp.Any())
+                            {
+                                <select name="coordinadorEmisor" class="form-select">
+                                    <option value="">— Seleccionar Coordinador Emisor —</option>
+                                    @foreach (var ur in usuariosResp)
+                                    {
+                                        <option value="@ur.Value">@ur.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" name="coordinadorEmisor" class="form-control" placeholder="Nombre del coordinador que entrega" />
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Persona Receptora (Recibe en Equipo)</label>
+                            @if (usuariosResp.Any())
+                            {
+                                <select name="personaReceptoraEquipo" class="form-select">
+                                    <option value="">— Seleccionar Integrante / Coordinador Receptor —</option>
+                                    @foreach (var ur in usuariosResp)
+                                    {
+                                        <option value="@ur.Value">@ur.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" name="personaReceptoraEquipo" class="form-control" placeholder="Nombre de quien recibe en el equipo" />
+                            }
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Observaciones</label>
+                            <input type="text" name="observaciones" class="form-control" placeholder="Notas opcionales" />
+                        </div>
+                    </div>
+
+                    <div class="border rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-semibold mb-0">Materiales a Transferir</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAgregarMaterialTransf">
+                                <i class="bi bi-plus me-1"></i>Agregar Material
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr><th>Material</th><th style="width:160px">Cantidad (unidades)</th><th></th></tr>
+                                </thead>
+                                <tbody id="cuerpoTransf">
+                                    <tr id="placeholder-transf"><td colspan="3" class="text-center text-muted py-3">Agregue materiales a transferir</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <input type="hidden" name="detallesJson" id="detallesTransfJson" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Registrar Transferencia</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var materialesDisp = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+        ((IEnumerable<SOR.Models.Material>)ViewBag.Materiales).Select(m => new { m.IdMaterial, m.NombreMaterial, m.Codigo, m.UnidadEntrega })
+    ));
+
+    document.getElementById('btnAgregarMaterialTransf').addEventListener('click', function () {
+        var ph = document.getElementById('placeholder-transf');
+        if (ph) ph.remove();
+        var id = Date.now();
+        var fila = document.createElement('tr');
+        fila.id = 'transfLinea-' + id;
+        fila.innerHTML =
+            '<td><select class="form-select form-select-sm sel-transf-mat" data-id="' + id + '">' +
+                '<option value="">— Material —</option>' +
+                materialesDisp.map(function(m){ return '<option value="' + m.IdMaterial + '" data-uds="' + m.unidadEntrega + '">' + m.Codigo + ' — ' + m.NombreMaterial + '</option>'; }).join('') +
+            '</select></td>' +
+            '<td><div class="input-group input-group-sm">' +
+                '<input type="number" class="form-control inp-transf-cant" data-id="' + id + '" min="1" value="1" />' +
+                '<span class="input-group-text lbl-transf-uds" data-id="' + id + '">uds</span>' +
+            '</div></td>' +
+            '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById(\'transfLinea-' + id + '\').remove(); actualizarTransfJson();"><i class="bi bi-trash3"></i></button></td>';
+        document.getElementById('cuerpoTransf').appendChild(fila);
+
+        fila.querySelector('.sel-transf-mat').addEventListener('change', function(){
+            var opt = this.options[this.selectedIndex];
+            fila.querySelector('.lbl-transf-uds').textContent = opt ? opt.dataset.uds : 'uds';
+            actualizarTransfJson();
+        });
+        fila.querySelector('.inp-transf-cant').addEventListener('input', actualizarTransfJson);
+    });
+
+    window.actualizarTransfJson = function () {
+        var result = [];
+        document.querySelectorAll('.sel-transf-mat').forEach(function (sel) {
+            var id = sel.dataset.id;
+            var inp = document.querySelector('.inp-transf-cant[data-id="' + id + '"]');
+            if (!sel.value) return;
+            result.push({ IdMaterial: parseInt(sel.value), CantidadUnidades: parseInt(inp.value) || 0 });
+        });
+        document.getElementById('detallesTransfJson').value = JSON.stringify(result);
+    };
+
+    document.getElementById('formTransf').addEventListener('submit', function (e) {
+        actualizarTransfJson();
+        var d = JSON.parse(document.getElementById('detallesTransfJson').value || '[]');
+        if (d.length === 0) { e.preventDefault(); alert('Debe agregar al menos un material para transferir.'); }
+    });
+})();
+</script>
+}

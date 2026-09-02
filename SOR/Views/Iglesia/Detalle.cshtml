@@ -103,8 +103,17 @@
         @if (Model.RecursosActuales != null)
         {
             <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
-                <h5 class="h6 font-bold text-slate-800 mb-3 border-bottom pb-2"><i class="bi bi-box-seam me-2 text-warning"></i>Asignación de Recursos</h5>
-                <div class="row g-2 text-center">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h5 class="h6 font-bold text-slate-800 mb-0"><i class="bi bi-box-seam me-2 text-warning"></i>Asignación de Recursos</h5>
+                    @if (!string.IsNullOrEmpty(Model.RecursosActuales.EstadoAsignacion))
+                    {
+                        string badgeClass = Model.RecursosActuales.EstadoAsignacion == "DESPACHADA" ? "bg-success" :
+                                            Model.RecursosActuales.EstadoAsignacion == "PROGRAMADA_DESPACHO" ? "bg-primary" :
+                                            Model.RecursosActuales.EstadoAsignacion == "DISPONIBLE_PARA_DESPACHO" ? "bg-info text-dark" : "bg-secondary";
+                        <span class="badge @badgeClass text-xxs px-2 py-1">@Model.RecursosActuales.EstadoAsignacion.Replace("_", " ")</span>
+                    }
+                </div>
+                <div class="row g-2 text-center mb-3">
                     <div class="col-6">
                         <div class="p-2 border rounded bg-slate-50">
                             <span class="d-block h4 mb-0 text-slate-800">@Model.RecursosActuales.OportunidadesEvangelisticas</span>
@@ -129,6 +138,11 @@
                             <small class="text-slate-500 text-xxs font-semibold uppercase">Libros Alumno</small>
                         </div>
                     </div>
+                </div>
+                <div class="d-grid">
+                    <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-primary btn-sm font-semibold">
+                        <i class="bi bi-send-check me-1"></i>Gestionar Despacho en Eventos
+                    </a>
                 </div>
             </div>
         }
@@ -546,11 +560,65 @@
                                 <span class="badge bg-warning-soft px-3 py-2"><i class="bi bi-lock me-1"></i>Requiere rol de CD, CE o Admin para finalizar recursos</span>
                             }
                         }
-                        else if (part.EtapaActual >= 7) // APROBACIÓN FINAL
+                        else if (part.EtapaActual >= 7) // APROBACIÓN FINAL & LOGÍSTICA
                         {
-                            <div class="alert alert-success mb-0 py-3 shadow-sm rounded-3">
+                            <div class="alert alert-success mb-3 py-3 shadow-sm rounded-3">
                                 <h6 class="font-bold mb-1"><i class="bi bi-patch-check-fill me-2 text-success"></i>¡Proceso Completado y Aprobado!</h6>
-                                <p class="small mb-0 mt-1">Esta iglesia ha completado satisfactoriamente todas las etapas de la temporada. Se han asignado los recursos y la participación está finalizada.</p>
+                                <p class="small mb-0 mt-1">Esta iglesia ha completado satisfactoriamente todas las etapas de la temporada. Se han asignado los recursos y está habilitada para el retiro de materiales en el Evento de Despacho.</p>
+                            </div>
+                            
+                            <div class="card border-0 bg-white shadow-sm rounded-3 p-3 mb-0 border-start border-4 border-primary">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                    <div>
+                                        <h6 class="font-bold text-dark mb-1"><i class="bi bi-truck-front text-primary me-2"></i>Estado de Despacho Presencial</h6>
+                                        <div class="small text-muted">
+                                            @if (Model.RecursosActuales != null && Model.RecursosActuales.EstadoAsignacion == "DESPACHADA")
+                                            {
+                                                <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Materiales Despachados</span>
+                                                <span> (Retirados por el Pastor o Líder Ministerial)</span>
+                                            }
+                                            else if (Model.RecursosActuales != null && Model.RecursosActuales.EstadoAsignacion == "PROGRAMADA_DESPACHO")
+                                            {
+                                                <span class="text-primary fw-bold"><i class="bi bi-calendar-check me-1"></i>Programada en Evento de Despacho</span>
+                                                <span> — Pendiente de entrega presencial con cédula en mano.</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-info fw-bold"><i class="bi bi-box-seam me-1"></i>Disponible para Despacho</span>
+                                                <span> — Lista para ser agregada a un Evento de Despacho de su equipo.</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-secondary font-semibold" data-bs-toggle="modal" data-bs-target="#modalCompletarTaller">
+                                                <i class="bi bi-pencil-square me-1"></i>Editar Asignación
+                                            </button>
+                                        }
+                                        <a href="@Url.Action("Index", "Eventos")" class="btn btn-sm btn-primary font-semibold shadow-sm">
+                                            <i class="bi bi-send-check me-1"></i>Ir a Eventos de Despacho
+                                        </a>
+                                        <a href="@Url.Action("Index", "Logistica")" class="btn btn-sm btn-outline-secondary font-semibold">
+                                            <i class="bi bi-boxes me-1"></i>Logística OCC
+                                        </a>
+                                    </div>
+                                </div>
+
+                                @if (Model.RecursosActuales != null)
+                                {
+                                    <div class="border-top pt-2">
+                                        <span class="text-xs fw-semibold text-slate-500 text-uppercase d-block mb-2"><i class="bi bi-box-seam me-1"></i>Materiales Asignados:</span>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-box me-1 text-primary"></i><strong>@Model.RecursosActuales.OportunidadesEvangelisticas</strong> Cajas (GM)</span>
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-book me-1 text-primary"></i><strong>@Model.RecursosActuales.LibrosMejorRegalo</strong> El Mejor Regalo</span>
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-journal-text me-1 text-success"></i><strong>@Model.RecursosActuales.LibrosAlumno</strong> GA Alumno</span>
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-journal-bookmark me-1 text-success"></i><strong>@Model.RecursosActuales.LibrosMaestros</strong> GA Guía Docente</span>
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-book-half me-1 text-info"></i><strong>@Model.RecursosActuales.NuevosTestamentos</strong> Nuevos Testamentos</span>
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-file-earmark-richtext me-1 text-warning"></i><strong>@Model.RecursosActuales.Posters</strong> Posters / Plantillas</span>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
                     }
@@ -1303,57 +1371,151 @@
         </div>
     </div>
 
-    <!-- MODAL 5: REGISTRAR Y COMPLETAR TALLER OCC -->
+    <!-- MODAL 5: REGISTRAR TALLER Y ASIGNAR MATERIALES PARA DESPACHO -->
     <div class="modal fade" id="modalCompletarTaller" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content border-0 rounded-4 shadow">
                 <form action="@Url.Action("CompletarTallerOCC", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="idParticipacion" value="@p.IdParticipacion" />
                     <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
 
                     <div class="modal-header bg-dark text-white rounded-top-4 py-3">
-                        <h5 class="modal-title font-bold"><i class="bi bi-book me-2 text-info"></i>Registrar Datos del Taller OCC</h5>
+                        <h5 class="modal-title font-bold"><i class="bi bi-boxes me-2 text-primary"></i>Asignación de Materiales para Despacho (Taller OCC)</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Nombre del Taller</label>
-                            <input type="text" name="tallerNombre" class="form-control" placeholder="Ej: Taller OCC - Santo Domingo Norte" required />
+                        <div class="alert alert-info py-2 px-3 small mb-3">
+                            <i class="bi bi-info-circle-fill me-1"></i>Selecciona el evento y define las cantidades oficiales de materiales que retirará la iglesia en el Evento de Despacho.
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Fecha del Taller</label>
-                                <input type="date" name="tallerFecha" class="form-control" required />
+
+                        <!-- 1. EVENTO DE TALLER / DESPACHO -->
+                        <div class="card bg-light border-0 p-3 rounded-3 mb-3">
+                            <h6 class="font-bold text-slate-800 mb-2"><i class="bi bi-calendar-event me-2 text-primary"></i>1. Datos del Evento</h6>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Seleccionar Evento Registrado</label>
+                                <select id="cboEventoSeleccion" class="form-select form-select-sm" onchange="alCambiarEventoCompletar(this)">
+                                    <option value="">— Seleccionar Evento de Taller o Despacho —</option>
+                                    @{
+                                        var evsTaller = ViewBag.EventosTaller as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+                                        var evsDespacho = ViewBag.EventosDespacho as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+                                    }
+                                    @if (evsTaller.Any())
+                                    {
+                                        <optgroup label="Eventos de Taller OCC">
+                                            @foreach (var ev in evsTaller)
+                                            {
+                                                <option value="@ev.Value">@ev.Text</option>
+                                            }
+                                        </optgroup>
+                                    }
+                                    @if (evsDespacho.Any())
+                                    {
+                                        <optgroup label="Eventos de Despacho">
+                                            @foreach (var ev in evsDespacho)
+                                            {
+                                                <option value="@ev.Value">@ev.Text</option>
+                                            }
+                                        </optgroup>
+                                    }
+                                    <option value="OTRO">— [+] Escribir evento manualmente —</option>
+                                </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Lugar</label>
-                                <input type="text" name="tallerLugar" class="form-control" placeholder="Ej: Iglesia Central" required />
+
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold small">Nombre del Taller / Evento <span class="text-danger">*</span></label>
+                                <input type="text" name="tallerNombre" id="txtTallerNombre" class="form-control form-control-sm" placeholder="Ej: Taller OCC - Santo Domingo Norte" value="@(p.TallerNombre ?? "")" required />
+                            </div>
+
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Fecha del Evento <span class="text-danger">*</span></label>
+                                    <input type="date" name="tallerFecha" id="txtTallerFecha" class="form-control form-control-sm" value="@(p.TallerFecha.HasValue ? p.TallerFecha.Value.ToString("yyyy-MM-dd") : DateTime.Today.ToString("yyyy-MM-dd"))" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">Lugar Físico <span class="text-danger">*</span></label>
+                                    <input type="text" name="tallerLugar" id="txtTallerLugar" class="form-control form-control-sm" placeholder="Ej: Iglesia Central" value="@(p.TallerLugar ?? "")" required />
+                                </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Cantidad de Niños</label>
-                                <input type="number" name="cantNinos" class="form-control" min="0" value="0" required />
+
+                        <!-- 2. MATERIALES A DESPACHAR -->
+                        <div class="card bg-slate-50 border p-3 rounded-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="font-bold text-slate-800 mb-0"><i class="bi bi-gift me-2 text-success"></i>2. Materiales Asignados para Despacho</h6>
+                                <span class="badge bg-success-soft text-success text-xxs uppercase font-semibold">Catálogo OCC</span>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Maestros Registrados</label>
-                                <input type="number" name="cantMaestrosReg" class="form-control" min="0" value="0" required />
+                            <p class="text-muted text-xs mb-2">Estas cantidades se descontarán del inventario del equipo al momento de la entrega presencial.</p>
+                            
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label text-xs fw-semibold mb-1">Cajas / Oportunidades (GM) <span class="text-danger">*</span></label>
+                                    <input type="number" name="oportunidadesEvangelisticas" id="inpMatOportunidades" class="form-control form-control-sm text-center fw-bold" min="0" value="@(Model.RecursosActuales != null && Model.RecursosActuales.OportunidadesEvangelisticas > 0 ? Model.RecursosActuales.OportunidadesEvangelisticas : (p.TallerCantNinos > 0 ? p.TallerCantNinos : 50))" required />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-xs fw-semibold mb-1">El Mejor Regalo (MR) <span class="text-danger">*</span></label>
+                                    <input type="number" name="librosMejorRegalo" id="inpMatRegalo" class="form-control form-control-sm text-center fw-bold text-primary" min="0" value="@(Model.RecursosActuales != null && Model.RecursosActuales.LibrosMejorRegalo > 0 ? Model.RecursosActuales.LibrosMejorRegalo : (p.TallerCantNinos > 0 ? p.TallerCantNinos : 50))" required />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-xs fw-semibold mb-1">Gran Aventura - Alumno (GA) <span class="text-danger">*</span></label>
+                                    <input type="number" name="librosAlumno" id="inpMatAlumno" class="form-control form-control-sm text-center fw-bold text-success" min="0" value="@(Model.RecursosActuales != null && Model.RecursosActuales.LibrosAlumno > 0 ? Model.RecursosActuales.LibrosAlumno : (p.TallerCantNinos > 0 ? p.TallerCantNinos : 50))" required />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-xs fw-semibold mb-1">Guías Docente / Maestros (GA)</label>
+                                    <input type="number" name="librosMaestros" id="inpMatMaestros" class="form-control form-control-sm text-center fw-bold" min="0" value="@(Model.RecursosActuales != null && Model.RecursosActuales.LibrosMaestros > 0 ? Model.RecursosActuales.LibrosMaestros : (Model.Maestros.Any() ? Model.Maestros.Count : 5))" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-xs fw-semibold mb-1">Nuevos Testamentos (NT)</label>
+                                    <input type="number" name="nuevosTestamentos" id="inpMatTestamentos" class="form-control form-control-sm text-center fw-bold" min="0" value="@(Model.RecursosActuales != null && Model.RecursosActuales.NuevosTestamentos > 0 ? Model.RecursosActuales.NuevosTestamentos : (p.TallerCantNinos > 0 ? p.TallerCantNinos : 50))" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-xs fw-semibold mb-1">Posters de Oración (PO)</label>
+                                    <input type="number" name="posters" id="inpMatPosters" class="form-control form-control-sm text-center fw-bold" min="0" value="@(Model.RecursosActuales != null && Model.RecursosActuales.Posters > 0 ? Model.RecursosActuales.Posters : 10)" />
+                                </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Maestros Asistentes</label>
-                                <input type="number" name="cantMaestrosAsist" class="form-control" min="0" value="0" required />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">Maestros Ausentes</label>
-                                <input type="number" name="cantMaestrosAus" class="form-control" min="0" value="0" required />
+
+                        <!-- 3. MÉTRICAS DE ASISTENCIA -->
+                        <div class="card bg-light border-0 p-3 rounded-3 mb-3">
+                            <h6 class="font-bold text-slate-800 mb-2"><i class="bi bi-people me-2 text-info"></i>3. Métricas de Asistencia del Taller</h6>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label text-xs fw-semibold">Cantidad Niños</label>
+                                    <input type="number" name="cantNinos" id="inpTallerNinos" class="form-control form-control-sm" min="0" value="@(p.TallerCantNinos > 0 ? p.TallerCantNinos : 50)" oninput="sincronizarCantidadesMateriales(this.value)" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-xs fw-semibold">Maestros Reg.</label>
+                                    <input type="number" name="cantMaestrosReg" id="inpTallerMaestrosReg" class="form-control form-control-sm" min="0" value="@(p.TallerCantMaestrosReg > 0 ? p.TallerCantMaestrosReg : (Model.Maestros.Any() ? Model.Maestros.Count : 1))" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-xs fw-semibold">Maestros Asist.</label>
+                                    <input type="number" name="cantMaestrosAsist" id="inpTallerMaestrosAsist" class="form-control form-control-sm" min="0" value="@(p.TallerCantMaestrosAsist > 0 ? p.TallerCantMaestrosAsist : (Model.Maestros.Any() ? Model.Maestros.Count : 1))" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-xs fw-semibold">Maestros Aus.</label>
+                                    <input type="number" name="cantMaestrosAus" id="inpTallerMaestrosAus" class="form-control form-control-sm" min="0" value="@(p.TallerCantMaestrosAus)" required />
+                                </div>
                             </div>
                         </div>
+
+                        <!-- 4. EVENTO DE DESPACHO PROGRAMADO (OPCIONAL) -->
+                        @if (evsDespacho.Any())
+                        {
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold text-slate-700"><i class="bi bi-truck-front me-1 text-primary"></i>Programar de inmediato en Evento de Despacho (Opcional)</label>
+                                <select name="idEventoDespacho" id="cboIdEventoDespacho" class="form-select form-select-sm">
+                                    <option value="">— Programar fecha de despacho más adelante —</option>
+                                    @foreach (var ed in evsDespacho)
+                                    {
+                                        <option value="@ed.Value">@ed.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        }
                     </div>
                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Completar Taller OCC</button>
+                        <button type="submit" class="btn btn-success font-semibold px-4 shadow-sm"><i class="bi bi-check2-circle me-1"></i>Asignar Materiales y Habilitar Despacho</button>
                     </div>
                 </form>
             </div>
@@ -1736,4 +1898,43 @@
             });
         });
     });
+
+    // =========================================================================
+    // AYUDANTES PARA ASIGNACIÓN DE MATERIALES Y COMPLETAR TALLER OCC
+    // =========================================================================
+    var eventosDisponiblesJsonData = @Html.Raw(ViewBag.EventosDisponiblesJson ?? "[]");
+
+    function alCambiarEventoCompletar(selectEl) {
+        var val = selectEl.value;
+        if (!val || val === 'OTRO') {
+            return;
+        }
+        var idNum = parseInt(val);
+        var evObj = eventosDisponiblesJsonData.find(function(x) { return x.id === idNum; });
+        if (evObj) {
+            document.getElementById('txtTallerNombre').value = evObj.nombre;
+            document.getElementById('txtTallerFecha').value = evObj.fecha;
+            document.getElementById('txtTallerLugar').value = evObj.lugar;
+            
+            if (evObj.tipo === 'Despacho') {
+                var cboDesp = document.getElementById('cboIdEventoDespacho');
+                if (cboDesp) cboDesp.value = evObj.id;
+            }
+        }
+    }
+
+    function sincronizarCantidadesMateriales(cantStr) {
+        var cant = parseInt(cantStr) || 0;
+        if (cant > 0) {
+            var inpOp = document.getElementById('inpMatOportunidades');
+            var inpReg = document.getElementById('inpMatRegalo');
+            var inpAlum = document.getElementById('inpMatAlumno');
+            var inpNt = document.getElementById('inpMatTestamentos');
+            
+            if (inpOp) inpOp.value = cant;
+            if (inpReg) inpReg.value = cant;
+            if (inpAlum) inpAlum.value = cant;
+            if (inpNt) inpNt.value = cant;
+        }
+    }
 </script>

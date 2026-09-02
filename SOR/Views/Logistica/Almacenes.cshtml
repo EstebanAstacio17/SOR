@@ -1,0 +1,326 @@
+@model IEnumerable<SOR.Models.Almacen>
+@{
+    ViewBag.Title = "Gestión de Almacenes — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var equiposDisp = ViewBag.EquiposDisponibles as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var lista = Model ?? new List<SOR.Models.Almacen>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-building me-2" style="color:var(--apple-accent)"></i>Gestión de Almacenes</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                    <li class="breadcrumb-item active">Almacenes</li>
+                </ol>
+            </nav>
+        </div>
+        <button class="btn btn-primary font-semibold shadow-sm" onclick="limpiarFormAlmacen()">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Almacén
+        </button>
+    </div>
+
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Listado de Almacenes en Tarjetas -->
+    <div class="row g-3">
+        @if (!lista.Any())
+        {
+            <div class="col-12 text-center text-muted py-5 bg-white rounded-4 shadow-sm border">
+                <i class="bi bi-building-x fs-1 d-block mb-2 text-slate-300"></i>
+                <p class="mb-0">No hay almacenes registrados en el sistema.</p>
+            </div>
+        }
+        @foreach (var a in lista)
+        {
+            <div class="col-md-6 col-xl-4">
+                <div class="card h-100 border-0 shadow-sm rounded-4 bg-white @(a.Activo ? "" : "opacity-75")">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                            <h6 class="fw-bold text-slate-800 mb-0 fs-6">@a.NombreAlmacen</h6>
+                            <span class="badge @(a.Activo ? "bg-success-soft text-success" : "bg-secondary-soft text-secondary") px-2.5 py-1 rounded-pill">
+                                @(a.Activo ? "Activo" : "Inactivo")
+                            </span>
+                        </div>
+
+                        <!-- Badge de Alcance (Central vs Equipos) -->
+                        <div class="mb-3">
+                            @if (a.EsCentral)
+                            {
+                                <span class="badge bg-primary-soft text-primary border">
+                                    <i class="bi bi-diagram-3-fill me-1"></i>Almacén Central / Uso Compartido
+                                </span>
+                            }
+                            else if (a.NombresEquipos.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var eq in a.NombresEquipos)
+                                    {
+                                        <span class="badge bg-info-soft text-info border">
+                                            <i class="bi bi-people-fill me-1"></i>@eq
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-muted border">
+                                    <i class="bi bi-people me-1"></i>Sin equipos asignados
+                                </span>
+                            }
+                        </div>
+
+                        <div class="small text-slate-600 mb-2">
+                            <i class="bi bi-geo-alt text-primary me-2"></i>@(string.IsNullOrEmpty(a.Direccion) ? "Sin dirección física" : a.Direccion)
+                        </div>
+
+                        <div class="small text-slate-700 mb-2">
+                            <i class="bi bi-person-badge text-primary me-2"></i>
+                            <strong>Responsable:</strong> @(string.IsNullOrEmpty(a.Responsable) ? "No designado" : a.Responsable)
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(a.Telefono))
+                        {
+                            <div class="small text-slate-600 mb-2">
+                                <i class="bi bi-telephone text-primary me-2"></i>@a.Telefono
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer bg-light rounded-bottom-4 border-top-0 p-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary w-100 font-semibold"
+                                onclick="editarAlmacen(@a.IdAlmacen, 
+                                '@Html.Raw(a.NombreAlmacen.Replace("'", "\\'"))', 
+                                '@Html.Raw((a.Direccion ?? "").Replace("'", "\\'"))', 
+                                '@(a.IdUsuarioResponsable.HasValue ? a.IdUsuarioResponsable.Value.ToString() : "")', 
+                                '@Html.Raw((a.Responsable ?? "").Replace("'", "\\'"))', 
+                                '@Html.Raw((a.Telefono ?? "").Replace("'", "\\'"))', 
+                                @(a.EsCentral ? "true" : "false"), 
+                                @(a.Activo ? "true" : "false"), 
+                                '@string.Join(",", a.IdsEquipos)')">
+                            <i class="bi bi-pencil-square me-1"></i>Editar Almacén
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Crear / Editar Almacén -->
+<div class="modal fade" id="modalAlmacen" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-light rounded-top-4 py-3 border-bottom">
+                <h5 class="modal-title font-bold text-slate-800" id="tituloModalAlmacen">
+                    <i class="bi bi-building me-2 text-primary"></i>Nuevo Almacén
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="@Url.Action("GuardarAlmacen", "Logistica")" method="post" id="formAlmacen">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="IdAlmacen" id="hdIdAlmacen" value="0" />
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Nombre del Almacén -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-slate-700">Nombre del Almacén <span class="text-danger">*</span></label>
+                            <input type="text" name="NombreAlmacen" id="inpNombreAlm" class="form-control" required placeholder="ej: Almacén Central OCC Santo Domingo, Almacén Regional Sur..." />
+                        </div>
+
+                        <!-- Dirección -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-slate-700">Dirección Física</label>
+                            <input type="text" name="Direccion" id="inpDirAlm" class="form-control" placeholder="Av., Calle, Edificio, Sector o Ciudad" />
+                        </div>
+
+                        <!-- Responsable del Almacén (Desplegable de Usuarios Existentes) -->
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold text-slate-700">Responsable (Usuario / Coordinador) <span class="text-danger">*</span></label>
+                            <select name="IdUsuarioResponsable" id="selIdUsuarioResp" class="form-select">
+                                <option value="">— Seleccionar usuario responsable —</option>
+                                @foreach (var u in usuariosResp)
+                                {
+                                    <option value="@u.Value">@u.Text</option>
+                                }
+                            </select>
+                            <input type="hidden" name="Responsable" id="inpRespAlm" value="" />
+                            <div class="form-text small">Seleccione de la lista de usuarios o coordinadores registrados.</div>
+                        </div>
+
+                        <!-- Teléfono -->
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold text-slate-700">Teléfono de Contacto</label>
+                            <input type="text" name="Telefono" id="inpTelAlm" class="form-control" placeholder="ej: 809-555-0100" />
+                        </div>
+
+                        <!-- Alcance y Equipos Asignados -->
+                        <div class="col-12 border-top pt-3">
+                            <label class="form-label fw-bold text-slate-800 mb-2">
+                                <i class="bi bi-people me-1 text-primary"></i>Uso y Asignación de Equipos
+                            </label>
+
+                            <div class="form-check form-switch mb-3 p-3 bg-light rounded-3 border">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" name="EsCentral" id="chkEsCentral" value="true" checked onchange="alCambiarEsCentral()" />
+                                <input type="hidden" name="EsCentral" value="false" />
+                                <label class="form-check-label fw-bold text-slate-800" for="chkEsCentral">
+                                    Almacén Central / Compartido por Todos los Equipos
+                                </label>
+                                <div class="form-text small text-muted ms-4">
+                                    Marque esta opción si el almacén es nacional o sirve a todos los equipos del país.
+                                </div>
+                            </div>
+
+                            <!-- Selector de Equipos Específicos (cuando no es central) -->
+                            <div id="divEquiposEspecificos" class="p-3 border rounded-3" style="display:none;">
+                                <label class="form-label fw-semibold small text-slate-700 mb-2">
+                                    Seleccione los equipos que tienen acceso a este almacén:
+                                </label>
+                                <div class="row g-2" style="max-height: 180px; overflow-y: auto;">
+                                    @foreach (var eq in equiposDisp)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input chk-equipo-alm" type="checkbox" name="idsEquiposSeleccionados" value="@eq.Value" id="chkEq_@eq.Value" />
+                                                <label class="form-check-label small text-slate-800" for="chkEq_@eq.Value">
+                                                    @eq.Text
+                                                </label>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado Activo -->
+                        <div class="col-12" id="rowActivoAlm" style="display:none;">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="Activo" id="chkActivoAlm" class="form-check-input" value="true" checked />
+                                <input type="hidden" name="Activo" value="false" />
+                                <label class="form-check-label fw-semibold text-slate-700" for="chkActivoAlm">Almacén activo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold shadow-sm">
+                        <i class="bi bi-save me-1"></i>Guardar Almacén
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.12) !important;
+        color: #0d6efd !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.12) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.12) !important;
+        color: #198754 !important;
+    }
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.12) !important;
+        color: #6c757d !important;
+    }
+</style>
+
+@section Scripts {
+<script>
+    function alCambiarEsCentral() {
+        var esCentral = document.getElementById('chkEsCentral').checked;
+        var divEq = document.getElementById('divEquiposEspecificos');
+        if (esCentral) {
+            divEq.style.display = 'none';
+        } else {
+            divEq.style.display = 'block';
+        }
+    }
+
+    function limpiarFormAlmacen() {
+        document.getElementById('hdIdAlmacen').value = '0';
+        document.getElementById('inpNombreAlm').value = '';
+        document.getElementById('inpDirAlm').value = '';
+        document.getElementById('selIdUsuarioResp').value = '';
+        document.getElementById('inpRespAlm').value = '';
+        document.getElementById('inpTelAlm').value = '';
+        document.getElementById('chkEsCentral').checked = true;
+        alCambiarEsCentral();
+
+        // Desmarcar equipos
+        var chks = document.querySelectorAll('.chk-equipo-alm');
+        chks.forEach(function(c) { c.checked = false; });
+
+        document.getElementById('tituloModalAlmacen').innerHTML = '<i class="bi bi-building me-2 text-primary"></i>Nuevo Almacén';
+        document.getElementById('rowActivoAlm').style.display = 'none';
+        document.getElementById('chkActivoAlm').checked = true;
+
+        var modal = new bootstrap.Modal(document.getElementById('modalAlmacen'));
+        modal.show();
+    }
+
+    function editarAlmacen(id, nombre, dir, idUsuarioResp, resp, tel, esCentral, activo, idsEquiposStr) {
+        document.getElementById('hdIdAlmacen').value = id;
+        document.getElementById('inpNombreAlm').value = nombre;
+        document.getElementById('inpDirAlm').value = dir;
+        document.getElementById('selIdUsuarioResp').value = idUsuarioResp || '';
+        document.getElementById('inpRespAlm').value = resp;
+        document.getElementById('inpTelAlm').value = tel;
+        document.getElementById('chkEsCentral').checked = (esCentral === true);
+        alCambiarEsCentral();
+
+        // Marcar equipos asignados
+        var chks = document.querySelectorAll('.chk-equipo-alm');
+        var arrIds = idsEquiposStr ? idsEquiposStr.split(',') : [];
+        chks.forEach(function(c) {
+            c.checked = arrIds.indexOf(c.value) !== -1;
+        });
+
+        document.getElementById('chkActivoAlm').checked = (activo === true);
+        document.getElementById('rowActivoAlm').style.display = 'block';
+        document.getElementById('tituloModalAlmacen').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i>Editar Almacén';
+
+        var modal = new bootstrap.Modal(document.getElementById('modalAlmacen'));
+        modal.show();
+    }
+
+    // Auto-actualizar texto de responsable al cambiar selector
+    document.addEventListener("DOMContentLoaded", function() {
+        var selResp = document.getElementById('selIdUsuarioResp');
+        if (selResp) {
+            selResp.addEventListener('change', function() {
+                var text = this.options[this.selectedIndex].text;
+                if (this.value) {
+                    // Tomar solo el nombre antes del primer paréntesis si lo hay
+                    var nom = text.split('(')[0].trim();
+                    document.getElementById('inpRespAlm').value = nom;
+                } else {
+                    document.getElementById('inpRespAlm').value = '';
+                }
+            });
+        }
+    });
+</script>
+}

@@ -140,6 +140,10 @@
     <Compile Include="Services\UsuarioService.cs" />
     <Compile Include="Services\IglesiaService.cs" />
     <Compile Include="Services\EquipoService.cs" />
+    <Compile Include="Controllers\LogisticaController.cs" />
+    <Compile Include="Models\LogisticaModels.cs" />
+    <Compile Include="Repositories\LogisticaRepository.cs" />
+    <Compile Include="Services\LogisticaService.cs" />
     <Compile Include="Permisos\ValidarSesionAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -229,6 +233,19 @@
     <Content Include="Views\Eventos\Index.cshtml" />
     <Content Include="Views\Eventos\Detalle.cshtml" />
     <Content Include="Views\CompanerosOracion\Index.cshtml" />
+    <Content Include="Views\Logistica\Index.cshtml" />
+    <Content Include="Views\Logistica\Almacenes.cshtml" />
+    <Content Include="Views\Logistica\Presentaciones.cshtml" />
+    <Content Include="Views\Logistica\Recepciones.cshtml" />
+    <Content Include="Views\Logistica\ComprobanteRecepcion.cshtml" />
+    <Content Include="Views\Logistica\InventarioCentral.cshtml" />
+    <Content Include="Views\Logistica\Transferencias.cshtml" />
+    <Content Include="Views\Logistica\ConstanciaEquipo.cshtml" />
+    <Content Include="Views\Logistica\InventarioEquipos.cshtml" />
+    <Content Include="Views\Logistica\EventosDespacho.cshtml" />
+    <Content Include="Views\Logistica\DetalleEventoDespacho.cshtml" />
+    <Content Include="Views\Logistica\ComprobanteDespachoIglesia.cshtml" />
+    <Content Include="Views\Logistica\Kardex.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\DB_SOR_Schema.sql" />

@@ -85,5 +85,11 @@ namespace SOR.Helpers
                 System.Diagnostics.Debug.WriteLine("Error al registrar auditoría: " + ex.Message);
             }
         }
+
+        /// <summary>Sobrecarga de conveniencia para módulos que solo tienen el IdUsuario (sin correo).</summary>
+        public static void Registrar(string accion, string modulo, string idRegistroAfectado, int idUsuario, string detalles)
+        {
+            Registrar(idUsuario, null, accion, modulo, idRegistroAfectado, detalles);
+        }
     }
 }

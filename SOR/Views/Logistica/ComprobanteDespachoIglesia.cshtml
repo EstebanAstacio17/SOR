@@ -1,0 +1,191 @@
+@model SOR.Models.DespachoIglesiaItem
+@{
+    ViewBag.Title = "Comprobante de Despacho — " + Model.NumeroComprobanteDespacho;
+    Layout = null; // Vista de impresión sin layout
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Comprobante de Despacho — @Model.NumeroComprobanteDespacho</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; }
+        .page { max-width: 750px; margin: 0 auto; padding: 30px; }
+        .header { border-bottom: 2px solid #003580; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .logo-zona h1 { font-size: 20px; font-weight: 700; color: #003580; }
+        .logo-zona p { font-size: 11px; color: #666; }
+        .comprobante-zona { text-align: right; }
+        .comprobante-zona .num { font-size: 16px; font-weight: 700; color: #003580; letter-spacing: 1px; }
+        .estado-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 11px; margin-top: 6px; }
+        .despachada { background: #d1fae5; color: #065f46; }
+        .no-despachada { background: #fee2e2; color: #991b1b; }
+        .programada { background: #dbeafe; color: #1e40af; }
+        .section { margin-bottom: 20px; }
+        .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #003580; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; margin-bottom: 10px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+        .info-item label { font-size: 10px; color: #666; display: block; margin-bottom: 1px; }
+        .info-item span { font-weight: 600; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f0f4ff; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 6px 8px; text-align: left; border-bottom: 1px solid #ccc; }
+        td { padding: 6px 8px; border-bottom: 1px dotted #e0e0e0; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .firma-zona { margin-top: 40px; display: flex; justify-content: space-between; }
+        .firma-linea { border-top: 1px solid #333; padding-top: 6px; text-align: center; min-width: 180px; font-size: 11px; }
+        .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #eee; font-size: 10px; color: #888; text-align: center; }
+        .no-print { margin: 20px auto; max-width: 750px; padding: 0 30px; }
+        @@media print { .no-print { display: none; } body { background: white; } }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()" style="background:#003580;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:8px;">
+            🖨️ Imprimir / Guardar PDF
+        </button>
+        <button onclick="window.close()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">
+            Cerrar
+        </button>
+    </div>
+
+    <div class="page">
+        <!-- Encabezado -->
+        <div class="header">
+            <div class="logo-zona">
+                <h1>Operación de Cierre de Campaña (OCC)</h1>
+                <p>Sistema de Gestión de Recursos y Despacho</p>
+                <p>Temporada: @Model.NombreTemporada</p>
+            </div>
+            <div class="comprobante-zona">
+                <div class="num">@Model.NumeroComprobanteDespacho</div>
+                <div>Comprobante de Despacho</div>
+                <div>
+                    <span class="estado-badge @(Model.EstadoDespacho == "DESPACHADA" ? "despachada" : Model.EstadoDespacho == "NO_DESPACHADA" ? "no-despachada" : "programada")">
+                        @Model.EstadoDespacho
+                    </span>
+                </div>
+                @if (Model.FechaHoraEntrega.HasValue)
+                {
+                    <div style="font-size:11px;color:#555;margin-top:4px">
+                        @Model.FechaHoraEntrega.Value.ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Datos del Evento -->
+        <div class="section">
+            <div class="section-title">Datos del Evento de Despacho</div>
+            <div class="info-grid">
+                <div class="info-item"><label>Evento</label><span>@Model.NombreEvento</span></div>
+                <div class="info-item"><label>Equipo</label><span>@Model.NombreEquipo</span></div>
+            </div>
+        </div>
+
+        <!-- Datos de la Iglesia -->
+        <div class="section">
+            <div class="section-title">Datos de la Iglesia</div>
+            <div class="info-grid">
+                <div class="info-item"><label>Nombre de la Iglesia</label><span>@Model.NombreIglesia</span></div>
+                <div class="info-item"><label>Dirección</label><span>@Model.DireccionIglesia</span></div>
+                @if (!string.IsNullOrEmpty(Model.NombrePastor))
+                {
+                    <div class="info-item"><label>Pastor</label><span>@Model.NombrePastor</span></div>
+                    <div class="info-item"><label>Cédula del Pastor</label><span>@Model.CedulaPastor</span></div>
+                }
+                @if (!string.IsNullOrEmpty(Model.NombreLiderMinisterial))
+                {
+                    <div class="info-item"><label>Líder Ministerial</label><span>@Model.NombreLiderMinisterial</span></div>
+                    <div class="info-item"><label>Cédula del Líder</label><span>@Model.CedulaLiderMinisterial</span></div>
+                }
+            </div>
+        </div>
+
+        @if (Model.EstadoDespacho == "DESPACHADA")
+        {
+            <!-- Datos del Receptor -->
+            <div class="section">
+                <div class="section-title">Datos del Receptor</div>
+                <div class="info-grid">
+                    <div class="info-item"><label>Tipo de Receptor</label><span>@(Model.TipoReceptor == "PASTOR" ? "Pastor" : "Líder Ministerial")</span></div>
+                    <div class="info-item"><label>Nombre Completo</label><span>@Model.NombreReceptor</span></div>
+                    <div class="info-item"><label>Cédula</label><span>@Model.DocumentoIdentidadReceptor</span></div>
+                    <div class="info-item"><label>Teléfono</label><span>@Model.TelefonoReceptor</span></div>
+                    <div class="info-item"><label>Coordinador Despachador</label><span>@Model.CoordinadorDespachador</span></div>
+                    <div class="info-item"><label>Fecha y Hora de Entrega</label><span>@(Model.FechaHoraEntrega.HasValue ? Model.FechaHoraEntrega.Value.ToString("dd/MM/yyyy HH:mm") : "—")</span></div>
+                </div>
+            </div>
+        }
+
+        @if (Model.EstadoDespacho == "NO_DESPACHADA")
+        {
+            <div class="section" style="background:#fff5f5;border:1px solid #fca5a5;padding:12px;border-radius:6px">
+                <div class="section-title" style="color:#991b1b">No Despachado</div>
+                <p><strong>Motivo:</strong> @Model.MotivoNoDespacho</p>
+                @if (!string.IsNullOrEmpty(Model.CoordinadorDespachador))
+                {
+                    <p><strong>Coordinador presente:</strong> @Model.CoordinadorDespachador</p>
+                }
+                <p style="color:#666;font-size:11px;margin-top:6px">La asignación de materiales queda activa para reprogramación en otro evento.</p>
+            </div>
+        }
+
+        <!-- Materiales -->
+        <div class="section">
+            <div class="section-title">Detalle de Materiales</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Material</th>
+                        <th>Unidad</th>
+                        <th class="text-right">Asignado</th>
+                        <th class="text-right">Despachado</th>
+                        <th class="text-right">No Despachado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model.Materiales)
+                    {
+                        <tr>
+                            <td><strong>@m.CodigoMaterial</strong></td>
+                            <td>@m.NombreMaterial</td>
+                            <td>@m.UnidadEntrega</td>
+                            <td class="text-right">@m.CantidadAsignada.ToString("N0")</td>
+                            <td class="text-right" style="color:@(m.CantidadDespachada > 0 ? "#065f46" : "#999");font-weight:600">@m.CantidadDespachada.ToString("N0")</td>
+                            <td class="text-right" style="color:@(m.CantidadNoDespachada > 0 ? "#991b1b" : "#999")">@m.CantidadNoDespachada.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Observaciones))
+        {
+            <div class="section">
+                <div class="section-title">Observaciones</div>
+                <p>@Model.Observaciones</p>
+            </div>
+        }
+
+        <!-- Firmas -->
+        @if (Model.EstadoDespacho == "DESPACHADA")
+        {
+            <div class="firma-zona">
+                <div class="firma-linea">
+                    @Model.CoordinadorDespachador<br />
+                    <span style="font-size:10px;color:#666">Coordinador / Despachador</span>
+                </div>
+                <div class="firma-linea">
+                    @Model.NombreReceptor<br />
+                    <span style="font-size:10px;color:#666">@(Model.TipoReceptor == "PASTOR" ? "Pastor" : "Líder Ministerial") Receptor</span>
+                </div>
+            </div>
+        }
+
+        <div class="footer">
+            Documento generado por el Sistema de Gestión OCC · @DateTime.Now.ToString("dd/MM/yyyy HH:mm") · Este documento es el comprobante oficial de entrega de materiales.
+        </div>
+    </div>
+</body>
+</html>

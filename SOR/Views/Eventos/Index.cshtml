@@ -47,6 +47,7 @@
                 <option value="">Todos</option>
                 <option value="Visión">Visión</option>
                 <option value="Taller OCC">Taller OCC</option>
+                <option value="Despacho">Despacho de Materiales</option>
                 <option value="Evangelístico">Evangelístico</option>
                 <option value="La Gran Aventura">La Gran Aventura</option>
             </select>
@@ -105,6 +106,10 @@
                                     else if (item.TipoEvento == "Taller")
                                     {
                                         <span class="badge bg-info-soft text-info px-3 py-1.5 rounded-pill"><i class="bi bi-book me-1"></i>Taller OCC</span>
+                                    }
+                                    else if (item.TipoEvento == "Despacho")
+                                    {
+                                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-send-check me-1"></i>Despacho</span>
                                     }
                                     else if (item.TipoEvento == "Evangelistico")
                                     {

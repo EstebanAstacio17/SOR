@@ -314,6 +314,7 @@ namespace SOR.Controllers
             {
                 string sql = @"
                     INSERT INTO dbo.Eventos (NombreEvento, TipoEvento, IdTemporada, Fecha, Lugar, Responsable, IdUsuarioCreacion, TipoLugar, Hora, CantidadAsistentes) 
+                    OUTPUT INSERTED.IdEvento
                     VALUES (@Nombre, @Tipo, @IdTemp, @Fecha, @Lugar, @Resp, @IdUsuario, @TipoLugar, @Hora, @Cant);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -329,7 +330,24 @@ namespace SOR.Controllers
                 cmd.Parameters.AddWithValue("@Cant", modelo.CantidadAsistentes);
 
                 cn.Open();
-                cmd.ExecuteNonQuery();
+                int idNuevoEvento = Convert.ToInt32(cmd.ExecuteScalar());
+
+                if (modelo.TipoEvento == "Despacho")
+                {
+                    int idEq = u.IdEquipo.GetValueOrDefault(1);
+                    string sqlED = @"
+                        IF NOT EXISTS (SELECT 1 FROM dbo.EventosDespacho WHERE IdEvento = @IdEv)
+                        BEGIN
+                            INSERT INTO dbo.EventosDespacho (IdEvento, IdEquipo, EstadoDespachoEvento)
+                            VALUES (@IdEv, @IdEq, 'PROGRAMADO');
+                        END";
+                    using (SqlCommand cmdED = new SqlCommand(sqlED, cn))
+                    {
+                        cmdED.Parameters.AddWithValue("@IdEv", idNuevoEvento);
+                        cmdED.Parameters.AddWithValue("@IdEq", idEq);
+                        cmdED.ExecuteNonQuery();
+                    }
+                }
             }
 
             TempData["MensajeExito"] = "Evento creado con éxito.";
@@ -387,6 +405,22 @@ namespace SOR.Controllers
                 return HttpNotFound();
             }
 
+            // Si es un evento de Despacho, cargar datos logísticos
+            if (evento.TipoEvento == "Despacho")
+            {
+                var logisticaSvc = new SOR.Services.LogisticaService();
+                var eventoDespacho = logisticaSvc.ObtenerDetalleEventoDespacho(id);
+                if (eventoDespacho == null)
+                {
+                    int idEquipo = u.IdEquipo.GetValueOrDefault(1);
+                    logisticaSvc.CrearEventoDespacho(id, idEquipo, null, u.IdUsuario);
+                    eventoDespacho = logisticaSvc.ObtenerDetalleEventoDespacho(id);
+                }
+                ViewBag.EventoDespacho = eventoDespacho;
+                int idEqDisp = u.IdEquipo.GetValueOrDefault(1);
+                ViewBag.IglesiasDisponibles = logisticaSvc.ObtenerIglesiasDisponiblesDespacho(idEqDisp, evento.IdTemporada);
+            }
+
             // Cargar iglesias que participan en este evento
             List<IglesiaParticipacionViewModel> iglesias = ObtenerIglesiasParticipantes(id, evento.IdTemporada);
             // Cargar maestros de estas iglesias
@@ -399,6 +433,135 @@ namespace SOR.Controllers
             ViewBag.PuedeEditar = PuedeEditarEvento(u, id);
 
             return View();
+        }
+
+        // =====================================================================
+        // MÉTODOS DE DESPACHO PRESENCIAL (EVENTOS DE DESPACHO)
+        // =====================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ProgramarIglesiaDespacho(int idEvento, int idParticipacion, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                var logisticaSvc = new SOR.Services.LogisticaService();
+                int idEquipo = u.IdEquipo.GetValueOrDefault(1);
+                int idTemporada = 0;
+                using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    using (var cmd = new SqlCommand("SELECT IdTemporada FROM dbo.Eventos WHERE IdEvento=@Id;", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", idEvento);
+                        idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+                }
+                logisticaSvc.ProgramarIglesiaEnDespacho(idEvento, idParticipacion, idIglesia, idEquipo, idTemporada, u.IdUsuario);
+                TempData["MensajeExito"] = "Iglesia agregada exitosamente al evento de despacho.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error: " + ex.Message;
+            }
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEvento)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                var logisticaSvc = new SOR.Services.LogisticaService();
+                int idEquipo = u.IdEquipo.GetValueOrDefault(1);
+                int idTemporada = 0;
+                using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    using (var cmd = new SqlCommand("SELECT IdTemporada FROM dbo.Eventos WHERE IdEvento=@Id;", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", idEvento);
+                        idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+                }
+                string nombre = u.Correo ?? "Coordinador";
+                logisticaSvc.ConfirmarDespacho(vm, idEquipo, idTemporada, u.IdUsuario, nombre);
+                TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al confirmar despacho: " + ex.Message;
+            }
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult MarcarNoDespacho(NoDespachoBecauseViewModel vm, int idEvento)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                var logisticaSvc = new SOR.Services.LogisticaService();
+                logisticaSvc.MarcarNoDespacho(vm, u.IdUsuario);
+                TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. No se descontó inventario y queda disponible para reprogramación.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error: " + ex.Message;
+            }
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        [HttpGet]
+        public JsonResult ObtenerDespachoMateriales(int id)
+        {
+            var logisticaSvc = new SOR.Services.LogisticaService();
+            var despacho = logisticaSvc.ObtenerDespachoDetalle(id);
+            if (despacho == null) return Json(new { materiales = new List<object>() }, JsonRequestBehavior.AllowGet);
+            
+            var mats = new List<object>();
+            foreach (var m in despacho.Materiales)
+            {
+                mats.Add(new
+                {
+                    m.IdMaterial,
+                    m.CodigoMaterial,
+                    m.NombreMaterial,
+                    m.UnidadEntrega,
+                    m.CantidadAsignada,
+                    m.CantidadDespachada
+                });
+            }
+
+            return Json(new
+            {
+                idDespacho = despacho.IdDespachoIglesia,
+                nombreIglesia = despacho.NombreIglesia,
+                nombrePastor = despacho.NombrePastor ?? "",
+                cedulaPastor = despacho.CedulaPastor ?? "",
+                telefonoPastor = despacho.TelefonoPastor ?? "",
+                nombreLider = despacho.NombreLiderMinisterial ?? "",
+                cedulaLider = despacho.CedulaLiderMinisterial ?? "",
+                telefonoLider = despacho.TelefonoLiderMinisterial ?? "",
+                tipoReceptor = despacho.TipoReceptor ?? "PASTOR",
+                nombreReceptor = despacho.NombreReceptor ?? "",
+                documentoIdentidadReceptor = despacho.DocumentoIdentidadReceptor ?? "",
+                telefonoReceptor = despacho.TelefonoReceptor ?? "",
+                materiales = mats
+            }, JsonRequestBehavior.AllowGet);
+        }
+
+        public ActionResult ComprobanteDespacho(int id)
+        {
+            var logisticaSvc = new SOR.Services.LogisticaService();
+            var modelo = logisticaSvc.ObtenerDespachoDetalle(id);
+            if (modelo == null) return HttpNotFound();
+            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            return View("~/Views/Logistica/ComprobanteDespachoIglesia.cshtml", modelo);
         }
 
         // POST: Eventos/RegistrarAsistenciaIglesia
@@ -743,6 +906,7 @@ namespace SOR.Controllers
             {
                 new SelectListItem { Value = "Vision", Text = "Presentación de la Visión" },
                 new SelectListItem { Value = "Taller", Text = "Taller OCC" },
+                new SelectListItem { Value = "Despacho", Text = "Despacho de Materiales" },
                 new SelectListItem { Value = "Evangelistico", Text = "Evento Evangelístico" },
                 new SelectListItem { Value = "GranAventura", Text = "La Gran Aventura" }
             };
