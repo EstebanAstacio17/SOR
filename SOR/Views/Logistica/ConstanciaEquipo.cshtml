@@ -2,6 +2,8 @@
 @{
     ViewBag.Title = "Constancia de Transferencia — " + Model.NumeroConstancia;
     Layout = null;
+    DateTime fechaEmision = Model.FechaEmision ?? Model.FechaTransferencia;
+    string equipoEmisor = string.IsNullOrEmpty(Model.NombreEquipoEmisor) ? "Almacén Central / Nacional" : Model.NombreEquipoEmisor;
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -10,77 +12,157 @@
     <title>Constancia de Transferencia — @Model.NumeroConstancia</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Helvetica Neue',Arial,sans-serif; font-size:12px; color:#1a1a1a; background:#fff; }
-        .page { max-width:720px; margin:0 auto; padding:30px; }
+        body { font-family:'Helvetica Neue',Arial,sans-serif; font-size:12px; color:#1a1a1a; background:#f4f6f8; }
+        .page { max-width:760px; margin:20px auto; padding:36px; background:#fff; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.06); }
         .header { border-bottom:2px solid #003580; padding-bottom:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start; }
-        .logo-zona h1 { font-size:18px; font-weight:700; color:#003580; }
-        .logo-zona p { font-size:11px; color:#666; }
+        .logo-zona h1 { font-size:20px; font-weight:700; color:#003580; letter-spacing:-0.3px; }
+        .logo-zona p { font-size:11px; color:#666; margin-top:3px; }
         .doc-zona { text-align:right; }
-        .doc-zona .num { font-size:14px; font-weight:700; color:#003580; }
-        .section { margin-bottom:20px; }
-        .section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#003580; border-bottom:1px solid #e0e0e0; padding-bottom:4px; margin-bottom:10px; }
-        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; }
-        .info-item label { font-size:10px; color:#666; display:block; }
-        .info-item span { font-weight:600; }
-        table { width:100%; border-collapse:collapse; }
-        th { background:#f0f4ff; font-size:10px; font-weight:700; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid #ccc; }
-        td { padding:6px 8px; border-bottom:1px dotted #e0e0e0; }
+        .doc-zona .num { font-size:15px; font-weight:700; color:#003580; font-family:monospace; }
+        .badge-estado { display:inline-block; margin-top:5px; padding:3px 12px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+        .badge-recibida { background:#d1fae5; color:#065f46; }
+        .badge-emitida { background:#fef3c7; color:#92400e; }
+        .badge-cancelada { background:#fee2e2; color:#991b1b; }
+        .section { margin-bottom:22px; }
+        .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#003580; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:12px; }
+        
+        .grid-trazabilidad { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
+        .card-traza { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 14px; }
+        .card-traza-title { font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+        .card-emisor .card-traza-title { color:#0369a1; }
+        .card-receptor .card-traza-title { color:#15803d; }
+        
+        .info-row { display:flex; justify-content:space-between; margin-bottom:6px; font-size:11px; }
+        .info-row label { color:#64748b; font-size:10px; text-transform:uppercase; }
+        .info-row span { font-weight:600; color:#1e293b; text-align:right; }
+
+        table { width:100%; border-collapse:collapse; margin-top:6px; }
+        th { background:#f1f5f9; font-size:10px; font-weight:700; text-transform:uppercase; padding:7px 10px; border-bottom:2px solid #cbd5e1; text-align:left; }
+        td { padding:8px 10px; border-bottom:1px dotted #e2e8f0; font-size:11.5px; }
         .text-right { text-align:right; }
-        .firma-zona { margin-top:50px; display:flex; justify-content:space-between; }
-        .firma-linea { border-top:1px solid #333; padding-top:6px; text-align:center; min-width:180px; font-size:11px; }
-        .footer { margin-top:30px; padding-top:12px; border-top:1px solid #eee; font-size:10px; color:#888; text-align:center; }
-        .no-print { margin:20px auto; max-width:720px; padding:0 30px; }
-        @@media print { .no-print { display:none; } }
+        .text-center { text-align:center; }
+        
+        .obs-box { background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:10px 12px; font-size:11px; color:#92400e; margin-bottom:20px; }
+        
+        .firma-zona { margin-top:55px; display:flex; justify-content:space-between; gap:40px; }
+        .firma-linea { flex:1; border-top:1px solid #334155; padding-top:8px; text-align:center; font-size:11px; font-weight:600; color:#1e293b; }
+        .firma-linea span { display:block; font-size:9.5px; font-weight:normal; color:#64748b; margin-top:2px; }
+        
+        .footer { margin-top:35px; padding-top:12px; border-top:1px solid #e2e8f0; font-size:9.5px; color:#94a3b8; text-align:center; }
+        .no-print { margin:20px auto; max-width:760px; padding:0; display:flex; justify-content:flex-end; gap:8px; }
+        .btn-print { background:#003580; color:#fff; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; }
+        .btn-close-win { background:#64748b; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; }
+        
+        @@media print { 
+            body { background:#fff; }
+            .page { margin:0; padding:15px; box-shadow:none; max-width:100%; }
+            .no-print { display:none; } 
+        }
     </style>
 </head>
 <body>
     <div class="no-print">
-        <button onclick="window.print()" style="background:#003580;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:8px;">🖨️ Imprimir / PDF</button>
-        <button onclick="window.close()" style="background:#666;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Cerrar</button>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <button class="btn-close-win" onclick="window.close()">Cerrar</button>
     </div>
     <div class="page">
         <div class="header">
             <div class="logo-zona">
-                <h1>OCC — Constancia de Transferencia</h1>
-                <p>Sistema de Gestión Logística · Temporada: @Model.NombreTemporada</p>
+                <h1>OCC — Constancia de Transferencia de Materiales</h1>
+                <p>Sistema de Gestión Logística · Temporada: <strong>@Model.NombreTemporada</strong></p>
             </div>
             <div class="doc-zona">
                 <div class="num">@Model.NumeroConstancia</div>
-                <div style="margin-top:4px"><span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">@Model.Estado</span></div>
+                <div>
+                    @{
+                        string estadoClass = Model.Estado == "RECIBIDA" || Model.Estado == "COMPLETADA" ? "badge-recibida" :
+                                             Model.Estado == "CANCELADA" ? "badge-cancelada" : "badge-emitida";
+                    }
+                    <span class="badge-estado @estadoClass">@Model.Estado</span>
+                </div>
             </div>
         </div>
 
         <div class="section">
-            <div class="section-title">Datos de la Transferencia</div>
-            <div class="info-grid">
-                <div class="info-item"><label>Almacén Origen</label><span>@Model.NombreAlmacenOrigen</span></div>
-                <div class="info-item"><label>Equipo Destino</label><span>@Model.NombreEquipo</span></div>
-                <div class="info-item"><label>Fecha de Transferencia</label><span>@Model.FechaTransferencia.ToString("dd/MM/yyyy")</span></div>
-                <div class="info-item"><label>Coordinador Emisor</label><span>@(string.IsNullOrEmpty(Model.CoordinadorEmisor) ? "—" : Model.CoordinadorEmisor)</span></div>
-                <div class="info-item"><label>Persona Receptora</label><span>@(string.IsNullOrEmpty(Model.PersonaReceptoraEquipo) ? "—" : Model.PersonaReceptoraEquipo)</span></div>
-                <div class="info-item"><label>Observaciones</label><span>@(string.IsNullOrEmpty(Model.Observaciones) ? "—" : Model.Observaciones)</span></div>
+            <div class="section-title">Trazabilidad de la Transferencia</div>
+            <div class="grid-trazabilidad">
+                <!-- ORIGEN -->
+                <div class="card-traza card-emisor">
+                    <div class="card-traza-title">📤 Origen / Emisión (Salida)</div>
+                    <div class="info-row">
+                        <label>Equipo Emisor</label>
+                        <span>@equipoEmisor</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Almacén Origen</label>
+                        <span>@Model.NombreAlmacenOrigen</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Coordinador Entrega</label>
+                        <span>@(string.IsNullOrEmpty(Model.CoordinadorEmisor) ? "—" : Model.CoordinadorEmisor)</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Fecha de Emisión</label>
+                        <span>@fechaEmision.ToString("dd/MM/yyyy")</span>
+                    </div>
+                </div>
+
+                <!-- DESTINO -->
+                <div class="card-traza card-receptor">
+                    <div class="card-traza-title">📥 Destino / Recepción (Entrada)</div>
+                    <div class="info-row">
+                        <label>Equipo Receptor</label>
+                        <span>@Model.NombreEquipo</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Persona Receptora</label>
+                        <span>@(string.IsNullOrEmpty(Model.PersonaReceptoraEquipo) ? "(Pendiente de confirmación)" : Model.PersonaReceptoraEquipo)</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Fecha Recepción</label>
+                        <span>@(Model.FechaRecepcion.HasValue ? Model.FechaRecepcion.Value.ToString("dd/MM/yyyy") : "(Pendiente)")</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Estado Entrega</label>
+                        <span>@Model.Estado</span>
+                    </div>
+                </div>
             </div>
+
+            @if (!string.IsNullOrEmpty(Model.Observaciones))
+            {
+                <div class="obs-box">
+                    <strong>Observaciones:</strong> @Model.Observaciones
+                </div>
+            }
         </div>
 
         <div class="section">
             <div class="section-title">Materiales Transferidos</div>
             <table>
-                <thead><tr><th>Código</th><th>Material</th><th>Unidad</th><th class="text-right">Cantidad</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th style="width:120px">Código</th>
+                        <th>Descripción del Material</th>
+                        <th style="width:140px">Unidad Entrega</th>
+                        <th class="text-right" style="width:120px">Cantidad</th>
+                    </tr>
+                </thead>
                 <tbody>
                     @{ int totalUds = 0; }
                     @foreach (var d in Model.Detalles)
                     {
                         totalUds += d.CantidadUnidades;
                         <tr>
-                            <td><strong>@d.CodigoMaterial</strong></td>
+                            <td><strong style="font-family:monospace">@d.CodigoMaterial</strong></td>
                             <td>@d.NombreMaterial</td>
                             <td>@d.UnidadEntrega</td>
                             <td class="text-right" style="font-weight:700">@d.CantidadUnidades.ToString("N0")</td>
                         </tr>
                     }
-                    <tr style="background:#f0f4ff">
-                        <td colspan="3" style="font-weight:700;text-align:right">TOTAL:</td>
-                        <td class="text-right" style="font-weight:700;font-size:14px">@totalUds.ToString("N0")</td>
+                    <tr style="background:#f8fafc; border-top:2px solid #cbd5e1;">
+                        <td colspan="3" style="font-weight:700;text-align:right; font-size:12px;">TOTAL UNIDADES:</td>
+                        <td class="text-right" style="font-weight:700;font-size:13px; color:#003580">@totalUds.ToString("N0")</td>
                     </tr>
                 </tbody>
             </table>
@@ -88,17 +170,17 @@
 
         <div class="firma-zona">
             <div class="firma-linea">
-                @Model.CoordinadorEmisor<br />
-                <span style="font-size:10px;color:#666">Coordinador Emisor — Almacén Central</span>
+                @(string.IsNullOrEmpty(Model.CoordinadorEmisor) ? "Firma Emisor" : Model.CoordinadorEmisor)<br />
+                <span>Responsable de Emisión / Despacho — @equipoEmisor</span>
             </div>
             <div class="firma-linea">
-                @Model.PersonaReceptoraEquipo<br />
-                <span style="font-size:10px;color:#666">Persona Receptora — @Model.NombreEquipo</span>
+                @(string.IsNullOrEmpty(Model.PersonaReceptoraEquipo) ? "Firma Receptor" : Model.PersonaReceptoraEquipo)<br />
+                <span>Responsable de Recepción Física — @Model.NombreEquipo</span>
             </div>
         </div>
 
         <div class="footer">
-            Documento generado por el Sistema de Gestión OCC · @DateTime.Now.ToString("dd/MM/yyyy HH:mm") · Constancia: @Model.NumeroConstancia
+            Documento de control y constancia emitido por el Sistema de Operaciones y Recursos (SOR OCC) · @DateTime.Now.ToString("dd/MM/yyyy HH:mm") · Constancia Nº @Model.NumeroConstancia
         </div>
     </div>
 </body>

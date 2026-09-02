@@ -407,8 +407,26 @@ namespace SOR.Helpers
                         Observaciones          NVARCHAR(500) NULL,
                         Estado                 VARCHAR(30)  NOT NULL DEFAULT 'COMPLETADA',
                         IdUsuarioRegistro      INT          NOT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                        IdEquipoEmisor         INT          NULL FOREIGN KEY REFERENCES dbo.Equipos(IdEquipo),
+                        FechaEmision           DATETIME2    NULL,
+                        FechaRecepcion         DATETIME2    NULL,
+                        IdUsuarioEmisor        INT          NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                        IdUsuarioReceptor      INT          NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
                         CONSTRAINT UQ_TransferenciasEquipo_Constancia UNIQUE (NumeroConstancia)
                     );
+                END
+                ELSE
+                BEGIN
+                    IF COL_LENGTH('dbo.TransferenciasEquipo', 'IdEquipoEmisor') IS NULL
+                        ALTER TABLE dbo.TransferenciasEquipo ADD IdEquipoEmisor INT NULL FOREIGN KEY REFERENCES dbo.Equipos(IdEquipo);
+                    IF COL_LENGTH('dbo.TransferenciasEquipo', 'FechaEmision') IS NULL
+                        ALTER TABLE dbo.TransferenciasEquipo ADD FechaEmision DATETIME2 NULL;
+                    IF COL_LENGTH('dbo.TransferenciasEquipo', 'FechaRecepcion') IS NULL
+                        ALTER TABLE dbo.TransferenciasEquipo ADD FechaRecepcion DATETIME2 NULL;
+                    IF COL_LENGTH('dbo.TransferenciasEquipo', 'IdUsuarioEmisor') IS NULL
+                        ALTER TABLE dbo.TransferenciasEquipo ADD IdUsuarioEmisor INT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario);
+                    IF COL_LENGTH('dbo.TransferenciasEquipo', 'IdUsuarioReceptor') IS NULL
+                        ALTER TABLE dbo.TransferenciasEquipo ADD IdUsuarioReceptor INT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario);
                 END
 
                 -- 8.9 Detalle de Transferencias

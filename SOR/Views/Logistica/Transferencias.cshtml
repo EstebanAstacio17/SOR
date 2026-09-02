@@ -5,50 +5,144 @@
     var materiales = ViewBag.Materiales as IEnumerable<SOR.Models.Material> ?? new List<SOR.Models.Material>();
     var almacenes = ViewBag.Almacenes as IEnumerable<SOR.Models.Almacen> ?? new List<SOR.Models.Almacen>();
     var equipos = ViewBag.Equipos as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var coordinadoresEmisores = ViewBag.CoordinadoresEmisores as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var uActual = ViewBag.UsuarioActual as SOR.Models.Usuario;
+    bool esAdmin = ViewBag.EsAdmin == true;
+    int? idEquipoUsuario = ViewBag.IdEquipoUsuario as int?;
 }
 
 <div class="container-fluid py-4">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-arrow-left-right me-2" style="color:var(--apple-accent)"></i>Transferencias a Equipos</h1>
-            <nav aria-label="breadcrumb"><ol class="breadcrumb small mb-0">
-                <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
-                <li class="breadcrumb-item active">Transferencias</li>
-            </ol></nav>
+            <h1 class="h3 fw-bold text-slate-800 mb-1"><i class="bi bi-arrow-left-right me-2 text-primary"></i>Transferencias a Equipos</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                    <li class="breadcrumb-item active">Transferencias</li>
+                </ol>
+            </nav>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTransf">
-            <i class="bi bi-plus-lg me-1"></i>Nueva Transferencia
+        <button class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaTransf">
+            <i class="bi bi-plus-lg me-2"></i>Nueva Transferencia
         </button>
     </div>
 
-    @if (TempData["MensajeExito"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
-    @if (TempData["MensajeError"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-4 mb-4">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-4 mb-4">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
-    <div class="card">
-        <div class="card-header"><h6 class="mb-0 fw-semibold">Historial de Transferencias</h6></div>
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-light py-3 border-0">
+            <div class="d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-bold text-slate-800"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de Transferencias con Trazabilidad</h6>
+                <span class="badge bg-white text-muted border px-3 py-1.5 rounded-pill">Total: @Model.Count()</span>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th>Constancia</th><th>Equipo</th><th>Almacén</th><th>Fecha</th><th>Receptor</th><th>Estado</th><th class="text-center">Comprobante</th></tr>
+                    <tr>
+                        <th class="ps-4">Constancia</th>
+                        <th>Origen (Emisor)</th>
+                        <th>Destino (Receptor)</th>
+                        <th>Fechas (Emisión / Recepción)</th>
+                        <th>Responsables</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4" style="width: 170px;">Acciones</th>
+                    </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay transferencias registradas</td></tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay transferencias registradas aún.
+                            </td>
+                        </tr>
                     }
                     @foreach (var t in Model)
                     {
+                        string badgeClass = t.Estado == "RECIBIDA" || t.Estado == "COMPLETADA" ? "bg-success" :
+                                            t.Estado == "CANCELADA" ? "bg-danger" : "bg-warning text-dark";
                         <tr>
-                            <td><code>@t.NumeroConstancia</code></td>
-                            <td class="fw-semibold">@t.NombreEquipo</td>
-                            <td class="text-muted">@t.NombreAlmacenOrigen</td>
-                            <td>@t.FechaTransferencia.ToString("dd/MM/yyyy")</td>
-                            <td class="text-muted">@t.PersonaReceptoraEquipo</td>
-                            <td><span class="badge bg-success">@t.Estado</span></td>
-                            <td class="text-center">
-                                <a href="@Url.Action("ConstanciaEquipo","Logistica", new{id=t.IdTransferencia})" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                    <i class="bi bi-printer"></i>
-                                </a>
+                            <td class="ps-4">
+                                <code class="fw-bold fs-6">@t.NumeroConstancia</code>
+                                @if (!string.IsNullOrEmpty(t.Observaciones))
+                                {
+                                    <div class="text-xs text-muted text-truncate" style="max-width: 200px;" title="@t.Observaciones">
+                                        @t.Observaciones
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-slate-800">
+                                    <i class="bi bi-geo-alt text-primary me-1"></i>@(string.IsNullOrEmpty(t.NombreEquipoEmisor) ? "Almacén Central / Nacional" : t.NombreEquipoEmisor)
+                                </div>
+                                <small class="text-muted"><i class="bi bi-building me-1"></i>@t.NombreAlmacenOrigen</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-slate-800">
+                                    <i class="bi bi-people-fill text-success me-1"></i>@t.NombreEquipo
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <span class="text-xs text-muted text-uppercase fw-semibold">Emisión:</span>
+                                    <span class="small fw-semibold text-dark">@(t.FechaEmision.HasValue ? t.FechaEmision.Value.ToString("dd/MM/yyyy") : t.FechaTransferencia.ToString("dd/MM/yyyy"))</span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-muted text-uppercase fw-semibold">Recepción:</span>
+                                    @if (t.FechaRecepcion.HasValue)
+                                    {
+                                        <span class="small fw-semibold text-success"><i class="bi bi-check2 me-1"></i>@t.FechaRecepcion.Value.ToString("dd/MM/yyyy")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs text-muted fst-italic">Pendiente</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <i class="bi bi-person-up text-primary me-1"></i>@(string.IsNullOrEmpty(t.CoordinadorEmisor) ? "N/D" : t.CoordinadorEmisor)
+                                </div>
+                                <div class="small text-muted">
+                                    <i class="bi bi-person-down text-success me-1"></i>@(string.IsNullOrEmpty(t.PersonaReceptoraEquipo) ? "(Pendiente de recepción)" : t.PersonaReceptoraEquipo)
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge @badgeClass px-2.5 py-1.5 rounded-pill">@t.Estado</span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex align-items-center justify-content-end gap-1">
+                                    <a href="@Url.Action("ConstanciaEquipo","Logistica", new { id = t.IdTransferencia })" class="btn btn-sm btn-outline-secondary" target="_blank" title="Imprimir / Ver Constancia">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    @if (t.Estado == "EMITIDA" || t.Estado == "EN_TRANSITO")
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar Recepción Física" 
+                                                onclick="abrirModalConfirmarRecepcion(@t.IdTransferencia, '@t.NumeroConstancia', '@t.NombreEquipo')">
+                                            <i class="bi bi-check2-circle"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar Transferencia"
+                                                onclick="abrirModalCancelar(@t.IdTransferencia, '@t.NumeroConstancia')">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -59,113 +153,246 @@
 </div>
 
 <!-- Modal Nueva Transferencia -->
-<div class="modal fade" id="modalNuevaTransf" tabindex="-1">
+<div class="modal fade" id="modalNuevaTransf" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-semibold"><i class="bi bi-arrow-left-right me-2"></i>Registrar Transferencia a Equipo</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold text-white"><i class="bi bi-arrow-left-right me-2 text-primary"></i>Registrar Transferencia a Equipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             @using (Html.BeginForm("RegistrarTransferencia", "Logistica", FormMethod.Post, new { id = "formTransf" }))
             {
                 @Html.AntiForgeryToken()
-                <div class="modal-body">
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Equipo Destino <span class="text-danger">*</span></label>
-                            <select name="idEquipo" class="form-select" required>
-                                <option value="">— Seleccionar —</option>
-                                @foreach (var eq in ViewBag.Equipos as IEnumerable<System.Web.Mvc.SelectListItem> ?? new List<System.Web.Mvc.SelectListItem>())
+                <div class="modal-body p-4">
+                    
+                    <!-- SECCIÓN 1: ORIGEN -->
+                    <div class="p-3 bg-light rounded-4 mb-4 border">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-box-arrow-up-right me-2"></i>1. Datos de Origen y Emisión (Salida)
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Equipo Emisor <span class="text-danger">*</span></label>
+                                @if (esAdmin)
                                 {
-                                    <option value="@eq.Value">@eq.Text</option>
+                                    <select name="idEquipoEmisor" id="idEquipoEmisor" class="form-select form-select-sm" required>
+                                        <option value="">— Almacén Central / Nacional —</option>
+                                        @foreach (var eq in equipos)
+                                        {
+                                            <option value="@eq.Value" @(idEquipoUsuario.HasValue && idEquipoUsuario.Value.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                                        }
+                                    </select>
                                 }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Almacén Origen <span class="text-danger">*</span></label>
-                            <select name="idAlmacenOrigen" class="form-select" required>
-                                <option value="">— Seleccionar —</option>
-                                @foreach (var a in almacenes)
+                                else
                                 {
-                                    <option value="@a.IdAlmacen">@a.NombreAlmacen</option>
+                                    string nomEquipoActual = equipos.FirstOrDefault(x => x.Value == (idEquipoUsuario?.ToString()))?.Text ?? "Equipo Asignado";
+                                    <input type="text" class="form-control form-control-sm bg-white" value="@nomEquipoActual" readonly />
+                                    <input type="hidden" name="idEquipoEmisor" id="idEquipoEmisor" value="@idEquipoUsuario" />
                                 }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Fecha de Transferencia <span class="text-danger">*</span></label>
-                            <input type="date" name="fechaTransferencia" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
-                        </div>
-                        @{
-                            var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
-                        }
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Coordinador Emisor (Entrega)</label>
-                            @if (usuariosResp.Any())
-                            {
-                                <select name="coordinadorEmisor" class="form-select">
-                                    <option value="">— Seleccionar Coordinador Emisor —</option>
-                                    @foreach (var ur in usuariosResp)
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Almacén Emisor <span class="text-danger">*</span></label>
+                                <select name="idAlmacenOrigen" id="idAlmacenOrigen" class="form-select form-select-sm" required>
+                                    <option value="">— Seleccionar Almacén —</option>
+                                    @foreach (var a in almacenes)
                                     {
-                                        <option value="@ur.Value">@ur.Text</option>
+                                        <option value="@a.IdAlmacen">@a.NombreAlmacen</option>
                                     }
                                 </select>
-                            }
-                            else
-                            {
-                                <input type="text" name="coordinadorEmisor" class="form-control" placeholder="Nombre del coordinador que entrega" />
-                            }
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Persona Receptora (Recibe en Equipo)</label>
-                            @if (usuariosResp.Any())
-                            {
-                                <select name="personaReceptoraEquipo" class="form-select">
-                                    <option value="">— Seleccionar Integrante / Coordinador Receptor —</option>
-                                    @foreach (var ur in usuariosResp)
-                                    {
-                                        <option value="@ur.Value">@ur.Text</option>
-                                    }
-                                </select>
-                            }
-                            else
-                            {
-                                <input type="text" name="personaReceptoraEquipo" class="form-control" placeholder="Nombre de quien recibe en el equipo" />
-                            }
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Observaciones</label>
-                            <input type="text" name="observaciones" class="form-control" placeholder="Notas opcionales" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Coordinador Emisor (Entrega) <span class="text-danger">*</span></label>
+                                @if (coordinadoresEmisores.Any())
+                                {
+                                    <select name="coordinadorEmisor" class="form-select form-select-sm" required>
+                                        <option value="">— Seleccionar Coordinador —</option>
+                                        @foreach (var ur in coordinadoresEmisores)
+                                        {
+                                            <option value="@ur.Value">@ur.Text</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="text" name="coordinadorEmisor" class="form-control form-control-sm" placeholder="Nombre del coordinador emisor" required />
+                                }
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Fecha de Emisión <span class="text-danger">*</span></label>
+                                <input type="date" name="fechaEmision" id="fechaEmision" class="form-control form-control-sm" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                            </div>
                         </div>
                     </div>
 
-                    <div class="border rounded-3 p-3">
+                    <!-- SECCIÓN 2: DESTINO -->
+                    <div class="p-3 bg-light rounded-4 mb-4 border">
+                        <h6 class="fw-bold text-success mb-3">
+                            <i class="bi bi-box-arrow-in-down-right me-2"></i>2. Datos de Destino y Recepción
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Equipo Receptor <span class="text-danger">*</span></label>
+                                <select name="idEquipo" id="idEquipoReceptor" class="form-select form-select-sm" required>
+                                    <option value="">— Seleccionar Equipo Destino —</option>
+                                    @foreach (var eq in equipos)
+                                    {
+                                        <option value="@eq.Value">@eq.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Persona Receptora (Recibe en Equipo)</label>
+                                @if (usuariosResp.Any())
+                                {
+                                    <select name="personaReceptoraEquipo" class="form-select form-select-sm">
+                                        <option value="">— Seleccionar Receptor (Opcional si es posterior) —</option>
+                                        @foreach (var ur in usuariosResp)
+                                        {
+                                            <option value="@ur.Value">@ur.Text</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="text" name="personaReceptoraEquipo" class="form-control form-control-sm" placeholder="Nombre de quien recibe en el equipo receptor" />
+                                }
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Fecha de Recepción (Opcional)</label>
+                                <input type="date" name="fechaRecepcion" id="fechaRecepcion" class="form-control form-control-sm" />
+                                <span class="text-xs text-muted fst-italic">Dejar en blanco si la recepción física se confirmará posteriormente</span>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-xs fw-semibold text-muted text-uppercase mb-1">Observaciones / Justificación</label>
+                                <input type="text" name="observaciones" class="form-control form-control-sm" placeholder="Detalles o notas adicionales sobre la transferencia" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN 3: MATERIALES A TRANSFERIR -->
+                    <div class="border rounded-4 p-3 mb-2 bg-white shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-semibold mb-0">Materiales a Transferir</h6>
+                            <h6 class="fw-bold text-slate-800 mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>3. Materiales a Transferir</h6>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="btnAgregarMaterialTransf">
-                                <i class="bi bi-plus me-1"></i>Agregar Material
+                                <i class="bi bi-plus-lg me-1"></i>Agregar Material
                             </button>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
                                 <thead class="table-light">
-                                    <tr><th>Material</th><th style="width:160px">Cantidad (unidades)</th><th></th></tr>
+                                    <tr>
+                                        <th>Material</th>
+                                        <th style="width:200px">Cantidad (unidades)</th>
+                                        <th style="width:60px"></th>
+                                    </tr>
                                 </thead>
                                 <tbody id="cuerpoTransf">
-                                    <tr id="placeholder-transf"><td colspan="3" class="text-center text-muted py-3">Agregue materiales a transferir</td></tr>
+                                    <tr id="placeholder-transf"><td colspan="3" class="text-center text-muted py-3">Haga clic en "+ Agregar Material" para seleccionar los ítems a transferir</td></tr>
                                 </tbody>
                             </table>
                         </div>
                         <input type="hidden" name="detallesJson" id="detallesTransfJson" />
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Registrar Transferencia</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>Registrar Transferencia</button>
                 </div>
             }
         </div>
     </div>
 </div>
+
+<!-- Modal Confirmar Recepción -->
+<div class="modal fade" id="modalConfirmarRecepcion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-success text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold text-white"><i class="bi bi-check2-circle me-2"></i>Confirmar Recepción Física</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("ConfirmarRecepcion", "Logistica", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="idTransferencia" id="confRecIdTransf" />
+                <div class="modal-body p-4">
+                    <div class="alert alert-success border-0 bg-success-soft rounded-3 mb-3">
+                        <div class="fw-semibold">Constancia: <code id="confRecConstancia" class="fw-bold"></code></div>
+                        <div class="text-xs text-muted mt-1">Equipo Receptor: <strong id="confRecEquipo"></strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Fecha de Recepción Física <span class="text-danger">*</span></label>
+                        <input type="date" name="fechaRecepcion" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Persona que Recibe en el Equipo <span class="text-danger">*</span></label>
+                        @if (usuariosResp.Any())
+                        {
+                            <select name="personaReceptora" class="form-select" required>
+                                <option value="">— Seleccionar Integrante / Coordinador —</option>
+                                @foreach (var ur in usuariosResp)
+                                {
+                                    <option value="@ur.Value">@ur.Text</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <input type="text" name="personaReceptora" class="form-control" placeholder="Nombre completo de quien recibe" required />
+                        }
+                    </div>
+                    <div class="text-xs text-muted">
+                        <i class="bi bi-info-circle me-1"></i>Al confirmar, los materiales transferidos ingresarán automáticamente al inventario disponible del equipo receptor.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-check2 me-1"></i>Confirmar y Acreditar Stock</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cancelar Transferencia -->
+<div class="modal fade" id="modalCancelarTransf" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold text-white"><i class="bi bi-x-circle me-2"></i>Cancelar Transferencia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("CancelarTransferencia", "Logistica", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="idTransferencia" id="cancelIdTransf" />
+                <div class="modal-body p-4">
+                    <div class="alert alert-danger border-0 bg-danger-soft rounded-3 mb-3">
+                        <div class="fw-semibold">¿Está seguro de cancelar la transferencia <code id="cancelConstancia" class="fw-bold"></code>?</div>
+                        <div class="text-xs mt-1">El stock descontado volverá a estar disponible de inmediato en el almacén de origen.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Motivo de Cancelación <span class="text-danger">*</span></label>
+                        <input type="text" name="motivo" class="form-control" placeholder="Ej: Error en cantidades / Envío suspendido" required />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-danger px-4"><i class="bi bi-x me-1"></i>Confirmar Cancelación</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.12) !important;
+    }
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.12) !important;
+    }
+</style>
 
 @section Scripts {
 <script>
@@ -181,15 +408,15 @@
         var fila = document.createElement('tr');
         fila.id = 'transfLinea-' + id;
         fila.innerHTML =
-            '<td><select class="form-select form-select-sm sel-transf-mat" data-id="' + id + '">' +
-                '<option value="">— Material —</option>' +
+            '<td><select class="form-select form-select-sm sel-transf-mat" data-id="' + id + '" required>' +
+                '<option value="">— Seleccionar Material —</option>' +
                 materialesDisp.map(function(m){ return '<option value="' + m.IdMaterial + '" data-uds="' + (m.UnidadEntrega || m.unidadEntrega || 'uds') + '">' + m.Codigo + ' — ' + m.NombreMaterial + '</option>'; }).join('') +
             '</select></td>' +
             '<td><div class="input-group input-group-sm">' +
-                '<input type="number" class="form-control inp-transf-cant" data-id="' + id + '" min="1" value="1" />' +
+                '<input type="number" class="form-control inp-transf-cant" data-id="' + id + '" min="1" value="1" required />' +
                 '<span class="input-group-text lbl-transf-uds" data-id="' + id + '">uds</span>' +
             '</div></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById(\'transfLinea-' + id + '\').remove(); actualizarTransfJson();"><i class="bi bi-trash3"></i></button></td>';
+            '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById(\'transfLinea-' + id + '\').remove(); actualizarTransfJson();"><i class="bi bi-trash3"></i></button></td>';
         document.getElementById('cuerpoTransf').appendChild(fila);
 
         fila.querySelector('.sel-transf-mat').addEventListener('change', function(){
@@ -214,8 +441,43 @@
     document.getElementById('formTransf').addEventListener('submit', function (e) {
         actualizarTransfJson();
         var d = JSON.parse(document.getElementById('detallesTransfJson').value || '[]');
-        if (d.length === 0) { e.preventDefault(); alert('Debe agregar al menos un material para transferir.'); }
+        if (d.length === 0) {
+            e.preventDefault();
+            alert('Debe agregar al menos un material para transferir.');
+            return;
+        }
+
+        var emisorSel = document.getElementById('idEquipoEmisor');
+        var receptorSel = document.getElementById('idEquipoReceptor');
+        if (emisorSel && receptorSel && emisorSel.value && receptorSel.value && emisorSel.value === receptorSel.value) {
+            e.preventDefault();
+            alert('El equipo emisor y el equipo receptor no pueden ser el mismo.');
+            return;
+        }
+
+        var fEmision = document.getElementById('fechaEmision').value;
+        var fRecepcion = document.getElementById('fechaRecepcion').value;
+        if (fEmision && fRecepcion && fRecepcion < fEmision) {
+            e.preventDefault();
+            alert('La fecha de recepción no puede ser anterior a la fecha de emisión.');
+            return;
+        }
     });
+
+    window.abrirModalConfirmarRecepcion = function (id, constancia, equipo) {
+        document.getElementById('confRecIdTransf').value = id;
+        document.getElementById('confRecConstancia').textContent = constancia;
+        document.getElementById('confRecEquipo').textContent = equipo;
+        var modal = new bootstrap.Modal(document.getElementById('modalConfirmarRecepcion'));
+        modal.show();
+    };
+
+    window.abrirModalCancelar = function (id, constancia) {
+        document.getElementById('cancelIdTransf').value = id;
+        document.getElementById('cancelConstancia').textContent = constancia;
+        var modal = new bootstrap.Modal(document.getElementById('modalCancelarTransf'));
+        modal.show();
+    };
 })();
 </script>
 }

@@ -533,7 +533,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // TRANSFERENCIA A EQUIPOS (TRANSACCIÓN ACID)
+        // TRANSFERENCIA A EQUIPOS (TRANSACCIÓN ACID Y TRAZABILIDAD COMPLETA)
         // =====================================================================
 
         public int RegistrarTransferencia(TransferenciaEquipo modelo, int idUsuario)
@@ -546,40 +546,77 @@ namespace SOR.Repositories
                     try
                     {
                         // 1. Temporada activa
-                        int idTemporada = 0;
-                        using (var cmd = new SqlCommand("SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;", cn, tran))
-                            idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
+                        int idTemporada = modelo.IdTemporada;
+                        if (idTemporada <= 0)
+                        {
+                            using (var cmd = new SqlCommand("SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC;", cn, tran))
+                            {
+                                object objTemp = cmd.ExecuteScalar();
+                                if (objTemp == null || objTemp == DBNull.Value)
+                                    throw new InvalidOperationException("No hay una temporada activa registrada en el sistema.");
+                                idTemporada = Convert.ToInt32(objTemp);
+                            }
+                        }
 
-                        // 2. Número de constancia único
-                        string constancia = "TRF-" + DateTime.Now.ToString("yyyyMMdd") + "-" + new Random().Next(1000, 9999);
+                        // 2. Fechas de Emisión y Recepción
+                        DateTime fechaEmision = modelo.FechaEmision ?? (modelo.FechaTransferencia != DateTime.MinValue ? modelo.FechaTransferencia : DateTime.Now);
+                        modelo.FechaTransferencia = fechaEmision;
 
-                        // 3. Insertar encabezado
+                        bool esRecibidaInmediata = modelo.FechaRecepcion.HasValue && !string.IsNullOrWhiteSpace(modelo.PersonaReceptoraEquipo);
+                        if (modelo.FechaRecepcion.HasValue && modelo.FechaRecepcion.Value < fechaEmision)
+                        {
+                            throw new InvalidOperationException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
+                        }
+
+                        string estado = esRecibidaInmediata ? "RECIBIDA" : "EMITIDA";
+
+                        // 3. Número de constancia único
+                        string constancia = "TRF-" + fechaEmision.ToString("yyyyMMdd") + "-" + new Random().Next(1000, 9999);
+
+                        // 4. Insertar encabezado con trazabilidad
                         int idTransf = 0;
                         string sqlTransf = @"
-                            INSERT INTO dbo.TransferenciasEquipo (NumeroConstancia, IdTemporada, IdEquipo, IdAlmacenOrigen, FechaTransferencia, CoordinadorEmisor, PersonaReceptoraEquipo, Observaciones, Estado, IdUsuarioRegistro)
+                            INSERT INTO dbo.TransferenciasEquipo 
+                                (NumeroConstancia, IdTemporada, IdEquipo, IdEquipoEmisor, IdAlmacenOrigen, 
+                                 FechaTransferencia, FechaEmision, FechaRecepcion, 
+                                 IdUsuarioEmisor, CoordinadorEmisor, IdUsuarioReceptor, PersonaReceptoraEquipo, 
+                                 Observaciones, Estado, IdUsuarioRegistro)
                             OUTPUT INSERTED.IdTransferencia
-                            VALUES (@Const, @IdTemp, @IdEq, @IdAlm, @Fecha, @Emisor, @Receptor, @Obs, 'COMPLETADA', @IdUser);";
+                            VALUES 
+                                (@Const, @IdTemp, @IdEqReceptor, @IdEqEmisor, @IdAlm, 
+                                 @Fecha, @FechaEmision, @FechaRecepcion, 
+                                 @IdUserEmisor, @Emisor, @IdUserReceptor, @Receptor, 
+                                 @Obs, @Estado, @IdUser);";
+
                         using (var cmd = new SqlCommand(sqlTransf, cn, tran))
                         {
                             cmd.Parameters.AddWithValue("@Const", constancia);
                             cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                            cmd.Parameters.AddWithValue("@IdEq", modelo.IdEquipo);
+                            cmd.Parameters.AddWithValue("@IdEqReceptor", modelo.IdEquipo);
+                            cmd.Parameters.AddWithValue("@IdEqEmisor", modelo.IdEquipoEmisor.HasValue ? (object)modelo.IdEquipoEmisor.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacenOrigen);
-                            cmd.Parameters.AddWithValue("@Fecha", modelo.FechaTransferencia);
+                            cmd.Parameters.AddWithValue("@Fecha", fechaEmision);
+                            cmd.Parameters.AddWithValue("@FechaEmision", fechaEmision);
+                            cmd.Parameters.AddWithValue("@FechaRecepcion", modelo.FechaRecepcion.HasValue ? (object)modelo.FechaRecepcion.Value : DBNull.Value);
+                            cmd.Parameters.AddWithValue("@IdUserEmisor", modelo.IdUsuarioEmisor.HasValue ? (object)modelo.IdUsuarioEmisor.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@Emisor", modelo.CoordinadorEmisor ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@IdUserReceptor", modelo.IdUsuarioReceptor.HasValue ? (object)modelo.IdUsuarioReceptor.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@Receptor", modelo.PersonaReceptoraEquipo ?? (object)DBNull.Value);
                             cmd.Parameters.AddWithValue("@Obs", modelo.Observaciones ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Estado", estado);
                             cmd.Parameters.AddWithValue("@IdUser", idUsuario);
                             idTransf = Convert.ToInt32(cmd.ExecuteScalar());
                         }
 
-                        // 4. Detalles + movimientos de stock
+                        // 5. Detalles + movimientos de stock
                         foreach (var det in modelo.Detalles)
                         {
-                            // 4a. Verificar stock suficiente
+                            if (det.CantidadUnidades <= 0) continue;
+
+                            // 5a. Verificar stock suficiente en almacén origen con bloqueo de lectura
                             int disp = 0;
                             using (var cmd = new SqlCommand(
-                                "SELECT ISNULL(CantidadDisponible,0) FROM dbo.InventarioCentral WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;", cn, tran))
+                                "SELECT ISNULL(CantidadDisponible,0) FROM dbo.InventarioCentral WITH (UPDLOCK, ROWLOCK) WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;", cn, tran))
                             {
                                 cmd.Parameters.AddWithValue("@IdT", idTemporada);
                                 cmd.Parameters.AddWithValue("@IdA", modelo.IdAlmacenOrigen);
@@ -588,9 +625,9 @@ namespace SOR.Repositories
                                 disp = val != null && val != DBNull.Value ? Convert.ToInt32(val) : 0;
                             }
                             if (disp < det.CantidadUnidades)
-                                throw new InvalidOperationException($"Stock insuficiente para el material ID {det.IdMaterial}. Disponible: {disp}, Solicitado: {det.CantidadUnidades}.");
+                                throw new InvalidOperationException($"Stock insuficiente en el almacén emisor para el material ID {det.IdMaterial}. Disponible: {disp}, Solicitado: {det.CantidadUnidades}.");
 
-                            // 4b. Detalle de transferencia
+                            // 5b. Detalle de transferencia
                             string sqlDet = @"INSERT INTO dbo.TransferenciasEquipoDetalle (IdTransferencia, IdMaterial, CantidadUnidades) VALUES (@IdT, @IdM, @Cant);";
                             using (var cmd = new SqlCommand(sqlDet, cn, tran))
                             {
@@ -600,7 +637,7 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 4c. Descontar del inventario central
+                            // 5c. Descontar del inventario central del almacén origen
                             string sqlCentral = @"
                                 UPDATE dbo.InventarioCentral
                                 SET CantidadTransferida = CantidadTransferida + @Cant,
@@ -615,7 +652,133 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 4d. Upsert en inventario del equipo
+                            // 5d. Si la recepción es inmediata, acreditar en inventario del equipo receptor
+                            if (esRecibidaInmediata)
+                            {
+                                string sqlEquipo = @"
+                                    MERGE dbo.InventarioEquipo AS tgt
+                                    USING (SELECT @IdT AS IdTemporada, @IdEq AS IdEquipo, @IdM AS IdMaterial) AS src
+                                    ON tgt.IdTemporada=src.IdTemporada AND tgt.IdEquipo=src.IdEquipo AND tgt.IdMaterial=src.IdMaterial
+                                    WHEN MATCHED THEN
+                                        UPDATE SET CantidadRecibida = tgt.CantidadRecibida + @Cant,
+                                                   CantidadDisponible = tgt.CantidadDisponible + @Cant
+                                    WHEN NOT MATCHED THEN
+                                        INSERT (IdTemporada, IdEquipo, IdMaterial, CantidadRecibida, CantidadAsignada, CantidadDespachada, CantidadDisponible)
+                                        VALUES (@IdT, @IdEq, @IdM, @Cant, 0, 0, @Cant);";
+                                using (var cmd = new SqlCommand(sqlEquipo, cn, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@IdT", idTemporada);
+                                    cmd.Parameters.AddWithValue("@IdEq", modelo.IdEquipo);
+                                    cmd.Parameters.AddWithValue("@IdM", det.IdMaterial);
+                                    cmd.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            // 5e. Registrar movimiento en Kárdex
+                            RegistrarMovimiento(cn, tran, idTemporada, "TRANSFERENCIA_EQUIPO", det.IdMaterial,
+                                det.CantidadUnidades, modelo.IdAlmacenOrigen, null, modelo.IdEquipo, null,
+                                constancia, idUsuario, $"Transferencia {constancia} de material ID {det.IdMaterial} al equipo ID {modelo.IdEquipo}");
+                        }
+
+                        tran.Commit();
+                        AuditoriaHelper.Registrar("Transferencia Equipo", "Logistica", idTransf.ToString(), idUsuario,
+                            $"Transferencia {constancia} registrada con éxito. Estado: {estado}.");
+                        return idTransf;
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void ConfirmarRecepcionTransferencia(int idTransferencia, DateTime fechaRecepcion, string personaReceptora, int? idUsuarioReceptor, int idUsuario)
+        {
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var tran = cn.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    try
+                    {
+                        int idTemporada = 0;
+                        int idEquipoReceptor = 0;
+                        string estadoActual = "";
+                        DateTime fechaEmision = DateTime.MinValue;
+                        string constancia = "";
+
+                        string sqlHead = @"
+                            SELECT IdTemporada, IdEquipo, Estado, FechaTransferencia, NumeroConstancia 
+                            FROM dbo.TransferenciasEquipo WITH (UPDLOCK, ROWLOCK)
+                            WHERE IdTransferencia = @Id;";
+                        using (var cmd = new SqlCommand(sqlHead, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            using (var dr = cmd.ExecuteReader())
+                            {
+                                if (dr.Read())
+                                {
+                                    idTemporada = Convert.ToInt32(dr["IdTemporada"]);
+                                    idEquipoReceptor = Convert.ToInt32(dr["IdEquipo"]);
+                                    estadoActual = dr["Estado"].ToString();
+                                    fechaEmision = Convert.ToDateTime(dr["FechaTransferencia"]);
+                                    constancia = dr["NumeroConstancia"].ToString();
+                                }
+                                else
+                                {
+                                    throw new InvalidOperationException("La transferencia especificada no existe.");
+                                }
+                            }
+                        }
+
+                        if (estadoActual == "RECIBIDA" || estadoActual == "COMPLETADA")
+                            throw new InvalidOperationException("La transferencia ya se encuentra confirmada como RECIBIDA.");
+                        if (estadoActual == "CANCELADA")
+                            throw new InvalidOperationException("No se puede confirmar la recepción de una transferencia cancelada.");
+
+                        if (fechaRecepcion < fechaEmision)
+                            throw new InvalidOperationException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
+
+                        // 1. Actualizar estado y fecha en encabezado
+                        string sqlUpd = @"
+                            UPDATE dbo.TransferenciasEquipo 
+                            SET Estado = 'RECIBIDA', 
+                                FechaRecepcion = @FechaRec, 
+                                PersonaReceptoraEquipo = @PersonaRec,
+                                IdUsuarioReceptor = @IdUserRec
+                            WHERE IdTransferencia = @Id;";
+                        using (var cmd = new SqlCommand(sqlUpd, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            cmd.Parameters.AddWithValue("@FechaRec", fechaRecepcion);
+                            cmd.Parameters.AddWithValue("@PersonaRec", personaReceptora ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@IdUserRec", idUsuarioReceptor.HasValue ? (object)idUsuarioReceptor.Value : DBNull.Value);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Acreditar materiales en inventario del equipo receptor
+                        var detalles = new List<Tuple<int, int>>();
+                        string sqlDet = "SELECT IdMaterial, CantidadUnidades FROM dbo.TransferenciasEquipoDetalle WHERE IdTransferencia = @Id;";
+                        using (var cmd = new SqlCommand(sqlDet, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            using (var dr = cmd.ExecuteReader())
+                            {
+                                while (dr.Read())
+                                {
+                                    detalles.Add(Tuple.Create(Convert.ToInt32(dr["IdMaterial"]), Convert.ToInt32(dr["CantidadUnidades"])));
+                                }
+                            }
+                        }
+
+                        foreach (var item in detalles)
+                        {
+                            int idMat = item.Item1;
+                            int cant = item.Item2;
+
                             string sqlEquipo = @"
                                 MERGE dbo.InventarioEquipo AS tgt
                                 USING (SELECT @IdT AS IdTemporada, @IdEq AS IdEquipo, @IdM AS IdMaterial) AS src
@@ -629,22 +792,20 @@ namespace SOR.Repositories
                             using (var cmd = new SqlCommand(sqlEquipo, cn, tran))
                             {
                                 cmd.Parameters.AddWithValue("@IdT", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdEq", modelo.IdEquipo);
-                                cmd.Parameters.AddWithValue("@IdM", det.IdMaterial);
-                                cmd.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
+                                cmd.Parameters.AddWithValue("@IdEq", idEquipoReceptor);
+                                cmd.Parameters.AddWithValue("@IdM", idMat);
+                                cmd.Parameters.AddWithValue("@Cant", cant);
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 4e. Kárdex
-                            RegistrarMovimiento(cn, tran, idTemporada, "TRANSFERENCIA_EQUIPO", det.IdMaterial,
-                                det.CantidadUnidades, modelo.IdAlmacenOrigen, null, modelo.IdEquipo, null,
-                                "TRF-" + idTransf, idUsuario, "Transferencia al equipo ID " + modelo.IdEquipo);
+                            RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_TRANSFERENCIA", idMat,
+                                cant, null, null, idEquipoReceptor, null,
+                                constancia, idUsuario, $"Confirmación de recepción física de transferencia {constancia} por el equipo receptor ID {idEquipoReceptor}");
                         }
 
                         tran.Commit();
-                        AuditoriaHelper.Registrar("Transferencia Equipo", "Logistica", idTransf.ToString(), idUsuario,
-                            $"Transferencia {constancia} al equipo ID {modelo.IdEquipo}.");
-                        return idTransf;
+                        AuditoriaHelper.Registrar("Confirmar Recepción", "Logistica", idTransferencia.ToString(), idUsuario,
+                            $"Transferencia {constancia} confirmada como RECIBIDA por {personaReceptora}.");
                     }
                     catch
                     {
@@ -653,6 +814,249 @@ namespace SOR.Repositories
                     }
                 }
             }
+        }
+
+        public void CancelarTransferencia(int idTransferencia, string motivo, int idUsuario)
+        {
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var tran = cn.BeginTransaction(IsolationLevel.ReadCommitted))
+                {
+                    try
+                    {
+                        int idTemporada = 0;
+                        int idAlmacenOrigen = 0;
+                        string estadoActual = "";
+                        string constancia = "";
+
+                        string sqlHead = @"
+                            SELECT IdTemporada, IdAlmacenOrigen, Estado, NumeroConstancia 
+                            FROM dbo.TransferenciasEquipo WITH (UPDLOCK, ROWLOCK)
+                            WHERE IdTransferencia = @Id;";
+                        using (var cmd = new SqlCommand(sqlHead, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            using (var dr = cmd.ExecuteReader())
+                            {
+                                if (dr.Read())
+                                {
+                                    idTemporada = Convert.ToInt32(dr["IdTemporada"]);
+                                    idAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]);
+                                    estadoActual = dr["Estado"].ToString();
+                                    constancia = dr["NumeroConstancia"].ToString();
+                                }
+                                else
+                                {
+                                    throw new InvalidOperationException("La transferencia especificada no existe.");
+                                }
+                            }
+                        }
+
+                        if (estadoActual == "RECIBIDA" || estadoActual == "COMPLETADA")
+                            throw new InvalidOperationException("No se puede cancelar una transferencia que ya fue recibida físicamente por el equipo receptor.");
+                        if (estadoActual == "CANCELADA")
+                            throw new InvalidOperationException("La transferencia ya se encuentra cancelada.");
+
+                        // 1. Revertir el stock en Inventario Central
+                        var detalles = new List<Tuple<int, int>>();
+                        string sqlDet = "SELECT IdMaterial, CantidadUnidades FROM dbo.TransferenciasEquipoDetalle WHERE IdTransferencia = @Id;";
+                        using (var cmd = new SqlCommand(sqlDet, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            using (var dr = cmd.ExecuteReader())
+                            {
+                                while (dr.Read())
+                                {
+                                    detalles.Add(Tuple.Create(Convert.ToInt32(dr["IdMaterial"]), Convert.ToInt32(dr["CantidadUnidades"])));
+                                }
+                            }
+                        }
+
+                        foreach (var item in detalles)
+                        {
+                            int idMat = item.Item1;
+                            int cant = item.Item2;
+
+                            string sqlRev = @"
+                                UPDATE dbo.InventarioCentral
+                                SET CantidadTransferida = CantidadTransferida - @Cant,
+                                    CantidadDisponible  = CantidadDisponible  + @Cant
+                                WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;";
+                            using (var cmd = new SqlCommand(sqlRev, cn, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@Cant", cant);
+                                cmd.Parameters.AddWithValue("@IdT", idTemporada);
+                                cmd.Parameters.AddWithValue("@IdA", idAlmacenOrigen);
+                                cmd.Parameters.AddWithValue("@IdM", idMat);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            RegistrarMovimiento(cn, tran, idTemporada, "CANCELACION_TRANSFERENCIA", idMat,
+                                cant, idAlmacenOrigen, null, null, null,
+                                constancia, idUsuario, $"Cancelación de transferencia {constancia}. Motivo: {motivo}");
+                        }
+
+                        // 2. Marcar como CANCELADA
+                        string sqlCancel = @"
+                            UPDATE dbo.TransferenciasEquipo 
+                            SET Estado = 'CANCELADA', 
+                                Observaciones = ISNULL(Observaciones + ' | ', '') + 'Cancelada: ' + @Motivo
+                            WHERE IdTransferencia = @Id;";
+                        using (var cmd = new SqlCommand(sqlCancel, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            cmd.Parameters.AddWithValue("@Motivo", string.IsNullOrWhiteSpace(motivo) ? "Cancelado por el usuario" : motivo);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        tran.Commit();
+                        AuditoriaHelper.Registrar("Cancelar Transferencia", "Logistica", idTransferencia.ToString(), idUsuario,
+                            $"Transferencia {constancia} cancelada. Motivo: {motivo}");
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public TransferenciaEquipo ObtenerTransferenciaDetalle(int idTransferencia)
+        {
+            TransferenciaEquipo t = null;
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlHead = @"
+                    SELECT tr.*, tp.NombreTemporada, 
+                           eqReceptor.NombreEquipo AS NombreEquipoReceptor,
+                           eqEmisor.NombreEquipo AS NombreEquipoEmisor,
+                           a.NombreAlmacen
+                    FROM dbo.TransferenciasEquipo tr
+                    INNER JOIN dbo.Temporadas tp ON tr.IdTemporada = tp.IdTemporada
+                    INNER JOIN dbo.Equipos eqReceptor ON tr.IdEquipo = eqReceptor.IdEquipo
+                    LEFT JOIN dbo.Equipos eqEmisor ON tr.IdEquipoEmisor = eqEmisor.IdEquipo
+                    INNER JOIN dbo.Almacenes a ON tr.IdAlmacenOrigen = a.IdAlmacen
+                    WHERE tr.IdTransferencia = @Id;";
+                using (var cmd = new SqlCommand(sqlHead, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            t = new TransferenciaEquipo
+                            {
+                                IdTransferencia = Convert.ToInt32(dr["IdTransferencia"]),
+                                NumeroConstancia = dr["NumeroConstancia"].ToString(),
+                                IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
+                                NombreTemporada = dr["NombreTemporada"].ToString(),
+                                IdEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null,
+                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "Almacén Central / Nacional",
+                                IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
+                                NombreEquipo = dr["NombreEquipoReceptor"].ToString(),
+                                IdAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]),
+                                NombreAlmacenOrigen = dr["NombreAlmacen"].ToString(),
+                                FechaTransferencia = Convert.ToDateTime(dr["FechaTransferencia"]),
+                                FechaEmision = dr["FechaEmision"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaEmision"]) : Convert.ToDateTime(dr["FechaTransferencia"]),
+                                FechaRecepcion = dr["FechaRecepcion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRecepcion"]) : null,
+                                IdUsuarioEmisor = dr["IdUsuarioEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioEmisor"]) : null,
+                                CoordinadorEmisor = dr["CoordinadorEmisor"] != DBNull.Value ? dr["CoordinadorEmisor"].ToString() : "",
+                                IdUsuarioReceptor = dr["IdUsuarioReceptor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioReceptor"]) : null,
+                                PersonaReceptoraEquipo = dr["PersonaReceptoraEquipo"] != DBNull.Value ? dr["PersonaReceptoraEquipo"].ToString() : "",
+                                Observaciones = dr["Observaciones"] != DBNull.Value ? dr["Observaciones"].ToString() : "",
+                                Estado = dr["Estado"].ToString()
+                            };
+                        }
+                    }
+                }
+                if (t == null) return null;
+
+                string sqlDet = @"
+                    SELECT d.*, m.Codigo, m.NombreMaterial, m.UnidadEntrega
+                    FROM dbo.TransferenciasEquipoDetalle d
+                    INNER JOIN dbo.Materiales m ON d.IdMaterial = m.IdMaterial
+                    WHERE d.IdTransferencia = @Id;";
+                using (var cmd = new SqlCommand(sqlDet, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            t.Detalles.Add(new TransferenciaEquipoDetalle
+                            {
+                                IdTransferenciaDetalle = Convert.ToInt32(dr["IdTransferenciaDetalle"]),
+                                IdTransferencia = Convert.ToInt32(dr["IdTransferencia"]),
+                                IdMaterial = Convert.ToInt32(dr["IdMaterial"]),
+                                CodigoMaterial = dr["Codigo"].ToString(),
+                                NombreMaterial = dr["NombreMaterial"].ToString(),
+                                UnidadEntrega = dr["UnidadEntrega"].ToString(),
+                                CantidadUnidades = Convert.ToInt32(dr["CantidadUnidades"])
+                            });
+                        }
+                    }
+                }
+            }
+            return t;
+        }
+
+        public List<TransferenciaEquipo> ObtenerTransferencias(int? idTemporada = null, int? idEquipo = null)
+        {
+            var lista = new List<TransferenciaEquipo>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    SELECT tr.*, tp.NombreTemporada, 
+                           eqReceptor.NombreEquipo AS NombreEquipoReceptor,
+                           eqEmisor.NombreEquipo AS NombreEquipoEmisor,
+                           a.NombreAlmacen
+                    FROM dbo.TransferenciasEquipo tr
+                    INNER JOIN dbo.Temporadas tp ON tr.IdTemporada = tp.IdTemporada
+                    INNER JOIN dbo.Equipos eqReceptor ON tr.IdEquipo = eqReceptor.IdEquipo
+                    LEFT JOIN dbo.Equipos eqEmisor ON tr.IdEquipoEmisor = eqEmisor.IdEquipo
+                    INNER JOIN dbo.Almacenes a ON tr.IdAlmacenOrigen = a.IdAlmacen
+                    WHERE (@IdTemp IS NULL OR tr.IdTemporada = @IdTemp)
+                      AND (@IdEq IS NULL OR tr.IdEquipo = @IdEq OR tr.IdEquipoEmisor = @IdEq)
+                    ORDER BY tr.FechaTransferencia DESC;";
+                cn.Open();
+                using (var cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            lista.Add(new TransferenciaEquipo
+                            {
+                                IdTransferencia = Convert.ToInt32(dr["IdTransferencia"]),
+                                NumeroConstancia = dr["NumeroConstancia"].ToString(),
+                                IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
+                                NombreTemporada = dr["NombreTemporada"].ToString(),
+                                IdEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null,
+                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "Almacén Central / Nacional",
+                                IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
+                                NombreEquipo = dr["NombreEquipoReceptor"].ToString(),
+                                IdAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]),
+                                NombreAlmacenOrigen = dr["NombreAlmacen"].ToString(),
+                                FechaTransferencia = Convert.ToDateTime(dr["FechaTransferencia"]),
+                                FechaEmision = dr["FechaEmision"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaEmision"]) : Convert.ToDateTime(dr["FechaTransferencia"]),
+                                FechaRecepcion = dr["FechaRecepcion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRecepcion"]) : null,
+                                IdUsuarioEmisor = dr["IdUsuarioEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioEmisor"]) : null,
+                                CoordinadorEmisor = dr["CoordinadorEmisor"] != DBNull.Value ? dr["CoordinadorEmisor"].ToString() : "",
+                                IdUsuarioReceptor = dr["IdUsuarioReceptor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioReceptor"]) : null,
+                                PersonaReceptoraEquipo = dr["PersonaReceptoraEquipo"] != DBNull.Value ? dr["PersonaReceptoraEquipo"].ToString() : "",
+                                Observaciones = dr["Observaciones"] != DBNull.Value ? dr["Observaciones"].ToString() : "",
+                                Estado = dr["Estado"].ToString()
+                            });
+                        }
+                    }
+                }
+            }
+            return lista;
         }
 
         // =====================================================================
@@ -1508,118 +1912,6 @@ namespace SOR.Repositories
                 cmd.Parameters.AddWithValue("@Just", justificacion ?? (object)DBNull.Value);
                 cmd.ExecuteNonQuery();
             }
-        }
-
-        // =====================================================================
-        // CONSULTA TRANSFERENCIA DETALLE
-        // =====================================================================
-
-        public TransferenciaEquipo ObtenerTransferenciaDetalle(int idTransferencia)
-        {
-            TransferenciaEquipo t = null;
-            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
-            {
-                cn.Open();
-                string sqlHead = @"
-                    SELECT tr.*, tp.NombreTemporada, eq.NombreEquipo, a.NombreAlmacen
-                    FROM dbo.TransferenciasEquipo tr
-                    INNER JOIN dbo.Temporadas tp ON tr.IdTemporada = tp.IdTemporada
-                    INNER JOIN dbo.Equipos eq ON tr.IdEquipo = eq.IdEquipo
-                    INNER JOIN dbo.Almacenes a ON tr.IdAlmacenOrigen = a.IdAlmacen
-                    WHERE tr.IdTransferencia = @Id;";
-                using (var cmd = new SqlCommand(sqlHead, cn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", idTransferencia);
-                    using (var dr = cmd.ExecuteReader())
-                    {
-                        if (dr.Read())
-                        {
-                            t = new TransferenciaEquipo
-                            {
-                                IdTransferencia = Convert.ToInt32(dr["IdTransferencia"]),
-                                NumeroConstancia = dr["NumeroConstancia"].ToString(),
-                                NombreTemporada = dr["NombreTemporada"].ToString(),
-                                NombreEquipo = dr["NombreEquipo"].ToString(),
-                                NombreAlmacenOrigen = dr["NombreAlmacen"].ToString(),
-                                FechaTransferencia = Convert.ToDateTime(dr["FechaTransferencia"]),
-                                CoordinadorEmisor = dr["CoordinadorEmisor"] != DBNull.Value ? dr["CoordinadorEmisor"].ToString() : "",
-                                PersonaReceptoraEquipo = dr["PersonaReceptoraEquipo"] != DBNull.Value ? dr["PersonaReceptoraEquipo"].ToString() : "",
-                                Observaciones = dr["Observaciones"] != DBNull.Value ? dr["Observaciones"].ToString() : "",
-                                Estado = dr["Estado"].ToString()
-                            };
-                        }
-                    }
-                }
-                if (t == null) return null;
-
-                string sqlDet = @"
-                    SELECT d.*, m.Codigo, m.NombreMaterial, m.UnidadEntrega
-                    FROM dbo.TransferenciasEquipoDetalle d
-                    INNER JOIN dbo.Materiales m ON d.IdMaterial = m.IdMaterial
-                    WHERE d.IdTransferencia = @Id;";
-                using (var cmd = new SqlCommand(sqlDet, cn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", idTransferencia);
-                    using (var dr = cmd.ExecuteReader())
-                    {
-                        while (dr.Read())
-                        {
-                            t.Detalles.Add(new TransferenciaEquipoDetalle
-                            {
-                                IdMaterial = Convert.ToInt32(dr["IdMaterial"]),
-                                CodigoMaterial = dr["Codigo"].ToString(),
-                                NombreMaterial = dr["NombreMaterial"].ToString(),
-                                UnidadEntrega = dr["UnidadEntrega"].ToString(),
-                                CantidadUnidades = Convert.ToInt32(dr["CantidadUnidades"])
-                            });
-                        }
-                    }
-                }
-            }
-            return t;
-        }
-
-        public List<TransferenciaEquipo> ObtenerTransferencias(int? idTemporada = null, int? idEquipo = null)
-        {
-            var lista = new List<TransferenciaEquipo>();
-            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
-            {
-                string sql = @"
-                    SELECT tr.*, tp.NombreTemporada, eq.NombreEquipo, a.NombreAlmacen
-                    FROM dbo.TransferenciasEquipo tr
-                    INNER JOIN dbo.Temporadas tp ON tr.IdTemporada = tp.IdTemporada
-                    INNER JOIN dbo.Equipos eq ON tr.IdEquipo = eq.IdEquipo
-                    INNER JOIN dbo.Almacenes a ON tr.IdAlmacenOrigen = a.IdAlmacen
-                    WHERE (@IdTemp IS NULL OR tr.IdTemporada = @IdTemp)
-                      AND (@IdEq IS NULL OR tr.IdEquipo = @IdEq)
-                    ORDER BY tr.FechaTransferencia DESC;";
-                cn.Open();
-                using (var cmd = new SqlCommand(sql, cn))
-                {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
-                    using (var dr = cmd.ExecuteReader())
-                    {
-                        while (dr.Read())
-                        {
-                            lista.Add(new TransferenciaEquipo
-                            {
-                                IdTransferencia = Convert.ToInt32(dr["IdTransferencia"]),
-                                NumeroConstancia = dr["NumeroConstancia"].ToString(),
-                                NombreTemporada = dr["NombreTemporada"].ToString(),
-                                IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
-                                NombreEquipo = dr["NombreEquipo"].ToString(),
-                                NombreAlmacenOrigen = dr["NombreAlmacen"].ToString(),
-                                FechaTransferencia = Convert.ToDateTime(dr["FechaTransferencia"]),
-                                CoordinadorEmisor = dr["CoordinadorEmisor"] != DBNull.Value ? dr["CoordinadorEmisor"].ToString() : "",
-                                PersonaReceptoraEquipo = dr["PersonaReceptoraEquipo"] != DBNull.Value ? dr["PersonaReceptoraEquipo"].ToString() : "",
-                                Estado = dr["Estado"].ToString()
-                            });
-                        }
-                    }
-                }
-            }
-            return lista;
         }
 
         // =====================================================================

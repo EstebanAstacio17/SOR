@@ -146,12 +146,18 @@ namespace SOR.Models
         public string NumeroConstancia { get; set; }
         public int IdTemporada { get; set; }
         public string NombreTemporada { get; set; }
+        public int? IdEquipoEmisor { get; set; }
+        public string NombreEquipoEmisor { get; set; }
         public int IdEquipo { get; set; }
         public string NombreEquipo { get; set; }
         public int IdAlmacenOrigen { get; set; }
         public string NombreAlmacenOrigen { get; set; }
         public DateTime FechaTransferencia { get; set; }
+        public DateTime? FechaEmision { get; set; }
+        public DateTime? FechaRecepcion { get; set; }
+        public int? IdUsuarioEmisor { get; set; }
         public string CoordinadorEmisor { get; set; }
+        public int? IdUsuarioReceptor { get; set; }
         public string PersonaReceptoraEquipo { get; set; }
         public string Observaciones { get; set; }
         public string Estado { get; set; }

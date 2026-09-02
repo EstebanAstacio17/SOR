@@ -282,6 +282,10 @@ namespace SOR.Controllers
             ViewBag.Almacenes = _svc.ObtenerAlmacenes();
             ViewBag.IdTemporadaActiva = idTemp;
 
+            bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            ViewBag.EsAdmin = esAdmin;
+            ViewBag.IdEquipoUsuario = u?.IdEquipo;
+
             // Equipos
             var equipos = new List<SelectListItem>();
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -293,27 +297,64 @@ namespace SOR.Controllers
                         equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
             }
             ViewBag.Equipos = equipos;
+
+            // Coordinadores Emisores (del equipo del usuario si tiene equipo asignado, o todos si es admin)
+            ViewBag.CoordinadoresEmisores = ObtenerUsuariosCoordinadoresSelect(esAdmin ? (int?)null : u?.IdEquipo);
+            // Todos los usuarios/coordinadores para receptores
             ViewBag.UsuariosResponsables = ObtenerUsuariosCoordinadoresSelect();
-            return View(_svc.ObtenerTransferencias(idTemp));
+
+            return View(_svc.ObtenerTransferencias(idTemp, esAdmin ? (int?)null : u?.IdEquipo));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult RegistrarTransferencia(int idEquipo, int idAlmacenOrigen, DateTime fechaTransferencia,
+            int? idEquipoEmisor, DateTime? fechaEmision, DateTime? fechaRecepcion,
             string coordinadorEmisor, string personaReceptoraEquipo, string observaciones, string detallesJson)
         {
             Usuario u = (Usuario)Session["usuario"];
             try
             {
+                bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+                
+                // Determinar Equipo Emisor server-side
+                int? eqEmisorFinal = idEquipoEmisor;
+                if (!esAdmin && u != null && u.IdEquipo.HasValue)
+                {
+                    eqEmisorFinal = u.IdEquipo.Value;
+                }
+
+                if (eqEmisorFinal.HasValue && eqEmisorFinal.Value == idEquipo)
+                {
+                    TempData["MensajeError"] = "El equipo emisor y el equipo receptor no pueden ser el mismo.";
+                    return RedirectToAction("Transferencias");
+                }
+
+                DateTime fEmision = fechaEmision ?? (fechaTransferencia != DateTime.MinValue ? fechaTransferencia : DateTime.Now);
+                if (fechaRecepcion.HasValue && fechaRecepcion.Value < fEmision)
+                {
+                    TempData["MensajeError"] = "La fecha de recepción no puede ser anterior a la fecha de emisión.";
+                    return RedirectToAction("Transferencias");
+                }
+
                 var detalles = string.IsNullOrEmpty(detallesJson)
                     ? new List<TransferenciaEquipoDetalle>()
                     : JsonConvert.DeserializeObject<List<TransferenciaEquipoDetalle>>(detallesJson);
 
+                if (detalles == null || detalles.Count == 0)
+                {
+                    TempData["MensajeError"] = "Debe agregar al menos un material para transferir.";
+                    return RedirectToAction("Transferencias");
+                }
+
                 var modelo = new TransferenciaEquipo
                 {
-                    IdEquipo = idEquipo,
+                    IdEquipo = idEquipo, // Destino
+                    IdEquipoEmisor = eqEmisorFinal,
                     IdAlmacenOrigen = idAlmacenOrigen,
-                    FechaTransferencia = fechaTransferencia,
+                    FechaTransferencia = fEmision,
+                    FechaEmision = fEmision,
+                    FechaRecepcion = fechaRecepcion,
                     CoordinadorEmisor = coordinadorEmisor,
                     PersonaReceptoraEquipo = personaReceptoraEquipo,
                     Observaciones = observaciones,
@@ -321,11 +362,45 @@ namespace SOR.Controllers
                 };
 
                 int idTransf = _svc.RegistrarTransferencia(modelo, u.IdUsuario);
-                TempData["MensajeExito"] = $"Transferencia registrada exitosamente (ID #{idTransf}).";
+                TempData["MensajeExito"] = $"Transferencia #{idTransf} registrada exitosamente.";
             }
             catch (Exception ex)
             {
                 TempData["MensajeError"] = "Error al registrar la transferencia: " + ex.Message;
+            }
+            return RedirectToAction("Transferencias");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ConfirmarRecepcion(int idTransferencia, DateTime fechaRecepcion, string personaReceptora, int? idUsuarioReceptor)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                _svc.ConfirmarRecepcionTransferencia(idTransferencia, fechaRecepcion, personaReceptora, idUsuarioReceptor, u.IdUsuario);
+                TempData["MensajeExito"] = "Recepción de materiales confirmada exitosamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al confirmar la recepción: " + ex.Message;
+            }
+            return RedirectToAction("Transferencias");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CancelarTransferencia(int idTransferencia, string motivo)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            try
+            {
+                _svc.CancelarTransferencia(idTransferencia, motivo, u.IdUsuario);
+                TempData["MensajeExito"] = "Transferencia cancelada exitosamente y el inventario fue reincorporado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al cancelar la transferencia: " + ex.Message;
             }
             return RedirectToAction("Transferencias");
         }

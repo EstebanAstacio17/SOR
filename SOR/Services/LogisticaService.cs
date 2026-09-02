@@ -81,8 +81,12 @@ namespace SOR.Services
         {
             if (modelo.IdEquipo <= 0)
                 throw new ArgumentException("Debe seleccionar un equipo de destino.");
+            if (modelo.IdEquipoEmisor.HasValue && modelo.IdEquipoEmisor.Value == modelo.IdEquipo)
+                throw new ArgumentException("El equipo emisor y el equipo receptor no pueden ser el mismo.");
             if (modelo.IdAlmacenOrigen <= 0)
                 throw new ArgumentException("Debe seleccionar el almacén de origen.");
+            if (modelo.FechaEmision.HasValue && modelo.FechaRecepcion.HasValue && modelo.FechaRecepcion.Value < modelo.FechaEmision.Value)
+                throw new ArgumentException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
             if (modelo.Detalles == null || modelo.Detalles.Count == 0)
                 throw new ArgumentException("Debe agregar al menos un material para transferir.");
             foreach (var det in modelo.Detalles)
@@ -91,6 +95,22 @@ namespace SOR.Services
                     throw new ArgumentException($"La cantidad de unidades para el material ID {det.IdMaterial} debe ser mayor a 0.");
             }
             return _repo.RegistrarTransferencia(modelo, idUsuario);
+        }
+
+        public void ConfirmarRecepcionTransferencia(int idTransferencia, DateTime fechaRecepcion, string personaReceptora, int? idUsuarioReceptor, int idUsuario)
+        {
+            if (idTransferencia <= 0)
+                throw new ArgumentException("Identificador de transferencia no válido.");
+            if (string.IsNullOrWhiteSpace(personaReceptora))
+                throw new ArgumentException("Debe indicar la persona que recibe en el equipo receptor.");
+            _repo.ConfirmarRecepcionTransferencia(idTransferencia, fechaRecepcion, personaReceptora, idUsuarioReceptor, idUsuario);
+        }
+
+        public void CancelarTransferencia(int idTransferencia, string motivo, int idUsuario)
+        {
+            if (idTransferencia <= 0)
+                throw new ArgumentException("Identificador de transferencia no válido.");
+            _repo.CancelarTransferencia(idTransferencia, motivo, idUsuario);
         }
 
         public List<TransferenciaEquipo> ObtenerTransferencias(int? idTemporada = null, int? idEquipo = null) =>
