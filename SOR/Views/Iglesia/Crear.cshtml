@@ -401,6 +401,22 @@
                         </div>
                     `;
                     $('#contenedorAlertaIglesiaDuplicada').html(alertHtml).slideDown();
+                } else if (response.requiereExcepcion) {
+                    var urlDetalle = '@Url.Action("Detalle", "Iglesia")/' + response.idIglesiaPrevia;
+                    var alertClass = response.excepcionAprobada ? 'alert-success border-success' : 'alert-danger border-danger';
+                    var iconClass = response.excepcionAprobada ? 'bi-shield-check text-success' : 'bi-shield-slash text-danger';
+                    var alertHtml = `
+                        <div class="alert ${alertClass} shadow-sm p-3 mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2 rounded-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi ${iconClass} fs-5 me-2"></i>
+                                <span>${response.mensaje}</span>
+                            </div>
+                            <a href="${urlDetalle}" target="_blank" class="btn btn-sm btn-dark font-semibold">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Ver Expediente Previo
+                            </a>
+                        </div>
+                    `;
+                    $('#contenedorAlertaIglesiaDuplicada').html(alertHtml).slideDown();
                 } else {
                     $('#contenedorAlertaIglesiaDuplicada').slideUp().empty();
                 }

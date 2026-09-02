@@ -160,6 +160,52 @@ namespace SOR.Helpers
                     {
                         cmd.ExecuteNonQuery();
                     }
+
+                    // 6. Tabla de Excepciones a la Regla de 3 Años (Aprobación CE + CMI)
+                    string sqlExcepciones = @"
+                        IF OBJECT_ID('dbo.ExcepcionesRegla3Anios', 'U') IS NULL
+                        BEGIN
+                            CREATE TABLE dbo.ExcepcionesRegla3Anios (
+                                IdExcepcion INT IDENTITY(1,1) PRIMARY KEY,
+                                IdIglesia INT NOT NULL FOREIGN KEY REFERENCES dbo.Iglesias(IdIglesia),
+                                IdTemporada INT NOT NULL FOREIGN KEY REFERENCES dbo.Temporadas(IdTemporada),
+                                TemporadaPreviaId INT NULL FOREIGN KEY REFERENCES dbo.Temporadas(IdTemporada),
+                                DiferenciaTemporadas INT NOT NULL DEFAULT 1,
+                                Motivo NVARCHAR(250) NOT NULL,
+                                Justificacion NVARCHAR(MAX) NOT NULL,
+                                ResultadoDesempeno NVARCHAR(MAX) NULL,
+                                SolicitadoPor INT NOT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                                FechaSolicitud DATETIME2 DEFAULT GETDATE(),
+                                AprobadoCE BIT NOT NULL DEFAULT 0,
+                                UsuarioAprobacionCE INT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                                FechaAprobacionCE DATETIME2 NULL,
+                                ComentarioCE NVARCHAR(500) NULL,
+                                AprobadoCMI BIT NOT NULL DEFAULT 0,
+                                UsuarioAprobacionCMI INT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                                FechaAprobacionCMI DATETIME2 NULL,
+                                ComentarioCMI NVARCHAR(500) NULL,
+                                Rechazado BIT NOT NULL DEFAULT 0,
+                                UsuarioRechazo INT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                                FechaRechazo DATETIME2 NULL,
+                                MotivoRechazo NVARCHAR(500) NULL,
+                                Estado VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE',
+                                FechaCreacion DATETIME2 DEFAULT GETDATE(),
+                                FechaModificacion DATETIME2 NULL,
+                                RowVersion ROWVERSION
+                            );
+
+                            CREATE NONCLUSTERED INDEX IX_Excepciones_Iglesia_Temporada 
+                            ON dbo.ExcepcionesRegla3Anios(IdIglesia, IdTemporada, Estado);
+
+                            CREATE UNIQUE NONCLUSTERED INDEX UQ_Excepcion_Iglesia_Temporada_Activa 
+                            ON dbo.ExcepcionesRegla3Anios(IdIglesia, IdTemporada) 
+                            WHERE Estado IN ('PENDIENTE', 'APROBADA');
+                        END";
+
+                    using (SqlCommand cmd = new SqlCommand(sqlExcepciones, cn))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception ex)

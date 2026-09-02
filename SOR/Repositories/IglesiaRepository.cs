@@ -481,6 +481,64 @@ namespace SOR.Repositories
                         }
                     }
                 }
+
+                // 5. Cargar regla de 3 años, desempeño previo y excepciones
+                if (ig.ParticipacionActual != null)
+                {
+                    int idTemporadaActiva = ig.ParticipacionActual.IdTemporada;
+                    int minAnios = 3;
+                    string sqlCfg = "SELECT Valor FROM dbo.ConfiguracionesSistema WHERE Clave = 'MinAniosAntiguedad';";
+                    using (SqlCommand cmdCfg = new SqlCommand(sqlCfg, cn))
+                    {
+                        object val = cmdCfg.ExecuteScalar();
+                        if (val != null && int.TryParse(val.ToString(), out int p)) minAnios = p;
+                    }
+
+                    string sqlAnt = @"
+                        SELECT TOP 1 p.IdTemporada, t.NombreTemporada
+                        FROM dbo.ParticipacionesIglesia p
+                        INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
+                        INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
+                        WHERE (i.IdIglesia = @Id OR (i.RNC_Cedula IS NOT NULL AND i.RNC_Cedula <> '' AND i.RNC_Cedula = @Rnc))
+                          AND p.IdTemporada < @IdTemp
+                        ORDER BY p.IdTemporada DESC;";
+
+                    using (SqlCommand cmdAnt = new SqlCommand(sqlAnt, cn))
+                    {
+                        cmdAnt.Parameters.AddWithValue("@Id", idIglesia);
+                        cmdAnt.Parameters.AddWithValue("@Rnc", ig.RNC_Cedula ?? "");
+                        cmdAnt.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
+                        using (SqlDataReader drAnt = cmdAnt.ExecuteReader())
+                        {
+                            if (drAnt.Read())
+                            {
+                                int idPrev = Convert.ToInt32(drAnt["IdTemporada"]);
+                                string nomPrev = drAnt["NombreTemporada"].ToString();
+                                int diff = idTemporadaActiva - idPrev;
+
+                                if (diff < minAnios)
+                                {
+                                    ig.RequiereExcepcion3Anios = true;
+                                    ig.DiferenciaAniosAntiguedad = diff;
+                                    ig.IdTemporadaPrevia = idPrev;
+                                    ig.NombreTemporadaPrevia = nomPrev;
+                                }
+                            }
+                        }
+                    }
+
+                    // Cargar Excepción Activa si existe
+                    ig.ExcepcionActiva = ObtenerExcepcionActivaInterno(cn, idIglesia, idTemporadaActiva);
+
+                    // Cargar Historial completo de Excepciones
+                    ig.HistorialExcepciones = ObtenerHistorialExcepcionesInterno(cn, idIglesia);
+
+                    // Si requiere excepción o tiene historial, calculamos el snapshot de desempeño histórico
+                    if (ig.RequiereExcepcion3Anios && ig.IdTemporadaPrevia > 0)
+                    {
+                        ig.DesempenoHistorico = CalcularDesempenoHistoricoInterno(cn, idIglesia, ig.IdTemporadaPrevia, idTemporadaActiva);
+                    }
+                }
             }
 
             return ig;
@@ -740,6 +798,554 @@ namespace SOR.Repositories
             else
             {
                 InsertarPersona(cn, tran, idIglesia, tipoPersona, persona);
+            }
+        }
+
+        // ============================================================================
+        // MÉTODOS DE EXCEPCIÓN A LA REGLA DE 3 AÑOS (DOBLE APROBACIÓN CE + CMI)
+        // ============================================================================
+
+        private ExcepcionRegla3Anios MapearExcepcion(SqlDataReader dr)
+        {
+            return new ExcepcionRegla3Anios
+            {
+                IdExcepcion = Convert.ToInt32(dr["IdExcepcion"]),
+                IdIglesia = Convert.ToInt32(dr["IdIglesia"]),
+                NombreIglesia = dr.TableHasColumn("NombreIglesia") && dr["NombreIglesia"] != DBNull.Value ? dr["NombreIglesia"].ToString() : "",
+                IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
+                NombreTemporada = dr.TableHasColumn("NombreTemporada") && dr["NombreTemporada"] != DBNull.Value ? dr["NombreTemporada"].ToString() : "",
+                TemporadaPreviaId = dr["TemporadaPreviaId"] != DBNull.Value ? (int?)Convert.ToInt32(dr["TemporadaPreviaId"]) : null,
+                NombreTemporadaPrevia = dr.TableHasColumn("NombreTemporadaPrevia") && dr["NombreTemporadaPrevia"] != DBNull.Value ? dr["NombreTemporadaPrevia"].ToString() : "",
+                DiferenciaTemporadas = Convert.ToInt32(dr["DiferenciaTemporadas"]),
+                Motivo = dr["Motivo"].ToString(),
+                Justificacion = dr["Justificacion"].ToString(),
+                ResultadoDesempeno = dr["ResultadoDesempeno"] != DBNull.Value ? dr["ResultadoDesempeno"].ToString() : "",
+                SolicitadoPor = Convert.ToInt32(dr["SolicitadoPor"]),
+                NombreSolicitante = dr.TableHasColumn("NombreSolicitante") && dr["NombreSolicitante"] != DBNull.Value ? dr["NombreSolicitante"].ToString() : "",
+                FechaSolicitud = Convert.ToDateTime(dr["FechaSolicitud"]),
+                AprobadoCE = Convert.ToBoolean(dr["AprobadoCE"]),
+                UsuarioAprobacionCE = dr["UsuarioAprobacionCE"] != DBNull.Value ? (int?)Convert.ToInt32(dr["UsuarioAprobacionCE"]) : null,
+                NombreUsuarioAprobacionCE = dr.TableHasColumn("NombreUsuarioCE") && dr["NombreUsuarioCE"] != DBNull.Value ? dr["NombreUsuarioCE"].ToString() : "",
+                FechaAprobacionCE = dr["FechaAprobacionCE"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaAprobacionCE"]) : null,
+                ComentarioCE = dr["ComentarioCE"] != DBNull.Value ? dr["ComentarioCE"].ToString() : "",
+                AprobadoCMI = Convert.ToBoolean(dr["AprobadoCMI"]),
+                UsuarioAprobacionCMI = dr["UsuarioAprobacionCMI"] != DBNull.Value ? (int?)Convert.ToInt32(dr["UsuarioAprobacionCMI"]) : null,
+                NombreUsuarioAprobacionCMI = dr.TableHasColumn("NombreUsuarioCMI") && dr["NombreUsuarioCMI"] != DBNull.Value ? dr["NombreUsuarioCMI"].ToString() : "",
+                FechaAprobacionCMI = dr["FechaAprobacionCMI"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaAprobacionCMI"]) : null,
+                ComentarioCMI = dr["ComentarioCMI"] != DBNull.Value ? dr["ComentarioCMI"].ToString() : "",
+                Rechazado = Convert.ToBoolean(dr["Rechazado"]),
+                UsuarioRechazo = dr["UsuarioRechazo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["UsuarioRechazo"]) : null,
+                NombreUsuarioRechazo = dr.TableHasColumn("NombreUsuarioRechazo") && dr["NombreUsuarioRechazo"] != DBNull.Value ? dr["NombreUsuarioRechazo"].ToString() : "",
+                FechaRechazo = dr["FechaRechazo"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRechazo"]) : null,
+                MotivoRechazo = dr["MotivoRechazo"] != DBNull.Value ? dr["MotivoRechazo"].ToString() : "",
+                Estado = dr["Estado"].ToString(),
+                FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]),
+                FechaModificacion = dr["FechaModificacion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaModificacion"]) : null,
+                RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
+            };
+        }
+
+        private ExcepcionRegla3Anios ObtenerExcepcionActivaInterno(SqlConnection cn, int idIglesia, int idTemporada)
+        {
+            string sql = @"
+                SELECT TOP 1 e.*, 
+                       i.NombreIglesia,
+                       t.NombreTemporada,
+                       tp.NombreTemporada AS NombreTemporadaPrevia,
+                       ISNULL(pcSol.PrimerNombre + ' ' + pcSol.PrimerApellido, uSol.Correo) AS NombreSolicitante,
+                       ISNULL(pcCE.PrimerNombre + ' ' + pcCE.PrimerApellido, uCE.Correo) AS NombreUsuarioCE,
+                       ISNULL(pcCMI.PrimerNombre + ' ' + pcCMI.PrimerApellido, uCMI.Correo) AS NombreUsuarioCMI,
+                       ISNULL(pcRech.PrimerNombre + ' ' + pcRech.PrimerApellido, uRech.Correo) AS NombreUsuarioRechazo
+                FROM dbo.ExcepcionesRegla3Anios e
+                INNER JOIN dbo.Iglesias i ON e.IdIglesia = i.IdIglesia
+                INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada
+                LEFT JOIN dbo.Temporadas tp ON e.TemporadaPreviaId = tp.IdTemporada
+                LEFT JOIN dbo.Usuarios uSol ON e.SolicitadoPor = uSol.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcSol ON uSol.IdUsuario = pcSol.IdUsuario
+                LEFT JOIN dbo.Usuarios uCE ON e.UsuarioAprobacionCE = uCE.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcCE ON uCE.IdUsuario = pcCE.IdUsuario
+                LEFT JOIN dbo.Usuarios uCMI ON e.UsuarioAprobacionCMI = uCMI.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcCMI ON uCMI.IdUsuario = pcCMI.IdUsuario
+                LEFT JOIN dbo.Usuarios uRech ON e.UsuarioRechazo = uRech.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcRech ON uRech.IdUsuario = pcRech.IdUsuario
+                WHERE e.IdIglesia = @IdIglesia AND e.IdTemporada = @IdTemporada AND e.Estado IN ('PENDIENTE', 'APROBADA')
+                ORDER BY e.IdExcepcion DESC;";
+
+            using (SqlCommand cmd = new SqlCommand(sql, cn))
+            {
+                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    if (dr.Read())
+                    {
+                        return MapearExcepcion(dr);
+                    }
+                }
+            }
+            return null;
+        }
+
+        private List<ExcepcionRegla3Anios> ObtenerHistorialExcepcionesInterno(SqlConnection cn, int idIglesia)
+        {
+            var lista = new List<ExcepcionRegla3Anios>();
+            string sql = @"
+                SELECT e.*, 
+                       i.NombreIglesia,
+                       t.NombreTemporada,
+                       tp.NombreTemporada AS NombreTemporadaPrevia,
+                       ISNULL(pcSol.PrimerNombre + ' ' + pcSol.PrimerApellido, uSol.Correo) AS NombreSolicitante,
+                       ISNULL(pcCE.PrimerNombre + ' ' + pcCE.PrimerApellido, uCE.Correo) AS NombreUsuarioCE,
+                       ISNULL(pcCMI.PrimerNombre + ' ' + pcCMI.PrimerApellido, uCMI.Correo) AS NombreUsuarioCMI,
+                       ISNULL(pcRech.PrimerNombre + ' ' + pcRech.PrimerApellido, uRech.Correo) AS NombreUsuarioRechazo
+                FROM dbo.ExcepcionesRegla3Anios e
+                INNER JOIN dbo.Iglesias i ON e.IdIglesia = i.IdIglesia
+                INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada
+                LEFT JOIN dbo.Temporadas tp ON e.TemporadaPreviaId = tp.IdTemporada
+                LEFT JOIN dbo.Usuarios uSol ON e.SolicitadoPor = uSol.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcSol ON uSol.IdUsuario = pcSol.IdUsuario
+                LEFT JOIN dbo.Usuarios uCE ON e.UsuarioAprobacionCE = uCE.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcCE ON uCE.IdUsuario = pcCE.IdUsuario
+                LEFT JOIN dbo.Usuarios uCMI ON e.UsuarioAprobacionCMI = uCMI.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcCMI ON uCMI.IdUsuario = pcCMI.IdUsuario
+                LEFT JOIN dbo.Usuarios uRech ON e.UsuarioRechazo = uRech.IdUsuario
+                LEFT JOIN dbo.PerfilesCoordinador pcRech ON uRech.IdUsuario = pcRech.IdUsuario
+                WHERE e.IdIglesia = @IdIglesia
+                ORDER BY e.IdExcepcion DESC;";
+
+            using (SqlCommand cmd = new SqlCommand(sql, cn))
+            {
+                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(MapearExcepcion(dr));
+                    }
+                }
+            }
+            return lista;
+        }
+
+        private DesempenoHistoricoIglesia CalcularDesempenoHistoricoInterno(SqlConnection cn, int idIglesia, int idTemporadaPrevia, int idTemporadaActual)
+        {
+            var des = new DesempenoHistoricoIglesia
+            {
+                IdIglesia = idIglesia,
+                IdTemporadaPrevia = idTemporadaPrevia,
+                DiferenciaTemporadas = idTemporadaActual - idTemporadaPrevia
+            };
+
+            string sql = @"
+                SELECT TOP 1 
+                    i.NombreIglesia,
+                    t.NombreTemporada,
+                    p.IdParticipacion,
+                    p.EtapaActual,
+                    p.EstadoEvaluacion,
+                    p.EstatusEvaluacionReporte,
+                    (SELECT COUNT(1) FROM dbo.ReportesEventos re WHERE re.IdParticipacion = p.IdParticipacion AND re.TipoReporte = 'Evangelistico') AS RepEvang,
+                    (SELECT COUNT(1) FROM dbo.ReportesEventos re WHERE re.IdParticipacion = p.IdParticipacion AND re.TipoReporte = 'GranAventura') AS RepGA,
+                    (SELECT ISNULL(SUM(re.CantidadNinos), 0) FROM dbo.ReportesEventos re WHERE re.IdParticipacion = p.IdParticipacion) AS TotalNinos,
+                    (SELECT ISNULL(SUM(re.CuantosAceptaronSenor), 0) FROM dbo.ReportesEventos re WHERE re.IdParticipacion = p.IdParticipacion) AS TotalAceptaron,
+                    (SELECT ISNULL(SUM(re.CuantosGraduaron), 0) FROM dbo.ReportesEventos re WHERE re.IdParticipacion = p.IdParticipacion) AS TotalGraduados,
+                    (SELECT COUNT(DISTINCT am.IdMaestro) 
+                     FROM dbo.AsistenciaMaestro am 
+                     INNER JOIN dbo.Eventos ev ON am.IdEvento = ev.IdEvento 
+                     INNER JOIN dbo.Maestros m ON am.IdMaestro = m.IdMaestro
+                     WHERE m.IdIglesia = i.IdIglesia AND ev.IdTemporada = p.IdTemporada AND am.Asistio = 1) AS TotalMaestros
+                FROM dbo.ParticipacionesIglesia p
+                INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
+                INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
+                WHERE p.IdIglesia = @IdIglesia AND p.IdTemporada = @IdTempPrev;";
+
+            using (SqlCommand cmd = new SqlCommand(sql, cn))
+            {
+                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                cmd.Parameters.AddWithValue("@IdTempPrev", idTemporadaPrevia);
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    if (dr.Read())
+                    {
+                        des.NombreIglesia = dr["NombreIglesia"].ToString();
+                        des.NombreTemporadaPrevia = dr["NombreTemporada"].ToString();
+                        des.IdParticipacionPrevia = Convert.ToInt32(dr["IdParticipacion"]);
+                        des.EtapaAlcanzada = Convert.ToInt32(dr["EtapaActual"]);
+                        des.EstadoEvaluacion = dr["EstadoEvaluacion"].ToString();
+                        des.EstatusReporte = dr["EstatusEvaluacionReporte"] != DBNull.Value ? dr["EstatusEvaluacionReporte"].ToString() : "Pendiente";
+                        des.ReportoEvangelismo = Convert.ToInt32(dr["RepEvang"]) > 0;
+                        des.ReportoDiscipulado = Convert.ToInt32(dr["RepGA"]) > 0;
+                        des.TotalNinosAlcanzados = Convert.ToInt32(dr["TotalNinos"]);
+                        des.TotalDecisionesFe = Convert.ToInt32(dr["TotalAceptaron"]);
+                        des.TotalGraduados = Convert.ToInt32(dr["TotalGraduados"]);
+                        des.TotalMaestrosCapacitados = Convert.ToInt32(dr["TotalMaestros"]);
+
+                        des.ResumenTexto = $"En la temporada '{des.NombreTemporadaPrevia}', la iglesia completó hasta la Etapa {des.EtapaAlcanzada} (Estatus reporte: {des.EstatusReporte}). " +
+                            $"Reportó {des.TotalNinosAlcanzados} niños alcanzados, {des.TotalDecisionesFe} decisiones de fe, {des.TotalGraduados} graduados de La Gran Aventura, y {des.TotalMaestrosCapacitados} maestros con asistencia confirmada a capacitaciones.";
+                    }
+                    else
+                    {
+                        des.ResumenTexto = "No se encontraron registros estadísticos en la base de datos para la temporada previa especificada.";
+                    }
+                }
+            }
+
+            return des;
+        }
+
+        public ExcepcionRegla3Anios ObtenerExcepcionActiva(int idIglesia, int idTemporada)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                return ObtenerExcepcionActivaInterno(cn, idIglesia, idTemporada);
+            }
+        }
+
+        public List<ExcepcionRegla3Anios> ObtenerHistorialExcepciones(int idIglesia)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                return ObtenerHistorialExcepcionesInterno(cn, idIglesia);
+            }
+        }
+
+        public DesempenoHistoricoIglesia CalcularDesempenoHistorico(int idIglesia, int idTemporadaPrevia, int idTemporadaActual)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                return CalcularDesempenoHistoricoInterno(cn, idIglesia, idTemporadaPrevia, idTemporadaActual);
+            }
+        }
+
+        public ExcepcionRegla3Anios ObtenerExcepcionPorId(int idExcepcion)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = @"
+                    SELECT TOP 1 e.*, 
+                           i.NombreIglesia,
+                           t.NombreTemporada,
+                           tp.NombreTemporada AS NombreTemporadaPrevia,
+                           ISNULL(pcSol.PrimerNombre + ' ' + pcSol.PrimerApellido, uSol.Correo) AS NombreSolicitante,
+                           ISNULL(pcCE.PrimerNombre + ' ' + pcCE.PrimerApellido, uCE.Correo) AS NombreUsuarioCE,
+                           ISNULL(pcCMI.PrimerNombre + ' ' + pcCMI.PrimerApellido, uCMI.Correo) AS NombreUsuarioCMI,
+                           ISNULL(pcRech.PrimerNombre + ' ' + pcRech.PrimerApellido, uRech.Correo) AS NombreUsuarioRechazo
+                    FROM dbo.ExcepcionesRegla3Anios e
+                    INNER JOIN dbo.Iglesias i ON e.IdIglesia = i.IdIglesia
+                    INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada
+                    LEFT JOIN dbo.Temporadas tp ON e.TemporadaPreviaId = tp.IdTemporada
+                    LEFT JOIN dbo.Usuarios uSol ON e.SolicitadoPor = uSol.IdUsuario
+                    LEFT JOIN dbo.PerfilesCoordinador pcSol ON uSol.IdUsuario = pcSol.IdUsuario
+                    LEFT JOIN dbo.Usuarios uCE ON e.UsuarioAprobacionCE = uCE.IdUsuario
+                    LEFT JOIN dbo.PerfilesCoordinador pcCE ON uCE.IdUsuario = pcCE.IdUsuario
+                    LEFT JOIN dbo.Usuarios uCMI ON e.UsuarioAprobacionCMI = uCMI.IdUsuario
+                    LEFT JOIN dbo.PerfilesCoordinador pcCMI ON uCMI.IdUsuario = pcCMI.IdUsuario
+                    LEFT JOIN dbo.Usuarios uRech ON e.UsuarioRechazo = uRech.IdUsuario
+                    LEFT JOIN dbo.PerfilesCoordinador pcRech ON uRech.IdUsuario = pcRech.IdUsuario
+                    WHERE e.IdExcepcion = @IdExcepcion;";
+
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdExcepcion", idExcepcion);
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            return MapearExcepcion(dr);
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        public int RegistrarSolicitudExcepcion(ExcepcionRegla3Anios excepcion, int idUsuario)
+        {
+            if (string.IsNullOrWhiteSpace(excepcion.Motivo))
+                throw new ArgumentException("El motivo de la excepción es obligatorio.");
+            if (string.IsNullOrWhiteSpace(excepcion.Justificacion))
+                throw new ArgumentException("La justificación detallada de la excepción es obligatoria.");
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Validar que no exista ya una excepción activa (PENDIENTE o APROBADA)
+                        string sqlCheck = @"
+                            SELECT COUNT(1) 
+                            FROM dbo.ExcepcionesRegla3Anios 
+                            WHERE IdIglesia = @IdIglesia AND IdTemporada = @IdTemp AND Estado IN ('PENDIENTE', 'APROBADA');";
+                        using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
+                        {
+                            cmdCheck.Parameters.AddWithValue("@IdIglesia", excepcion.IdIglesia);
+                            cmdCheck.Parameters.AddWithValue("@IdTemp", excepcion.IdTemporada);
+                            int existe = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                            if (existe > 0)
+                            {
+                                throw new InvalidOperationException("Esta iglesia ya cuenta con una solicitud de excepción activa (Pendiente o Aprobada) para esta temporada.");
+                            }
+                        }
+
+                        // 2. Insertar excepción
+                        string sqlInsert = @"
+                            INSERT INTO dbo.ExcepcionesRegla3Anios (
+                                IdIglesia, IdTemporada, TemporadaPreviaId, DiferenciaTemporadas,
+                                Motivo, Justificacion, ResultadoDesempeno,
+                                SolicitadoPor, FechaSolicitud,
+                                AprobadoCE, AprobadoCMI, Rechazado, Estado,
+                                FechaCreacion
+                            ) VALUES (
+                                @IdIglesia, @IdTemporada, @TemporadaPreviaId, @DiferenciaTemporadas,
+                                @Motivo, @Justificacion, @ResultadoDesempeno,
+                                @SolicitadoPor, GETDATE(),
+                                0, 0, 0, 'PENDIENTE',
+                                GETDATE()
+                            );
+                            SELECT SCOPE_IDENTITY();";
+
+                        int idExcepcionNew;
+                        using (SqlCommand cmdIns = new SqlCommand(sqlInsert, cn, tran))
+                        {
+                            cmdIns.Parameters.AddWithValue("@IdIglesia", excepcion.IdIglesia);
+                            cmdIns.Parameters.AddWithValue("@IdTemporada", excepcion.IdTemporada);
+                            cmdIns.Parameters.AddWithValue("@TemporadaPreviaId", excepcion.TemporadaPreviaId.HasValue ? (object)excepcion.TemporadaPreviaId.Value : DBNull.Value);
+                            cmdIns.Parameters.AddWithValue("@DiferenciaTemporadas", excepcion.DiferenciaTemporadas);
+                            cmdIns.Parameters.AddWithValue("@Motivo", excepcion.Motivo.Trim());
+                            cmdIns.Parameters.AddWithValue("@Justificacion", excepcion.Justificacion.Trim());
+                            cmdIns.Parameters.AddWithValue("@ResultadoDesempeno", (object)excepcion.ResultadoDesempeno ?? DBNull.Value);
+                            cmdIns.Parameters.AddWithValue("@SolicitadoPor", idUsuario);
+
+                            idExcepcionNew = Convert.ToInt32(cmdIns.ExecuteScalar());
+                        }
+
+                        // 3. Registrar auditoría
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "SOLICITAR_EXCEPCION_3ANIOS", "EXCEPCIONES",
+                            idExcepcionNew.ToString(), $"Solicitud de excepción registrada para iglesia #{excepcion.IdIglesia}. Motivo: {excepcion.Motivo}");
+
+                        tran.Commit();
+                        return idExcepcionNew;
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void AprobarExcepcionCE(int idExcepcion, int idUsuarioCE, string comentario, byte[] rowVersion)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        // Validar estado actual
+                        string sqlVal = "SELECT Estado, AprobadoCMI FROM dbo.ExcepcionesRegla3Anios WHERE IdExcepcion = @Id;";
+                        bool cmiAprobado = false;
+                        using (SqlCommand cmdVal = new SqlCommand(sqlVal, cn, tran))
+                        {
+                            cmdVal.Parameters.AddWithValue("@Id", idExcepcion);
+                            using (SqlDataReader dr = cmdVal.ExecuteReader())
+                            {
+                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepción no existe.");
+                                string estadoActual = dr["Estado"].ToString();
+                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepción que ha sido rechazada.");
+                                cmiAprobado = Convert.ToBoolean(dr["AprobadoCMI"]);
+                            }
+                        }
+
+                        string nuevoEstado = cmiAprobado ? "APROBADA" : "PENDIENTE";
+
+                        string sqlUp = @"
+                            UPDATE dbo.ExcepcionesRegla3Anios SET
+                                AprobadoCE = 1,
+                                UsuarioAprobacionCE = @IdUser,
+                                FechaAprobacionCE = GETDATE(),
+                                ComentarioCE = @Comentario,
+                                Estado = @NuevoEstado,
+                                FechaModificacion = GETDATE()
+                            WHERE IdExcepcion = @Id 
+                              AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
+
+                        using (SqlCommand cmdUp = new SqlCommand(sqlUp, cn, tran))
+                        {
+                            cmdUp.Parameters.AddWithValue("@IdUser", idUsuarioCE);
+                            cmdUp.Parameters.AddWithValue("@Comentario", (object)comentario ?? DBNull.Value);
+                            cmdUp.Parameters.AddWithValue("@NuevoEstado", nuevoEstado);
+                            cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdUp.Parameters.AddWithValue("@RowVersion", rowVersion ?? (object)DBNull.Value);
+
+                            int rows = cmdUp.ExecuteNonQuery();
+                            if (rows == 0)
+                            {
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario mientras se procesaba su aprobación.");
+                            }
+                        }
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuarioCE, null, "APROBAR_EXCEPCION_CE", "EXCEPCIONES",
+                            idExcepcion.ToString(), $"Aprobación de CE registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void AprobarExcepcionCMI(int idExcepcion, int idUsuarioCMI, string comentario, byte[] rowVersion)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sqlVal = "SELECT Estado, AprobadoCE FROM dbo.ExcepcionesRegla3Anios WHERE IdExcepcion = @Id;";
+                        bool ceAprobado = false;
+                        using (SqlCommand cmdVal = new SqlCommand(sqlVal, cn, tran))
+                        {
+                            cmdVal.Parameters.AddWithValue("@Id", idExcepcion);
+                            using (SqlDataReader dr = cmdVal.ExecuteReader())
+                            {
+                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepción no existe.");
+                                string estadoActual = dr["Estado"].ToString();
+                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepción que ha sido rechazada.");
+                                ceAprobado = Convert.ToBoolean(dr["AprobadoCE"]);
+                            }
+                        }
+
+                        string nuevoEstado = ceAprobado ? "APROBADA" : "PENDIENTE";
+
+                        string sqlUp = @"
+                            UPDATE dbo.ExcepcionesRegla3Anios SET
+                                AprobadoCMI = 1,
+                                UsuarioAprobacionCMI = @IdUser,
+                                FechaAprobacionCMI = GETDATE(),
+                                ComentarioCMI = @Comentario,
+                                Estado = @NuevoEstado,
+                                FechaModificacion = GETDATE()
+                            WHERE IdExcepcion = @Id 
+                              AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
+
+                        using (SqlCommand cmdUp = new SqlCommand(sqlUp, cn, tran))
+                        {
+                            cmdUp.Parameters.AddWithValue("@IdUser", idUsuarioCMI);
+                            cmdUp.Parameters.AddWithValue("@Comentario", (object)comentario ?? DBNull.Value);
+                            cmdUp.Parameters.AddWithValue("@NuevoEstado", nuevoEstado);
+                            cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdUp.Parameters.AddWithValue("@RowVersion", rowVersion ?? (object)DBNull.Value);
+
+                            int rows = cmdUp.ExecuteNonQuery();
+                            if (rows == 0)
+                            {
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario mientras se procesaba su aprobación.");
+                            }
+                        }
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuarioCMI, null, "APROBAR_EXCEPCION_CMI", "EXCEPCIONES",
+                            idExcepcion.ToString(), $"Aprobación de CMI registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void RechazarExcepcion(int idExcepcion, int idUsuario, string motivo, byte[] rowVersion)
+        {
+            if (string.IsNullOrWhiteSpace(motivo))
+                throw new ArgumentException("Debe especificar el motivo del rechazo.");
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sqlUp = @"
+                            UPDATE dbo.ExcepcionesRegla3Anios SET
+                                Rechazado = 1,
+                                UsuarioRechazo = @IdUser,
+                                FechaRechazo = GETDATE(),
+                                MotivoRechazo = @Motivo,
+                                Estado = 'RECHAZADA',
+                                FechaModificacion = GETDATE()
+                            WHERE IdExcepcion = @Id 
+                              AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
+
+                        using (SqlCommand cmdUp = new SqlCommand(sqlUp, cn, tran))
+                        {
+                            cmdUp.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmdUp.Parameters.AddWithValue("@Motivo", motivo.Trim());
+                            cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdUp.Parameters.AddWithValue("@RowVersion", rowVersion ?? (object)DBNull.Value);
+
+                            int rows = cmdUp.ExecuteNonQuery();
+                            if (rows == 0)
+                            {
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario.");
+                            }
+                        }
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "RECHAZAR_EXCEPCION_3ANIOS", "EXCEPCIONES",
+                            idExcepcion.ToString(), $"Excepción rechazada. Motivo: {motivo}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public bool TieneExcepcionAprobada(string rncCedula, int idTemporada)
+        {
+            if (string.IsNullOrWhiteSpace(rncCedula)) return false;
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = @"
+                    SELECT COUNT(1)
+                    FROM dbo.ExcepcionesRegla3Anios e
+                    INNER JOIN dbo.Iglesias i ON e.IdIglesia = i.IdIglesia
+                    WHERE i.RNC_Cedula = @Rnc 
+                      AND e.IdTemporada = @IdTemporada 
+                      AND e.Estado = 'APROBADA' 
+                      AND e.AprobadoCE = 1 
+                      AND e.AprobadoCMI = 1;";
+
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Rnc", rncCedula.Trim());
+                    cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                    return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                }
             }
         }
     }

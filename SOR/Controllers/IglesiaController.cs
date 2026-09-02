@@ -365,7 +365,177 @@ namespace SOR.Controllers
 
             ViewBag.UsuarioActual = u;
             ViewBag.PuedeEditar = PuedeEditarIglesia(u, iglesia.IdEquipo);
+
+            bool esAdmin = (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool puedeAprobarCE = esAdmin || (u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+            bool puedeAprobarCMI = esAdmin || (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+            bool puedeSolicitarExcepcion = esAdmin || PuedeEditarIglesia(u, iglesia.IdEquipo);
+
+            ViewBag.PuedeAprobarCE = puedeAprobarCE;
+            ViewBag.PuedeAprobarCMI = puedeAprobarCMI;
+            ViewBag.PuedeSolicitarExcepcion = puedeSolicitarExcepcion;
+
             return View(iglesia);
+        }
+
+        // ============================================================================
+        // GESTIÓN DE EXCEPCIONES A LA REGLA DE 3 AÑOS (DOBLE APROBACIÓN CE + CMI)
+        // ============================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult SolicitarExcepcion3Anios(int idIglesia, int idTemporada, int? temporadaPreviaId, int diferenciaTemporadas, string motivo, string justificacion, string resultadoDesempeno)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permiso para solicitar excepciones en esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (string.IsNullOrWhiteSpace(motivo) || string.IsNullOrWhiteSpace(justificacion))
+            {
+                TempData["MensajeError"] = "El motivo y la justificación detallada son obligatorios para solicitar la excepción.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                var excepcion = new ExcepcionRegla3Anios
+                {
+                    IdIglesia = idIglesia,
+                    IdTemporada = idTemporada,
+                    TemporadaPreviaId = temporadaPreviaId,
+                    DiferenciaTemporadas = diferenciaTemporadas,
+                    Motivo = motivo,
+                    Justificacion = justificacion,
+                    ResultadoDesempeno = resultadoDesempeno
+                };
+
+                _iglesiaService.SolicitarExcepcion(excepcion, u.IdUsuario);
+                TempData["MensajeExito"] = "Solicitud de excepción registrada exitosamente. Queda pendiente de evaluación independiente por el Coordinador de Equipo (CE) y el Coordinador de Movilización (CMI).";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al solicitar la excepción: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AprobarExcepcionCE(int idExcepcion, int idIglesia, string comentarioCE, string rowVersionString)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            bool esAdmin = (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCE = (u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+
+            if (!esAdmin && !esCE)
+            {
+                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Equipo (CE) autorizado o un Administrador pueden registrar la aprobación de CE.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                byte[] rowVersion = !string.IsNullOrEmpty(rowVersionString) ? Convert.FromBase64String(rowVersionString) : null;
+                _iglesiaService.AprobarExcepcionCE(idExcepcion, u.IdUsuario, comentarioCE, rowVersion);
+                TempData["MensajeExito"] = "Aprobación de CE registrada correctamente.";
+            }
+            catch (DBConcurrencyException ex)
+            {
+                TempData["MensajeError"] = "Conflicto de concurrencia: " + ex.Message;
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar aprobación de CE: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AprobarExcepcionCMI(int idExcepcion, int idIglesia, string comentarioCMI, string rowVersionString)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            bool esAdmin = (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCMI = (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+
+            if (!esAdmin && !esCMI)
+            {
+                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Movilización (CMI) autorizado o un Administrador pueden registrar la aprobación de CMI.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                byte[] rowVersion = !string.IsNullOrEmpty(rowVersionString) ? Convert.FromBase64String(rowVersionString) : null;
+                _iglesiaService.AprobarExcepcionCMI(idExcepcion, u.IdUsuario, comentarioCMI, rowVersion);
+                TempData["MensajeExito"] = "Aprobación de CMI registrada correctamente.";
+            }
+            catch (DBConcurrencyException ex)
+            {
+                TempData["MensajeError"] = "Conflicto de concurrencia: " + ex.Message;
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar aprobación de CMI: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RechazarExcepcion3Anios(int idExcepcion, int idIglesia, string motivoRechazo, string rowVersionString)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            Iglesia iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            bool esAdmin = (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            bool esCE = (u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+            bool esCMI = (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+
+            if (!esAdmin && !esCE && !esCMI)
+            {
+                TempData["MensajeError"] = "Acceso denegado: Solo CE, CMI o un Administrador pueden rechazar una solicitud de excepción.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (string.IsNullOrWhiteSpace(motivoRechazo))
+            {
+                TempData["MensajeError"] = "Debe indicar el motivo del rechazo de la excepción.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                byte[] rowVersion = !string.IsNullOrEmpty(rowVersionString) ? Convert.FromBase64String(rowVersionString) : null;
+                _iglesiaService.RechazarExcepcion(idExcepcion, u.IdUsuario, motivoRechazo, rowVersion);
+                TempData["MensajeExito"] = "La solicitud de excepción fue rechazada.";
+            }
+            catch (DBConcurrencyException ex)
+            {
+                TempData["MensajeError"] = "Conflicto de concurrencia: " + ex.Message;
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al rechazar la excepción: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
         // ============================================================================
@@ -1483,6 +1653,70 @@ namespace SOR.Controllers
                             idTemporada = idTemp,
                             mensaje = $"Esta iglesia ya está registrada en el equipo: {nombreEq}"
                         }, JsonRequestBehavior.AllowGet);
+                    }
+                }
+            }
+
+            // 2. Si no está en la temporada activa, verificar si participó en una temporada previa reciente (< minAnios)
+            int minAnios = 3;
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sqlCfg = "SELECT Valor FROM dbo.ConfiguracionesSistema WHERE Clave = 'MinAniosAntiguedad';";
+                using (SqlCommand cmdCfg = new SqlCommand(sqlCfg, cn))
+                {
+                    object val = cmdCfg.ExecuteScalar();
+                    if (val != null && int.TryParse(val.ToString(), out int p)) minAnios = p;
+                }
+
+                string sqlAnt = @"
+                    SELECT TOP 1 p.IdTemporada, t.NombreTemporada, i.IdIglesia, i.NombreIglesia, e.NombreEquipo
+                    FROM dbo.ParticipacionesIglesia p
+                    INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
+                    INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
+                    INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
+                    WHERE (i.RNC_Cedula = @RncCedula OR REPLACE(REPLACE(ISNULL(i.RNC_Cedula, ''), '-', ''), ' ', '') = @CleanDoc)
+                      AND p.IdTemporada < @IdTemp
+                    ORDER BY p.IdTemporada DESC;";
+
+                using (SqlCommand cmdAnt = new SqlCommand(sqlAnt, cn))
+                {
+                    cmdAnt.Parameters.AddWithValue("@RncCedula", rncCedula.Trim());
+                    cmdAnt.Parameters.AddWithValue("@CleanDoc", cleanDoc);
+                    cmdAnt.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
+
+                    using (SqlDataReader drAnt = cmdAnt.ExecuteReader())
+                    {
+                        if (drAnt.Read())
+                        {
+                            int idPrev = Convert.ToInt32(drAnt["IdTemporada"]);
+                            string nomPrev = drAnt["NombreTemporada"].ToString();
+                            int idIgAnt = Convert.ToInt32(drAnt["IdIglesia"]);
+                            string nomIgAnt = drAnt["NombreIglesia"].ToString();
+                            string nomEqAnt = drAnt["NombreEquipo"].ToString();
+                            int diff = idTemporadaActiva - idPrev;
+
+                            if (diff < minAnios)
+                            {
+                                bool excepcionAprobada = _iglesiaService.TieneExcepcionAprobada(rncCedula, idTemporadaActiva);
+
+                                return Json(new
+                                {
+                                    existe = false,
+                                    requiereExcepcion = true,
+                                    excepcionAprobada = excepcionAprobada,
+                                    idIglesiaPrevia = idIgAnt,
+                                    nombreIglesiaPrevia = nomIgAnt,
+                                    nombreEquipoPrevia = nomEqAnt,
+                                    temporadaPrevia = nomPrev,
+                                    diferenciaTemporadas = diff,
+                                    minAnios = minAnios,
+                                    mensaje = excepcionAprobada
+                                        ? $"La iglesia '{nomIgAnt}' participó en la temporada '{nomPrev}' ({diff} temp. de diferencia), pero cuenta con una EXCEPCIÓN APROBADA (CE y CMI) para esta temporada."
+                                        : $"ATENCIÓN: La iglesia '{nomIgAnt}' participó en la temporada reciente '{nomPrev}' ({diff} temp. de diferencia; mínimo requerido: {minAnios}). Requiere una excepción formal aprobada por CE y CMI para poder participar."
+                                }, JsonRequestBehavior.AllowGet);
+                            }
+                        }
                     }
                 }
             }

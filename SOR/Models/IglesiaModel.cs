@@ -52,6 +52,15 @@ namespace SOR.Models
         public List<ComentarioIglesia> Comentarios { get; set; } = new List<ComentarioIglesia>();
         public List<CompaneroOracion> CompanerosOracion { get; set; } = new List<CompaneroOracion>();
         public List<HistorialParticipacion> Historial { get; set; } = new List<HistorialParticipacion>();
+
+        // Excepción al requisito de 3 años (Doble Aprobación CE + CMI)
+        public ExcepcionRegla3Anios ExcepcionActiva { get; set; }
+        public List<ExcepcionRegla3Anios> HistorialExcepciones { get; set; } = new List<ExcepcionRegla3Anios>();
+        public DesempenoHistoricoIglesia DesempenoHistorico { get; set; }
+        public bool RequiereExcepcion3Anios { get; set; }
+        public int DiferenciaAniosAntiguedad { get; set; }
+        public int IdTemporadaPrevia { get; set; }
+        public string NombreTemporadaPrevia { get; set; }
     }
 
     public class PersonaIglesia
@@ -273,5 +282,74 @@ namespace SOR.Models
         public bool Leida { get; set; }
         public DateTime? FechaLectura { get; set; }
         public int? IdUsuarioLectura { get; set; }
+    }
+
+    public class ExcepcionRegla3Anios
+    {
+        public int IdExcepcion { get; set; }
+        public int IdIglesia { get; set; }
+        public string NombreIglesia { get; set; }
+        public int IdTemporada { get; set; }
+        public string NombreTemporada { get; set; }
+        public int? TemporadaPreviaId { get; set; }
+        public string NombreTemporadaPrevia { get; set; }
+        public int DiferenciaTemporadas { get; set; }
+
+        public string Motivo { get; set; }
+        public string Justificacion { get; set; }
+        public string ResultadoDesempeno { get; set; }
+
+        public int SolicitadoPor { get; set; }
+        public string NombreSolicitante { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+
+        public bool AprobadoCE { get; set; }
+        public int? UsuarioAprobacionCE { get; set; }
+        public string NombreUsuarioAprobacionCE { get; set; }
+        public DateTime? FechaAprobacionCE { get; set; }
+        public string ComentarioCE { get; set; }
+
+        public bool AprobadoCMI { get; set; }
+        public int? UsuarioAprobacionCMI { get; set; }
+        public string NombreUsuarioAprobacionCMI { get; set; }
+        public DateTime? FechaAprobacionCMI { get; set; }
+        public string ComentarioCMI { get; set; }
+
+        public bool Rechazado { get; set; }
+        public int? UsuarioRechazo { get; set; }
+        public string NombreUsuarioRechazo { get; set; }
+        public DateTime? FechaRechazo { get; set; }
+        public string MotivoRechazo { get; set; }
+
+        public string Estado { get; set; } // PENDIENTE, APROBADA, RECHAZADA, CANCELADA
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaModificacion { get; set; }
+
+        public byte[] RowVersion { get; set; }
+        public string RowVersionString
+        {
+            get => RowVersion != null ? Convert.ToBase64String(RowVersion) : "";
+            set => RowVersion = !string.IsNullOrEmpty(value) ? Convert.FromBase64String(value) : null;
+        }
+    }
+
+    public class DesempenoHistoricoIglesia
+    {
+        public int IdIglesia { get; set; }
+        public string NombreIglesia { get; set; }
+        public int IdTemporadaPrevia { get; set; }
+        public string NombreTemporadaPrevia { get; set; }
+        public int IdParticipacionPrevia { get; set; }
+        public int EtapaAlcanzada { get; set; }
+        public string EstadoEvaluacion { get; set; }
+        public string EstatusReporte { get; set; }
+        public bool ReportoEvangelismo { get; set; }
+        public bool ReportoDiscipulado { get; set; }
+        public int TotalNinosAlcanzados { get; set; }
+        public int TotalDecisionesFe { get; set; }
+        public int TotalGraduados { get; set; }
+        public int TotalMaestrosCapacitados { get; set; }
+        public int DiferenciaTemporadas { get; set; }
+        public string ResumenTexto { get; set; }
     }
 }

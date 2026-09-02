@@ -822,7 +822,53 @@ namespace SOR.Services
                         int idTempPrev = Convert.ToInt32(valAnt);
                         if (idTemporadaDestino - idTempPrev < minAniosAntiguedad)
                         {
-                            throw new InvalidOperationException($"La iglesia con RNC/Cédula '{rncCedula}' participó en una temporada reciente (ID {idTempPrev}). Se requiere una antigüedad mínima de {minAniosAntiguedad} temporadas para volver a participar.");
+                            // Verificar si existe una excepción formal registrada
+                            string sqlExcep = @"
+                                SELECT TOP 1 e.Estado, e.AprobadoCE, e.AprobadoCMI, e.MotivoRechazo
+                                FROM dbo.ExcepcionesRegla3Anios e
+                                INNER JOIN dbo.Iglesias i ON e.IdIglesia = i.IdIglesia
+                                WHERE i.RNC_Cedula = @Rnc AND e.IdTemporada = @IdDest
+                                ORDER BY e.IdExcepcion DESC;";
+
+                            using (SqlCommand cmdEx = new SqlCommand(sqlExcep, cn, tran))
+                            {
+                                cmdEx.Parameters.AddWithValue("@Rnc", rncCedula.Trim());
+                                cmdEx.Parameters.AddWithValue("@IdDest", idTemporadaDestino);
+                                using (SqlDataReader drEx = cmdEx.ExecuteReader())
+                                {
+                                    if (drEx.Read())
+                                    {
+                                        string estadoEx = drEx["Estado"].ToString();
+                                        bool ce = Convert.ToBoolean(drEx["AprobadoCE"]);
+                                        bool cmi = Convert.ToBoolean(drEx["AprobadoCMI"]);
+
+                                        if (estadoEx == "APROBADA" && ce && cmi)
+                                        {
+                                            // ¡Excepción formalmente aprobada por CE y CMI!
+                                            // Se permite continuar sin bloquear.
+                                        }
+                                        else if (estadoEx == "PENDIENTE")
+                                        {
+                                            string detalle = (!ce && !cmi) ? "pendiente de evaluación por CE y CMI" :
+                                                             (!ce ? "aprobada por CMI, pero pendiente de aprobación por CE" : "aprobada por CE, pero pendiente de aprobación por CMI");
+                                            throw new InvalidOperationException($"La iglesia participó en la temporada reciente #{idTempPrev} (< {minAniosAntiguedad} temporadas). Tiene una excepción en curso ({detalle}). Requiere la aprobación de ambas instancias (CE y CMI) para continuar.");
+                                        }
+                                        else if (estadoEx == "RECHAZADA")
+                                        {
+                                            string mot = drEx["MotivoRechazo"] != DBNull.Value ? drEx["MotivoRechazo"].ToString() : "Sin motivo especificado";
+                                            throw new InvalidOperationException($"La iglesia participó en la temporada reciente #{idTempPrev} (< {minAniosAntiguedad} temporadas). La solicitud de excepción para esta temporada fue RECHAZADA. Motivo: {mot}.");
+                                        }
+                                        else
+                                        {
+                                            throw new InvalidOperationException($"La iglesia participó en la temporada #{idTempPrev}. Se requiere una antigüedad mínima de {minAniosAntiguedad} temporadas o una excepción aprobada por CE y CMI.");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        throw new InvalidOperationException($"La iglesia con RNC/Cédula '{rncCedula}' participó en una temporada reciente (ID {idTempPrev}). Se requiere una antigüedad mínima de {minAniosAntiguedad} temporadas para volver a participar, o una excepción formal de buen desempeño aprobada por CE y CMI.");
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -880,6 +926,46 @@ namespace SOR.Services
         public void ActualizarIglesia(Iglesia modelo, int idUsuarioEdicion)
         {
             _iglesiaRepository.ActualizarIglesia(modelo, idUsuarioEdicion);
+        }
+
+        public int SolicitarExcepcion(ExcepcionRegla3Anios excepcion, int idUsuario)
+        {
+            return _iglesiaRepository.RegistrarSolicitudExcepcion(excepcion, idUsuario);
+        }
+
+        public void AprobarExcepcionCE(int idExcepcion, int idUsuarioCE, string comentario, byte[] rowVersion)
+        {
+            _iglesiaRepository.AprobarExcepcionCE(idExcepcion, idUsuarioCE, comentario, rowVersion);
+        }
+
+        public void AprobarExcepcionCMI(int idExcepcion, int idUsuarioCMI, string comentario, byte[] rowVersion)
+        {
+            _iglesiaRepository.AprobarExcepcionCMI(idExcepcion, idUsuarioCMI, comentario, rowVersion);
+        }
+
+        public void RechazarExcepcion(int idExcepcion, int idUsuario, string motivo, byte[] rowVersion)
+        {
+            _iglesiaRepository.RechazarExcepcion(idExcepcion, idUsuario, motivo, rowVersion);
+        }
+
+        public DesempenoHistoricoIglesia CalcularDesempenoHistorico(int idIglesia, int idTemporadaPrevia, int idTemporadaActual)
+        {
+            return _iglesiaRepository.CalcularDesempenoHistorico(idIglesia, idTemporadaPrevia, idTemporadaActual);
+        }
+
+        public ExcepcionRegla3Anios ObtenerExcepcionActiva(int idIglesia, int idTemporada)
+        {
+            return _iglesiaRepository.ObtenerExcepcionActiva(idIglesia, idTemporada);
+        }
+
+        public List<ExcepcionRegla3Anios> ObtenerHistorialExcepciones(int idIglesia)
+        {
+            return _iglesiaRepository.ObtenerHistorialExcepciones(idIglesia);
+        }
+
+        public bool TieneExcepcionAprobada(string rncCedula, int idTemporada)
+        {
+            return _iglesiaRepository.TieneExcepcionAprobada(rncCedula, idTemporada);
         }
     }
 }
