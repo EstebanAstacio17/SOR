@@ -4,6 +4,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var temporadas = (List<SelectListItem>)ViewBag.ListaTemporadas;
     var tipos = (List<SelectListItem>)ViewBag.ListaTipos;
+    var almacenes = (List<SelectListItem>)ViewBag.ListaAlmacenes ?? new List<SelectListItem>();
     var uEv = (SOR.Models.Usuario)ViewBag.UsuarioActual;
     var equiposPermitidosEv = (HashSet<int>)ViewBag.EquiposPermitidos ?? new HashSet<int>();
     bool esAdminEv = uEv != null && (uEv.IdRolSeguridad == 1 || uEv.IdRolSeguridad == 2);
@@ -253,13 +254,33 @@
                                                         </div>
                                                         <div class="row">
                                                             <div class="col-md-6 mb-3">
-                                                                <label class="form-label fw-semibold">Lugar Físico</label>
-                                                                <input type="text" name="Lugar" class="form-control" value="@item.Lugar" placeholder="Dirección o punto de encuentro" />
+                                                                <label class="form-label fw-semibold">Lugar / Almacén</label>
+                                                                @if (item.TipoEvento == "Despacho")
+                                                                {
+                                                                    <select name="Lugar" class="form-select" required>
+                                                                        <option value="">-- Seleccionar Almacén --</option>
+                                                                        @foreach (var alm in almacenes)
+                                                                        {
+                                                                            <option value="@alm.Value" @(item.Lugar == alm.Value ? "selected" : "")>@alm.Text</option>
+                                                                        }
+                                                                    </select>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <input type="text" name="Lugar" class="form-control" value="@item.Lugar" placeholder="Dirección o punto de encuentro" required />
+                                                                }
                                                             </div>
-                                                            <div class="col-md-6 mb-3">
-                                                                <label class="form-label fw-semibold">Cantidad de Asistentes</label>
-                                                                <input type="number" name="CantidadAsistentes" class="form-control" value="@item.CantidadAsistentes" min="0" />
-                                                            </div>
+                                                            @if (item.TipoEvento != "Despacho")
+                                                            {
+                                                                <div class="col-md-6 mb-3">
+                                                                    <label class="form-label fw-semibold">Cantidad de Asistentes</label>
+                                                                    <input type="number" name="CantidadAsistentes" class="form-control" value="@item.CantidadAsistentes" min="0" required />
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <input type="hidden" name="CantidadAsistentes" value="0" />
+                                                            }
                                                         </div>
                                                         <div class="mb-3">
                                                             <label class="form-label fw-semibold">Responsable</label>
@@ -301,7 +322,7 @@
 <div class="modal fade text-start" id="modalCrearEvento" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content border-0 rounded-4 shadow">
-            <form action="@Url.Action("Crear", "Eventos")" method="post">
+            <form action="@Url.Action("Crear", "Eventos")" method="post" id="formCrearEvento">
                 <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                     <h5 class="modal-title font-bold text-white"><i class="bi bi-calendar-plus me-2 text-primary"></i>Crear Nuevo Evento</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -314,7 +335,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Tipo de Evento</label>
-                            <select name="TipoEvento" class="form-select" required>
+                            <select name="TipoEvento" id="crearTipoEvento" class="form-select" onchange="onTipoEventoChange(this.value)" required>
                                 <option value="">Selecciona...</option>
                                 @foreach (var type in tipos)
                                 {
@@ -324,36 +345,51 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Fecha</label>
-                            <input type="date" name="Fecha" class="form-control" required />
+                            <input type="date" name="Fecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
                         </div>
                     </div>
+                    
+                    <!-- Campo Lugar Dinámico: Selección de Almacén si es Despacho, o Texto libre para otros -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Lugar</label>
-                        <input type="text" name="Lugar" class="form-control" placeholder="Ej: Salón Multiusos Iglesia Central" required />
+                        <label class="form-label fw-semibold" id="lblCrearLugar">Lugar</label>
+                        <div id="contenedorLugarTexto">
+                            <input type="text" id="crearLugarTexto" name="Lugar" class="form-control" placeholder="Ej: Salón Multiusos Iglesia Central" required />
+                        </div>
+                        <div id="contenedorLugarAlmacen" class="d-none">
+                            <select id="crearLugarAlmacen" class="form-select">
+                                <option value="">-- Seleccionar Almacén de Despacho --</option>
+                                @foreach (var alm in almacenes)
+                                {
+                                    <option value="@alm.Value">@alm.Text</option>
+                                }
+                            </select>
+                            <small class="text-muted"><i class="bi bi-building me-1"></i>Punto de distribución y despacho de materiales registrado</small>
+                        </div>
                     </div>
+
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3" id="colTipoLugar">
                             <label class="form-label fw-semibold">Tipo de Lugar</label>
-                            <select name="TipoLugar" class="form-select" required>
-                                <option value="">Selecciona...</option>
+                            <select name="TipoLugar" id="crearTipoLugar" class="form-select" required>
                                 <option value="Templo">Templo</option>
                                 <option value="Salón">Salón</option>
+                                <option value="Almacén">Almacén</option>
                                 <option value="Parque">Parque</option>
                                 <option value="Casa/Hogar">Casa/Hogar</option>
-                                <option value="Otros">Otros</option>
+                                <option value="Otros" selected>Otros</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3" id="colHora">
                             <label class="form-label fw-semibold">Hora del Evento (HH:mm)</label>
-                            <input type="time" name="Hora" class="form-control" required />
+                            <input type="time" name="Hora" class="form-control" value="09:00" required />
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3" id="colCantidadAsistentes">
                             <label class="form-label fw-semibold">Cantidad de Asistentes</label>
-                            <input type="number" name="CantidadAsistentes" class="form-control" min="0" value="0" required />
+                            <input type="number" name="CantidadAsistentes" id="crearCantidadAsistentes" class="form-control" min="0" value="0" required />
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3" id="colResponsable">
                             <label class="form-label fw-semibold">Responsable del Evento (Mismo Equipo)</label>
                             @if (integrantesEquipo.Any())
                             {
@@ -405,6 +441,86 @@
 </style>
 
 <script>
+    function onTipoEventoChange(tipo) {
+        var txtCont = document.getElementById("contenedorLugarTexto");
+        var txtInput = document.getElementById("crearLugarTexto");
+        var almCont = document.getElementById("contenedorLugarAlmacen");
+        var almSelect = document.getElementById("crearLugarAlmacen");
+        var colAsist = document.getElementById("colCantidadAsistentes");
+        var inputAsist = document.getElementById("crearCantidadAsistentes");
+        var colResp = document.getElementById("colResponsable");
+        var selTipoLugar = document.getElementById("crearTipoLugar");
+        var lblLugar = document.getElementById("lblCrearLugar");
+
+        if (tipo === "Despacho") {
+            // Modo Despacho de Materiales:
+            // 1. Mostrar selector de Almacén registrado
+            if (txtCont) txtCont.classList.add("d-none");
+            if (txtInput) {
+                txtInput.removeAttribute("name");
+                txtInput.removeAttribute("required");
+            }
+
+            if (almCont) almCont.classList.remove("d-none");
+            if (almSelect) {
+                almSelect.setAttribute("name", "Lugar");
+                almSelect.setAttribute("required", "required");
+            }
+            if (lblLugar) lblLugar.innerHTML = '<i class="bi bi-building me-1 text-primary"></i>Almacén de Despacho';
+
+            // 2. Tipo de lugar por defecto Almacén
+            if (selTipoLugar) selTipoLugar.value = "Almacén";
+
+            // 3. Cantidad de asistentes no requerida (oculta, no obligatoria, valor 0)
+            if (colAsist) colAsist.classList.add("d-none");
+            if (inputAsist) {
+                inputAsist.removeAttribute("required");
+                inputAsist.value = 0;
+            }
+            if (colResp) {
+                colResp.className = "col-12 mb-3";
+            }
+        } else {
+            // Modo Eventos Normales / Talleres:
+            // 1. Mostrar input de texto para lugar libre
+            if (almCont) almCont.classList.add("d-none");
+            if (almSelect) {
+                almSelect.removeAttribute("name");
+                almSelect.removeAttribute("required");
+            }
+
+            if (txtCont) txtCont.classList.remove("d-none");
+            if (txtInput) {
+                txtInput.setAttribute("name", "Lugar");
+                txtInput.setAttribute("required", "required");
+            }
+            if (lblLugar) lblLugar.innerHTML = 'Lugar';
+
+            // 2. Restaurar Tipo de lugar
+            if (selTipoLugar && selTipoLugar.value === "Almacén") selTipoLugar.value = "Otros";
+
+            // 3. Cantidad de asistentes requerida
+            if (colAsist) colAsist.classList.remove("d-none");
+            if (inputAsist) {
+                inputAsist.setAttribute("required", "required");
+            }
+            if (colResp) {
+                colResp.className = "col-md-6 mb-3";
+            }
+        }
+    }
+
+    // Al abrir modal Crear Evento asegurar configuración de campos
+    var modalCrearEl = document.getElementById('modalCrearEvento');
+    if (modalCrearEl) {
+        modalCrearEl.addEventListener('show.bs.modal', function () {
+            var sel = document.getElementById("crearTipoEvento");
+            if (sel) {
+                onTipoEventoChange(sel.value);
+            }
+        });
+    }
+
     function filtrarTablaEventos() {
         var inputBusqueda = document.getElementById("filtroBuscarEvento").value.toLowerCase();
         var filtroTemporada = document.getElementById("filtroTemporada").value.toLowerCase();

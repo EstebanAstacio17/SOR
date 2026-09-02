@@ -350,16 +350,31 @@ namespace SOR.Controllers
                 if (modelo.TipoEvento == "Despacho")
                 {
                     int idEq = u.IdEquipo.GetValueOrDefault(1);
+                    int? idAlmacen = null;
+                    if (!string.IsNullOrEmpty(modelo.Lugar))
+                    {
+                        using (SqlCommand cmdFindAlm = new SqlCommand("SELECT TOP 1 IdAlmacen FROM dbo.Almacenes WHERE NombreAlmacen = @Nom OR @Nom LIKE '%' + NombreAlmacen + '%';", cn))
+                        {
+                            cmdFindAlm.Parameters.AddWithValue("@Nom", modelo.Lugar);
+                            object almObj = cmdFindAlm.ExecuteScalar();
+                            if (almObj != null && almObj != DBNull.Value)
+                            {
+                                idAlmacen = Convert.ToInt32(almObj);
+                            }
+                        }
+                    }
+
                     string sqlED = @"
                         IF NOT EXISTS (SELECT 1 FROM dbo.EventosDespacho WHERE IdEvento = @IdEv)
                         BEGIN
-                            INSERT INTO dbo.EventosDespacho (IdEvento, IdEquipo, EstadoDespachoEvento)
-                            VALUES (@IdEv, @IdEq, 'PROGRAMADO');
+                            INSERT INTO dbo.EventosDespacho (IdEvento, IdEquipo, IdAlmacen, EstadoDespachoEvento)
+                            VALUES (@IdEv, @IdEq, @IdAlm, 'PROGRAMADO');
                         END";
                     using (SqlCommand cmdED = new SqlCommand(sqlED, cn))
                     {
                         cmdED.Parameters.AddWithValue("@IdEv", idNuevoEvento);
                         cmdED.Parameters.AddWithValue("@IdEq", idEq);
+                        cmdED.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value);
                         cmdED.ExecuteNonQuery();
                     }
                 }
@@ -947,6 +962,27 @@ namespace SOR.Controllers
                 }
             }
             ViewBag.ListaIntegrantesEquipo = integrantes;
+
+            List<SelectListItem> almacenes = new List<SelectListItem>();
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sqlAlm = "SELECT IdAlmacen, NombreAlmacen, Direccion FROM dbo.Almacenes WHERE Activo = 1 ORDER BY NombreAlmacen ASC;";
+                SqlCommand cmdAlm = new SqlCommand(sqlAlm, cn);
+                cn.Open();
+                using (SqlDataReader drAlm = cmdAlm.ExecuteReader())
+                {
+                    while (drAlm.Read())
+                    {
+                        string nom = drAlm["NombreAlmacen"].ToString();
+                        almacenes.Add(new SelectListItem
+                        {
+                            Value = nom,
+                            Text = nom
+                        });
+                    }
+                }
+            }
+            ViewBag.ListaAlmacenes = almacenes;
         }
 
         // POST: Eventos/Editar
