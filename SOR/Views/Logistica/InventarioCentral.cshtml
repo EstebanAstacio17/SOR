@@ -43,23 +43,21 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
         
         <!-- Header con Controles y Filtros -->
-        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap gap-3 align-items-center justify-content-between">
+        <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap gap-3 align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle p-2 bg-primary bg-opacity-10 text-primary">
-                    <i class="bi bi-grid-3x3-gap-fill fs-5"></i>
-                </div>
+                <i class="bi bi-box-seam fs-5 text-primary"></i>
                 <div>
                     <h6 class="mb-0 fw-bold text-slate-800" id="tituloVistaInventario">Stock Global por Material</h6>
-                    <small class="text-muted text-xs" id="subtituloVistaInventario">Consolidado general de la temporada en curso</small>
+                    <small class="text-muted text-xs d-block" id="subtituloVistaInventario">Consolidado general de la temporada en curso</small>
                 </div>
             </div>
 
             <!-- Filtros: Selector de Equipo y Buscador de Material -->
-            <div class="d-flex flex-wrap align-items-center gap-2.5 ms-auto">
+            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
                 <!-- Selector de Equipo -->
-                <div class="d-flex align-items-center gap-2">
-                    <label for="filtroEquipoInv" class="small text-muted fw-semibold mb-0 text-nowrap">Filtrar por:</label>
-                    <select id="filtroEquipoInv" class="form-select form-select-sm rounded-pill bg-light border shadow-sm ps-3 pe-4 fw-medium text-dark" style="min-width: 260px;">
+                <div class="input-group input-group-sm" style="min-width: 250px;">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-funnel"></i></span>
+                    <select id="filtroEquipoInv" class="form-select bg-light border-start-0 text-slate-800 fw-medium">
                         <option value="GLOBAL">🌐 Consolidado Global</option>
                         <optgroup label="Estatus Rápido por Equipo">
                             @foreach (var eq in Model.Equipos)
@@ -71,17 +69,17 @@
                 </div>
 
                 <!-- Buscador de texto -->
-                <div class="input-group input-group-sm" style="width: 200px;">
-                    <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-2.5"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorMaterial" class="form-control bg-light border-start-0 rounded-end-pill pe-3" placeholder="Buscar material...">
+                <div class="input-group input-group-sm" style="min-width: 200px;">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="buscadorMaterial" class="form-control bg-light border-start-0" placeholder="Buscar material...">
                 </div>
             </div>
         </div>
 
         <!-- Banner de Contexto de Filtro -->
-        <div class="px-4 py-2 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 text-xs">
+        <div class="px-4 py-2 bg-light bg-opacity-50 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 text-xs">
             <div id="bannerContexto" class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold" id="badgeEstadoFiltro">
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill fw-semibold" id="badgeEstadoFiltro">
                     <i class="bi bi-globe me-1"></i>Mostrando: Consolidado Global de la Temporada
                 </span>
             </div>
