@@ -1,0 +1,590 @@
+@model IEnumerable<SOR.Models.Evento>
+@{
+    ViewBag.Title = "Eventos y Participación";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var temporadas = (List<SelectListItem>)ViewBag.ListaTemporadas;
+    var tipos = (List<SelectListItem>)ViewBag.ListaTipos;
+    var almacenes = (List<SelectListItem>)ViewBag.ListaAlmacenes ?? new List<SelectListItem>();
+    var uEv = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var equiposPermitidosEv = (HashSet<int>)ViewBag.EquiposPermitidos ?? new HashSet<int>();
+    bool esAdminEv = uEv != null && (uEv.IdRolSeguridad == 1 || uEv.IdRolSeguridad == 2);
+    var integrantesEquipo = (List<SelectListItem>)ViewBag.ListaIntegrantesEquipo ?? new List<SelectListItem>();
+
+    string filtroInicial = ViewBag.FiltroTipoInicial as string ?? "";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-calendar3 text-primary me-2"></i>Eventos y Participación</h2>
+        <p class="text-muted mb-0">Control de asistencia, capacitaciones y despacho de materiales de iglesias y maestros por temporada.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
+            <i class="bi bi-plus-circle me-2"></i>Crear Nuevo Evento
+        </button>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Búsqueda General</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filtroBuscarEvento" class="form-control bg-light border-start-0" placeholder="Buscar evento, responsable..." onkeyup="filtrarTablaEventos()">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
+            <select id="filtroTemporada" class="form-select form-select-sm bg-light" onchange="filtrarTablaEventos()">
+                <option value="">Todas</option>
+                @foreach (var temp in temporadas)
+                {
+                    <option value="@temp.Text">@temp.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Tipo de Evento</label>
+            <select id="filtroTipo" class="form-select form-select-sm bg-light" onchange="filtrarTablaEventos(true)">
+                <option value="">Todos</option>
+                <option value="Visión">Visión</option>
+                <option value="Taller OCC">Taller OCC</option>
+                <option value="Despacho">Despacho de Materiales</option>
+                <option value="Evangelístico">Evangelístico</option>
+                <option value="La Gran Aventura">La Gran Aventura</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Fecha (Desde)</label>
+            <input type="date" id="filtroFecha" class="form-control form-control-sm bg-light" onchange="filtrarTablaEventos()">
+        </div>
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-sm btn-outline-secondary w-100" type="button" onclick="limpiarFiltrosEventos()">
+                <i class="bi bi-eraser me-1"></i>Limpiar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Evento</th>
+                        <th>Tipo de Evento</th>
+                        <th>Temporada</th>
+                        <th>Fecha</th>
+                        <th>Lugar / Responsable</th>
+                        <th class="text-end pe-4" style="width: 220px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay eventos registrados aún.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            bool puedeEditarEvento = esAdminEv || (uEv != null && uEv.IdUsuario == item.IdUsuarioCreacion) || (item.IdEquipoCreador.HasValue && equiposPermitidosEv.Contains(item.IdEquipoCreador.Value));
+                            <tr data-tipo-evento="@item.TipoEvento">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.NombreEvento</div>
+                                    <small class="text-muted">Creado por: @item.CorreoCreador</small>
+                                    @if (item.TipoEvento == "Despacho")
+                                    {
+                                        <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
+                                            @if (item.TotalIglesiasAsignadas > 0)
+                                            {
+                                                <span class="small text-muted">
+                                                    <strong class="text-success">@item.TotalIglesiasDespachadas</strong> de <strong>@item.TotalIglesiasAsignadas</strong> iglesias despachadas (@item.PorcentajeDespachado%)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="small text-muted fst-italic">Sin iglesias programadas aún</span>
+                                            }
+                                        </div>
+                                        if (item.TotalIglesiasAsignadas > 0)
+                                        {
+                                            <div class="progress mt-1" style="height: 5px; max-width: 160px;">
+                                                <div class="progress-bar bg-success" style="width: @(item.PorcentajeDespachado)%"></div>
+                                            </div>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.TipoEvento == "Vision")
+                                    {
+                                        <span class="badge bg-purple-soft text-purple px-3 py-1.5 rounded-pill"><i class="bi bi-eye me-1"></i>Visión</span>
+                                    }
+                                    else if (item.TipoEvento == "Taller")
+                                    {
+                                        <span class="badge bg-info-soft text-info px-3 py-1.5 rounded-pill"><i class="bi bi-book me-1"></i>Taller OCC</span>
+                                    }
+                                    else if (item.TipoEvento == "Despacho")
+                                    {
+                                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-send-check me-1"></i>Despacho</span>
+                                        if (!string.IsNullOrEmpty(item.EstadoDespachoEvento))
+                                        {
+                                            string badgeCls = item.EstadoDespachoEvento == "FINALIZADO" ? "bg-success" :
+                                                              item.EstadoDespachoEvento == "EN_CURSO" ? "bg-warning text-dark" :
+                                                              item.EstadoDespachoEvento == "CANCELADO" ? "bg-danger" : "bg-primary";
+                                            <span class="badge @badgeCls ms-1 text-xs">@item.EstadoDespachoEvento</span>
+                                        }
+                                    }
+                                    else if (item.TipoEvento == "Evangelistico")
+                                    {
+                                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-heart-pulse me-1"></i>Evangelístico</span>
+                                    }
+                                    else if (item.TipoEvento == "GranAventura")
+                                    {
+                                        <span class="badge bg-warning-soft text-warning px-3 py-1.5 rounded-pill"><i class="bi bi-compass me-1"></i>La Gran Aventura</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-soft text-secondary px-3 py-1.5 rounded-pill">@item.TipoEvento</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-slate-700">@item.NombreTemporada</span>
+                                </td>
+                                <td>
+                                    <i class="bi bi-calendar-check me-1 text-muted"></i>@item.Fecha.ToString("dd/MM/yyyy")
+                                </td>
+                                <td>
+                                    <div>
+                                        <i class="bi bi-geo-alt me-1 text-muted"></i>@(string.IsNullOrEmpty(item.Lugar) ? "N/D" : item.Lugar)
+                                        @if (!string.IsNullOrEmpty(item.TipoLugar))
+                                        {
+                                            <span class="text-muted small">(@item.TipoLugar)</span>
+                                        }
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        <i class="bi bi-clock me-1"></i>Hora: @(string.IsNullOrEmpty(item.Hora) ? "N/D" : item.Hora) | 
+                                        <i class="bi bi-people me-1"></i>Asistentes: @item.CantidadAsistentes
+                                    </div>
+                                    <div class="small text-muted"><i class="bi bi-person me-1"></i>Resp: @(string.IsNullOrEmpty(item.Responsable) ? "N/D" : item.Responsable)</div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                                        @if (item.TipoEvento == "Despacho")
+                                        {
+                                            <a href="@Url.Action("Detalle", "Eventos", new { id = item.IdEvento })" class="btn btn-sm btn-success font-semibold text-white shadow-sm">
+                                                <i class="bi bi-truck-front me-1"></i>Gestionar Despacho
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a href="@Url.Action("Detalle", "Eventos", new { id = item.IdEvento })" class="btn btn-sm btn-outline-primary font-semibold">
+                                                <i class="bi bi-check2-square me-1"></i>Ver / Asistencia
+                                            </a>
+                                        }
+                                        @if (puedeEditarEvento)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditarEvento_@item.IdEvento">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form action="@Url.Action("Eliminar", "Eventos")" method="post" class="d-inline m-0" onsubmit="return confirm('¿Está seguro de eliminar este evento? Solo se podrá eliminar si no tiene asistencias confirmadas.');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="idEvento" value="@item.IdEvento" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+
+                                    <!-- MODAL EDITAR EVENTO -->
+                                    <div class="modal fade text-start" id="modalEditarEvento_@item.IdEvento" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content border-0 rounded-4 shadow">
+                                                <form action="@Url.Action("Editar", "Eventos")" method="post">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="IdEvento" value="@item.IdEvento" />
+                                                    <input type="hidden" name="RowVersionString" value="@item.RowVersionString" />
+                                                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                                                        <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2 text-info"></i>Editar Evento</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Nombre del Evento</label>
+                                                            <input type="text" name="NombreEvento" class="form-control" value="@item.NombreEvento" required />
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Tipo de Evento</label>
+                                                                <select name="TipoEvento" class="form-select" required>
+                                                                    @foreach (var type in tipos)
+                                                                    {
+                                                                        <option value="@type.Value" @(type.Value == item.TipoEvento ? "selected" : "")>@type.Text</option>
+                                                                    }
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Fecha</label>
+                                                                <input type="date" name="Fecha" class="form-control" value="@item.Fecha.ToString("yyyy-MM-dd")" required />
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Tipo de Lugar</label>
+                                                                <select name="TipoLugar" class="form-select">
+                                                                    <option value="Templo" @(item.TipoLugar == "Templo" ? "selected" : "")>Templo</option>
+                                                                    <option value="Salón" @(item.TipoLugar == "Salón" ? "selected" : "")>Salón</option>
+                                                                    <option value="Parque" @(item.TipoLugar == "Parque" ? "selected" : "")>Parque</option>
+                                                                    <option value="Casa/Hogar" @(item.TipoLugar == "Casa/Hogar" ? "selected" : "")>Casa / Hogar</option>
+                                                                    <option value="Otros" @(item.TipoLugar == "Otros" ? "selected" : "")>Otros</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Hora</label>
+                                                                <input type="time" name="Hora" class="form-control" value="@item.Hora" />
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Lugar / Almacén</label>
+                                                                @if (item.TipoEvento == "Despacho")
+                                                                {
+                                                                    <select name="Lugar" class="form-select" required>
+                                                                        <option value="">-- Seleccionar Almacén --</option>
+                                                                        @foreach (var alm in almacenes)
+                                                                        {
+                                                                            <option value="@alm.Value" @(item.Lugar == alm.Value ? "selected" : "")>@alm.Text</option>
+                                                                        }
+                                                                    </select>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <input type="text" name="Lugar" class="form-control" value="@item.Lugar" placeholder="Dirección o punto de encuentro" required />
+                                                                }
+                                                            </div>
+                                                            @if (item.TipoEvento != "Despacho")
+                                                            {
+                                                                <div class="col-md-6 mb-3">
+                                                                    <label class="form-label fw-semibold">Cantidad de Asistentes</label>
+                                                                    <input type="number" name="CantidadAsistentes" class="form-control" value="@item.CantidadAsistentes" min="0" required />
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <input type="hidden" name="CantidadAsistentes" value="0" />
+                                                            }
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Responsable</label>
+                                                            @if (integrantesEquipo.Any())
+                                                            {
+                                                                <select name="Responsable" class="form-select" required>
+                                                                    <option value="">-- Seleccionar Integrante del Equipo --</option>
+                                                                    @foreach (var member in integrantesEquipo)
+                                                                    {
+                                                                        <option value="@member.Value" @(member.Value == item.Responsable ? "selected" : "")>@member.Text</option>
+                                                                    }
+                                                                </select>
+                                                            }
+                                                            else
+                                                            {
+                                                                <input type="text" name="Responsable" class="form-control" value="@item.Responsable" placeholder="Nombre del facilitador o encargado" required />
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar Cambios</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR EVENTO -->
+<div class="modal fade text-start" id="modalCrearEvento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("Crear", "Eventos")" method="post" id="formCrearEvento">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-calendar-plus me-2 text-primary"></i>Crear Nuevo Evento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Evento</label>
+                        <input type="text" name="NombreEvento" class="form-control" placeholder="Ej: Presentación de la Visión Santo Domingo" required />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo de Evento</label>
+                            <select name="TipoEvento" id="crearTipoEvento" class="form-select" onchange="onTipoEventoChange(this.value)" required>
+                                <option value="">Selecciona...</option>
+                                @foreach (var type in tipos)
+                                {
+                                    <option value="@type.Value">@type.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Fecha</label>
+                            <input type="date" name="Fecha" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                    
+                    <!-- Campo Lugar Dinámico: Selección de Almacén si es Despacho, o Texto libre para otros -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" id="lblCrearLugar">Lugar</label>
+                        <div id="contenedorLugarTexto">
+                            <input type="text" id="crearLugarTexto" name="Lugar" class="form-control" placeholder="Ej: Salón Multiusos Iglesia Central" required />
+                        </div>
+                        <div id="contenedorLugarAlmacen" class="d-none">
+                            <select id="crearLugarAlmacen" class="form-select">
+                                <option value="">-- Seleccionar Almacén de Despacho --</option>
+                                @foreach (var alm in almacenes)
+                                {
+                                    <option value="@alm.Value">@alm.Text</option>
+                                }
+                            </select>
+                            <small class="text-muted"><i class="bi bi-building me-1"></i>Punto de distribución y despacho de materiales registrado</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3" id="colTipoLugar">
+                            <label class="form-label fw-semibold">Tipo de Lugar</label>
+                            <select name="TipoLugar" id="crearTipoLugar" class="form-select" required>
+                                <option value="Templo">Templo</option>
+                                <option value="Salón">Salón</option>
+                                <option value="Almacén">Almacén</option>
+                                <option value="Parque">Parque</option>
+                                <option value="Casa/Hogar">Casa/Hogar</option>
+                                <option value="Otros" selected>Otros</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="colHora">
+                            <label class="form-label fw-semibold">Hora del Evento (HH:mm)</label>
+                            <input type="time" name="Hora" class="form-control" value="09:00" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3" id="colCantidadAsistentes">
+                            <label class="form-label fw-semibold">Cantidad de Asistentes</label>
+                            <input type="number" name="CantidadAsistentes" id="crearCantidadAsistentes" class="form-control" min="0" value="0" required />
+                        </div>
+                        <div class="col-md-6 mb-3" id="colResponsable">
+                            <label class="form-label fw-semibold">Responsable del Evento (Mismo Equipo)</label>
+                            @if (integrantesEquipo.Any())
+                            {
+                                <select name="Responsable" class="form-select" required>
+                                    <option value="">-- Seleccionar Integrante del Equipo --</option>
+                                    @foreach (var member in integrantesEquipo)
+                                    {
+                                        <option value="@member.Value">@member.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" name="Responsable" class="form-control" placeholder="Nombre del responsable del equipo" required />
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Crear Evento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple-soft {
+        background-color: rgba(111, 66, 193, 0.15) !important;
+        color: #6f42c1 !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.15) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #198754 !important;
+    }
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.15) !important;
+        color: #6c757d !important;
+    }
+</style>
+
+<script>
+    function onTipoEventoChange(tipo) {
+        var txtCont = document.getElementById("contenedorLugarTexto");
+        var txtInput = document.getElementById("crearLugarTexto");
+        var almCont = document.getElementById("contenedorLugarAlmacen");
+        var almSelect = document.getElementById("crearLugarAlmacen");
+        var colAsist = document.getElementById("colCantidadAsistentes");
+        var inputAsist = document.getElementById("crearCantidadAsistentes");
+        var colResp = document.getElementById("colResponsable");
+        var selTipoLugar = document.getElementById("crearTipoLugar");
+        var lblLugar = document.getElementById("lblCrearLugar");
+
+        if (tipo === "Despacho") {
+            // Modo Despacho de Materiales:
+            // 1. Mostrar selector de Almacén registrado
+            if (txtCont) txtCont.classList.add("d-none");
+            if (txtInput) {
+                txtInput.removeAttribute("name");
+                txtInput.removeAttribute("required");
+            }
+
+            if (almCont) almCont.classList.remove("d-none");
+            if (almSelect) {
+                almSelect.setAttribute("name", "Lugar");
+                almSelect.setAttribute("required", "required");
+            }
+            if (lblLugar) lblLugar.innerHTML = '<i class="bi bi-building me-1 text-primary"></i>Almacén de Despacho';
+
+            // 2. Tipo de lugar por defecto Almacén
+            if (selTipoLugar) selTipoLugar.value = "Almacén";
+
+            // 3. Cantidad de asistentes no requerida (oculta, no obligatoria, valor 0)
+            if (colAsist) colAsist.classList.add("d-none");
+            if (inputAsist) {
+                inputAsist.removeAttribute("required");
+                inputAsist.value = 0;
+            }
+            if (colResp) {
+                colResp.className = "col-12 mb-3";
+            }
+        } else {
+            // Modo Eventos Normales / Talleres:
+            // 1. Mostrar input de texto para lugar libre
+            if (almCont) almCont.classList.add("d-none");
+            if (almSelect) {
+                almSelect.removeAttribute("name");
+                almSelect.removeAttribute("required");
+            }
+
+            if (txtCont) txtCont.classList.remove("d-none");
+            if (txtInput) {
+                txtInput.setAttribute("name", "Lugar");
+                txtInput.setAttribute("required", "required");
+            }
+            if (lblLugar) lblLugar.innerHTML = 'Lugar';
+
+            // 2. Restaurar Tipo de lugar
+            if (selTipoLugar && selTipoLugar.value === "Almacén") selTipoLugar.value = "Otros";
+
+            // 3. Cantidad de asistentes requerida
+            if (colAsist) colAsist.classList.remove("d-none");
+            if (inputAsist) {
+                inputAsist.setAttribute("required", "required");
+            }
+            if (colResp) {
+                colResp.className = "col-md-6 mb-3";
+            }
+        }
+    }
+
+    // Al abrir modal Crear Evento asegurar configuración de campos
+    var modalCrearEl = document.getElementById('modalCrearEvento');
+    if (modalCrearEl) {
+        modalCrearEl.addEventListener('show.bs.modal', function () {
+            var sel = document.getElementById("crearTipoEvento");
+            if (sel) {
+                onTipoEventoChange(sel.value);
+            }
+        });
+    }
+
+    function filtrarTablaEventos() {
+        var inputBusqueda = document.getElementById("filtroBuscarEvento").value.toLowerCase();
+        var filtroTemporada = document.getElementById("filtroTemporada").value.toLowerCase();
+        var filtroTipo = document.getElementById("filtroTipo").value.toLowerCase();
+        var filtroFecha = document.getElementById("filtroFecha").value; // YYYY-MM-DD
+
+        var fechaComparar = "";
+        if (filtroFecha) {
+            var partes = filtroFecha.split('-');
+            fechaComparar = partes[2] + "/" + partes[1] + "/" + partes[0];
+        }
+
+        var tbody = document.querySelector("table tbody");
+        var tr = tbody.getElementsByTagName("tr");
+
+        for (var i = 0; i < tr.length; i++) {
+            if (tr[i].getElementsByTagName("td").length === 1) continue;
+
+            var tdEventoResp = tr[i].getElementsByTagName("td")[0];
+            var tdTipo = tr[i].getElementsByTagName("td")[1];
+            var tdTemporada = tr[i].getElementsByTagName("td")[2];
+            var tdFecha = tr[i].getElementsByTagName("td")[3];
+            var tdLugar = tr[i].getElementsByTagName("td")[4];
+
+            if (tdEventoResp && tdTipo && tdTemporada && tdFecha && tdLugar) {
+                var txtEvento = tdEventoResp.textContent || tdEventoResp.innerText;
+                var txtLugar = tdLugar.textContent || tdLugar.innerText;
+                var txtTexto = txtEvento + " " + txtLugar;
+                
+                var txtTipo = tdTipo.textContent || tdTipo.innerText;
+                var txtTemporada = tdTemporada.textContent || tdTemporada.innerText;
+                var txtFecha = tdFecha.textContent || tdFecha.innerText;
+
+                var matchBusqueda = txtTexto.toLowerCase().indexOf(inputBusqueda) > -1;
+                var matchTemporada = filtroTemporada === "" || txtTemporada.toLowerCase().indexOf(filtroTemporada) > -1;
+                var matchTipo = filtroTipo === "" || txtTipo.toLowerCase().indexOf(filtroTipo) > -1;
+                var matchFecha = fechaComparar === "" || txtFecha.indexOf(fechaComparar) > -1;
+
+                if (matchBusqueda && matchTemporada && matchTipo && matchFecha) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+
+    function limpiarFiltrosEventos() {
+        document.getElementById("filtroBuscarEvento").value = "";
+        document.getElementById("filtroTemporada").value = "";
+        document.getElementById("filtroTipo").value = "";
+        document.getElementById("filtroFecha").value = "";
+        filtrarTablaEventos();
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var params = new URLSearchParams(window.location.search);
+        var tipoParam = params.get("tipo") || "@Html.Raw(filtroInicial)";
+        if (tipoParam) {
+            var selTipo = document.getElementById("filtroTipo");
+            if (selTipo) {
+                selTipo.value = tipoParam;
+                filtrarTablaEventos();
+            }
+        }
+    });
+</script>

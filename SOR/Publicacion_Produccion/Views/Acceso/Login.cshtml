@@ -1,0 +1,120 @@
+@{
+    Layout = null;
+}
+
+<!doctype html>
+<html lang="es" data-bs-theme="dark">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>SOR | Sistema de Gestión Interna OCC República Dominicana</title>
+
+    <!-- Bootstrap 5 (local) -->
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CSS propio -->
+    <link href="~/Content/css/Login.css" rel="stylesheet" />
+
+</head>
+
+<body class="d-flex align-items-center py-4 bg-body-tertiary">
+
+    <main class="form-signin w-100 m-auto">
+
+        <form action="@Url.Action("Login", "Acceso")" method="post" onsubmit="sessionStorage.removeItem('SOR_TAB_LOGGED_OUT'); sessionStorage.setItem('user_tab_session', 'active');">
+            @Html.AntiForgeryToken()
+
+            <!-- LOGO -->
+            <img src="~/Content/css/Imgs/OCC-logo.png"
+                 class="logo-login"
+                 alt="Logo">
+
+            <!-- TITULO -->
+            <h1 class="h3 mb-3 fw-normal text-center">
+                Iniciar sesión
+            </h1>
+
+            <!-- CORREO -->
+            <div class="form-floating">
+
+                <input type="email"
+                       name="Correo"
+                       class="form-control"
+                       id="floatingInput"
+                       placeholder="correo@ejemplo.com"
+                       required>
+
+                <label for="floatingInput">
+                    Correo electrónico
+                </label>
+
+            </div>
+
+            <!-- CONTRASEÑA -->
+            <div class="form-floating">
+
+                <input type="password"
+                       name="Clave"
+                       class="form-control"
+                       id="floatingPassword"
+                       placeholder="Contraseña"
+                       required>
+
+                <label for="floatingPassword">
+                    Contraseña
+                </label>
+
+            </div>
+
+            <!-- MENSAJE DEL CONTROLADOR -->
+            @if (ViewData["Mensaje"] != null)
+            {
+                var alertClass = ViewData["TipoAlert"] != null ? ViewData["TipoAlert"].ToString() : "alert-danger";
+                <div class="alert @alertClass mt-3">
+                    @ViewData["Mensaje"]
+                </div>
+            }
+
+            <!-- BOTON -->
+            <button class="btn btn-primary w-100 py-2 mt-3"
+                    type="submit">
+                Iniciar sesión
+            </button>
+
+            <!-- OLVIDÉ MI CONTRASEÑA -->
+            <div class="text-center mt-3">
+                <a href="@Url.Action("RecuperarClave", "Acceso")" class="text-decoration-none text-slate-400 small">
+                    <i class="bi bi-shield-lock me-1"></i>¿Olvidaste tu contraseña?
+                </a>
+            </div>
+
+            <!-- REGISTRO -->
+            <div class="text-center mt-4">
+
+                <span class="text-body-secondary">
+                    ¿No estás registrado?
+                </span>
+
+                <a href="@Url.Action("Registrar", "Acceso")">
+                    Registrarme
+                </a>
+
+            </div>
+
+            <p class="mt-5 mb-3 text-body-secondary text-center">
+                &copy; @DateTime.Now.Year - SOR | Powered by PortaForza
+            </p>
+
+        </form>
+
+    </main>
+
+    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

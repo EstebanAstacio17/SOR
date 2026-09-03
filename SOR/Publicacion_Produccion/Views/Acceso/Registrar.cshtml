@@ -1,0 +1,134 @@
+@{
+    Layout = null;
+}
+
+<!doctype html>
+<html lang="es" data-bs-theme="dark">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Registro | SOR</title>
+
+    <!-- Bootstrap 5 (local) -->
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CSS propio -->
+    <link href="~/Content/css/Login.css" rel="stylesheet" />
+
+</head>
+
+<body class="d-flex align-items-center py-4 bg-body-tertiary">
+
+    <main class="form-signin w-100 m-auto">
+
+        <form action="@Url.Action("Registrar", "Acceso")" method="post" onsubmit="sessionStorage.setItem('user_tab_session', 'active');">
+            @Html.AntiForgeryToken()
+
+            <!-- LOGO -->
+            <img src="~/Content/css/Imgs/OCC-logo.png"
+                 class="logo-login"
+                 alt="Logo">
+
+            <!-- TITULO -->
+            <h1 class="h3 mb-3 fw-normal text-center">
+                Registrarme
+            </h1>
+
+            <!-- CORREO -->
+            <div class="form-floating">
+
+                <input type="email"
+                       name="Correo"
+                       class="form-control"
+                       id="floatingInput"
+                       placeholder="correo@ejemplo.com"
+                       required>
+
+                <label for="floatingInput">
+                    Correo electrónico
+                </label>
+
+            </div>
+
+            <!-- CONTRASEÑA -->
+            <div class="form-floating">
+
+                <input type="password"
+                       name="Clave"
+                       class="form-control"
+                       id="floatingPassword"
+                       placeholder="Contraseña"
+                       required>
+
+                <label for="floatingPassword">
+                    Contraseña
+                </label>
+
+            </div>
+
+            <!-- CONFIRMAR CONTRASEÑA -->
+            <div class="form-floating">
+
+                <input type="password"
+                       name="ConfirmarClave"
+                       class="form-control"
+                       id="floatingPassword"
+                       placeholder="confirmar Contraseña"
+                       required>
+
+                <label for="floatingPassword">
+                    Confirmar Contraseña
+                </label>
+
+            </div>
+
+            <!-- MENSAJE DEL CONTROLADOR -->
+            @if (ViewData["Mensaje"] != null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ViewData["Mensaje"]
+                </div>
+            }
+
+            <!-- BOTON -->
+            <div>
+                <button class="btn btn-primary w-100 py-2 mt-3"
+                        type="submit">
+                    Registrarse
+                </button>
+
+            </div>
+
+
+            <!-- INICIO DE SESION -->
+            <div class="text-center mt-4">
+
+                <span class="text-body-secondary">
+                    Ya estoy Registrado
+                    <a href="@Url.Action("Login","Acceso")" class="ml-2">Iniciar Sesion</a>
+
+                </span>
+
+
+
+            </div>
+
+            <p class="mt-5 mb-3 text-body-secondary text-center">
+                &copy; @DateTime.Now.Year - SOR | Powered by PortaForza
+            </p>
+
+        </form>
+
+    </main>
+
+    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+
+    
+
+</body>
+
+</html>

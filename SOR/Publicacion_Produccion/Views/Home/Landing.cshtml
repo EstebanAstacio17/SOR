@@ -1,0 +1,206 @@
+@{
+    ViewBag.Title = "SOR | Sistema de Gestión Interna OCC República Dominicana";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .apple-hero {
+        padding: 80px 20px 60px 20px;
+        text-align: center;
+        max-width: 960px;
+        margin: 0 auto;
+    }
+
+    .apple-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        box-shadow: var(--apple-shadow-xs);
+        padding: 6px 18px;
+        border-radius: 980px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--apple-accent);
+        margin-bottom: 24px;
+    }
+
+    .apple-hero-title {
+        font-size: clamp(2.4rem, 5vw, 3.8rem);
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        line-height: 1.15;
+        color: var(--apple-text-primary);
+        margin-bottom: 20px;
+    }
+
+    .apple-hero-subtitle {
+        font-size: clamp(1.1rem, 2vw, 1.35rem);
+        font-weight: 400;
+        color: var(--apple-text-secondary);
+        max-width: 760px;
+        margin: 0 auto 36px auto;
+        line-height: 1.55;
+        letter-spacing: -0.015em;
+    }
+
+    .apple-btn-primary {
+        background-color: var(--apple-accent) !important;
+        color: #ffffff !important;
+        font-weight: 500;
+        padding: 12px 28px;
+        font-size: 1rem;
+        border-radius: 980px;
+        border: none;
+        transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
+    }
+
+    .apple-btn-primary:hover {
+        background-color: var(--apple-accent-hover) !important;
+        transform: scale(1.02);
+        color: #ffffff !important;
+        box-shadow: 0 6px 20px rgba(0, 113, 227, 0.35);
+    }
+
+    .apple-btn-secondary {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: var(--apple-text-primary) !important;
+        border: 1px solid var(--apple-border);
+        font-weight: 500;
+        padding: 12px 28px;
+        font-size: 1rem;
+        border-radius: 980px;
+        transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .apple-btn-secondary:hover {
+        background-color: rgba(0, 0, 0, 0.09);
+        transform: scale(1.02);
+        color: var(--apple-text-primary) !important;
+    }
+
+    .apple-quote-card {
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        border-radius: 24px;
+        padding: 36px 40px;
+        margin: 40px auto 60px auto;
+        max-width: 860px;
+        box-shadow: var(--apple-shadow-sm);
+        text-align: left;
+    }
+
+    .apple-feature-card {
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        border-radius: 22px;
+        padding: 36px 28px;
+        box-shadow: var(--apple-shadow-xs);
+        transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .apple-feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--apple-shadow-md);
+    }
+
+    .apple-icon-bubble {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        background: #f0f6ff;
+        color: var(--apple-accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 22px;
+    }
+</style>
+
+<div class="apple-hero">
+    <div class="apple-hero-badge">
+        <i class="bi bi-sparkles"></i> Samaritan's Purse • Operation Christmas Child
+    </div>
+    
+    <h1 class="apple-hero-title">Gestión Inteligente.<br />Impacto Eterno.</h1>
+    
+    <p class="apple-hero-subtitle">
+        Plataforma oficial de sincronización, Logística y Discipulado para coordinadores y <strong>voluntarios de OCC</strong> en toda la República Dominicana.
+    </p>
+    
+    <div class="d-flex justify-content-center align-items-center flex-wrap gap-3">
+        <a href="@Url.Action("SolicitudVoluntario", "Home")" class="apple-btn-primary">
+            <i class="bi bi-person-heart"></i> Quiero ser Voluntario
+        </a>
+        <a href="@Url.Action("Login", "Acceso")" class="apple-btn-secondary">
+            <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+        </a>
+    </div>
+
+    <!-- Tarjeta de Nuestra Misión -->
+    <div class="apple-quote-card">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-quote fs-1" style="color: var(--apple-accent); line-height: 1;"></i>
+            <div>
+                <h6 class="fw-bold text-uppercase mb-2" style="color: var(--apple-accent); letter-spacing: 0.05em; font-size: 0.8rem;">
+                    Nuestra Misión
+                </h6>
+                <p class="mb-0" style="font-size: 1.1rem; font-style: italic; color: var(--apple-text-primary); line-height: 1.65;">
+                    "La misión de Operation Christmas Child es demostrar el amor de Dios de una manera tangible a niños necesitados alrededor del mundo. A través de este proyecto, Samaritan´s Purse colabora junto con la iglesia local de todo el mundo con el fin de compartir las Buenas Nuevas de Jesucristo y hacer discípulos de todas las naciones."
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="apple-feature-card">
+                <div class="apple-icon-bubble">
+                    <i class="bi bi-building"></i>
+                </div>
+                <h3 class="h5 font-bold mb-2" style="color: var(--apple-text-primary);">Red de Iglesias</h3>
+                <p style="color: var(--apple-text-secondary); font-size: 0.95rem; line-height: 1.5;" class="mb-0">
+                    Registro centralizado, seguimiento de procesos de discipulado y validación institucional en tiempo real.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="apple-feature-card">
+                <div class="apple-icon-bubble" style="background: #e8f9ed; color: var(--apple-success);">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h3 class="h5 font-bold mb-2" style="color: var(--apple-text-primary);">Maestros y Eventos</h3>
+                <p style="color: var(--apple-text-secondary); font-size: 0.95rem; line-height: 1.5;" class="mb-0">
+                    Capacitaciones ministeriales, asignaciones de voluntarios y control riguroso de asistencia.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="apple-feature-card">
+                <div class="apple-icon-bubble" style="background: #fff6e6; color: var(--apple-warning);">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <h3 class="h5 font-bold mb-2" style="color: var(--apple-text-primary);">Reportes e Impacto</h3>
+                <p style="color: var(--apple-text-secondary); font-size: 0.95rem; line-height: 1.5;" class="mb-0">
+                    Estadísticas detalladas de cajas entregadas, niños alcanzados y graduados de La Gran Aventura.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

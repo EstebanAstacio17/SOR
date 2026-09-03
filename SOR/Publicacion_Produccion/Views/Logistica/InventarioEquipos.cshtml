@@ -1,0 +1,467 @@
+@model IEnumerable<SOR.Models.ResumenInventarioEquipo>
+@{
+    ViewBag.Title = "Inventario por Equipo — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <!-- Encabezado de Página -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1">
+                <i class="bi bi-layers-half me-2" style="color:var(--apple-accent)"></i>Inventario por Equipo
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                    <li class="breadcrumb-item active">Inventario Equipos</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="@Url.Action("Transferencias","Logistica")" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Ver Transferencias
+            </a>
+            <a href="@Url.Action("Recepciones","Logistica")" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-truck-front me-1"></i>Recepciones
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Equipos -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-diagram-3 text-primary fs-5"></i>
+                <h6 class="mb-0 fw-bold text-slate-800">Inventario y Almacenes por Equipo</h6>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm" style="max-width: 280px;">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorEquipos" class="form-control bg-light border-start-0" placeholder="Buscar equipo, almacén o coordinador...">
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaEquiposInv">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 25%;">Equipo</th>
+                        <th style="width: 25%;">Almacén</th>
+                        <th style="width: 30%;">Coordinador Responsable</th>
+                        <th class="text-center" style="width: 10%;">Disponibilidad</th>
+                        <th class="text-center pe-4" style="width: 10%;">Estatus / Inventario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-slate-300"></i>
+                                No se encontraron equipos con registros de inventario.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        string jsonMateriales = Newtonsoft.Json.JsonConvert.SerializeObject(item.Materiales);
+                        string jsonEquipo = Newtonsoft.Json.JsonConvert.SerializeObject(new {
+                            idEquipo = item.IdEquipo,
+                            nombreEquipo = item.NombreEquipo,
+                            nombreNivel = item.NombreNivel,
+                            nombreAlmacen = item.NombreAlmacen,
+                            nombreCoordinador = item.NombreCoordinador,
+                            telefonoCoordinador = item.TelefonoCoordinador,
+                            posicionCoordinador = item.PosicionCoordinador,
+                            correoCoordinador = item.CorreoCoordinador,
+                            totalRecibido = item.TotalRecibido,
+                            totalAsignado = item.TotalAsignado,
+                            totalDespachado = item.TotalDespachado,
+                            totalDisponible = item.TotalDisponible
+                        });
+
+                        <tr class="fila-equipo" 
+                            data-filtro="@item.NombreEquipo.ToLower() @item.NombreAlmacen.ToLower() @item.NombreCoordinador.ToLower() @item.PosicionCoordinador.ToLower()">
+                            
+                            <!-- COLUMNA 1: EQUIPO -->
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle p-2 bg-light text-primary border">
+                                        <i class="bi bi-shield-shaded"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">@item.NombreEquipo</div>
+                                        <span class="badge bg-light text-secondary border px-2 py-0.5 rounded-pill text-xs">
+                                            @(!string.IsNullOrEmpty(item.NombreNivel) ? item.NombreNivel : "Equipo Regional")
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- COLUMNA 2: ALMACÉN (Nombre del almacén, no dirección) -->
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-building text-secondary fs-5"></i>
+                                    <div>
+                                        <span class="fw-semibold text-slate-800 d-block">@item.NombreAlmacen</span>
+                                        <span class="text-xs text-muted">Centro de Acopio y Custodia</span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- COLUMNA 3: COORDINADOR RESPONSABLE (Nombre, Teléfono y Posición) -->
+                            <td>
+                                <div>
+                                    <div class="fw-semibold text-dark d-flex align-items-center gap-1">
+                                        <i class="bi bi-person-badge text-primary"></i>
+                                        <span>@item.NombreCoordinador</span>
+                                    </div>
+                                    <div class="d-flex align-items-center flex-wrap gap-2 mt-0.5">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-0.5 text-xs rounded-pill">
+                                            <i class="bi bi-award me-1"></i>@item.PosicionCoordinador
+                                        </span>
+                                        @if (!string.IsNullOrWhiteSpace(item.TelefonoCoordinador))
+                                        {
+                                            <a href="tel:@item.TelefonoCoordinador" class="text-decoration-none small text-muted hover-primary">
+                                                <i class="bi bi-telephone-fill text-success me-1"></i>@item.TelefonoCoordinador
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="small text-muted fst-italic">Sin teléfono</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- COLUMNA 4: DISPONIBILIDAD -->
+                            <td class="text-center">
+                                @if (item.TotalDisponible > 0)
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold">
+                                        <i class="bi bi-box-seam me-1"></i>@item.TotalDisponible.ToString("N0") uds
+                                    </span>
+                                }
+                                else if (item.TotalRecibido > 0)
+                                {
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded-pill fw-semibold">
+                                        Agotado (0 uds)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-muted border px-2.5 py-1.5 rounded-pill">
+                                        Sin Stock
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- COLUMNA 5: ACCIÓN / BOTÓN DE OJITO -->
+                            <td class="text-center pe-4">
+                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-1"
+                                        title="Ver Estatus e Inventario Completo"
+                                        onclick='abrirPlantillaInventario(@Html.Raw(jsonEquipo), @Html.Raw(jsonMateriales))'>
+                                    <i class="bi bi-eye-fill"></i>
+                                    <span>Ver Estatus</span>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL / VENTANA EMERGENTE: PLANTILLA DE INVENTARIO Y ESTATUS POR EQUIPO -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="modalPlantillaInventario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3 px-4 d-flex align-items-center justify-content-between border-0">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle p-2 bg-primary text-white d-flex align-items-center justify-content-center" style="width:36px; height:36px;">
+                        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-white mb-0" id="lblModalTitulo">Plantilla de Inventario y Estatus</h5>
+                        <small class="text-light opacity-75" id="lblModalSubtitulo">Operación y Control Logístico OCC RD</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-light btn-sm rounded-pill font-semibold px-3 shadow-sm d-print-none" onclick="imprimirPlantillaInventario()">
+                        <i class="bi bi-printer-fill me-1 text-primary"></i>Imprimir / Guardar PDF
+                    </button>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+            </div>
+
+            <!-- Modal Body (Área imprimible) -->
+            <div class="modal-body p-4 bg-light" id="areaImprimiblePlantilla">
+                
+                <!-- Encabezado Membretado Oficial (Visible en Pantalla y en Impresión) -->
+                <div class="bg-white rounded-4 p-4 mb-4 border shadow-sm" id="encabezadoMembrete">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary text-white rounded-3 p-2.5 fw-bold fs-4 d-flex align-items-center justify-content-center" style="width:52px; height:52px;">
+                                OCC
+                            </div>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-slate-800">OPERACIÓN NIÑO DE LA NAVIDAD (OCC)</h4>
+                                <div class="text-xs text-muted text-uppercase fw-semibold tracking-wider">República Dominicana • Sistema de Gestión Interna (SOR)</div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary px-3 py-1.5 rounded-pill text-xs fw-bold">REPORTE OFICIAL DE INVENTARIO</span>
+                            <div class="small text-muted mt-1">Fecha de Generación: <strong class="text-dark" id="fechaGeneracion">@DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Ficha Técnica del Equipo y Almacén -->
+                    <div class="row g-3">
+                        <div class="col-md-6 border-end-md">
+                            <div class="d-flex flex-column gap-1.5">
+                                <div>
+                                    <span class="text-xs text-muted text-uppercase fw-bold">Equipo:</span>
+                                    <span class="fw-bold text-dark fs-6 ms-1" id="plantillaNombreEquipo">—</span>
+                                    <span class="badge bg-light text-primary border ms-1" id="plantillaNivelEquipo">—</span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-muted text-uppercase fw-bold">Almacén de Custodia:</span>
+                                    <span class="fw-semibold text-slate-800 ms-1" id="plantillaNombreAlmacen">—</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 ps-md-4">
+                            <div class="d-flex flex-column gap-1.5">
+                                <div>
+                                    <span class="text-xs text-muted text-uppercase fw-bold">Coordinador Responsable:</span>
+                                    <span class="fw-bold text-dark ms-1" id="plantillaNombreCoord">—</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div>
+                                        <span class="text-xs text-muted text-uppercase fw-bold">Posición:</span>
+                                        <span class="small fw-semibold text-primary ms-1" id="plantillaPosicionCoord">—</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs text-muted text-uppercase fw-bold">Teléfono:</span>
+                                        <span class="small fw-semibold text-dark ms-1" id="plantillaTelCoord">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla Detallada de Materiales -->
+                <div class="bg-white rounded-4 p-4 border shadow-sm mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                        <h6 class="fw-bold text-slate-800 mb-0">
+                            <i class="bi bi-boxes me-2 text-primary"></i>Desglose Detallado de Materiales
+                        </h6>
+                        <span class="badge bg-light text-muted border text-xs">Cantidades expresadas en unidades</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm align-middle mb-0" id="tablaPlantillaMateriales">
+                            <thead class="table-light text-slate-700">
+                                <tr class="text-xs text-uppercase">
+                                    <th class="text-center" style="width: 10%;">Código</th>
+                                    <th style="width: 35%;">Material</th>
+                                    <th class="text-center" style="width: 12%;">Unidad</th>
+                                    <th class="text-center" style="width: 11%;">Recibido</th>
+                                    <th class="text-center" style="width: 11%;">Asignado</th>
+                                    <th class="text-center" style="width: 11%;">Despachado</th>
+                                    <th class="text-center bg-success bg-opacity-10 text-success fw-bold" style="width: 10%;">Disponible</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoPlantillaMateriales">
+                                <!-- Filas dinámicas generadas con JS -->
+                            </tbody>
+                            <tfoot class="table-light fw-bold" id="piePlantillaMateriales">
+                                <!-- Totales generados dinámicamente -->
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sección de Firmas y Validación Oficial para Impresión -->
+                <div class="bg-white rounded-4 p-4 border shadow-sm mt-3" id="seccionFirmas">
+                    <div class="row pt-4 text-center">
+                        <div class="col-6">
+                            <div class="border-top border-dark mx-auto pt-2" style="max-width: 260px;">
+                                <strong class="d-block text-dark small" id="firmaCoordNombre">Coordinador Responsable</strong>
+                                <span class="text-xs text-muted" id="firmaCoordPosicion">Coordinador de Equipo</span>
+                                <div class="text-xs text-muted mt-1">Firma / Sello de Recepción y Custodia</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-top border-dark mx-auto pt-2" style="max-width: 260px;">
+                                <strong class="d-block text-dark small">Coordinación de Logística OCC</strong>
+                                <span class="text-xs text-muted">Oficina Nacional OCC RD</span>
+                                <div class="text-xs text-muted mt-1">Firma / Sello de Autorización y Despacho</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-white border-top py-3 px-4 d-flex justify-content-between">
+                <span class="text-xs text-muted">
+                    <i class="bi bi-shield-check text-success me-1"></i>Información sincronizada en tiempo real con la base de datos SOR.
+                </span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" onclick="imprimirPlantillaInventario()">
+                        <i class="bi bi-printer-fill me-1"></i>Imprimir / Guardar en PDF
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos para Pantalla e Impresión */
+.hover-primary:hover {
+    color: var(--apple-accent) !important;
+}
+
+@@media print {
+    /* Ocultar todo lo que no sea el área de la plantilla */
+    body * {
+        visibility: hidden !important;
+    }
+    #modalPlantillaInventario,
+    #modalPlantillaInventario * {
+        visibility: visible !important;
+    }
+    #modalPlantillaInventario {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+    .modal-dialog {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .modal-header,
+    .modal-footer,
+    .d-print-none {
+        display: none !important;
+    }
+    #areaImprimiblePlantilla {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+    .card, .bg-white {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+
+@section Scripts {
+<script>
+    // Filtro rápido de búsqueda de equipos en la tabla principal
+    document.getElementById('buscadorEquipos').addEventListener('input', function () {
+        var query = this.value.toLowerCase().trim();
+        document.querySelectorAll('#tablaEquiposInv tbody tr.fila-equipo').forEach(function (tr) {
+            var dataFiltro = tr.getAttribute('data-filtro') || '';
+            tr.style.display = (!query || dataFiltro.includes(query)) ? '' : 'none';
+        });
+    });
+
+    // Abrir Ventana Modal con la Plantilla Completa de Inventario
+    function abrirPlantillaInventario(equipo, materiales) {
+        if (!equipo) return;
+
+        // 1. Rellenar Metadatos del Equipo y Almacén
+        document.getElementById('plantillaNombreEquipo').textContent = equipo.nombreEquipo || 'Equipo';
+        document.getElementById('plantillaNivelEquipo').textContent = equipo.nombreNivel || 'ERLE';
+        document.getElementById('plantillaNombreAlmacen').textContent = equipo.nombreAlmacen || 'Almacén de Equipo';
+        
+        document.getElementById('plantillaNombreCoord').textContent = equipo.nombreCoordinador || 'Sin Asignar';
+        document.getElementById('plantillaPosicionCoord').textContent = equipo.posicionCoordinador || 'Coordinador';
+        document.getElementById('plantillaTelCoord').textContent = equipo.telefonoCoordinador || 'No registrado';
+
+        document.getElementById('firmaCoordNombre').textContent = equipo.nombreCoordinador || 'Coordinador Responsable';
+        document.getElementById('firmaCoordPosicion').textContent = (equipo.posicionCoordinador || 'Coordinador') + ' — ' + (equipo.nombreEquipo || '');
+
+        // 2. Rellenar Tabla de Materiales
+        var tbody = document.getElementById('cuerpoPlantillaMateriales');
+        tbody.innerHTML = '';
+
+        if (!materiales || materiales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>No hay materiales registrados para este equipo en la temporada activa</td></tr>';
+        } else {
+            var sumRec = 0, sumAsig = 0, sumDesp = 0, sumDisp = 0;
+
+            materiales.forEach(function (mat) {
+                var rec = mat.CantidadRecibida || 0;
+                var asig = mat.CantidadAsignada || 0;
+                var desp = mat.CantidadDespachada || 0;
+                var disp = mat.CantidadDisponible || 0;
+
+                sumRec += rec;
+                sumAsig += asig;
+                sumDesp += desp;
+                sumDisp += disp;
+
+                var dispStyle = disp > 0 
+                    ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold fs-6">${disp.toLocaleString('es-DO')}</span>`
+                    : `<span class="badge bg-light text-muted border px-2.5 py-1 rounded-pill fw-semibold">0</span>`;
+
+                var tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center"><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill font-mono">${mat.CodigoMaterial || '—'}</span></td>
+                    <td class="fw-semibold text-slate-800">${mat.NombreMaterial || 'Material'}</td>
+                    <td class="text-center text-muted small">${mat.UnidadEntrega || 'Unidades'}</td>
+                    <td class="text-center fw-semibold ${rec > 0 ? 'text-primary' : 'text-muted'}">${rec.toLocaleString('es-DO')}</td>
+                    <td class="text-center fw-semibold ${asig > 0 ? 'text-warning' : 'text-muted'}">${asig.toLocaleString('es-DO')}</td>
+                    <td class="text-center fw-semibold ${desp > 0 ? 'text-info' : 'text-muted'}">${desp.toLocaleString('es-DO')}</td>
+                    <td class="text-center bg-light bg-opacity-50">${dispStyle}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Pie con Totales
+            var tfoot = document.getElementById('piePlantillaMateriales');
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-end text-uppercase text-xs fw-bold">TOTALES CONSOLIDADOS:</td>
+                    <td class="text-center text-primary fs-6">${sumRec.toLocaleString('es-DO')}</td>
+                    <td class="text-center text-warning fs-6">${sumAsig.toLocaleString('es-DO')}</td>
+                    <td class="text-center text-info fs-6">${sumDesp.toLocaleString('es-DO')}</td>
+                    <td class="text-center bg-light fw-bold fs-6">${sumDisp > 0 ? '<span class="text-success">' + sumDisp.toLocaleString('es-DO') + '</span>' : '<span class="text-muted">0</span>'}</td>
+                </tr>
+            `;
+        }
+
+        // 4. Mostrar el Modal en pantalla
+        var modalEl = document.getElementById('modalPlantillaInventario');
+        var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInst.show();
+    }
+
+    // Función de Impresión / Guardar en PDF
+    function imprimirPlantillaInventario() {
+        window.print();
+    }
+</script>
+}

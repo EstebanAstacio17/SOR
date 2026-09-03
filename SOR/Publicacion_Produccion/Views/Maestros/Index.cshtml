@@ -1,0 +1,391 @@
+@model IEnumerable<SOR.Models.Maestro>
+@{
+    ViewBag.Title = "Registro de Maestros";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var iglesias = (List<SelectListItem>)ViewBag.ListaIglesias;
+    var u = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var equiposPermitidos = (HashSet<int>)ViewBag.EquiposPermitidos ?? new HashSet<int>();
+    bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Gestión de Maestros</h2>
+        <p class="text-muted mb-0">Administra los maestros de discipulado de las iglesias socias de OCC en República Dominicana.</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearMaestro">
+            <i class="bi bi-plus-circle me-2"></i>Registrar Nuevo Maestro
+        </button>
+    </div>
+</div>
+
+<!-- Barra de búsqueda instantánea -->
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-3">
+    <div class="input-group">
+        <span class="input-group-text bg-light border-end-0 text-slate-500"><i class="bi bi-search"></i></span>
+        <input type="text" id="txtBuscarMaestro" class="form-control bg-light border-start-0 text-slate-800" placeholder="Escribe aquí para buscar maestro instantáneamente por nombre, iglesia, cédula o contacto..." style="font-size: 0.9rem;" />
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Nombre Completo</th>
+                        <th>Iglesia Asociada</th>
+                        <th class="d-none d-md-table-cell">Documento / Identidad</th>
+                        <th class="d-none d-md-table-cell">Contacto</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4" style="min-width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-person-x fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay maestros registrados aún.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            bool puedeEditarMaestro = esAdmin || (item.IdEquipoIglesia > 0 && equiposPermitidos.Contains(item.IdEquipoIglesia));
+                            <tr class="@(!item.Activo ? "opacity-75 bg-light" : "")">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.Nombres @item.Apellidos</div>
+                                    <small class="text-muted">ID: #@item.IdMaestro</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-bold px-2 py-1"><i class="bi bi-building text-primary me-1"></i>@(string.IsNullOrEmpty(item.NombreIglesia) ? "Sin Iglesia" : item.NombreIglesia)</span>
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    <span class="font-monospace text-xs text-slate-600">@(string.IsNullOrEmpty(item.DocumentoIdentidad) ? "N/D" : item.DocumentoIdentidad)</span>
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    @if (!string.IsNullOrEmpty(item.Celular))
+                                    {
+                                        <div><i class="bi bi-telephone text-muted me-1"></i>@item.Celular</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.Correo))
+                                    {
+                                        <div class="small text-muted"><i class="bi bi-envelope text-muted me-1"></i>@item.Correo</div>
+                                    }
+                                    @if (string.IsNullOrEmpty(item.Celular) && string.IsNullOrEmpty(item.Correo))
+                                    {
+                                        <span class="text-muted text-xs">Sin contactos</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Activo)
+                                    {
+                                        <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4 text-nowrap">
+                                    <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                    @if (puedeEditarMaestro)
+                                    {
+                                        if (item.Activo)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger font-semibold" data-bs-toggle="modal" data-bs-target="#modalBajaMaestro_@item.IdMaestro">
+                                                <i class="bi bi-arrow-down-circle me-1"></i>Dar de Baja
+                                            </button>
+
+                                            <!-- MODAL DAR DE BAJA MAESTRO -->
+                                            <div class="modal fade text-start" id="modalBajaMaestro_@item.IdMaestro" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content border-0 rounded-4 shadow">
+                                                        <form action="@Url.Action("ToggleEstado", "Maestros")" method="post">
+                                                            <input type="hidden" name="idMaestro" value="@item.IdMaestro" />
+                                                            <input type="hidden" name="activo" value="false" />
+                                                            <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                                                                <h5 class="modal-title font-bold"><i class="bi bi-person-x me-2"></i>Dar de Baja al Maestro</h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4">
+                                                                <p class="text-slate-700 mb-3">¿Está seguro de que desea dar de baja al maestro <strong>@item.Nombres @item.Apellidos</strong> (@item.NombreIglesia)?</p>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold">Razón o Motivo de la Baja <span class="text-danger">*</span></label>
+                                                                    <textarea name="motivo" class="form-control" rows="3" required placeholder="Indica el motivo de la baja (ej: cambio de iglesia, retiro voluntario, etc.)..."></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                                <button type="submit" class="btn btn-danger font-semibold"><i class="bi bi-check-circle me-1"></i>Confirmar Baja</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <form action="@Url.Action("ToggleEstado", "Maestros")" method="post" class="d-inline m-0">
+                                                <input type="hidden" name="idMaestro" value="@item.IdMaestro" />
+                                                <input type="hidden" name="activo" value="true" />
+                                                <button type="submit" class="btn btn-sm btn-outline-success font-semibold">
+                                                    <i class="bi bi-arrow-up-circle me-1"></i>Activar
+                                                </button>
+                                            </form>
+                                        }
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarMaestro_@item.IdMaestro">
+                                            <i class="bi bi-pencil me-1"></i>Editar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted border px-2 py-1"><i class="bi bi-lock me-1"></i>Solo Lectura</span>
+                                    }
+                                    </div>
+
+                                    <!-- MODAL EDITAR MAESTRO -->
+                                    <div class="modal fade text-start" id="modalEditarMaestro_@item.IdMaestro" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content border-0 rounded-4 shadow">
+                                                <form action="@Url.Action("Editar", "Maestros")" method="post">
+                                                    <input type="hidden" name="IdMaestro" value="@item.IdMaestro" />
+                                                    <input type="hidden" name="Activo" value="@(item.Activo ? "true" : "false")" />
+                                                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                                                        <h5 class="modal-title font-bold"><i class="bi bi-pencil-square me-2 text-info"></i>Editar Maestro</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Nombres</label>
+                                                                <input type="text" name="Nombres" value="@item.Nombres" class="form-control" required />
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Apellidos</label>
+                                                                <input type="text" name="Apellidos" value="@item.Apellidos" class="form-control" required />
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Iglesia Asociada</label>
+                                                            <select name="IdIglesia" class="form-select" required onchange="validarEquipoIglesiaModal(this)">
+                                                                <option value="">Selecciona una Iglesia...</option>
+                                                                @foreach (var ig in iglesias)
+                                                                {
+                                                                    <option value="@ig.Value" @(ig.Value == item.IdIglesia.ToString() ? "selected" : "")>@ig.Text</option>
+                                                                }
+                                                            </select>
+                                                            <div class="alert alert-warning py-2 text-xs mt-2 d-none shadow-sm alerta-equipo-diferente">
+                                                                <i class="bi bi-exclamation-triangle-fill me-1"></i><span class="texto-alerta-equipo"></span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-semibold">Documento Identidad (Cédula/Pasaporte)</label>
+                                                            <input type="text" name="DocumentoIdentidad" value="@item.DocumentoIdentidad" class="form-control" placeholder="Ej: 001-0000000-0" />
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Celular / WhatsApp</label>
+                                                                <input type="text" name="Celular" value="@item.Celular" class="form-control" placeholder="Ej: 809-555-5555" />
+                                                            </div>
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="form-label fw-semibold">Correo Electrónico</label>
+                                                                <input type="email" name="Correo" value="@item.Correo" class="form-control" placeholder="maestro@ejemplo.com" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar Cambios</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR MAESTRO -->
+<div class="modal fade text-start" id="modalCrearMaestro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("Crear", "Maestros")" method="post">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-person-plus me-2 text-primary"></i>Registrar Nuevo Maestro</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Nombres</label>
+                            <input type="text" name="Nombres" class="form-control" placeholder="Ej: Juan" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Apellidos</label>
+                            <input type="text" name="Apellidos" class="form-control" placeholder="Ej: Pérez" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Iglesia Asociada (Temporada Activa Actual)</label>
+                        @if (ViewBag.IdIglesiaPreseleccionada != null)
+                        {
+                            <input type="hidden" name="IdIglesia" value="@ViewBag.IdIglesiaPreseleccionada" />
+                            <div class="form-control bg-light border text-slate-800 font-semibold py-2">
+                                <i class="bi bi-building text-primary me-2"></i>@ViewBag.NombreIglesiaPreseleccionada <span class="badge bg-slate-200 text-slate-700 ms-2">@ViewBag.NombreEquipoIglesiaPreseleccionada</span>
+                            </div>
+                            <small class="text-muted text-xs mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Iglesia seleccionada automáticamente desde su expediente.</small>
+                        }
+                        else
+                        {
+                            <div class="input-group input-group-sm mb-1">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="filtroModalIglesia" class="form-control" placeholder="Escribe para buscar iglesia..." onkeyup="filtrarSelectIglesias()" style="max-width: 100%;" />
+                            </div>
+                            <select name="IdIglesia" id="selectModalIglesia" class="form-select" required size="5" onchange="validarEquipoIglesiaModal(this)" style="max-width: 100%;">
+                                <option value="" disabled selected>-- Selecciona una Iglesia --</option>
+                                @foreach (var ig in iglesias)
+                                {
+                                    <option value="@ig.Value">@ig.Text</option>
+                                }
+                            </select>
+                            <div id="alertaEquipoDiferente" class="alert alert-warning py-2 text-xs mt-2 d-none shadow-sm alerta-equipo-diferente w-100">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="textoAlertaEquipo" class="texto-alerta-equipo"></span>
+                            </div>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Documento Identidad (Cédula/Pasaporte)</label>
+                        <input type="text" name="DocumentoIdentidad" class="form-control" placeholder="Ej: 001-0000000-0" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Celular / WhatsApp</label>
+                            <input type="text" name="Celular" class="form-control" placeholder="Ej: 809-555-5555" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Correo Electrónico</label>
+                            <input type="email" name="Correo" class="form-control" placeholder="maestro@ejemplo.com" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Registrar Maestro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #198754 !important;
+    }
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+        color: #dc3545 !important;
+    }
+</style>
+
+<script type="text/javascript">
+    var mapaEquipos = @Html.Raw(ViewBag.MapaEquiposJson ?? "{}");
+    var esAdmin = @(esAdmin ? "true" : "false");
+    var equiposPermitidosIds = [@string.Join(",", equiposPermitidos)];
+
+    function validarEquipoIglesiaModal(selectElement) {
+        var alertaDiv = selectElement.parentNode.querySelector('.alerta-equipo-diferente') || document.getElementById("alertaEquipoDiferente");
+        var textoSpan = alertaDiv ? alertaDiv.querySelector('.texto-alerta-equipo') : null;
+        var submitBtn = selectElement.closest('form').querySelector('button[type="submit"]');
+
+        if (!selectElement.value) {
+            if (alertaDiv) alertaDiv.classList.add("d-none");
+            if (submitBtn) submitBtn.disabled = false;
+            return;
+        }
+
+        $.getJSON('/Maestros/ValidarJurisdiccionIglesia', { idIglesia: selectElement.value }, function(response) {
+            if (response.success) {
+                if (!response.allowed) {
+                    if (textoSpan) textoSpan.textContent = "Esta iglesia pertenece al equipo: " + response.nombreEquipo;
+                    if (alertaDiv) alertaDiv.classList.remove("d-none");
+                    if (submitBtn) submitBtn.disabled = true;
+                } else {
+                    if (alertaDiv) alertaDiv.classList.add("d-none");
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        var searchInput = document.getElementById('txtBuscarMaestro');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                var query = this.value.toLowerCase().trim();
+                var rows = document.querySelectorAll('table tbody tr');
+                
+                rows.forEach(function(row) {
+                    // Ignorar la fila de "no hay datos"
+                    if (row.cells.length === 1 && row.cells[0].colSpan > 1) return;
+                    
+                    var text = row.textContent.toLowerCase();
+                    if (text.indexOf(query) > -1) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+
+    function filtrarSelectIglesias() {
+        var input = document.getElementById('filtroModalIglesia');
+        var filter = input.value.toLowerCase();
+        var select = document.getElementById('selectModalIglesia');
+        var options = select.getElementsByTagName('option');
+
+        for (var i = 1; i < options.length; i++) {
+            var txtValue = options[i].textContent || options[i].innerText;
+            if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                options[i].style.display = "";
+            } else {
+                options[i].style.display = "none";
+            }
+        }
+    }
+</script>
+
+@{
+    var idIglesiaPresel = ViewBag.IdIglesiaPreseleccionada;
+}
+@if (idIglesiaPresel != null)
+{
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            // Abrir automáticamente el modal de crear maestro y pre-seleccionar la iglesia
+            var modalCrear = document.getElementById('modalCrearMaestro');
+            if (modalCrear) {
+                var selectIglesia = modalCrear.querySelector('select[name="IdIglesia"]');
+                if (selectIglesia) {
+                    selectIglesia.value = '@idIglesiaPresel';
+                }
+                var bsModal = new bootstrap.Modal(modalCrear);
+                bsModal.show();
+            }
+        });
+    </script>
+}

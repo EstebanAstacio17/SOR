@@ -1,0 +1,97 @@
+@{
+    ViewBag.Title = "Estado de Solicitud | SOR";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var usuario = (SOR.Models.Usuario)ViewBag.Usuario ?? new SOR.Models.Usuario { IdEstado = 1, NombreEstado = "PendienteAprobacionCorreo" };
+}
+
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden text-center">
+            <div class="card-header bg-dark text-white py-4">
+                <i class="bi bi-person-badge-fill fs-1 text-sky-400 mb-2" style="color: #38bdf8;"></i>
+                <h2 class="h4 font-bold mb-0">Estado de tu Cuenta de Coordinador</h2>
+            </div>
+            <div class="card-body p-5">
+                @if (usuario.IdEstado == 1) // PendienteAprobacionCorreo
+                {
+                    <div class="py-3">
+                        <div class="mb-4">
+                            <span class="badge bg-warning text-dark px-4 py-3 fs-6 rounded-pill">
+                                <i class="bi bi-hourglass-split me-2 fs-5"></i>Pendiente de Aprobación de Correo
+                            </span>
+                        </div>
+                        <h3 class="h5 font-bold mb-3 text-slate-800">Tu registro inicial de correo ha sido recibido</h3>
+                        <p class="text-muted leading-relaxed max-w-lg mx-auto">
+                            Un administrador de OCC República Dominicana está revisando tu cuenta de usuario. Tan pronto tu correo sea validado y aprobado, recibirás el acceso para completar tu formulario oficial de Perfil de Coordinador.
+                        </p>
+                    </div>
+                }
+                else if (usuario.IdEstado == 2) // CorreoAprobado
+                {
+                    <div class="py-3">
+                        <div class="mb-4">
+                            <span class="badge bg-info text-dark px-4 py-3 fs-6 rounded-pill">
+                                <i class="bi bi-file-earmark-plus me-2 fs-5"></i>Correo Aprobado - Formulario Habilitado
+                            </span>
+                        </div>
+                        <h3 class="h5 font-bold mb-3 text-slate-800">¡Tu correo ha sido aprobado con éxito!</h3>
+                        <p class="text-muted leading-relaxed max-w-lg mx-auto mb-4">
+                            Ya puedes completar tu Formulario de Perfil de Coordinador con tus datos personales, ministeriales y la selección de tu equipo OCC.
+                        </p>
+                        <a href="@Url.Action("RegistroPerfil", "Coordinador")" class="btn btn-primary btn-lg px-4 font-semibold shadow-sm">
+                            <i class="bi bi-pencil-square me-2"></i>Llenar Formulario de Coordinador
+                        </a>
+                    </div>
+                }
+                else if (usuario.IdEstado == 3) // PerfilPendienteAprobacion
+                {
+                    <div class="py-3">
+                        <div class="mb-4">
+                            <span class="badge bg-primary px-4 py-3 fs-6 rounded-pill">
+                                <i class="bi bi-shield-lock me-2 fs-5"></i>Perfil Pendiente de Revisión Administrativa
+                            </span>
+                        </div>
+                        <h3 class="h5 font-bold mb-3 text-slate-800">Tu perfil ha sido registrado y está en revisión</h3>
+                        <p class="text-muted leading-relaxed max-w-lg mx-auto mb-4">
+                            Los administradores están validando la asignación de tu equipo y rol. Mientras tanto, puedes revisar o actualizar los datos de tu formulario cuantas veces necesites.
+                        </p>
+                        <a href="@Url.Action("RegistroPerfil", "Coordinador")" class="btn btn-outline-primary px-4 font-semibold">
+                            <i class="bi bi-eye me-2"></i>Ver / Editar Formulario
+                        </a>
+                    </div>
+                }
+                else if (usuario.IdEstado == 4) // Activo
+                {
+                    <div class="py-3">
+                        <div class="mb-4">
+                            <span class="badge bg-success px-4 py-3 fs-6 rounded-pill">
+                                <i class="bi bi-check-circle-fill me-2 fs-5"></i>Cuenta Plenamente Activa
+                            </span>
+                        </div>
+                        <h3 class="h5 font-bold mb-3 text-slate-800">¡Acceso concedido a la plataforma SOR!</h3>
+                        <p class="text-muted leading-relaxed max-w-lg mx-auto mb-4">
+                            Tu usuario y perfil de coordinador están completamente validados. Puedes ingresar al Panel Principal (Dashboard) y gestionar las iglesias de tu equipo.
+                        </p>
+                        <a href="@Url.Action("Index", "Home")" class="btn btn-success btn-lg px-4 font-semibold shadow-sm">
+                            <i class="bi bi-speedometer2 me-2"></i>Ir al Dashboard
+                        </a>
+                    </div>
+                }
+                else if (usuario.IdEstado == 5) // Rechazado
+                {
+                    <div class="py-3">
+                        <div class="mb-4">
+                            <span class="badge bg-danger px-4 py-3 fs-6 rounded-pill">
+                                <i class="bi bi-x-circle-fill me-2 fs-5"></i>Solicitud Rechazada
+                            </span>
+                        </div>
+                        <h3 class="h5 font-bold mb-3 text-slate-800">Tu solicitud no fue aprobada</h3>
+                        <p class="text-muted leading-relaxed max-w-lg mx-auto">
+                            Por favor ponte en contacto con la administración de OCC República Dominicana para más información.
+                        </p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

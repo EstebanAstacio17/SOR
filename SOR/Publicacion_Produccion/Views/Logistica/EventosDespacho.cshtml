@@ -1,0 +1,131 @@
+@model IEnumerable<SOR.Models.EventoDespacho>
+@{
+    ViewBag.Title = "Eventos de Despacho — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var almacenes = ViewBag.Almacenes as IEnumerable<SOR.Models.Almacen> ?? new List<SOR.Models.Almacen>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-send-check me-2" style="color:var(--apple-accent)"></i>Eventos de Despacho</h1>
+            <nav aria-label="breadcrumb"><ol class="breadcrumb small mb-0">
+                <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                <li class="breadcrumb-item active">Eventos de Despacho</li>
+            </ol></nav>
+        </div>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
+            <i class="bi bi-plus-lg me-1"></i>Configurar Evento de Despacho
+        </button>
+    </div>
+
+    @if (TempData["MensajeExito"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+    @if (TempData["MensajeError"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+    @if (!Model.Any())
+    {
+        <div class="card"><div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+            <h6>No hay eventos de despacho configurados</h6>
+            <p class="small">Crea primero un evento de tipo <strong>Despacho</strong> en el módulo de Eventos y luego configúralo aquí.</p>
+        </div></div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var ev in Model)
+            {
+                string estadoBadge = ev.EstadoDespachoEvento == "FINALIZADO" ? "bg-success" :
+                                     ev.EstadoDespachoEvento == "EN_CURSO" ? "bg-warning text-dark" :
+                                     ev.EstadoDespachoEvento == "CANCELADO" ? "bg-danger" : "bg-primary";
+                int pct = ev.TotalIglesiasAsignadas > 0 ? (ev.TotalIglesiasDespachadas * 100 / ev.TotalIglesiasAsignadas) : 0;
+                <div class="col-md-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="fw-semibold mb-0">@ev.NombreEvento</h6>
+                                <span class="badge @estadoBadge">@ev.EstadoDespachoEvento</span>
+                            </div>
+                            <div class="small text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>@(ev.FechaEvento.HasValue ? ev.FechaEvento.Value.ToString("dd/MM/yyyy") : "—")</div>
+                            <div class="small text-muted mb-1"><i class="bi bi-geo-alt me-1"></i>@(string.IsNullOrEmpty(ev.Lugar) ? "Sin lugar definido" : ev.Lugar)</div>
+                            <div class="small text-muted mb-3"><i class="bi bi-people me-1"></i>@ev.NombreEquipo</div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Progreso de despacho</span>
+                                    <span class="fw-semibold">@ev.TotalIglesiasDespachadas / @ev.TotalIglesiasAsignadas</span>
+                                </div>
+                                <div class="progress" style="height:6px">
+                                    <div class="progress-bar bg-success" style="width:@pct%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent pt-0">
+                            <a href="@Url.Action("DetalleEventoDespacho","Logistica", new { id = ev.IdEvento })" class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-arrow-right-circle me-1"></i>Gestionar Evento
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal Crear/Configurar Evento de Despacho -->
+<div class="modal fade" id="modalCrearEvento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold"><i class="bi bi-calendar-plus me-2"></i>Configurar Evento de Despacho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("CrearEventoDespacho", "Logistica", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i>Solo aparecen eventos de tipo <strong>Despacho</strong> de la temporada activa que aún no han sido configurados.</div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Evento de Despacho <span class="text-danger">*</span></label>
+                        <select name="idEvento" id="selEventoDespacho" class="form-select" required>
+                            <option value="">— Cargando eventos —</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Almacén (opcional)</label>
+                        <select name="idAlmacen" class="form-select">
+                            <option value="">— Sin almacén específico —</option>
+                            @foreach (var a in almacenes)
+                            {
+                                <option value="@a.IdAlmacen">@a.NombreAlmacen</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check2 me-1"></i>Configurar</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.getElementById('modalCrearEvento').addEventListener('show.bs.modal', function () {
+    fetch('@Url.Action("EventosDisponiblesParaDespacho","Logistica")')
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            var sel = document.getElementById('selEventoDespacho');
+            sel.innerHTML = '<option value="">— Seleccionar evento —</option>';
+            if (data.length === 0) {
+                sel.innerHTML = '<option value="" disabled>No hay eventos de Despacho disponibles</option>';
+            } else {
+                data.forEach(function(e) {
+                    sel.innerHTML += '<option value="' + e.IdEvento + '">' + e.NombreEvento + ' — ' + e.Fecha + '</option>';
+                });
+            }
+        });
+});
+</script>
+}

@@ -1,0 +1,289 @@
+@model SOR.Models.InventarioCentralViewModel
+@{
+    ViewBag.Title = "Inventario Central — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string jsonGlobal = Newtonsoft.Json.JsonConvert.SerializeObject(Model.MaterialesGlobal);
+    string jsonEquipos = Newtonsoft.Json.JsonConvert.SerializeObject(Model.Equipos);
+}
+
+<div class="container-fluid py-4">
+    <!-- Encabezado de Página -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h1 class="h3 fw-semibold mb-1">
+                    <i class="bi bi-boxes me-2" style="color:var(--apple-accent)"></i>Inventario Central
+                </h1>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill text-xs fw-bold">
+                    <i class="bi bi-calendar-check me-1"></i>@(Model.NombreTemporada ?? "Temporada Activa")
+                </span>
+            </div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                    <li class="breadcrumb-item active">Inventario Central</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="@Url.Action("Recepciones","Logistica")" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-truck-front me-1"></i>Recepciones de Contenedor
+            </a>
+            <a href="@Url.Action("Transferencias","Logistica")" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Transferencias
+            </a>
+            <a href="@Url.Action("InventarioEquipos","Logistica")" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="bi bi-layers-half me-1"></i>Inventario por Equipo
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjeta Principal de Inventario Central -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        
+        <!-- Header con Controles y Filtros -->
+        <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-box-seam fs-5 text-primary"></i>
+                <div>
+                    <h6 class="mb-0 fw-bold text-slate-800" id="tituloVistaInventario">Stock Global por Material</h6>
+                    <small class="text-muted text-xs d-block" id="subtituloVistaInventario">Consolidado general de la temporada en curso</small>
+                </div>
+            </div>
+
+            <!-- Filtros: Selector de Equipo y Buscador de Material -->
+            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                <!-- Selector de Equipo -->
+                <div class="input-group input-group-sm" style="min-width: 250px;">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-funnel"></i></span>
+                    <select id="filtroEquipoInv" class="form-select bg-light border-start-0 text-slate-800 fw-medium">
+                        <option value="GLOBAL">🌐 Consolidado Global</option>
+                        <optgroup label="Estatus Rápido por Equipo">
+                            @foreach (var eq in Model.Equipos)
+                            {
+                                <option value="@eq.IdEquipo">👥 @eq.NombreEquipo (@eq.NombreNivel)</option>
+                            }
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Buscador de texto -->
+                <div class="input-group input-group-sm" style="min-width: 200px;">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="buscadorMaterial" class="form-control bg-light border-start-0" placeholder="Buscar material...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Banner de Contexto de Filtro -->
+        <div class="px-4 py-2 bg-light bg-opacity-50 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 text-xs">
+            <div id="bannerContexto" class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill fw-semibold" id="badgeEstadoFiltro">
+                    <i class="bi bi-globe me-1"></i>Mostrando: Consolidado Global de la Temporada
+                </span>
+            </div>
+            <div class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>Cantidades expresadas en unidades físicas
+            </div>
+        </div>
+
+        <!-- Tabla de Materiales -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaInvCentralMateriales">
+                <thead class="table-light text-slate-700">
+                    <tr class="text-xs text-uppercase">
+                        <th class="ps-4 text-center" style="width: 10%;">Código</th>
+                        <th style="width: 30%;">Material</th>
+                        <th class="text-center" style="width: 18%;">Por Caja / Empaque</th>
+                        <th class="text-center" style="width: 13%;">Recibido</th>
+                        <th class="text-center" style="width: 13%;">Despachado</th>
+                        <th class="text-center" style="width: 16%;">Existencia Disponible</th>
+                        <th class="text-center pe-4" style="width: 10%;">% Despachado</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaMateriales">
+                    <!-- Filas generadas dinámicamente -->
+                </tbody>
+                <tfoot class="table-light fw-bold" id="pieTablaMateriales">
+                    <!-- Totales consolidados generados dinámicamente -->
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Datos globales y de equipos serializados desde el servidor
+    var datosGlobales = @Html.Raw(jsonGlobal) || [];
+    var datosEquipos = @Html.Raw(jsonEquipos) || [];
+
+    // Renderizar la tabla de materiales según la selección
+    function renderizarTablaMateriales(materiales, nombreContexto, esEquipo) {
+        var tbody = document.getElementById('cuerpoTablaMateriales');
+        var tfoot = document.getElementById('pieTablaMateriales');
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        // Actualizar banner de contexto
+        var badge = document.getElementById('badgeEstadoFiltro');
+        var titulo = document.getElementById('tituloVistaInventario');
+        var subtitulo = document.getElementById('subtituloVistaInventario');
+
+        if (esEquipo) {
+            badge.className = 'badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold';
+            badge.innerHTML = `<i class="bi bi-people-fill me-1"></i>Estatus Rápido del Equipo: <strong>${nombreContexto}</strong>`;
+            titulo.textContent = `Stock de ${nombreContexto}`;
+            subtitulo.textContent = `Estatus de materiales asignados a este equipo en la temporada`;
+        } else {
+            badge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-1.5 rounded-pill fw-semibold';
+            badge.innerHTML = `<i class="bi bi-globe me-1"></i>Mostrando: Consolidado Global de la Temporada`;
+            titulo.textContent = 'Stock Global por Material';
+            subtitulo.textContent = 'Consolidado general de la temporada en curso';
+        }
+
+        if (!materiales || materiales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2 text-slate-300"></i>No hay registros de inventario disponibles para este contexto</td></tr>';
+            return;
+        }
+
+        var sumRec = 0, sumDesp = 0, sumDisp = 0;
+
+        materiales.forEach(function (mat) {
+            var rec = mat.CantidadRecibida || 0;
+            var desp = mat.CantidadDespachada || 0;
+            var disp = mat.CantidadDisponible || 0;
+            var upe = mat.UnidadesPorEmpaque || 1;
+            var tipoEmp = mat.TipoEmpaque || 'Caja';
+            var unidad = mat.UnidadEntrega || 'Unidades';
+
+            sumRec += rec;
+            sumDesp += desp;
+            sumDisp += disp;
+
+            var pct = rec > 0 ? Math.min(100, Math.round((desp * 100) / rec)) : 0;
+            
+            // Presentación / Empaque
+            var presentacionHtml = upe > 1
+                ? `<span class="badge bg-light text-slate-700 border px-2.5 py-1 rounded-pill font-mono"><i class="bi bi-box-seam me-1 text-primary"></i>${upe.toLocaleString('es-DO')} ${unidad} / ${tipoEmp}</span>`
+                : `<span class="badge bg-light text-muted border px-2 py-1 rounded-pill">${tipoEmp} estándar</span>`;
+
+            // Formato de Recibido (Cajas + Unidades)
+            var recHtml = '';
+            if (rec > 0 && upe > 1) {
+                var cajasRec = (rec / upe);
+                recHtml = `
+                    <div class="fw-bold text-primary">${cajasRec.toLocaleString('es-DO', {maximumFractionDigits: 1})} ${tipoEmp}s</div>
+                    <div class="text-xs text-muted font-mono">${rec.toLocaleString('es-DO')} ${unidad}</div>
+                `;
+            } else {
+                recHtml = `<div class="fw-semibold ${rec > 0 ? 'text-primary' : 'text-muted'}">${rec.toLocaleString('es-DO')} ${unidad}</div>`;
+            }
+
+            // Formato de Despachado (Cajas + Unidades)
+            var despHtml = '';
+            if (desp > 0 && upe > 1) {
+                var cajasDesp = (desp / upe);
+                despHtml = `
+                    <div class="fw-bold text-info">${cajasDesp.toLocaleString('es-DO', {maximumFractionDigits: 1})} ${tipoEmp}s</div>
+                    <div class="text-xs text-muted font-mono">${desp.toLocaleString('es-DO')} ${unidad}</div>
+                `;
+            } else {
+                despHtml = `<div class="fw-semibold ${desp > 0 ? 'text-info' : 'text-muted'}">${desp.toLocaleString('es-DO')} ${unidad}</div>`;
+            }
+
+            // Formato de Existencia Disponible (Ej: 1 Paquete disponible = 100 brochure)
+            var dispHtml = '';
+            if (disp > 0) {
+                if (upe > 1) {
+                    var cajasDisp = (disp / upe);
+                    dispHtml = `
+                        <div class="d-inline-flex flex-column align-items-center">
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill fw-bold fs-6">
+                                ${cajasDisp.toLocaleString('es-DO', {maximumFractionDigits: 1})} ${tipoEmp}s
+                            </span>
+                            <span class="small fw-semibold text-slate-700 mt-1">${disp.toLocaleString('es-DO')} ${unidad} disp.</span>
+                        </div>
+                    `;
+                } else {
+                    dispHtml = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill fw-bold fs-6">${disp.toLocaleString('es-DO')} ${unidad}</span>`;
+                }
+            } else {
+                dispHtml = `<span class="badge bg-light text-muted border px-2.5 py-1 rounded-pill fw-semibold">0 ${tipoEmp}s (0 ${unidad})</span>`;
+            }
+
+            var tr = document.createElement('tr');
+            tr.className = 'fila-material';
+            tr.setAttribute('data-filtro', ((mat.Codigo || '') + ' ' + (mat.NombreMaterial || '') + ' ' + tipoEmp).toLowerCase());
+
+            tr.innerHTML = `
+                <td class="ps-4 text-center">
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill font-mono">${mat.Codigo || '—'}</span>
+                </td>
+                <td>
+                    <strong class="text-dark d-block">${mat.NombreMaterial || 'Material'}</strong>
+                </td>
+                <td class="text-center">${presentacionHtml}</td>
+                <td class="text-center">${recHtml}</td>
+                <td class="text-center">${despHtml}</td>
+                <td class="text-center bg-light bg-opacity-25">${dispHtml}</td>
+                <td class="text-center pe-4">
+                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                        <div class="progress flex-grow-1" style="height: 6px; max-width: 80px; background-color: #e9ecef;">
+                            <div class="progress-bar ${pct >= 100 ? 'bg-success' : 'bg-primary'}" role="progressbar" style="width: ${pct}%;"></div>
+                        </div>
+                        <span class="text-xs text-muted font-mono" style="min-width: 32px;">${pct}%</span>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Totales consolidados en el pie
+        var pctTotal = sumRec > 0 ? Math.min(100, Math.round((sumDesp * 100) / sumRec)) : 0;
+        tfoot.innerHTML = `
+            <tr class="bg-light">
+                <td colspan="3" class="ps-4 text-end text-uppercase text-xs fw-bold">TOTALES CONSOLIDADOS (UNIDADES):</td>
+                <td class="text-center text-primary fw-bold fs-6">${sumRec.toLocaleString('es-DO')}</td>
+                <td class="text-center text-info fw-bold fs-6">${sumDesp.toLocaleString('es-DO')}</td>
+                <td class="text-center fs-6">${sumDisp > 0 ? '<span class="text-success fw-bold">' + sumDisp.toLocaleString('es-DO') + '</span>' : '<span class="text-muted">0</span>'}</td>
+                <td class="text-center pe-4 text-xs text-muted font-mono fw-bold">${pctTotal}% despachado</td>
+            </tr>
+        `;
+    }
+
+    // Evento al cambiar el selector de equipo
+    document.getElementById('filtroEquipoInv').addEventListener('change', function () {
+        var valor = this.value;
+        if (valor === 'GLOBAL') {
+            renderizarTablaMateriales(datosGlobales, 'Consolidado Global', false);
+        } else {
+            var idEq = parseInt(valor, 10);
+            var eqEncontrado = datosEquipos.find(function (e) { return e.IdEquipo === idEq; });
+            if (eqEncontrado) {
+                renderizarTablaMateriales(eqEncontrado.Materiales, eqEncontrado.NombreEquipo, true);
+            } else {
+                renderizarTablaMateriales([], 'Equipo', true);
+            }
+        }
+        // Reaplicar filtro de texto si hubiese
+        filtrarTextoMateriales();
+    });
+
+    // Buscador en vivo de materiales
+    function filtrarTextoMateriales() {
+        var query = (document.getElementById('buscadorMaterial').value || '').toLowerCase().trim();
+        document.querySelectorAll('#tablaInvCentralMateriales tbody tr.fila-material').forEach(function (tr) {
+            var filtro = tr.getAttribute('data-filtro') || '';
+            tr.style.display = (!query || filtro.includes(query)) ? '' : 'none';
+        });
+    }
+
+    document.getElementById('buscadorMaterial').addEventListener('input', filtrarTextoMateriales);
+
+    // Inicializar la tabla en Modo Global por defecto
+    renderizarTablaMateriales(datosGlobales, 'Consolidado Global', false);
+</script>
+}
+

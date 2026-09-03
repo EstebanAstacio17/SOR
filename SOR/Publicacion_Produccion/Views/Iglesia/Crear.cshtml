@@ -1,0 +1,426 @@
+@model SOR.Models.Iglesia
+@{
+    ViewBag.Title = "Registrar Iglesia Beneficiada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var listaEquipos = (List<SelectListItem>)ViewBag.ListaEquipos ?? new List<SelectListItem>();
+    var u = (SOR.Models.Usuario)Session["usuario"];
+}
+
+<div class="mb-4">
+    <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-plus-circle-fill text-primary me-2"></i>Registrar Nueva Iglesia</h2>
+    <p class="text-muted mb-0">Ingresa los datos de la institución, del Pastor principal y del Líder Ministerial.</p>
+</div>
+
+@if (ViewBag.AlertaIglesiaOtroEquipo != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show mb-4 shadow-sm border-warning" role="alert">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <i class="bi bi-exclamation-triangle-fill me-2 text-warning fs-5"></i>
+                <strong class="text-dark">@ViewBag.AlertaIglesiaOtroEquipo</strong>
+            </div>
+            @if (ViewBag.IdIglesiaOtroEquipo != null && (int)ViewBag.IdIglesiaOtroEquipo > 0)
+            {
+                <a href="@Url.Action("Detalle", "Iglesia", new { id = ViewBag.IdIglesiaOtroEquipo })" class="btn btn-sm btn-dark font-semibold">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver Expediente de la Iglesia
+                </a>
+            }
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (ViewData["MensajeError"] != null && ViewBag.AlertaIglesiaOtroEquipo == null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@ViewData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form id="formCrearIglesia" action="@Url.Action("Crear", "Iglesia")" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <!-- DATOS DE LA INSTITUCIÓN -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-dark text-white p-3">
+            <h3 class="h5 font-bold mb-0"><i class="bi bi-building me-2"></i>1. Datos de la Institución / Iglesia</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Nombre Completo de la Iglesia o Institución <span class="text-danger">*</span></label>
+                    <input type="text" name="NombreIglesia" class="form-control" value="@Model.NombreIglesia" required placeholder="Ej: Iglesia Evangélica Central" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">RNC o Cédula <span class="text-danger">*</span></label>
+                    <input type="text" name="RNC_Cedula" id="txtRNC_Cedula" class="form-control" value="@Model.RNC_Cedula" required pattern="^(\d{9}|\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 101012345 o 001-1234567-8" />
+                </div>
+                <div class="col-12" id="contenedorAlertaIglesiaDuplicada" style="display:none;"></div>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Teléfono <span class="text-danger">*</span></label>
+                    <input type="text" name="Telefono" class="form-control" value="@Model.Telefono" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 809-555-1234" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Correo Institucional <span class="text-danger">*</span></label>
+                    <input type="email" name="CorreoInstitucion" class="form-control" value="@Model.CorreoInstitucion" required placeholder="Ej: contacto@iglesia.org" />
+                </div>
+
+                <h5 class="h6 font-bold mt-4 mb-2 text-dark">Dirección Física Completa</h5>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Calle <span class="text-danger">*</span></label>
+                    <input type="text" name="Calle" class="form-control" value="@Model.Calle" required placeholder="Ej: Calle Duarte" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Número <span class="text-danger">*</span></label>
+                    <input type="text" name="Numero" class="form-control" value="@Model.Numero" required placeholder="Ej: 12" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Sector <span class="text-danger">*</span></label>
+                    <input type="text" name="Sector" class="form-control" value="@Model.Sector" required placeholder="Ej: El Ensanche" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Ciudad <span class="text-danger">*</span></label>
+                    <input type="text" name="Ciudad" class="form-control" value="@Model.Ciudad" required placeholder="Ej: Santiago" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label font-semibold">Provincia <span class="text-danger">*</span></label>
+                    <input type="text" name="Provincia" class="form-control" value="@Model.Provincia" required placeholder="Ej: Santiago" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-semibold">Referencia de Ubicación <span class="text-danger">*</span></label>
+                    <input type="text" name="Referencia" class="form-control" value="@Model.Referencia" required placeholder="Ej: Frente al Parque Central" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-semibold">Equipo OCC Asignado <span class="text-danger">*</span></label>
+                    @if (u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2))
+                    {
+                        @Html.DropDownListFor(m => m.IdEquipo, listaEquipos, "-- Seleccionar Equipo --", new { @class = "form-select", required = "required" })
+                    }
+                    else
+                    {
+                        <input type="text" class="form-control" value="@(u != null && !string.IsNullOrEmpty(u.NombreEquipo) ? u.NombreEquipo : "Sin Equipo Asignado")" readonly />
+                        <input type="hidden" name="IdEquipo" value="@(u != null ? u.IdEquipo ?? 1 : 1)" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATOS DEL PASTOR -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-secondary text-white p-3">
+            <h3 class="h5 font-bold mb-0"><i class="bi bi-person-badge me-2"></i>2. Datos del Pastor Principal</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Nombres del Pastor <span class="text-danger">*</span></label>
+                    <input type="text" name="Pastor.Nombres" class="form-control" value="@Model.Pastor.Nombres" required placeholder="Ej: Juan" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Apellidos del Pastor <span class="text-danger">*</span></label>
+                    <input type="text" name="Pastor.Apellidos" class="form-control" value="@Model.Pastor.Apellidos" required placeholder="Ej: Pérez" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Cédula del Pastor <span class="text-danger">*</span></label>
+                    <input type="text" name="Pastor.DocumentoIdentidad" class="form-control" value="@Model.Pastor.DocumentoIdentidad" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 001-1234567-8" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Adjuntar Cédula / Documento (Foto o PDF)</label>
+                    <input type="file" name="docPastor" class="form-control" accept="image/*,.pdf" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Celular del Pastor <span class="text-danger">*</span></label>
+                    <input type="text" name="Pastor.Celular" class="form-control" value="@Model.Pastor.Celular" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 829-555-4321" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Correo Electrónico del Pastor <span class="text-danger">*</span></label>
+                    <input type="email" name="Pastor.Correo" class="form-control" value="@Model.Pastor.Correo" required placeholder="juan.perez@example.com" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATOS DEL LÍDER MINISTERIAL -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-dark text-white p-3">
+            <h3 class="h5 font-bold mb-0"><i class="bi bi-person-workspace me-2"></i>3. Datos del Líder Ministerial</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Nombres del Líder <span class="text-danger">*</span></label>
+                    <input type="text" name="LiderMinisterial.Nombres" class="form-control" value="@Model.LiderMinisterial.Nombres" required placeholder="Ej: Pedro" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Apellidos del Líder <span class="text-danger">*</span></label>
+                    <input type="text" name="LiderMinisterial.Apellidos" class="form-control" value="@Model.LiderMinisterial.Apellidos" required placeholder="Ej: Gómez" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Cédula del Líder <span class="text-danger">*</span></label>
+                    <input type="text" name="LiderMinisterial.DocumentoIdentidad" class="form-control" value="@Model.LiderMinisterial.DocumentoIdentidad" required pattern="^(\d{11}|\d{3}-\d{7}-\d{1})$" placeholder="Ej: 001-1234567-8" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Adjuntar Cédula / Documento (Foto o PDF)</label>
+                    <input type="file" name="docLider" class="form-control" accept="image/*,.pdf" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Celular del Líder <span class="text-danger">*</span></label>
+                    <input type="text" name="LiderMinisterial.Celular" class="form-control" value="@Model.LiderMinisterial.Celular" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 849-555-9876" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label font-semibold">Correo Electrónico del Líder <span class="text-danger">*</span></label>
+                    <input type="email" name="LiderMinisterial.Correo" class="form-control" value="@Model.LiderMinisterial.Correo" required placeholder="pedro.gomez@example.com" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 4: INFORMACIÓN MINISTERIAL Y REFERENCIAS -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-dark text-white p-3">
+            <h3 class="h5 font-bold mb-0 text-white"><i class="bi bi-file-earmark-medical me-2 text-warning"></i>4. Información Ministerial y Referencias</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Cantidad de Maestros <span class="text-danger">*</span></label>
+                    <input type="number" name="CantidadMaestros" class="form-control" value="@Model.CantidadMaestros" min="0" required placeholder="Ej: 5" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Cantidad de Niños <span class="text-danger">*</span></label>
+                    <input type="number" name="CantidadNinos" class="form-control" value="@Model.CantidadNinos" min="0" required placeholder="Ej: 150" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Denominación <span class="text-danger">*</span></label>
+                    <select name="Denominacion" class="form-select" required>
+                        <option value="">-- Seleccionar --</option>
+                        @foreach (var d in (List<SelectListItem>)ViewBag.ListaDenominaciones ?? new List<SelectListItem>())
+                        {
+                            <option value="@d.Value" @(Model.Denominacion == d.Value ? "selected" : "")>@d.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label font-semibold">Tipo de Organización <span class="text-danger">*</span></label>
+                    <select name="TipoOrganizacion" class="form-select" required>
+                        <option value="">-- Seleccionar --</option>
+                        @foreach (var t in (List<SelectListItem>)ViewBag.ListaTiposOrganizacion ?? new List<SelectListItem>())
+                        {
+                            <option value="@t.Value" @(Model.TipoOrganizacion == t.Value ? "selected" : "")>@t.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <h5 class="h6 font-bold mt-4 mb-2 text-dark">Referencias Ministeriales</h5>
+                <div class="col-md-6">
+                    <label class="form-label font-semibold">Nombre de Referencia 1 <span class="text-danger">*</span></label>
+                    <input type="text" name="Ref1Nombre" class="form-control" value="@Model.Ref1Nombre" required placeholder="Ej: Reverendo Ramón Ramos" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-semibold">Contacto de Referencia 1 <span class="text-danger">*</span></label>
+                    <input type="text" name="Ref1Contacto" class="form-control" value="@Model.Ref1Contacto" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 809-555-1122" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-semibold">Nombre de Referencia 2 <span class="text-danger">*</span></label>
+                    <input type="text" name="Ref2Nombre" class="form-control" value="@Model.Ref2Nombre" required placeholder="Ej: Obispo Rafael Reyes" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label font-semibold">Contacto de Referencia 2 <span class="text-danger">*</span></label>
+                    <input type="text" name="Ref2Contacto" class="form-control" value="@Model.Ref2Contacto" required pattern="^(809|829|849)[-]?\d{3}[-]?\d{4}$" placeholder="Ej: 829-555-3344" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-end mb-5">
+        <a href="@Url.Action("Index", "Iglesia")" class="btn btn-secondary me-2">Cancelar</a>
+        <button type="submit" class="btn btn-primary px-5 font-semibold">
+            <i class="bi bi-check-circle-fill me-2"></i>Guardar Expediente de Iglesia
+        </button>
+    </div>
+</form>
+
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof $.fn.validate === 'function') {
+            if (!$.validator.methods.regex) {
+                $.validator.addMethod("regex", function(value, element, regexp) {
+                    var re = new RegExp(regexp);
+                    return this.optional(element) || re.test(value);
+                }, "Formato inválido.");
+            }
+
+            $("#formCrearIglesia").validate({
+                rules: {
+                    NombreIglesia: { required: true },
+                    RNC_Cedula: {
+                        required: true,
+                        regex: "^(\\d{9}|\\d{11}|\\d{3}-\\d{7}-\\d{1})$"
+                    },
+                    Telefono: {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    Calle: { required: true },
+                    Numero: { required: true },
+                    Sector: { required: true },
+                    Ciudad: { required: true },
+                    Referencia: { required: true },
+                    "Pastor.Nombres": { required: true },
+                    "Pastor.Apellidos": { required: true },
+                    "Pastor.DocumentoIdentidad": {
+                        required: true,
+                        regex: "^(\\d{11}|\\d{3}-\\d{7}-\\d{1})$"
+                    },
+                    "Pastor.Celular": {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    "Pastor.Correo": {
+                        required: true,
+                        email: true
+                    },
+                    "LiderMinisterial.Nombres": { required: true },
+                    "LiderMinisterial.Apellidos": { required: true },
+                    "LiderMinisterial.DocumentoIdentidad": {
+                        required: true,
+                        regex: "^(\\d{11}|\\d{3}-\\d{7}-\\d{1})$"
+                    },
+                    "LiderMinisterial.Celular": {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    "LiderMinisterial.Correo": {
+                        required: true,
+                        email: true
+                    },
+                    CantidadMaestros: { required: true, min: 0 },
+                    CantidadNinos: { required: true, min: 0 },
+                    Denominacion: { required: true },
+                    TipoOrganizacion: { required: true },
+                    Ref1Nombre: { required: true },
+                    Ref1Contacto: {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    },
+                    Ref2Nombre: { required: true },
+                    Ref2Contacto: {
+                        required: true,
+                        regex: "^(809|829|849)[-]?\\d{3}[-]?\\d{4}$"
+                    }
+                },
+                messages: {
+                    RNC_Cedula: {
+                        required: "El RNC o Cédula es obligatorio.",
+                        regex: "Debe tener 9 u 11 dígitos numéricos (ej: 001-1234567-8)."
+                    },
+                    Telefono: {
+                        required: "El teléfono es obligatorio.",
+                        regex: "Formato de teléfono inválido (ej: 809-555-1234)."
+                    },
+                    "Pastor.DocumentoIdentidad": {
+                        required: "La cédula del pastor es obligatoria.",
+                        regex: "Formato de cédula inválido."
+                    },
+                    "Pastor.Celular": {
+                        required: "El celular del pastor es obligatorio.",
+                        regex: "Formato de celular inválido."
+                    },
+                    "Pastor.Correo": {
+                        required: "El correo es obligatorio.",
+                        email: "Ingrese un correo electrónico válido."
+                    },
+                    "LiderMinisterial.DocumentoIdentidad": {
+                        required: "La cédula del líder es obligatoria.",
+                        regex: "Formato de cédula inválido."
+                    },
+                    "LiderMinisterial.Celular": {
+                        required: "El celular del líder es obligatorio.",
+                        regex: "Formato de celular inválido."
+                    },
+                    "LiderMinisterial.Correo": {
+                        required: "El correo es obligatorio.",
+                        email: "Ingrese un correo electrónico válido."
+                    },
+                    Ref1Contacto: {
+                        required: "El contacto es obligatorio.",
+                        regex: "Formato de teléfono inválido."
+                    },
+                    Ref2Contacto: {
+                        required: "El contacto es obligatorio.",
+                        regex: "Formato de teléfono inválido."
+                    }
+                },
+                errorElement: 'div',
+                errorClass: 'invalid-feedback d-block mt-1',
+                highlight: function(element) {
+                    $(element).addClass('is-invalid');
+                },
+                unhighlight: function(element) {
+                    $(element).removeClass('is-invalid');
+                },
+                errorPlacement: function(error, element) {
+                    error.insertAfter(element);
+                }
+            });
+        }
+
+        // Validación de unicidad de líder por AJAX
+        $(document).on('change', 'input[name="LiderMinisterial.DocumentoIdentidad"]', function() {
+            var val = $(this).val();
+            if (!val) return;
+            var $input = $(this);
+            $.getJSON('@Url.Action("VerificarUnicidadPersona", "Iglesia")', { cedula: val }, function(response) {
+                if (response.existe) {
+                    alert('ADVERTENCIA: El ' + (response.rol === 'Lider' ? 'Líder discipulado' : 'Maestro') + ' con la identificación ' + val + ' ya está registrado en la iglesia "' + response.iglesia + '", zona/equipo "' + response.equipo + '" (' + response.nivel + ').');
+                }
+            });
+        });
+
+        // Validación en vivo de iglesia registrada en otro equipo en la temporada activa
+        $(document).on('change', '#txtRNC_Cedula', function() {
+            var val = $(this).val();
+            if (!val) {
+                $('#contenedorAlertaIglesiaDuplicada').slideUp().empty();
+                return;
+            }
+            var idEquipoActual = $('select[name="IdEquipo"]').val() || '@(u != null && u.IdEquipo.HasValue ? u.IdEquipo.Value : 0)';
+            $.getJSON('@Url.Action("VerificarIglesiaExistente", "Iglesia")', { rncCedula: val, idEquipoActual: idEquipoActual, excluirIdIglesia: 0 }, function(response) {
+                if (response.existe && !response.mismoEquipo) {
+                    var urlDetalle = '@Url.Action("Detalle", "Iglesia")/' + response.idIglesia;
+                    var alertHtml = `
+                        <div class="alert alert-warning border-warning shadow-sm p-3 mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2 rounded-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-2"></i>
+                                <span>Esta iglesia ya está registrada en el equipo: <strong class="text-dark">${response.nombreEquipo}</strong></span>
+                            </div>
+                            <a href="${urlDetalle}" target="_blank" class="btn btn-sm btn-dark font-semibold">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Ver Expediente
+                            </a>
+                        </div>
+                    `;
+                    $('#contenedorAlertaIglesiaDuplicada').html(alertHtml).slideDown();
+                } else if (response.requiereExcepcion) {
+                    var urlDetalle = '@Url.Action("Detalle", "Iglesia")/' + response.idIglesiaPrevia;
+                    var alertClass = response.excepcionAprobada ? 'alert-success border-success' : 'alert-danger border-danger';
+                    var iconClass = response.excepcionAprobada ? 'bi-shield-check text-success' : 'bi-shield-slash text-danger';
+                    var alertHtml = `
+                        <div class="alert ${alertClass} shadow-sm p-3 mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2 rounded-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi ${iconClass} fs-5 me-2"></i>
+                                <span>${response.mensaje}</span>
+                            </div>
+                            <a href="${urlDetalle}" target="_blank" class="btn btn-sm btn-dark font-semibold">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Ver Expediente Previo
+                            </a>
+                        </div>
+                    `;
+                    $('#contenedorAlertaIglesiaDuplicada').html(alertHtml).slideDown();
+                } else {
+                    $('#contenedorAlertaIglesiaDuplicada').slideUp().empty();
+                }
+            });
+        });
+    });
+</script>

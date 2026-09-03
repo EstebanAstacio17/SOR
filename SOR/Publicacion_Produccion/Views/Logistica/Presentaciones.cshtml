@@ -1,0 +1,329 @@
+@model IEnumerable<SOR.Models.PresentacionMaterial>
+@{
+    ViewBag.Title = "Presentaciones de Materiales por Temporada — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var materiales = ViewBag.Materiales as IEnumerable<SOR.Models.Material> ?? new List<SOR.Models.Material>();
+    var temporadas = ViewBag.Temporadas as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    int? idTempSel = ViewBag.IdTemporadaSeleccionada as int?;
+    var lista = Model ?? new List<SOR.Models.PresentacionMaterial>();
+    int totalActivas = lista.Count(x => x.Activo);
+    int totalInactivas = lista.Count(x => !x.Activo);
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-box-seam me-2" style="color:var(--apple-accent)"></i>Presentaciones y Empaques de Materiales</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb small mb-0">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                    <li class="breadcrumb-item active">Presentaciones por Temporada</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-primary font-semibold shadow-sm" onclick="abrirModalCrear()">
+                <i class="bi bi-plus-lg me-1"></i>Nueva Presentación
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros y Métricas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-7 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <form action="@Url.Action("Presentaciones", "Logistica")" method="get" class="d-flex align-items-center gap-2 flex-wrap">
+                        <label class="form-label mb-0 small fw-semibold text-slate-700 text-nowrap"><i class="bi bi-calendar3 me-1"></i>Filtrar Temporada:</label>
+                        <select name="idTemporada" class="form-select form-select-sm" style="min-width: 220px;" onchange="this.form.submit()">
+                            <option value="">— Todas las Temporadas / Globales —</option>
+                            @foreach (var t in temporadas)
+                            {
+                                <option value="@t.Value" @(idTempSel.HasValue && idTempSel.Value.ToString() == t.Value ? "selected" : "")>@t.Text</option>
+                            }
+                        </select>
+                        @if (idTempSel.HasValue)
+                        {
+                            <a href="@Url.Action("Presentaciones", "Logistica")" class="btn btn-sm btn-outline-secondary" title="Limpiar filtro">
+                                <i class="bi bi-x-circle me-1"></i>Limpiar
+                            </a>
+                        }
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                <div class="card-body p-3 d-flex align-items-center justify-content-around">
+                    <div class="text-center">
+                        <span class="d-block text-xs text-muted text-uppercase fw-semibold">Total</span>
+                        <span class="h5 fw-bold text-slate-800 mb-0">@lista.Count()</span>
+                    </div>
+                    <div class="vr"></div>
+                    <div class="text-center">
+                        <span class="d-block text-xs text-success text-uppercase fw-semibold">Habilitadas</span>
+                        <span class="h5 fw-bold text-success mb-0">@totalActivas</span>
+                    </div>
+                    <div class="vr"></div>
+                    <div class="text-center">
+                        <span class="d-block text-xs text-secondary text-uppercase fw-semibold">Inhabilitadas</span>
+                        <span class="h5 fw-bold text-secondary mb-0">@totalInactivas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Presentaciones -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-slate-800">
+                <i class="bi bi-boxes me-2 text-primary"></i>Catálogo de Presentaciones y Empaques
+            </h6>
+            <span class="badge bg-light text-dark border">
+                @(idTempSel.HasValue ? "Temporada Filtrada" : "Todas las Temporadas")
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Material</th>
+                        <th>Tipo de Empaque</th>
+                        <th class="text-center">Unidades por Empaque</th>
+                        <th>Temporada de Vigencia</th>
+                        <th class="text-center">Movimientos Históricos</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end pe-4" style="width: 180px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!lista.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-slate-300"></i>
+                                No hay presentaciones registradas para el criterio de búsqueda seleccionado.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var p in lista)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary px-2.5 py-1.5 font-monospace">@p.CodigoMaterial</span>
+                                    <strong class="text-slate-800">@p.NombreMaterial</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-slate-700 border px-2.5 py-1.5">
+                                    <i class="bi bi-box me-1 text-primary"></i>@p.TipoEmpaque
+                                </span>
+                            </td>
+                            <td class="text-center fw-bold text-slate-800 fs-6">
+                                @p.UnidadesPorEmpaque.ToString("N0") <span class="small fw-normal text-muted">unidades</span>
+                            </td>
+                            <td>
+                                @if (p.IdTemporadaVigencia.HasValue)
+                                {
+                                    <span class="badge bg-purple-soft text-purple border">
+                                        <i class="bi bi-calendar-event me-1"></i>@p.NombreTemporada
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-soft text-secondary border">
+                                        <i class="bi bi-globe me-1"></i>Global / Todas
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (p.TotalMovimientosRegistrados > 0)
+                                {
+                                    <span class="badge bg-info-soft text-info border" title="@p.TotalMovimientosRegistrados registros en recepciones / transferencias">
+                                        <i class="bi bi-journal-check me-1"></i>@p.TotalMovimientosRegistrados registros
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-xs text-muted">Sin movimientos</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (p.Activo)
+                                {
+                                    <span class="badge bg-success-soft text-success px-2.5 py-1.5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Habilitada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-soft text-secondary px-2.5 py-1.5 rounded-pill"><i class="bi bi-slash-circle me-1"></i>Inhabilitada</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex align-items-center justify-content-end gap-1">
+                                    <!-- Botón Editar -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Editar presentación"
+                                            onclick="abrirModalEditar(@p.IdPresentacion, @p.IdMaterial, '@Html.Raw(p.TipoEmpaque.Replace("'","\\'"))', @p.UnidadesPorEmpaque, '@(p.IdTemporadaVigencia.HasValue ? p.IdTemporadaVigencia.Value.ToString() : "")', @(p.Activo ? "true" : "false"))">
+                                        <i class="bi bi-pencil-square me-1"></i>Editar
+                                    </button>
+
+                                    <!-- Botón Habilitar / Inhabilitar -->
+                                    <form action="@Url.Action("AlternarEstadoPresentacion", "Logistica")" method="post" style="display:inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="idPresentacion" value="@p.IdPresentacion" />
+                                        <input type="hidden" name="activo" value="@(p.Activo ? "false" : "true")" />
+                                        <input type="hidden" name="idTemporada" value="@(idTempSel.HasValue ? idTempSel.Value.ToString() : "")" />
+                                        @if (p.Activo)
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Inhabilitar presentación"
+                                                    onclick="return confirm('¿Inhabilitar esta presentación? Ya no aparecerá en nuevas recepciones ni transferencias.')">
+                                                <i class="bi bi-eye-slash"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Habilitar presentación"
+                                                    onclick="return confirm('¿Habilitar esta presentación para nuevas operaciones?')">
+                                                <i class="bi bi-check2"></i>
+                                            </button>
+                                        }
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Unificado: Crear / Editar Presentación -->
+<div class="modal fade" id="modalPresentacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-light border-bottom rounded-top-4 py-3">
+                <h5 class="modal-title font-bold text-slate-800" id="lblModalTitulo">
+                    <i class="bi bi-box-seam me-2 text-primary"></i>Nueva Presentación de Empaque
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="@Url.Action("GuardarPresentacion", "Logistica")" method="post" id="formPresentacion">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="IdPresentacion" id="hdIdPresentacion" value="0" />
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 px-3 small rounded-3 mb-3">
+                        <i class="bi bi-info-circle me-1"></i><strong>Historial Seguro:</strong> Los registros de recepciones y transferencias pasadas mantienen intactas sus cantidades históricas registradas.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-slate-700">Material <span class="text-danger">*</span></label>
+                        <select name="IdMaterial" id="selIdMaterial" class="form-select" required>
+                            <option value="">— Seleccionar material —</option>
+                            @foreach (var m in materiales)
+                            {
+                                <option value="@m.IdMaterial">@m.Codigo — @m.NombreMaterial</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold text-slate-700">Tipo de Empaque <span class="text-danger">*</span></label>
+                            <select name="TipoEmpaque" id="selTipoEmpaque" class="form-select" required>
+                                <option value="Caja">Caja</option>
+                                <option value="Paquete">Paquete</option>
+                                <option value="Rollo">Rollo</option>
+                                <option value="Bolsa">Bolsa</option>
+                                <option value="Resma">Resma</option>
+                                <option value="Atado">Atado</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold text-slate-700">Unidades por Empaque <span class="text-danger">*</span></label>
+                            <input type="number" name="UnidadesPorEmpaque" id="txtUnidadesPorEmpaque" class="form-control" min="1" required placeholder="ej: 12, 16, 45, 200" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-slate-700">Temporada de Vigencia</label>
+                        <select name="IdTemporadaVigencia" id="selIdTemporadaVigencia" class="form-select">
+                            <option value="">— Global / Todas las Temporadas —</option>
+                            @foreach (var t in temporadas)
+                            {
+                                <option value="@t.Value" @(idTempSel.HasValue && idTempSel.Value.ToString() == t.Value ? "selected" : "")>@t.Text</option>
+                            }
+                        </select>
+                        <div class="form-text small">Si se especifica una temporada, esta presentación se aplicará preferentemente en ese ciclo.</div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="Activo" id="chkActivo" value="true" checked />
+                        <input type="hidden" name="Activo" value="false" />
+                        <label class="form-check-label fw-semibold text-slate-700" for="chkActivo">Presentación Habilitada para Operaciones</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold shadow-sm">
+                        <i class="bi bi-save me-1"></i>Guardar Presentación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple-soft {
+        background-color: rgba(111, 66, 193, 0.12) !important;
+        color: #6f42c1 !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.12) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.12) !important;
+        color: #198754 !important;
+    }
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.12) !important;
+        color: #6c757d !important;
+    }
+</style>
+
+<script>
+    function abrirModalCrear() {
+        document.getElementById('lblModalTitulo').innerHTML = '<i class="bi bi-box-seam me-2 text-primary"></i>Nueva Presentación de Empaque';
+        document.getElementById('hdIdPresentacion').value = '0';
+        document.getElementById('selIdMaterial').value = '';
+        document.getElementById('selTipoEmpaque').value = 'Caja';
+        document.getElementById('txtUnidadesPorEmpaque').value = '';
+        
+        // Conservar la temporada seleccionada en el filtro si existe
+        var idTempFiltrada = '@(idTempSel.HasValue ? idTempSel.Value.ToString() : "")';
+        document.getElementById('selIdTemporadaVigencia').value = idTempFiltrada;
+        
+        document.getElementById('chkActivo').checked = true;
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalPresentacion'));
+        modal.show();
+    }
+
+    function abrirModalEditar(idPres, idMat, tipoEmp, unidades, idTemp, activo) {
+        document.getElementById('lblModalTitulo').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i>Editar Presentación de Empaque';
+        document.getElementById('hdIdPresentacion').value = idPres;
+        document.getElementById('selIdMaterial').value = idMat;
+        document.getElementById('selTipoEmpaque').value = tipoEmp || 'Caja';
+        document.getElementById('txtUnidadesPorEmpaque').value = unidades;
+        document.getElementById('selIdTemporadaVigencia').value = idTemp || '';
+        document.getElementById('chkActivo').checked = (activo === true);
+
+        var modal = new bootstrap.Modal(document.getElementById('modalPresentacion'));
+        modal.show();
+    }
+</script>

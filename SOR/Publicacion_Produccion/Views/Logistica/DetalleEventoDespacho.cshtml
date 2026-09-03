@@ -1,0 +1,487 @@
+@model SOR.Models.EventoDespacho
+@{
+    ViewBag.Title = "Detalle Evento de Despacho — " + Model.NombreEvento;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var iglesiasDisponibles = ViewBag.IglesiasDisponibles as IEnumerable<SOR.Models.DespachoIglesiaItem> ?? new List<SOR.Models.DespachoIglesiaItem>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-send-check me-2" style="color:var(--apple-accent)"></i>@Model.NombreEvento</h1>
+            <nav aria-label="breadcrumb"><ol class="breadcrumb small mb-0">
+                <li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li>
+                <li class="breadcrumb-item"><a href="@Url.Action("EventosDespacho","Logistica")">Eventos</a></li>
+                <li class="breadcrumb-item active">Detalle</li>
+            </ol></nav>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAgregarIglesia">
+                <i class="bi bi-plus-lg me-1"></i>Agregar Iglesia
+            </button>
+        </div>
+    </div>
+
+    @if (TempData["MensajeExito"] != null) { <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+    @if (TempData["MensajeError"] != null) { <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
+
+    <!-- Info Card -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-sm-4"><div class="small text-muted">Equipo</div><div class="fw-semibold">@Model.NombreEquipo</div></div>
+                        <div class="col-sm-4"><div class="small text-muted">Fecha</div><div class="fw-semibold">@(Model.FechaEvento.HasValue ? Model.FechaEvento.Value.ToString("dd/MM/yyyy") : "—")</div></div>
+                        <div class="col-sm-4"><div class="small text-muted">Hora</div><div class="fw-semibold">@(string.IsNullOrEmpty(Model.Hora) ? "—" : Model.Hora)</div></div>
+                        <div class="col-sm-4"><div class="small text-muted">Lugar</div><div class="fw-semibold">@(string.IsNullOrEmpty(Model.Lugar) ? "—" : Model.Lugar)</div></div>
+                        <div class="col-sm-4"><div class="small text-muted">Almacén</div><div class="fw-semibold">@(string.IsNullOrEmpty(Model.NombreAlmacen) ? "—" : Model.NombreAlmacen)</div></div>
+                        <div class="col-sm-4"><div class="small text-muted">Estado</div>
+                            <span class="badge @(Model.EstadoDespachoEvento == "FINALIZADO" ? "bg-success" : Model.EstadoDespachoEvento == "CANCELADO" ? "bg-danger" : "bg-primary")">@Model.EstadoDespachoEvento</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body p-4 text-center">
+                    @{ int pct = Model.TotalIglesiasAsignadas > 0 ? (Model.TotalIglesiasDespachadas * 100 / Model.TotalIglesiasAsignadas) : 0; }
+                    <div class="h2 fw-bold mb-0 text-success">@pct%</div>
+                    <div class="small text-muted mb-2">Completado</div>
+                    <div class="progress mb-2" style="height:8px"><div class="progress-bar bg-success" style="width:@pct%"></div></div>
+                    <div class="small"><strong>@Model.TotalIglesiasDespachadas</strong> despachadas de <strong>@Model.TotalIglesiasAsignadas</strong></div>
+                    <div class="small text-muted">@Model.TotalIglesiasPendientes pendientes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Iglesias del evento -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-semibold"><i class="bi bi-church me-2"></i>Iglesias Asignadas al Evento</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Iglesia</th>
+                        <th>Comprobante</th>
+                        <th>Estado</th>
+                        <th>Receptor</th>
+                        <th>Fecha Entrega</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Iglesias.Any())
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No hay iglesias asignadas a este evento</td></tr>
+                    }
+                    @foreach (var ig in Model.Iglesias)
+                    {
+                        string bdg = ig.EstadoDespacho == "DESPACHADA" ? "bg-success" :
+                                     ig.EstadoDespacho == "NO_DESPACHADA" ? "bg-danger" :
+                                     ig.EstadoDespacho == "PROGRAMADA" ? "bg-primary" : "bg-secondary";
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@ig.NombreIglesia</div>
+                                <div class="small text-muted">@ig.DireccionIglesia</div>
+                            </td>
+                            <td><code class="small">@ig.NumeroComprobanteDespacho</code></td>
+                            <td><span class="badge @bdg">@ig.EstadoDespacho</span></td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(ig.NombreReceptor))
+                                {
+                                    <div class="small">@ig.NombreReceptor</div>
+                                    <div class="small text-muted">@ig.TipoReceptor — @ig.DocumentoIdentidadReceptor</div>
+                                }
+                                else if (ig.EstadoDespacho == "NO_DESPACHADA")
+                                {
+                                    <span class="small text-danger"><i class="bi bi-x-circle me-1"></i>@ig.MotivoNoDespacho</span>
+                                }
+                                else { <span class="text-muted small">—</span> }
+                            </td>
+                            <td class="small">@(ig.FechaHoraEntrega.HasValue ? ig.FechaHoraEntrega.Value.ToString("dd/MM/yyyy HH:mm") : "—")</td>
+                            <td class="text-center">
+                                @if (ig.EstadoDespacho == "PROGRAMADA" || ig.EstadoDespacho == "EN_ESPERA")
+                                {
+                                    <button class="btn btn-sm btn-success me-1" title="Confirmar Despacho"
+                                        onclick="abrirModalDespacho(@ig.IdDespachoIglesia, '@ig.NombreIglesia', @Model.IdEvento)">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" title="No Despachado"
+                                        onclick="abrirModalNoDespacho(@ig.IdDespachoIglesia, '@ig.NombreIglesia', @Model.IdEvento)">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                }
+                                @if (ig.EstadoDespacho == "DESPACHADA")
+                                {
+                                    <a href="@Url.Action("ComprobanteDespachoIglesia","Logistica", new{id=ig.IdDespachoIglesia})" class="btn btn-sm btn-outline-secondary" target="_blank" title="Comprobante">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                }
+                                @if (ig.EstadoDespacho == "NO_DESPACHADA")
+                                {
+                                    <span class="small text-muted"><i class="bi bi-arrow-repeat"></i> Disponible para reprogramar</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Agregar Iglesia -->
+<div class="modal fade" id="modalAgregarIglesia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold"><i class="bi bi-plus-circle me-2"></i>Agregar Iglesia al Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("ProgramarIglesiaEnDespacho", "Logistica", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="idEvento" value="@Model.IdEvento" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Iglesia disponible para despacho <span class="text-danger">*</span></label>
+                        <select name="idParticipacion" id="selIglesiaDisp" class="form-select" required>
+                            <option value="">— Seleccionar iglesia —</option>
+                            @foreach (var ig in iglesiasDisponibles)
+                            {
+                                <option value="@ig.IdParticipacion" data-idIglesia="@ig.IdIglesia">
+                                    @ig.NombreIglesia — @ig.DireccionIglesia
+                                </option>
+                            }
+                        </select>
+                        <input type="hidden" name="idIglesia" id="hidIdIglesia" value="0" />
+                    </div>
+                    @if (!iglesiasDisponibles.Any())
+                    {
+                        <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i>No hay iglesias con recursos disponibles para despacho en este equipo y temporada.</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" @(iglesiasDisponibles.Any() ? "" : "disabled")>
+                        <i class="bi bi-plus me-1"></i>Agregar
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Despacho -->
+<div class="modal fade" id="modalConfirmarDespacho" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold"><i class="bi bi-send-check me-2 text-success"></i>Confirmar Entrega de Materiales</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("ConfirmarDespacho", "Logistica", FormMethod.Post, new { id = "formConfirmarDespacho" }))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="vm.IdDespachoIglesia" id="hdIdDespachoIglesia" />
+                <input type="hidden" name="idEvento" value="@Model.IdEvento" />
+                <input type="hidden" name="vm.CantidadesJson" id="hdCantidadesJson" />
+                
+                <input type="hidden" name="vm.TipoReceptor" id="hdTipoReceptorLog" value="PASTOR" />
+                <input type="hidden" name="vm.NombreReceptor" id="hdNombreReceptorLog" value="" />
+                <input type="hidden" name="vm.DocumentoCedulaReceptor" id="hdCedulaReceptorLog" value="" />
+                <input type="hidden" name="vm.TelefonoReceptor" id="hdTelReceptorLog" value="" />
+
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2.5 px-3 small mb-3 border border-info border-opacity-25 rounded-3">
+                        <i class="bi bi-shield-check text-primary me-1 fs-6"></i><strong>Regla de Entrega Institucional:</strong> Solo se entregan materiales al <strong>Pastor General</strong>, al <strong>Líder Ministerial</strong> o a <strong>ambos líderes juntos</strong> debidamente registrados. Seleccione a continuación quién está presente recibiendo con su documento físico de identidad en mano.
+                    </div>
+                    
+                    <div class="card bg-light border-0 p-3 mb-3 rounded-3">
+                        <span class="text-xs text-muted text-uppercase fw-semibold">Iglesia Receptora</span>
+                        <h5 class="fw-bold text-slate-800 mb-0" id="lblNombreIglesiaDespacho">—</h5>
+                    </div>
+
+                    <h6 class="fw-bold mb-2 text-slate-800"><i class="bi bi-person-vcard me-2 text-primary"></i>Seleccionar Quién Recibe los Materiales</h6>
+                    
+                    <div class="row g-2 mb-3">
+                        <!-- Opción Pastor -->
+                        <div class="col-md-4">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer" for="optReceptorPastorLog">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="optReceptorLog" id="optReceptorPastorLog" value="PASTOR" checked onchange="seleccionarOpcionReceptorLog('PASTOR')" />
+                                    <span class="form-check-label fw-bold text-slate-800 d-block">
+                                        <i class="bi bi-person-badge text-primary me-1"></i>Pastor General
+                                    </span>
+                                </div>
+                                <div class="small bg-white p-2 rounded border">
+                                    <div class="text-xs text-muted fw-semibold">Nombre:</div>
+                                    <div class="fw-bold text-slate-800 text-truncate" id="txtPastorNombreLog">—</div>
+                                    <div class="text-xs text-muted fw-semibold mt-1">Cédula / Identidad:</div>
+                                    <div class="font-monospace text-primary fw-semibold" id="txtPastorCedulaLog">—</div>
+                                    <div class="text-xs text-muted fw-semibold mt-1">Teléfono:</div>
+                                    <div class="text-slate-700" id="txtPastorTelefonoLog">—</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Opción Líder Ministerial -->
+                        <div class="col-md-4">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer" for="optReceptorLiderLog">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="optReceptorLog" id="optReceptorLiderLog" value="LIDER_MINISTERIAL" onchange="seleccionarOpcionReceptorLog('LIDER_MINISTERIAL')" />
+                                    <span class="form-check-label fw-bold text-slate-800 d-block">
+                                        <i class="bi bi-person-check text-info me-1"></i>Líder Ministerial
+                                    </span>
+                                </div>
+                                <div class="small bg-white p-2 rounded border">
+                                    <div class="text-xs text-muted fw-semibold">Nombre:</div>
+                                    <div class="fw-bold text-slate-800 text-truncate" id="txtLiderNombreLog">—</div>
+                                    <div class="text-xs text-muted fw-semibold mt-1">Cédula / Identidad:</div>
+                                    <div class="font-monospace text-primary fw-semibold" id="txtLiderCedulaLog">—</div>
+                                    <div class="text-xs text-muted fw-semibold mt-1">Teléfono:</div>
+                                    <div class="text-slate-700" id="txtLiderTelefonoLog">—</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Opción Ambos Presentes -->
+                        <div class="col-md-4">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer" for="optReceptorAmbosLog">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="optReceptorLog" id="optReceptorAmbosLog" value="AMBOS" onchange="seleccionarOpcionReceptorLog('AMBOS')" />
+                                    <span class="form-check-label fw-bold text-slate-800 d-block">
+                                        <i class="bi bi-people-fill text-success me-1"></i>Ambos Presentes
+                                    </span>
+                                </div>
+                                <div class="small bg-white p-2 rounded border">
+                                    <div class="text-xs text-muted fw-semibold">Entrega Conjunta:</div>
+                                    <div class="fw-bold text-slate-800">Pastor y Líder</div>
+                                    <div class="text-xs text-muted mt-1">Se registran las credenciales de ambos representantes.</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Resumen del Receptor Seleccionado -->
+                    <div class="card p-3 mb-3 border-success border-opacity-50 bg-success-soft rounded-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                <span class="text-xs text-muted text-uppercase fw-semibold d-block">Persona Acreditada:</span>
+                                <div id="txtReceptorResumenLog" class="small text-slate-800 font-semibold">Pastor General</div>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-xs text-muted text-uppercase fw-semibold d-block">Cédula / Documento:</span>
+                                <span id="txtCedulaResumenLog" class="font-monospace fw-bold text-primary small">—</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-xs text-muted text-uppercase fw-semibold d-block">Teléfono de Contacto:</span>
+                                <span id="txtTelefonoResumenLog" class="fw-semibold text-slate-700 small">—</span>
+                            </div>
+                            <div class="col-12 mt-2 pt-2 border-top">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkValidadoEnManoLog" required checked />
+                                    <label class="form-check-label small fw-bold text-slate-800" for="chkValidadoEnManoLog">
+                                        <i class="bi bi-patch-check-fill text-success me-1"></i>Cédula física validada en mano al momento de la entrega
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Coordinador Despachador</label>
+                            <input type="text" name="vm.CoordinadorDespachador" class="form-control form-control-sm" placeholder="Nombre del coordinador que entrega" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Observaciones</label>
+                            <input type="text" name="vm.Observaciones" class="form-control form-control-sm" placeholder="Cajas selladas, retiro en persona, etc." />
+                        </div>
+                    </div>
+
+                    <!-- Cantidades -->
+                    <h6 class="fw-bold mb-2 text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Cantidades a Entregar</h6>
+                    <div id="tablaCantidades" class="table-responsive border rounded-3"></div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success font-semibold shadow-sm"><i class="bi bi-check2-circle me-1"></i>Confirmar Despacho y Descontar Stock</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal: No Despachado -->
+<div class="modal fade" id="modalNoDespacho" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-semibold"><i class="bi bi-x-circle me-2"></i>Marcar como No Despachado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            @using (Html.BeginForm("MarcarNoDespacho", "Logistica", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="vm.IdDespachoIglesia" id="hdIdNoDespacho" />
+                <input type="hidden" name="idEvento" value="@Model.IdEvento" />
+                <div class="modal-body">
+                    <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i>El inventario <strong>NO</strong> será descontado. La iglesia quedará disponible para ser reprogramada en otro evento.</div>
+                    <h6 class="fw-semibold" id="lblNombreIglesiaNoDespacho"></h6>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Motivo de No Despacho <span class="text-danger">*</span></label>
+                        <select name="vm.MotivoNoDespacho" class="form-select" required>
+                            <option value="">— Seleccionar motivo —</option>
+                            <option value="Iglesia ausente — no se presentó">Iglesia ausente — no se presentó</option>
+                            <option value="Pastor/Líder sin cédula en mano">Pastor/Líder sin cédula en mano</option>
+                            <option value="Persona receptora no autorizada">Persona receptora no autorizada</option>
+                            <option value="Cancelación solicitada por la iglesia">Cancelación solicitada por la iglesia</option>
+                            <option value="Material no disponible temporalmente">Material no disponible temporalmente</option>
+                            <option value="Otro motivo">Otro motivo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Coordinador presente</label>
+                        <input type="text" name="vm.CoordinadorDespachador" class="form-control" placeholder="Nombre del coordinador" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-x me-1"></i>Registrar No Despacho</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// Sincronizar idIglesia al cambiar el select
+document.getElementById('selIglesiaDisp').addEventListener('change', function () {
+    var opt = this.options[this.selectedIndex];
+    document.getElementById('hidIdIglesia').value = opt ? (opt.dataset.idIglesia || 0) : 0;
+});
+
+var datosReceptorLog = {};
+
+function abrirModalDespacho(idDespacho, nombreIglesia, idEvento) {
+    document.getElementById('hdIdDespachoIglesia').value = idDespacho;
+    document.getElementById('lblNombreIglesiaDespacho').textContent = nombreIglesia;
+
+    var tabla = document.getElementById('tablaCantidades');
+    tabla.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando datos y materiales...</div>';
+
+    fetch('@Url.Action("ObtenerDespachoMateriales","Logistica")?id=' + idDespacho)
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            datosReceptorLog = data;
+            
+            // Datos del Pastor
+            var nomPastor = data.nombrePastor && data.nombrePastor.trim() !== '' ? data.nombrePastor : 'Pastor No Asignado';
+            var cedPastor = data.cedulaPastor && data.cedulaPastor.trim() !== '' ? data.cedulaPastor : 'Sin documento';
+            var telPastor = data.telefonoPastor && data.telefonoPastor.trim() !== '' ? data.telefonoPastor : 'Sin teléfono';
+            document.getElementById('txtPastorNombreLog').innerText = nomPastor;
+            document.getElementById('txtPastorCedulaLog').innerText = cedPastor;
+            document.getElementById('txtPastorTelefonoLog').innerText = telPastor;
+
+            // Datos del Líder Ministerial
+            var nomLider = data.nombreLider && data.nombreLider.trim() !== '' ? data.nombreLider : 'Líder No Asignado';
+            var cedLider = data.cedulaLider && data.cedulaLider.trim() !== '' ? data.cedulaLider : 'Sin documento';
+            var telLider = data.telefonoLider && data.telefonoLider.trim() !== '' ? data.telefonoLider : 'Sin teléfono';
+            document.getElementById('txtLiderNombreLog').innerText = nomLider;
+            document.getElementById('txtLiderCedulaLog').innerText = cedLider;
+            document.getElementById('txtLiderTelefonoLog').innerText = telLider;
+
+            // Seleccionar Pastor por defecto
+            document.getElementById('optReceptorPastorLog').checked = true;
+            seleccionarOpcionReceptorLog('PASTOR');
+
+            var tieneLider = data.nombreLider && data.nombreLider.trim() !== '';
+            document.getElementById('optReceptorLiderLog').disabled = !tieneLider;
+            document.getElementById('optReceptorAmbosLog').disabled = !tieneLider;
+
+            var mats = data.materiales || [];
+            if (!mats || mats.length === 0) {
+                tabla.innerHTML = '<div class="alert alert-warning small mb-0">No se encontraron materiales asignados.</div>';
+                return;
+            }
+            var html = '<table class="table table-sm align-middle mb-0"><thead class="table-light"><tr><th>Material</th><th class="text-center">Asignado</th><th class="text-center" style="width:130px">A Despachar</th></tr></thead><tbody>';
+            mats.forEach(function(m) {
+                var badgeClass = 'bg-primary-soft text-primary border border-primary-subtle';
+                if (m.codigoMaterial === 'OE') badgeClass = 'bg-info-soft text-info border border-info-subtle';
+                else if (m.codigoMaterial === 'MR') badgeClass = 'bg-primary-soft text-primary border border-primary-subtle';
+                else if (m.codigoMaterial === 'GA') badgeClass = 'bg-success-soft text-success border border-success-subtle';
+                else if (m.codigoMaterial === 'GM') badgeClass = 'bg-warning-soft text-warning border border-warning-subtle';
+                else if (m.codigoMaterial === 'NT') badgeClass = 'bg-secondary-soft text-secondary border border-secondary-subtle';
+                else if (m.codigoMaterial === 'PO') badgeClass = 'bg-purple-soft text-purple border border-purple-subtle';
+
+                html += '<tr><td><span class="badge ' + badgeClass + ' me-2 font-mono">' + m.codigoMaterial + '</span><strong class="text-slate-800">' + m.nombreMaterial + '</strong> <small class="text-muted">(' + m.unidadEntrega + ')</small></td>' +
+                        '<td class="text-center fw-semibold">' + m.cantidadAsignada + '</td>' +
+                        '<td><input type="number" class="form-control form-control-sm text-center fw-bold inp-cant-desp" data-idmat="' + m.idMaterial + '" min="0" max="' + m.cantidadAsignada + '" value="' + m.cantidadAsignada + '" /></td></tr>';
+            });
+            html += '</tbody></table>';
+            tabla.innerHTML = html;
+
+            tabla.querySelectorAll('.inp-cant-desp').forEach(function(inp){
+                inp.addEventListener('input', actualizarCantidadesJson);
+            });
+            actualizarCantidadesJson();
+        })
+        .catch(function(){ tabla.innerHTML = '<div class="alert alert-danger small">Error al cargar materiales.</div>'; });
+
+    var modal = new bootstrap.Modal(document.getElementById('modalConfirmarDespacho'));
+    modal.show();
+}
+
+function seleccionarOpcionReceptorLog(tipo) {
+    document.getElementById('hdTipoReceptorLog').value = tipo;
+    var nomPastor = datosReceptorLog.nombrePastor || 'Pastor General';
+    var cedPastor = datosReceptorLog.cedulaPastor || 'No registrada';
+    var telPastor = datosReceptorLog.telefonoPastor || 'Sin teléfono';
+
+    var nomLider = datosReceptorLog.nombreLider || 'Líder Ministerial';
+    var cedLider = datosReceptorLog.cedulaLider || 'No registrada';
+    var telLider = datosReceptorLog.telefonoLider || 'Sin teléfono';
+
+    if (tipo === 'PASTOR') {
+        document.getElementById('hdNombreReceptorLog').value = nomPastor;
+        document.getElementById('hdCedulaReceptorLog').value = cedPastor;
+        document.getElementById('hdTelReceptorLog').value = telPastor;
+        document.getElementById('txtReceptorResumenLog').innerHTML = `<i class="bi bi-person-check-fill text-primary me-1"></i><strong>${nomPastor}</strong> <span class="badge bg-primary-soft text-primary ms-1">Pastor General</span>`;
+        document.getElementById('txtCedulaResumenLog').innerText = cedPastor;
+        document.getElementById('txtTelefonoResumenLog').innerText = telPastor;
+    } else if (tipo === 'LIDER_MINISTERIAL') {
+        document.getElementById('hdNombreReceptorLog').value = nomLider;
+        document.getElementById('hdCedulaReceptorLog').value = cedLider;
+        document.getElementById('hdTelReceptorLog').value = telLider;
+        document.getElementById('txtReceptorResumenLog').innerHTML = `<i class="bi bi-person-check-fill text-info me-1"></i><strong>${nomLider}</strong> <span class="badge bg-info-soft text-info ms-1">Líder Ministerial</span>`;
+        document.getElementById('txtCedulaResumenLog').innerText = cedLider;
+        document.getElementById('txtTelefonoResumenLog').innerText = telLider;
+    } else if (tipo === 'AMBOS') {
+        var nombres = nomPastor + ' y ' + nomLider;
+        var cedulas = cedPastor + ' / ' + cedLider;
+        var tels = (telPastor !== 'Sin teléfono' ? telPastor : '') + (telLider !== 'Sin teléfono' ? ' • ' + telLider : '');
+        if (!tels.trim()) tels = 'Sin teléfonos registrados';
+        document.getElementById('hdNombreReceptorLog').value = nombres;
+        document.getElementById('hdCedulaReceptorLog').value = cedulas;
+        document.getElementById('hdTelReceptorLog').value = tels;
+        document.getElementById('txtReceptorResumenLog').innerHTML = `<i class="bi bi-people-fill text-success me-1"></i><strong>${nomPastor}</strong> (Pastor) y <strong>${nomLider}</strong> (Líder)`;
+        document.getElementById('txtCedulaResumenLog').innerText = cedulas;
+        document.getElementById('txtTelefonoResumenLog').innerText = tels;
+    }
+}
+
+function abrirModalNoDespacho(idDespacho, nombreIglesia, idEvento) {
+    document.getElementById('hdIdNoDespacho').value = idDespacho;
+    document.getElementById('lblNombreIglesiaNoDespacho').textContent = nombreIglesia;
+    var modal = new bootstrap.Modal(document.getElementById('modalNoDespacho'));
+    modal.show();
+}
+</script>
+}

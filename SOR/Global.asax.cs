@@ -17,8 +17,10 @@ namespace SOR
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
-            InicializarColumnasBloqueo();
-            SOR.Helpers.DatabaseSchemaHelper.AsegurarIntegridadYConcurrencia();
+            try { InicializarColumnasBloqueo(); } catch { }
+            try { SOR.Helpers.DatabaseSchemaHelper.AsegurarIntegridadYConcurrencia(); } catch { }
+            try { new SOR.DAL.ReportesRepository().AsegurarEsquema(); } catch { }
+            try { new SOR.Repositories.FinanzasRepository().AsegurarEsquema(); } catch { }
         }
 
         private void InicializarColumnasBloqueo()

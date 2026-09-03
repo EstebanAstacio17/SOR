@@ -1,0 +1,288 @@
+@model IEnumerable<SOR.Models.CompaneroOracion>
+@{
+    ViewBag.Title = "Compañeros de Oración";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var iglesias = (List<SelectListItem>)ViewBag.ListaIglesias;
+    var temporadas = (List<SelectListItem>)ViewBag.ListaTemporadas;
+    var puedeRegistrar = (bool)ViewBag.PuedeRegistrar;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-heart-fill text-danger me-2"></i>Compañeros de Oración</h2>
+        <p class="text-muted mb-0">Red de intercesores y compañeros de oración vinculados a las iglesias y temporadas OCC.</p>
+    </div>
+    <div>
+        @if (puedeRegistrar)
+        {
+            <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearCompanero">
+                <i class="bi bi-plus-circle me-2"></i>Registrar Intercesor
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-secondary font-semibold px-4 shadow-sm disabled" disabled title="Permisos restringidos para Coordinadores de Oración (CO)">
+                <i class="bi bi-lock me-2"></i>Solo Escritura CO
+            </button>
+        }
+    </div>
+</div>
+
+<!-- BARRA DE BÚSQUEDA Y FILTROS -->
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Búsqueda General</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filtroBuscarCompanero" class="form-control bg-light border-start-0" placeholder="Buscar por nombre, teléfono, registrador..." onkeyup="filtrarTablaCompaneros()" autocomplete="off" />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Filtrar por Iglesia</label>
+            <select id="filtroIglesia" class="form-select form-select-sm bg-light" onchange="filtrarTablaCompaneros()">
+                <option value="">Todas las Iglesias</option>
+                @foreach (var ig in iglesias)
+                {
+                    <option value="@ig.Text">@ig.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
+            <select id="filtroTemporada" class="form-select form-select-sm bg-light" onchange="filtrarTablaCompaneros()">
+                <option value="">Todas las Temporadas</option>
+                @foreach (var temp in temporadas)
+                {
+                    <option value="@temp.Text">@temp.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-sm btn-outline-secondary w-100 font-semibold" type="button" onclick="limpiarFiltrosCompaneros()">
+                <i class="bi bi-eraser me-1"></i>Limpiar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaCompanerosOracion">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Nombre del Compañero</th>
+                        <th>Contacto</th>
+                        <th>Rango de Edad</th>
+                        <th>Iglesia Asociada</th>
+                        <th>Temporada / Registro</th>
+                        @if (puedeRegistrar)
+                        {
+                            <th class="text-end pe-4" style="width: 150px;">Acciones</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="@(puedeRegistrar ? 6 : 5)" class="text-center py-5 text-muted">
+                                <i class="bi bi-envelope-heart fs-1 d-block mb-2 text-slate-400"></i>
+                                No hay compañeros de oración registrados aún.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr class="item-fila-companero">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark fs-6">@item.NombreCompleto</div>
+                                    <small class="text-muted">ID: #@item.IdCompanero</small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.ContactoWhatsApp))
+                                    {
+                                        <a href="https://wa.me/@item.ContactoWhatsApp.Replace("-","").Replace(" ","")" target="_blank" class="text-decoration-none text-success fw-semibold">
+                                            <i class="bi bi-whatsapp me-1"></i>@item.ContactoWhatsApp
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted text-xs">Sin WhatsApp</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.EsMayorEdad)
+                                    {
+                                        <span class="badge bg-light border text-dark px-2.5 py-1.5 font-semibold" style="color: #334155 !important; background-color: #f8fafc !important;">
+                                            <i class="bi bi-person-check text-success me-1"></i>Mayor de edad
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-soft text-warning px-2.5 py-1.5 font-semibold" style="color: #b45309 !important; background-color: rgba(245, 158, 11, 0.15) !important;">
+                                            <i class="bi bi-person-exclamation me-1"></i>Menor de edad
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-building text-primary me-2 fs-6"></i>
+                                        <span class="fw-bold text-slate-800" style="color: #0f172a !important; font-size: 0.93rem;">@item.NombreIglesia</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-slate-800" style="color: #1e293b !important;">@item.NombreTemporada</div>
+                                    <small class="text-muted">Por: @item.CorreoRegistrador</small>
+                                </td>
+                                @if (puedeRegistrar)
+                                {
+                                    <td class="text-end pe-4">
+                                        <form action="@Url.Action("Eliminar", "CompanerosOracion")" method="post" class="m-0" onsubmit="return confirm('¿Seguro que deseas eliminar a este compañero de oración?');">
+                                            <input type="hidden" name="idCompanero" value="@item.IdCompanero" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger font-semibold">
+                                                <i class="bi bi-trash me-1"></i>Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                    <tr id="rowNoResultadosCompaneros" class="d-none">
+                        <td colspan="@(puedeRegistrar ? 6 : 5)" class="text-center py-5 text-muted">
+                            <i class="bi bi-search fs-2 d-block mb-2 text-slate-300"></i>
+                            No se encontraron compañeros de oración con los filtros aplicados.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR COMPAÑERO -->
+@if (puedeRegistrar)
+{
+    <div class="modal fade text-start" id="modalCrearCompanero" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("Crear", "CompanerosOracion")" method="post">
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold"><i class="bi bi-heart-pulse me-2 text-danger"></i>Registrar Compañero de Oración</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nombre Completo del Intercesor</label>
+                            <input type="text" name="NombreCompleto" class="form-control" placeholder="Ej: María Altagracia" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Contacto WhatsApp</label>
+                            <input type="text" name="ContactoWhatsApp" class="form-control" placeholder="Ej: 809-555-0199" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Rango de Edad</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="EsMayorEdad" id="edadMayor" value="true" checked>
+                                <label class="form-check-label" for="edadMayor">
+                                    Mayor de Edad
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="EsMayorEdad" id="edadMenor" value="false">
+                                <label class="form-check-label" for="edadMenor">
+                                    Menor de Edad
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Iglesia Asociada</label>
+                            <select name="IdIglesia" class="form-select" required>
+                                <option value="">Selecciona una Iglesia...</option>
+                                @foreach (var ig in iglesias)
+                                {
+                                    <option value="@ig.Value">@ig.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Temporada</label>
+                            <select name="IdTemporada" class="form-select">
+                                <option value="">-- Temporada Activa Actual --</option>
+                                @foreach (var temp in temporadas)
+                                {
+                                    <option value="@temp.Value">@temp.Text</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-heart-fill me-1 text-danger"></i>Registrar Intercesor</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    function filtrarTablaCompaneros() {
+        var inputBusqueda = (document.getElementById("filtroBuscarCompanero").value || "").toLowerCase().trim();
+        var filtroIglesia = (document.getElementById("filtroIglesia").value || "").toLowerCase().trim();
+        var filtroTemporada = (document.getElementById("filtroTemporada").value || "").toLowerCase().trim();
+
+        var filas = document.querySelectorAll(".item-fila-companero");
+        var visibles = 0;
+
+        filas.forEach(function (tr) {
+            var tds = tr.getElementsByTagName("td");
+            if (tds.length >= 5) {
+                var txtNombre = tds[0].textContent || tds[0].innerText;
+                var txtContacto = tds[1] ? (tds[1].textContent || tds[1].innerText) : "";
+                var txtTexto = (txtNombre + " " + txtContacto).toLowerCase();
+
+                var txtIglesia = (tds[3].textContent || tds[3].innerText).toLowerCase();
+                var txtTemporada = (tds[4].textContent || tds[4].innerText).toLowerCase();
+
+                var matchBusqueda = inputBusqueda === "" || txtTexto.indexOf(inputBusqueda) > -1;
+                var matchIglesia = filtroIglesia === "" || txtIglesia.indexOf(filtroIglesia) > -1;
+                var matchTemporada = filtroTemporada === "" || txtTemporada.indexOf(filtroTemporada) > -1;
+
+                if (matchBusqueda && matchIglesia && matchTemporada) {
+                    tr.style.display = "";
+                    visibles++;
+                } else {
+                    tr.style.display = "none";
+                }
+            }
+        });
+
+        var rowNoResultados = document.getElementById("rowNoResultadosCompaneros");
+        if (rowNoResultados) {
+            if (visibles === 0 && (inputBusqueda !== "" || filtroIglesia !== "" || filtroTemporada !== "")) {
+                rowNoResultados.classList.remove("d-none");
+            } else {
+                rowNoResultados.classList.add("d-none");
+            }
+        }
+    }
+
+    function limpiarFiltrosCompaneros() {
+        document.getElementById("filtroBuscarCompanero").value = "";
+        document.getElementById("filtroIglesia").value = "";
+        document.getElementById("filtroTemporada").value = "";
+        filtrarTablaCompaneros();
+    }
+</script>
+
+<style>
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+</style>

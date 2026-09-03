@@ -1,0 +1,152 @@
+@model SOR.Models.RecepcionContenedor
+@{
+    ViewBag.Title = "Comprobante de Recepción — " + Model.NumeroContenedor;
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Comprobante de Recepción — @Model.NumeroContenedor</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Helvetica Neue',Arial,sans-serif; font-size:12px; color:#1a1a1a; background:#f8fafc; }
+        .page { max-width:760px; margin:20px auto; padding:35px; background:#fff; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
+        .header { border-bottom:2px solid #003580; padding-bottom:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start; }
+        .logo-zona h1 { font-size:18px; font-weight:700; color:#003580; }
+        .logo-zona p { font-size:11px; color:#666; }
+        .doc-zona { text-align:right; }
+        .doc-zona .num { font-size:15px; font-weight:700; color:#003580; }
+        .section { margin-bottom:22px; }
+        .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#003580; border-bottom:1px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 24px; }
+        .info-item label { font-size:10px; color:#64748b; display:block; text-transform:uppercase; font-weight:600; margin-bottom:2px; }
+        .info-item span { font-weight:600; font-size:12px; color:#1e293b; }
+        table { width:100%; border-collapse:collapse; margin-top:4px; }
+        th { background:#f1f5f9; font-size:10px; font-weight:700; text-transform:uppercase; padding:8px 10px; border-bottom:1px solid #cbd5e1; color:#334155; }
+        td { padding:8px 10px; border-bottom:1px dotted #e2e8f0; font-size:11px; }
+        .text-right { text-align:right; }
+        .text-center { text-align:center; }
+        .firmas-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; padding-top:10px; }
+        .firma-box { text-align:center; border-top:1px solid #94a3b8; padding-top:8px; }
+        .firma-box .cargo { font-size:10px; color:#64748b; margin-top:2px; }
+        .evidencias-list { font-size:11px; color:#475569; list-style:none; padding-left:0; margin-top:6px; }
+        .evidencias-list li { padding:4px 0; border-bottom:1px solid #f1f5f9; }
+        .footer { margin-top:30px; padding-top:12px; border-top:1px solid #eee; font-size:10px; color:#888; text-align:center; }
+        .no-print { margin:20px auto; max-width:760px; padding:0 35px; }
+        @@media print {
+            body { background:#fff; }
+            .page { box-shadow:none; margin:0; padding:20px 0; max-width:100%; }
+            .no-print { display:none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()" style="background:#003580;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;margin-right:8px;">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Cerrar</button>
+    </div>
+    <div class="page">
+        <div class="header">
+            <div class="logo-zona">
+                <h1>OCC — Comprobante Oficial de Recepción</h1>
+                <p>Sistema de Operaciones y Recursos (SOR) — Logística Nacional</p>
+                <p>Temporada: <strong>@Model.NombreTemporada</strong></p>
+            </div>
+            <div class="doc-zona">
+                <div class="num">Contenedor: @Model.NumeroContenedor</div>
+                <div style="font-weight:600;color:#475569;">Recepción #@Model.IdRecepcion</div>
+                <div style="margin-top:6px"><span style="background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700">@Model.EstadoRecepcion</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Información de Recepción y Destino</div>
+            <div class="info-grid">
+                <div class="info-item"><label>Número de Contenedor / BL</label><span>@Model.NumeroContenedor</span></div>
+                <div class="info-item"><label>Almacén de Recepción</label><span>@Model.NombreAlmacen</span></div>
+                <div class="info-item"><label>Fecha de Recepción</label><span>@Model.FechaRecepcion.ToString("dd/MM/yyyy")</span></div>
+                <div class="info-item"><label>Hora de Recepción</label><span>@(string.IsNullOrEmpty(Model.HoraRecepcion) ? "—" : Model.HoraRecepcion)</span></div>
+                <div class="info-item"><label>Responsable de Recepción</label><span>@(string.IsNullOrEmpty(Model.ResponsableRecepcion) ? "—" : Model.ResponsableRecepcion)</span></div>
+                <div class="info-item">
+                    <label>Equipos Servidos / Alcance</label>
+                    <span>
+                        @( !string.IsNullOrEmpty(Model.NombreEquipoReceptor)
+                            ? Model.NombreEquipoReceptor
+                            : (Model.NombresEquiposAlmacen != null && Model.NombresEquiposAlmacen.Any()
+                                ? string.Join(", ", Model.NombresEquiposAlmacen)
+                                : "Almacén Central / Uso Nacional") )
+                    </span>
+                </div>
+                <div class="info-item" style="grid-column: span 2;"><label>Observaciones</label><span>@(string.IsNullOrEmpty(Model.Observaciones) ? "Sin observaciones adicionales registradas." : Model.Observaciones)</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Detalle de Materiales y Empaques Recibidos</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Material</th>
+                        <th>Presentación / Empaque</th>
+                        <th class="text-right">Bultos / Empaques</th>
+                        <th class="text-right">Uds / Empaque</th>
+                        <th class="text-right">Total Unidades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int totalEmpaquesGeneral = 0; int totalGeneral = 0; }
+                    @foreach (var d in Model.Detalles)
+                    {
+                        totalEmpaquesGeneral += d.CantidadEmpaques;
+                        totalGeneral += d.CantidadTotalUnidades;
+                        <tr>
+                            <td><strong>@d.CodigoMaterial</strong></td>
+                            <td>@d.NombreMaterial</td>
+                            <td>@d.TipoEmpaque</td>
+                            <td class="text-right">@d.CantidadEmpaques.ToString("N0")</td>
+                            <td class="text-right">@d.UnidadesPorEmpaque.ToString("N0")</td>
+                            <td class="text-right" style="font-weight:700">@d.CantidadTotalUnidades.ToString("N0")</td>
+                        </tr>
+                    }
+                    <tr style="background:#f1f5f9;border-top:2px solid #cbd5e1;">
+                        <td colspan="3" style="font-weight:700;text-align:right">TOTALES ESTIMADOS DEL CONTENEDOR:</td>
+                        <td class="text-right" style="font-weight:700">@totalEmpaquesGeneral.ToString("N0") bultos</td>
+                        <td></td>
+                        <td class="text-right" style="font-weight:700;font-size:13px;color:#003580;">@totalGeneral.ToString("N0") uds</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.Evidencias != null && Model.Evidencias.Any())
+        {
+            <div class="section">
+                <div class="section-title">Evidencias Adjuntas (@Model.Evidencias.Count)</div>
+                <ul class="evidencias-list">
+                    @foreach (var ev in Model.Evidencias)
+                    {
+                        <li>📎 <strong>@ev.NombreArchivo</strong> <span style="color:#94a3b8;font-size:10px;">(@(ev.TamanoBytes.HasValue ? (ev.TamanoBytes.Value / 1024).ToString("N0") + " KB" : "Adjunto")) — @ev.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</span></li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="firmas-grid">
+            <div class="firma-box">
+                <strong>@(string.IsNullOrEmpty(Model.ResponsableRecepcion) ? "Responsable de Recepción" : Model.ResponsableRecepcion)</strong>
+                <div class="cargo">Recibido y Verificado Físicamente</div>
+            </div>
+            <div class="firma-box">
+                <strong>Coordinación de Logística OCC</strong>
+                <div class="cargo">Autorización y Validación en Sistema</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Documento emitido por el Sistema de Operaciones y Recursos (SOR) · Fecha de Emisión: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+        </div>
+    </div>
+</body>
+</html>

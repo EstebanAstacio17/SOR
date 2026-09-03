@@ -1,0 +1,441 @@
+@model IEnumerable<SOR.Models.RecepcionContenedor>
+@{
+    ViewBag.Title = "Recepción de Contenedores — Logística OCC";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var materiales = ViewBag.Materiales as IEnumerable<SOR.Models.Material> ?? new List<SOR.Models.Material>();
+    var presentaciones = ViewBag.Presentaciones as IEnumerable<SOR.Models.PresentacionMaterial> ?? new List<SOR.Models.PresentacionMaterial>();
+    var almacenes = ViewBag.Almacenes as IEnumerable<SOR.Models.Almacen> ?? new List<SOR.Models.Almacen>();
+    var equipos = ViewBag.Equipos as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var usuariosResp = ViewBag.UsuariosResponsables as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h3 fw-semibold mb-1"><i class="bi bi-truck-front me-2" style="color:var(--apple-accent)"></i>Recepción de Contenedores</h1>
+            <nav aria-label="breadcrumb"><ol class="breadcrumb small mb-0"><li class="breadcrumb-item"><a href="@Url.Action("Index","Logistica")">Logística</a></li><li class="breadcrumb-item active">Recepciones</li></ol></nav>
+        </div>
+        <button class="btn btn-primary font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaRecepcion">
+            <i class="bi bi-plus-lg me-1"></i>Registrar Contenedor
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white py-3 border-bottom"><h6 class="mb-0 fw-semibold text-slate-800"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de Recepciones de Contenedores</h6></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaRecepciones">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Contenedor</th>
+                        <th>Almacén / Destino</th>
+                        <th>Temporada</th>
+                        <th>Fecha y Hora</th>
+                        <th>Responsable</th>
+                        <th>Estado</th>
+                        <th class="text-center">Comprobante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2 text-slate-300"></i>No hay recepciones registradas en la temporada activa</td></tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td class="text-muted fw-medium">#@r.IdRecepcion</td>
+                            <td>
+                                <span class="fw-bold text-slate-800">@r.NumeroContenedor</span>
+                                @if (!string.IsNullOrEmpty(r.NombreEquipoReceptor))
+                                {
+                                    <div class="small text-muted"><i class="bi bi-people me-1"></i>Eq: @r.NombreEquipoReceptor</div>
+                                }
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-primary"><i class="bi bi-building me-1"></i>@r.NombreAlmacen</span>
+                            </td>
+                            <td><span class="badge bg-light text-slate-700 border">@r.NombreTemporada</span></td>
+                            <td>
+                                <div>@r.FechaRecepcion.ToString("dd/MM/yyyy")</div>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>@(string.IsNullOrEmpty(r.HoraRecepcion) ? "—" : r.HoraRecepcion)</small>
+                            </td>
+                            <td class="text-slate-700">@(string.IsNullOrEmpty(r.ResponsableRecepcion) ? "—" : r.ResponsableRecepcion)</td>
+                            <td><span class="badge @(r.EstadoRecepcion == "CONFIRMADA" ? "bg-success" : r.EstadoRecepcion == "ANULADA" ? "bg-danger" : "bg-warning") rounded-pill px-2.5 py-1">@r.EstadoRecepcion</span></td>
+                            <td class="text-center">
+                                <a href="@Url.Action("ComprobanteRecepcion","Logistica", new{id=r.IdRecepcion})" class="btn btn-sm btn-outline-primary font-semibold shadow-sm" target="_blank" title="Imprimir / Ver Comprobante">
+                                    <i class="bi bi-printer me-1"></i>Comprobante
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Recepción -->
+<div class="modal fade" id="modalNuevaRecepcion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-light py-3 rounded-top-4 border-bottom">
+                <h5 class="modal-title fw-bold text-slate-800"><i class="bi bi-truck-front me-2 text-primary"></i>Registrar Recepción de Contenedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            @using (Html.BeginForm("RegistrarRecepcion", "Logistica", FormMethod.Post, new { id = "formRecepcion", enctype = "multipart/form-data" }))
+            {
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-slate-700">Número de Contenedor / BL <span class="text-danger">*</span></label>
+                            <input type="text" name="numeroContenedor" id="numeroContenedor" class="form-control" placeholder="ej. CONT-2025-001 / MSCU1234567" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-slate-700">Almacén de Recepción <span class="text-danger">*</span></label>
+                            <select name="idAlmacen" id="idAlmacen" class="form-select" required>
+                                <option value="">— Seleccionar Almacén —</option>
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.IdAlmacen">@a.NombreAlmacen @(a.EsCentral ? "(Central)" : "")</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-slate-700">Equipo Receptor (Opcional)</label>
+                            <select name="idEquipoReceptor" id="idEquipoReceptor" class="form-select">
+                                <option value="">— Todo el Almacén / Distribución General —</option>
+                                @foreach (var eq in equipos)
+                                {
+                                    <option value="@eq.Value">@eq.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold text-slate-700">Fecha de Recepción <span class="text-danger">*</span></label>
+                            <input type="date" name="fechaRecepcion" id="fechaRecepcion" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold text-slate-700">Hora de Recepción <span class="text-danger">*</span></label>
+                            <input type="text" name="horaRecepcion" id="horaRecepcion" class="form-control" value="@DateTime.Now.ToString("hh:mm tt")" placeholder="ej. 09:30 AM" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-slate-700">Responsable de Recepción <span class="text-danger">*</span></label>
+                            @if (usuariosResp.Any())
+                            {
+                                <select name="responsableRecepcion" class="form-select" required>
+                                    <option value="">— Seleccionar Responsable / Coordinador —</option>
+                                    @foreach (var ur in usuariosResp)
+                                    {
+                                        <option value="@ur.Text">@ur.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" name="responsableRecepcion" class="form-control" placeholder="Nombre del responsable" required />
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-slate-700">Evidencias Fotográficas / Documentales</label>
+                            <input type="file" name="evidenciasArchivos" id="evidenciasArchivos" class="form-control" multiple accept="image/*,.pdf,.docx,.xlsx,.doc" />
+                            <div class="form-text small text-muted">Adjunte fotos del sello, contenedor abierto, conduce o acta de entrega (Múltiples archivos permitidos).</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-slate-700">Observaciones Generales</label>
+                            <input type="text" name="observaciones" class="form-control" placeholder="Notas de estado, precinto de seguridad, transportista, etc." />
+                        </div>
+                    </div>
+
+                    <!-- Líneas de materiales -->
+                    <div class="border rounded-4 p-3 bg-light bg-opacity-25">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold text-slate-800 mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Materiales del Contenedor</h6>
+                                <small class="text-muted">Indique el material, empaque/presentación y cantidad de bultos o cajas recibidas</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary font-semibold shadow-sm" id="btnAgregarLinea">
+                                <i class="bi bi-plus-circle me-1"></i>Agregar Material
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0 bg-white rounded-3 shadow-sm" id="tablaLineas">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 220px;">Material</th>
+                                        <th style="min-width: 200px;">Presentación / Empaque</th>
+                                        <th style="width: 140px;">Cant. Empaques</th>
+                                        <th class="text-center" style="width: 130px;">Total Unidades</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoLineas">
+                                    <tr id="placeholder-linea"><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>Agregue al menos un material recibido en el contenedor</td></tr>
+                                </tbody>
+                                <tfoot id="tfootLineas" class="table-light d-none">
+                                    <tr class="fw-bold">
+                                        <td colspan="2" class="text-end text-slate-700">Totales Estimados del Contenedor:</td>
+                                        <td id="totalEmpaquesBadge" class="text-center text-primary">0 empaques</td>
+                                        <td id="totalUnidadesBadge" class="text-center text-success">0 uds</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <input type="hidden" name="detallesJson" id="detallesJson" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 py-3 border-top-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold shadow-sm" id="btnGuardarRecepcion">
+                        <i class="bi bi-save me-1"></i>Confirmar Recepción
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var materiales = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+        ((IEnumerable<SOR.Models.Material>)ViewBag.Materiales).Select(m => new {
+            m.IdMaterial,
+            m.NombreMaterial,
+            m.Codigo,
+            m.UnidadEntrega,
+            presentaciones = (m.Presentaciones != null
+                ? (m.Presentaciones.Any(p => p.Activo) ? m.Presentaciones.Where(p => p.Activo) : m.Presentaciones)
+                : Enumerable.Empty<SOR.Models.PresentacionMaterial>()).Select(p => new {
+                    p.IdPresentacion,
+                    p.TipoEmpaque,
+                    p.UnidadesPorEmpaque,
+                    p.Activo
+                }).ToList()
+        })
+    ));
+
+    var btnAgregar = document.getElementById('btnAgregarLinea');
+    var cuerpoLineas = document.getElementById('cuerpoLineas');
+    var tfootLineas = document.getElementById('tfootLineas');
+    var totalEmpaquesBadge = document.getElementById('totalEmpaquesBadge');
+    var totalUnidadesBadge = document.getElementById('totalUnidadesBadge');
+
+    function obtenerMaterial(id) {
+        return materiales.find(function(m) { return m.IdMaterial == id; });
+    }
+
+    btnAgregar.addEventListener('click', function () {
+        var id = Date.now();
+        var fila = document.createElement('tr');
+        fila.id = 'linea-' + id;
+        fila.className = 'fila-material-linea';
+
+        var optionsMateriales = '<option value="">— Seleccionar Material —</option>' +
+            materiales.map(function(m) {
+                return '<option value="' + m.IdMaterial + '">' + m.Codigo + ' — ' + m.NombreMaterial + '</option>';
+            }).join('');
+
+        fila.innerHTML =
+            '<td>' +
+                '<select class="form-select form-select-sm sel-material" data-id="' + id + '" required>' +
+                    optionsMateriales +
+                '</select>' +
+            '</td>' +
+            '<td>' +
+                '<select class="form-select form-select-sm sel-presentacion" data-id="' + id + '" required disabled>' +
+                    '<option value="">— Seleccione Material primero —</option>' +
+                '</select>' +
+            '</td>' +
+            '<td>' +
+                '<input type="number" class="form-control form-control-sm inp-empaques" data-id="' + id + '" min="1" value="1" required />' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<span class="badge bg-secondary lbl-unidades" data-id="' + id + '">—</span>' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-linea" data-id="' + id + '" title="Eliminar fila">' +
+                    '<i class="bi bi-trash3"></i>' +
+                '</button>' +
+            '</td>';
+
+        var ph = document.getElementById('placeholder-linea');
+        if (ph) ph.remove();
+
+        cuerpoLineas.appendChild(fila);
+        if (tfootLineas) tfootLineas.classList.remove('d-none');
+
+        attachHandlers(id);
+        actualizarJson();
+    });
+
+    function attachHandlers(id) {
+        var selMat = document.querySelector('.sel-material[data-id="' + id + '"]');
+        var selPres = document.querySelector('.sel-presentacion[data-id="' + id + '"]');
+        var inpEmp = document.querySelector('.inp-empaques[data-id="' + id + '"]');
+        var lblUds = document.querySelector('.lbl-unidades[data-id="' + id + '"]');
+        var btnDel = document.querySelector('.btn-eliminar-linea[data-id="' + id + '"]');
+
+        selMat.addEventListener('change', function () {
+            selMat.classList.remove('is-invalid');
+            selPres.classList.remove('is-invalid');
+            var idMat = selMat.value;
+            if (!idMat) {
+                selPres.innerHTML = '<option value="">— Seleccione Material primero —</option>';
+                selPres.disabled = true;
+                calcularFila(inpEmp, selPres, lblUds);
+                actualizarJson();
+                return;
+            }
+
+            var mat = obtenerMaterial(idMat);
+            var presentaciones = (mat && mat.presentaciones) ? mat.presentaciones : [];
+
+            if (presentaciones.length === 0) {
+                selPres.innerHTML = '<option value="">⚠️ Sin presentaciones registradas</option>';
+                selPres.disabled = true;
+                selPres.classList.add('is-invalid');
+            } else {
+                selPres.disabled = false;
+                var htmlOptions = '<option value="">— Seleccionar Presentación —</option>';
+                htmlOptions += presentaciones.map(function (p) {
+                    var idPres = (p.IdPresentacion !== undefined && p.IdPresentacion !== null) ? p.IdPresentacion : p.idPresentacion;
+                    var tipoEmp = (p.TipoEmpaque !== undefined && p.TipoEmpaque !== null) ? p.TipoEmpaque : (p.tipoEmpaque || 'Empaque');
+                    var uds = (p.UnidadesPorEmpaque !== undefined && p.UnidadesPorEmpaque !== null) ? p.UnidadesPorEmpaque : (p.unidadesPorEmpaque || 0);
+                    return '<option value="' + idPres + '" data-uds="' + uds + '">' + tipoEmp + ' (' + Number(uds).toLocaleString() + ' uds/empaque)</option>';
+                }).join('');
+
+                selPres.innerHTML = htmlOptions;
+
+                // Si solo tiene una presentación registrada, auto-seleccionarla para mayor agilidad
+                if (presentaciones.length === 1) {
+                    selPres.selectedIndex = 1;
+                }
+            }
+
+            calcularFila(inpEmp, selPres, lblUds);
+            actualizarJson();
+        });
+
+        selPres.addEventListener('change', function () {
+            selPres.classList.remove('is-invalid');
+            calcularFila(inpEmp, selPres, lblUds);
+            actualizarJson();
+        });
+
+        inpEmp.addEventListener('input', function () {
+            if (parseInt(inpEmp.value) < 1) inpEmp.value = 1;
+            calcularFila(inpEmp, selPres, lblUds);
+            actualizarJson();
+        });
+
+        btnDel.addEventListener('click', function () {
+            var fila = document.getElementById('linea-' + id);
+            if (fila) fila.remove();
+
+            var filasRestantes = cuerpoLineas.querySelectorAll('.fila-material-linea');
+            if (filasRestantes.length === 0) {
+                cuerpoLineas.innerHTML = '<tr id="placeholder-linea"><td colspan="5" class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>Agregue al menos un material al contenedor</td></tr>';
+                if (tfootLineas) tfootLineas.classList.add('d-none');
+            }
+            actualizarJson();
+        });
+    }
+
+    function calcularFila(inpEmp, selPres, lblUds) {
+        var opt = selPres.options[selPres.selectedIndex];
+        var uds = opt && opt.dataset.uds ? parseInt(opt.dataset.uds) : 0;
+        var empaques = parseInt(inpEmp.value) || 0;
+        var total = uds * empaques;
+
+        if (total > 0) {
+            lblUds.textContent = total.toLocaleString() + ' uds';
+            lblUds.className = 'badge bg-primary lbl-unidades';
+        } else {
+            lblUds.textContent = '—';
+            lblUds.className = 'badge bg-secondary lbl-unidades';
+        }
+    }
+
+    window.actualizarJson = function () {
+        var result = [];
+        var totalEmpaques = 0;
+        var totalUnidades = 0;
+
+        document.querySelectorAll('.fila-material-linea').forEach(function (fila) {
+            var selMat = fila.querySelector('.sel-material');
+            var selPres = fila.querySelector('.sel-presentacion');
+            var inpEmp = fila.querySelector('.inp-empaques');
+
+            if (!selMat || !selPres || !inpEmp) return;
+
+            var idMat = parseInt(selMat.value);
+            var idPres = parseInt(selPres.value);
+            var cantEmp = parseInt(inpEmp.value) || 0;
+            var opt = selPres.options[selPres.selectedIndex];
+            var udsPorEmp = opt && opt.dataset.uds ? parseInt(opt.dataset.uds) : 0;
+
+            if (idMat && idPres && cantEmp > 0) {
+                result.push({
+                    IdMaterial: idMat,
+                    IdPresentacion: idPres,
+                    CantidadEmpaques: cantEmp,
+                    UnidadesPorEmpaque: udsPorEmp
+                });
+                totalEmpaques += cantEmp;
+                totalUnidades += (cantEmp * udsPorEmp);
+            }
+        });
+
+        document.getElementById('detallesJson').value = JSON.stringify(result);
+
+        if (totalEmpaquesBadge) totalEmpaquesBadge.textContent = totalEmpaques.toLocaleString() + ' empaques';
+        if (totalUnidadesBadge) totalUnidadesBadge.textContent = totalUnidades.toLocaleString() + ' uds';
+    };
+
+    document.getElementById('formRecepcion').addEventListener('submit', function (e) {
+        var filas = cuerpoLineas.querySelectorAll('.fila-material-linea');
+        if (filas.length === 0) {
+            e.preventDefault();
+            alert('Debe agregar al menos un material al contenedor.');
+            return;
+        }
+
+        var tieneErrores = false;
+        filas.forEach(function (fila) {
+            var selMat = fila.querySelector('.sel-material');
+            var selPres = fila.querySelector('.sel-presentacion');
+            var inpEmp = fila.querySelector('.inp-empaques');
+
+            if (!selMat.value) {
+                selMat.classList.add('is-invalid');
+                tieneErrores = true;
+            }
+            if (!selPres.value || selPres.disabled) {
+                selPres.classList.add('is-invalid');
+                tieneErrores = true;
+            }
+            if (!inpEmp.value || parseInt(inpEmp.value) <= 0) {
+                inpEmp.classList.add('is-invalid');
+                tieneErrores = true;
+            }
+        });
+
+        if (tieneErrores) {
+            e.preventDefault();
+            alert('Por favor complete todos los materiales y presentaciones requeridos antes de registrar el contenedor.');
+            return;
+        }
+
+        actualizarJson();
+        var detalles = JSON.parse(document.getElementById('detallesJson').value || '[]');
+        if (detalles.length === 0) {
+            e.preventDefault();
+            alert('Debe especificar al menos un material con presentación y cantidad válida.');
+        }
+    });
+})();
+</script>
+}

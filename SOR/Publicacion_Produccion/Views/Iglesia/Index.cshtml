@@ -1,0 +1,377 @@
+@model IEnumerable<SOR.Models.Iglesia>
+@{
+    ViewBag.Title = "Registro de Iglesias";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var u = (SOR.Models.Usuario)ViewBag.UsuarioActual;
+    var temporadas = (List<SelectListItem>)ViewBag.FiltroTemporadas;
+    var etapas = (List<SelectListItem>)ViewBag.FiltroEtapas;
+    var estados = (List<SelectListItem>)ViewBag.FiltroEstados;
+    var estatusReportes = (List<SelectListItem>)ViewBag.FiltroEstatusReportes;
+    var importarTemporadas = (List<SelectListItem>)ViewBag.ImportarTemporadas;
+}
+
+<!-- Cabecera Principal -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-building-fill text-primary me-2"></i>Gestión de Iglesias Beneficiadas</h2>
+        <p class="text-muted mb-0">Listado e historia de iglesias socias de OCC en República Dominicana.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2)
+        {
+            <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownAgregarIglesia" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-plus-circle me-1"></i> Agregar Iglesia
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg" aria-labelledby="dropdownAgregarIglesia">
+                    <li>
+                        <a class="dropdown-item fw-medium py-2" href="@Url.Action("Crear", "Iglesia")">
+                            <i class="bi bi-building me-2 text-primary"></i>Registro Individual
+                        </a>
+                    </li>
+                    <li>
+                        <button class="dropdown-item fw-medium py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalImportarMasivo">
+                            <i class="bi bi-file-earmark-excel me-2 text-success"></i>Importación Masiva (Excel/CSV)
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+
+<div class="row g-4">
+    <!-- Panel Izquierdo: Sidebar de Filtros -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+            <h5 class="h6 font-bold text-slate-800 mb-3 border-bottom pb-2"><i class="bi bi-funnel me-2 text-primary"></i>Filtros Avanzados</h5>
+            <form action="@Url.Action("Index", "Iglesia")" method="get" class="d-flex flex-column gap-3">
+                
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Temporada</label>
+                    <select name="idTemporada" class="form-select">
+                        <option value="">Todas las temporadas</option>
+                        @foreach (var temp in temporadas)
+                        {
+                            <option value="@temp.Value" @(Request.QueryString["idTemporada"] == temp.Value ? "selected" : "")>@temp.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Denominación</label>
+                    <input type="text" name="denominacion" value="@Request.QueryString["denominacion"]" class="form-control" placeholder="Ej: Bautista, Pentecostal..." />
+                </div>
+
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Tipo Organización</label>
+                    <input type="text" name="tipoOrg" value="@Request.QueryString["tipoOrg"]" class="form-control" placeholder="Ej: Iglesia, Asociación..." />
+                </div>
+
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Etapas en Temporada</label>
+                    <select name="etapaProcess" class="form-select">
+                        <option value="">Todas las etapas</option>
+                        @foreach (var et in etapas)
+                        {
+                            <option value="@et.Value" @(Request.QueryString["etapaProcess"] == et.Value ? "selected" : "")>@et.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Estado de Participación</label>
+                    <select name="estadoParticipacion" class="form-select">
+                        <option value="">Todos los estados</option>
+                        @foreach (var st in estados)
+                        {
+                            <option value="@st.Value" @(Request.QueryString["estadoParticipacion"] == st.Value ? "selected" : "")>@st.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label text-slate-600 small fw-semibold">Estatus Evaluación (Reporte)</label>
+                    <select name="estatusEvalReporte" class="form-select">
+                        <option value="">Todos los estatus</option>
+                        @if(estatusReportes != null)
+                        {
+                            foreach (var rep in estatusReportes)
+                            {
+                                <option value="@rep.Value" @(Request.QueryString["estatusEvalReporte"] == rep.Value ? "selected" : "")>@rep.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-2">
+                    <button type="submit" class="btn btn-primary font-semibold w-100"><i class="bi bi-search me-2"></i>Aplicar Filtros</button>
+                    <a href="@Url.Action("Index", "Iglesia")" class="btn btn-outline-secondary font-semibold w-100">Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Listado de Iglesias -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 text-slate-500"><i class="bi bi-search"></i></span>
+                        <input type="text" id="txtBuscarIglesia" class="form-control bg-light border-start-0 text-slate-800" placeholder="Escribe aquí para buscar iglesia instantáneamente por nombre, denominación, ciudad o equipo..." style="font-size: 0.9rem;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select id="filtroEquipoIglesia" class="form-select bg-light text-slate-800" style="font-size: 0.9rem;">
+                        <option value="">Todos los Equipos</option>
+                        @if (ViewBag.ListaEquipos != null)
+                        {
+                            foreach (var eq in (List<SelectListItem>)ViewBag.ListaEquipos)
+                            {
+                                <option value="@eq.Text">@eq.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Nombre de la Iglesia</th>
+                                <th>Ubicación / Contacto</th>
+                                <th>Denominación</th>
+                                <th>Etapa en Temporada</th>
+                                <th>Evaluación</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-400"></i>
+                                        No se encontraron iglesias con los filtros aplicados.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="fw-bold fs-6" style="color: #1e293b;">@item.NombreIglesia</div>
+                                            <span class="badge" style="color: #475569; background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.25rem 0.5rem; font-size: 0.75rem;">@item.NombreEquipo</span>
+                                        </td>
+                                        <td>
+                                            <div>@item.Ciudad</div>
+                                            <small class="text-muted"><i class="bi bi-telephone text-xxs me-1"></i>@(string.IsNullOrEmpty(item.Telefono) ? "N/D" : item.Telefono)</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge" style="color: #1e293b; background-color: #e2e8f0; border: 1px solid #cbd5e1; padding: 0.25rem 0.5rem; font-size: 0.75rem;">@(string.IsNullOrEmpty(item.Denominacion) ? "N/D" : item.Denominacion)</span>
+                                        </td>
+                                        <td>
+                                            @if (item.ParticipacionActual != null)
+                                            {
+                                                if (item.ParticipacionActual.EtapaActual == 1)
+                                                {
+                                                    <span class="badge bg-secondary-soft text-secondary rounded-pill"><i class="bi bi-1-circle me-1"></i>Inscrita</span>
+                                                }
+                                                else if (item.ParticipacionActual.EtapaActual == 2)
+                                                {
+                                                    <span class="badge bg-warning-soft text-warning rounded-pill"><i class="bi bi-2-circle me-1"></i>Evaluada Inicial</span>
+                                                }
+                                                else if (item.ParticipacionActual.EtapaActual == 3)
+                                                {
+                                                    <span class="badge bg-purple-soft text-purple rounded-pill"><i class="bi bi-3-circle me-1"></i>Visión</span>
+                                                }
+                                                else if (item.ParticipacionActual.EtapaActual == 4)
+                                                {
+                                                    <span class="badge bg-info-soft text-info rounded-pill"><i class="bi bi-4-circle me-1"></i>Elegible Taller</span>
+                                                }
+                                                else if (item.ParticipacionActual.EtapaActual == 5)
+                                                {
+                                                    <span class="badge bg-success-soft text-success rounded-pill"><i class="bi bi-5-circle-fill me-1"></i>Taller OCC</span>
+                                                }
+                                                else if (item.ParticipacionActual.EtapaActual == 6)
+                                                {
+                                                    <span class="badge bg-primary-soft text-primary rounded-pill"><i class="bi bi-6-circle me-1"></i>Asignación</span>
+                                                }
+                                                else if (item.ParticipacionActual.EtapaActual >= 7)
+                                                {
+                                                    <span class="badge bg-success text-white rounded-pill"><i class="bi bi-patch-check-fill me-1"></i>Aprobación Final</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark rounded-pill">Sin participación activa</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.ParticipacionActual != null)
+                                            {
+                                                if (item.ParticipacionActual.EstadoEvaluacion == "Pendiente")
+                                                {
+                                                    <span class="badge bg-warning-soft text-warning">Pendiente</span>
+                                                }
+                                                else if (item.ParticipacionActual.EstadoEvaluacion == "Aprobado")
+                                                {
+                                                    <span class="badge bg-success-soft text-success">Aprobada</span>
+                                                }
+                                                else if (item.ParticipacionActual.EstadoEvaluacion == "Rechazado")
+                                                {
+                                                    <span class="badge bg-danger-soft text-danger">Rechazada</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">N/D</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <a href="@Url.Action("Detalle", "Iglesia", new { id = item.IdIglesia })" class="btn btn-sm btn-outline-primary font-semibold">
+                                                <i class="bi bi-folder2-open me-1"></i>Ver Expediente
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL IMPORTAR MASIVO -->
+<div class="modal fade" id="modalImportarMasivo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form id="formImportarMasivo" action="@Url.Action("ImportarMasivo", "Iglesia")" method="post" enctype="multipart/form-data">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-file-earmark-excel me-2 text-info"></i>Importar Iglesias de forma Masiva</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex flex-column gap-2 mb-3 bg-light p-3 rounded-3 border">
+                        <span class="fw-bold text-slate-700 small"><i class="bi bi-file-earmark-arrow-down-fill me-1 text-primary"></i>Recursos Descargables:</span>
+                        <div class="d-flex gap-2">
+                            <a href="@Url.Action("DescargarPlantillaIglesias", "Iglesia")" class="btn btn-xs btn-outline-success font-semibold flex-fill">
+                                <i class="bi bi-file-excel me-1"></i>Plantilla CSV / Ejemplo
+                            </a>
+                            <a href="@Url.Action("DescargarCondicionesImportacion", "Iglesia")" class="btn btn-xs btn-outline-primary font-semibold flex-fill">
+                                <i class="bi bi-file-text me-1"></i>Ver Guía de Condiciones
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Temporada a la que se importarán las iglesias <span class="text-danger">*</span></label>
+                        <select name="idTemporadaImportar" class="form-select" required>
+                            <option value="">-- Seleccionar Temporada --</option>
+                            @if (importarTemporadas != null)
+                            {
+                                foreach (var temp in importarTemporadas)
+                                {
+                                    <option value="@temp.Value">@temp.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Seleccionar archivo de carga (.xlsx / .csv)</label>
+                        <input type="file" name="archivoExcel" class="form-control" accept=".xlsx,.csv" required />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white font-semibold"><i class="bi bi-eye me-1"></i>Subir y Previsualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple-soft {
+        background-color: rgba(111, 66, 193, 0.15) !important;
+        color: #6f42c1 !important;
+    }
+    .bg-info-soft {
+        background-color: rgba(13, 202, 240, 0.15) !important;
+        color: #0dcaf0 !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #198754 !important;
+    }
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #ffc107 !important;
+    }
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+        color: #dc3545 !important;
+    }
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.15) !important;
+        color: #6c757d !important;
+    }
+</style>
+
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        var searchInput = document.getElementById('txtBuscarIglesia');
+        var selectEquipo = document.getElementById('filtroEquipoIglesia');
+
+        function filtrarTabla() {
+            var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            var equipo = selectEquipo ? selectEquipo.value.toLowerCase().trim() : '';
+            var rows = document.querySelectorAll('table tbody tr');
+            
+            rows.forEach(function(row) {
+                if (row.cells.length === 1 && row.cells[0].colSpan > 1) return;
+                
+                var text = row.textContent.toLowerCase();
+                var eqCell = row.cells[0] ? row.cells[0].textContent.toLowerCase() : ''; // El equipo está en la primera celda
+
+                var matchText = text.indexOf(query) > -1;
+                var matchEq = equipo === "" || eqCell.indexOf(equipo) > -1;
+
+                if (matchText && matchEq) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        if (searchInput) searchInput.addEventListener('keyup', filtrarTabla);
+        if (selectEquipo) selectEquipo.addEventListener('change', filtrarTabla);
+
+        // Validación del formulario de importación masiva con jquery.validate
+        if (typeof $.fn.validate === 'function') {
+            $("#formImportarMasivo").validate({
+                errorElement: 'div',
+                errorClass: 'invalid-feedback d-block mt-1',
+                highlight: function(element) {
+                    $(element).addClass('is-invalid');
+                },
+                unhighlight: function(element) {
+                    $(element).removeClass('is-invalid');
+                },
+                errorPlacement: function(error, element) {
+                    error.insertAfter(element);
+                }
+            });
+        }
+    });
+</script>
