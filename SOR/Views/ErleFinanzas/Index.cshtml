@@ -2,219 +2,360 @@
 @{
     ViewBag.Title = "Finanzas — " + Model.NombreEquipo;
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    decimal totalIngresosMes = Model.Transacciones.Sum(t => t.IngresoDOP);
+    decimal totalGastosMes = Model.Transacciones.Sum(t => t.GastoDOP);
+    decimal saldoFinalMes = Model.Transacciones.Any() 
+        ? Model.Transacciones.Last().SaldoDOP 
+        : Model.SaldoMesAnteriorDOP;
 }
 
-<div class="container-fluid py-3 px-lg-4">
-    <!-- Encabezado y Filtros Globales de Finanzas -->
-    <div class="card shadow-sm border-0 rounded-4 mb-4 bg-white overflow-hidden">
-        <div class="card-body p-4 bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom">
-            <div>
-                <h3 class="h4 font-bold text-slate-800 mb-1">
-                    <i class="bi bi-cash-stack text-success me-2"></i>Control Presupuestario y Flujo Financiero
-                </h3>
-                <p class="text-muted mb-0 small">
-                    Libro diario de ingresos y gastos, encadenamiento de saldos y seguimiento de presupuestos aprobados para todos los equipos.
-                </p>
-            </div>
-            
-            <!-- Selectores de Equipo y Temporada -->
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <div class="d-flex align-items-center gap-2 bg-light p-2 rounded-3 border">
-                    <div>
-                        <label class="form-label text-xs fw-bold text-muted mb-0 d-block">Equipo:</label>
-                        <select id="selectEquipoFiltro" class="form-select form-select-sm bg-white border font-semibold" style="min-width: 180px;" onchange="cambiarFiltrosFinanzas()">
-                            @foreach (var eq in Model.ListaEquipos)
-                            {
-                                <option value="@eq.Value" @(Model.EquipoId.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
-                            }
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label text-xs fw-bold text-muted mb-0 d-block">Temporada:</label>
-                        <select id="selectTemporadaFiltro" class="form-select form-select-sm bg-white border font-semibold" style="min-width: 140px;" onchange="cambiarFiltrosFinanzas()">
-                            @foreach (var tmp in Model.ListaTemporadas)
-                            {
-                                <option value="@tmp.Value" @(Model.TemporadaId.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
-                            }
-                        </select>
-                    </div>
-                </div>
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-cash-stack text-success me-2"></i>Finanzas — Libro Diario Mensual</h2>
+        <p class="text-muted mb-0">Control de ingresos, gastos y conciliación de flujo financiero por equipo y temporada.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("ReporteConsolidado", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId })" class="btn btn-outline-primary font-semibold px-3 shadow-sm">
+            <i class="bi bi-grid-3x3 me-1"></i>Reporte Consolidado Anual
+        </a>
+        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
+            <i class="bi bi-plus-circle me-2"></i>Registrar Movimiento
+        </button>
+    </div>
+</div>
 
-                <a href="@Url.Action("ReporteConsolidado", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId })" class="btn btn-outline-primary font-semibold shadow-sm rounded-3">
-                    <i class="bi bi-grid-3x3 me-1"></i>Reporte Consolidado Anual
-                </a>
+<!-- BARRA DE BÚSQUEDA Y FILTROS -->
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Búsqueda General</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filtroBuscarTransaccion" class="form-control bg-light border-start-0" placeholder="Buscar concepto, documento..." onkeyup="filtrarTablaTransacciones()" autocomplete="off">
             </div>
         </div>
-
-        <!-- Selector de Meses Pestañas -->
-        <div class="card-footer bg-light border-0 py-2.5 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <span class="text-xs fw-bold text-slate-600 text-uppercase tracking-wider">Ciclo Mensual (Sep - Ago):</span>
-            <div class="btn-group btn-group-sm flex-wrap shadow-sm rounded-3 overflow-hidden" role="group">
-                @foreach (var m in new[] { "SEP", "OCT", "NOV", "DIC", "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO" })
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Equipo</label>
+            <select id="selectEquipoFiltro" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosFinanzas()">
+                @foreach (var eq in Model.ListaEquipos)
                 {
-                    <a href="@Url.Action("Index", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId, mes = m })"
-                       class="btn @(Model.Mes == m ? "btn-primary active fw-bold px-3" : "btn-white text-slate-700 px-3") border">
-                        @m
-                    </a>
+                    <option value="@eq.Value" @(Model.EquipoId.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
                 }
-            </div>
+            </select>
         </div>
-    </div>
-
-    <!-- Panel de Comparativa Presupuestaria Aprobada -->
-    <div class="card shadow-sm border-0 rounded-4 mb-4 bg-white overflow-hidden">
-        <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom">
-            <div>
-                <span class="fw-bold text-dark fs-6"><i class="bi bi-shield-check me-2 text-success"></i>Control Presupuestario Aprobado (@Model.NombreEquipo)</span>
-                <small class="d-block text-muted">Techo asignado y balance en tiempo real por cada categoría presupuestaria.</small>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                @{
-                    decimal totalPresUSD = Model.ResumenPresupuestario.Sum(x => x.PresupuestoAprobadoUSD);
-                    decimal totalPresDOP = Model.ResumenPresupuestario.Sum(x => x.PresupuestoAprobadoDOP);
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
+            <select id="selectTemporadaFiltro" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosFinanzas()">
+                @foreach (var tmp in Model.ListaTemporadas)
+                {
+                    <option value="@tmp.Value" @(Model.TemporadaId.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
                 }
-                <span class="badge bg-success-soft text-success px-3 py-2 rounded-pill font-monospace fw-bold">
-                    Presupuesto Total Aprobado: $@totalPresUSD.ToString("N2") USD (RD$ @totalPresDOP.ToString("N2"))
-                </span>
-                <button type="button" class="btn btn-sm btn-outline-secondary font-semibold" data-bs-toggle="modal" data-bs-target="#modalConfigPresupuesto">
-                    <i class="bi bi-sliders me-1"></i>Configurar Techos
-                </button>
-            </div>
+            </select>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover mb-0 align-middle" style="font-size: 0.88rem;">
-                    <thead class="table-light text-center">
-                        <tr>
-                            <th class="ps-3 text-start">Cat.</th>
-                            <th class="text-start">Descripción de la Categoría</th>
-                            <th class="text-end">Presupuesto (USD)</th>
-                            <th class="text-end">Presupuesto (DOP)</th>
-                            <th class="text-end">Ejecutado Real (USD)</th>
-                            <th class="text-end">Remanente Disp. (USD)</th>
-                            <th style="width: 150px;">% Ejecución</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (!Model.ResumenPresupuestario.Any(x => x.PresupuestoAprobadoUSD > 0))
-                        {
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="bi bi-info-circle me-1"></i>Este equipo no tiene techos presupuestarios configurados para esta temporada.<br />
-                                    <button class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#modalConfigPresupuesto">
-                                        <i class="bi bi-plus-circle me-1"></i>Configurar Techo Presupuestario
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                        else
-                        {
-                            foreach (var item in Model.ResumenPresupuestario.Where(x => x.PresupuestoAprobadoUSD > 0))
-                            {
-                                <tr>
-                                    <td class="ps-3 fw-bold text-primary font-monospace">@item.CategoriaId</td>
-                                    <td class="fw-semibold text-slate-800">@item.Descripcion</td>
-                                    <td class="text-end fw-bold font-monospace">$@item.PresupuestoAprobadoUSD.ToString("N2")</td>
-                                    <td class="text-end text-muted font-monospace">RD$ @item.PresupuestoAprobadoDOP.ToString("N2")</td>
-                                    <td class="text-end fw-semibold font-monospace">$@item.EjecutadoUSD.ToString("N2")</td>
-                                    <td class="text-end fw-bold font-monospace @(item.RemanenteUSD < 0 ? "text-danger" : "text-success")">
-                                        $@item.RemanenteUSD.ToString("N2")
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress flex-grow-1" style="height: 10px; border-radius: 5px;">
-                                                <div class="progress-bar @(item.PorcentajeEjecucion > 100 ? "bg-danger" : (item.PorcentajeEjecucion > 80 ? "bg-warning" : "bg-primary"))" 
-                                                     role="progressbar" 
-                                                     style="width: @(Math.Min(item.PorcentajeEjecucion, 100))%;">
-                                                </div>
-                                            </div>
-                                            <span class="text-xs fw-bold font-monospace @(item.PorcentajeEjecucion > 100 ? "text-danger" : "text-slate-600")">
-                                                @item.PorcentajeEjecucion%
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Categoría</label>
+            <select id="filtroCategoria" class="form-select form-select-sm bg-light" onchange="filtrarTablaTransacciones()">
+                <option value="">Todas las Categorías</option>
+                @foreach (var c in Model.Categorias)
+                {
+                    <option value="@c.Value">@c.Text</option>
+                }
+            </select>
         </div>
-    </div>
-
-    <!-- Libro Diario Mensual -->
-    <div class="card shadow-sm border-0 rounded-4 bg-white overflow-hidden">
-        <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom">
-            <div>
-                <span class="fw-bold text-primary fs-6"><i class="bi bi-journal-check me-2"></i>Movimientos del Mes: <strong>@Model.Mes</strong></span>
-                <small class="d-block text-muted">Registro de ingresos y gastos con encadenamiento de saldo inicial y cálculo automático DOP/USD.</small>
-            </div>
-            <button type="button" class="btn btn-success font-semibold shadow-sm rounded-3" id="btnAgregarFila">
-                <i class="bi bi-plus-circle me-1"></i>Registrar Movimiento
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-sm btn-outline-secondary w-100 font-semibold" type="button" onclick="limpiarFiltrosFinanzas()">
+                <i class="bi bi-eraser me-1"></i>Limpiar
             </button>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0" id="tablaErle">
-                    <thead class="table-dark text-center small">
+    </div>
+</div>
+
+<!-- SELECTOR DE MESES (SEP A AGO) -->
+<div class="card border-0 shadow-sm rounded-4 bg-white p-2 mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 px-2">
+        <span class="text-xs fw-bold text-slate-600 text-uppercase"><i class="bi bi-calendar-range me-1 text-primary"></i>Mes de Operación:</span>
+        <div class="btn-group btn-group-sm flex-wrap" role="group">
+            @foreach (var m in new[] { "SEP", "OCT", "NOV", "DIC", "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO" })
+            {
+                <a href="@Url.Action("Index", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId, mes = m })"
+                   class="btn @(Model.Mes == m ? "btn-primary active fw-bold px-3 shadow-sm" : "btn-light text-slate-700 px-3") border-0 rounded-2 me-1">
+                    @m
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- TARJETAS KPI RESUMEN FINANCIERO DEL MES -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #6c757d !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Saldo Inicial (Arrastre)</div>
+                    <div class="h4 font-bold text-dark mb-0 font-monospace">RD$ @Model.SaldoMesAnteriorDOP.ToString("N2")</div>
+                    <small class="text-muted font-monospace">$@((Model.TasaCambio > 0 ? Math.Round(Model.SaldoMesAnteriorDOP / Model.TasaCambio, 2) : 0).ToString("N2")) USD</small>
+                </div>
+                <div class="rounded-circle p-3 bg-secondary-soft text-secondary">
+                    <i class="bi bi-clock-history fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Ingresos del Mes (@Model.Mes)</div>
+                    <div class="h4 font-bold text-success mb-0 font-monospace">RD$ @totalIngresosMes.ToString("N2")</div>
+                    <small class="text-muted font-monospace">$@((Model.TasaCambio > 0 ? Math.Round(totalIngresosMes / Model.TasaCambio, 2) : 0).ToString("N2")) USD</small>
+                </div>
+                <div class="rounded-circle p-3 bg-success-soft text-success">
+                    <i class="bi bi-arrow-down-left-circle fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Gastos del Mes (@Model.Mes)</div>
+                    <div class="h4 font-bold text-danger mb-0 font-monospace">RD$ @totalGastosMes.ToString("N2")</div>
+                    <small class="text-muted font-monospace">$@((Model.TasaCambio > 0 ? Math.Round(totalGastosMes / Model.TasaCambio, 2) : 0).ToString("N2")) USD</small>
+                </div>
+                <div class="rounded-circle p-3 bg-danger-soft text-danger">
+                    <i class="bi bi-arrow-up-right-circle fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #0d6efd !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Saldo Final Disponible</div>
+                    <div class="h4 font-bold @(saldoFinalMes < 0 ? "text-danger" : "text-primary") mb-0 font-monospace">RD$ @saldoFinalMes.ToString("N2")</div>
+                    <small class="text-muted font-monospace">$@((Model.TasaCambio > 0 ? Math.Round(saldoFinalMes / Model.TasaCambio, 2) : 0).ToString("N2")) USD</small>
+                </div>
+                <div class="rounded-circle p-3 bg-primary-soft text-primary">
+                    <i class="bi bi-wallet2 fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TABLA DE MOVIMIENTOS DEL MES -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+    <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom">
+        <div>
+            <h6 class="mb-0 fw-bold text-slate-800">
+                <i class="bi bi-journal-text me-2 text-primary"></i>Libro Diario de Movimientos: @Model.Mes (@Model.NombreEquipo)
+            </h6>
+            <small class="text-muted">Registro secuencial de ingresos y gastos de la temporada @Model.NombreTemporada</small>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalConfigPresupuesto">
+                <i class="bi bi-sliders me-1"></i>Ver / Configurar Techos Presupuestarios
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaFinanzasMovimientos">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Fecha</th>
+                        <th># Documento</th>
+                        <th>Descripción / Concepto</th>
+                        <th>Categoría</th>
+                        <th class="text-end">Gasto (DOP)</th>
+                        <th class="text-end">Ingreso (DOP)</th>
+                        <th class="text-end">Saldo Resultante</th>
+                        <th class="text-end pe-4" style="width: 130px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Transacciones.Any())
+                    {
                         <tr>
-                            <th style="width: 130px;">Fecha</th>
-                            <th style="width: 130px;"># Documento</th>
-                            <th>Descripción del Movimiento</th>
-                            <th style="width: 250px;">Categoría</th>
-                            <th style="width: 125px;">Gasto (DOP)</th>
-                            <th style="width: 110px;">Gasto (USD)</th>
-                            <th style="width: 125px;">Ingreso (DOP)</th>
-                            <th style="width: 110px;">Ingreso (USD)</th>
-                            <th style="width: 135px;">Saldo (DOP)</th>
-                            <th style="width: 110px;">Saldo (USD)</th>
-                            <th style="width: 90px;">Acción</th>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-300"></i>
+                                No hay movimientos financieros registrados en el mes de <strong>@Model.Mes</strong> para <strong>@Model.NombreEquipo</strong>.<br />
+                                <button type="button" class="btn btn-sm btn-primary font-semibold mt-2" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
+                                    <i class="bi bi-plus-circle me-1"></i>Registrar Primer Movimiento
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="small">
-                        @if (!Model.Transacciones.Any())
+                    }
+                    else
+                    {
+                        foreach (var item in Model.Transacciones)
                         {
-                            <tr id="rowSinMovimientos">
-                                <td colspan="11" class="text-center py-5 text-muted">
-                                    <i class="bi bi-inbox fs-2 d-block mb-2 text-slate-300"></i>
-                                    No hay movimientos registrados en el mes de <strong>@Model.Mes</strong> para <strong>@Model.NombreEquipo</strong>.<br />
-                                    Presiona <strong>Registrar Movimiento</strong> para agregar el primer registro.
+                            <tr class="item-fila-transaccion" data-cat="@item.CategoriaId">
+                                <td class="ps-4 fw-semibold text-slate-800">
+                                    <i class="bi bi-calendar-check text-muted me-1"></i>@item.Fecha.ToString("dd/MM/yyyy")
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.NumeroDocumento))
+                                    {
+                                        <span class="badge bg-light text-slate-700 border font-monospace">@item.NumeroDocumento</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted text-xs">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@item.Descripcion</div>
+                                    @if (!string.IsNullOrEmpty(item.Notas))
+                                    {
+                                        <small class="text-muted"><i class="bi bi-chat-left-text me-1"></i>@item.Notas</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(item.IngresoDOP > 0 ? "bg-success-soft text-success" : "bg-primary-soft text-primary") px-2.5 py-1.5 fw-semibold">
+                                        @item.CategoriaId — @item.CategoriaDescripcion
+                                    </span>
+                                </td>
+                                <td class="text-end font-monospace">
+                                    @if (item.GastoDOP > 0)
+                                    {
+                                        <div class="fw-bold text-danger">RD$ @item.GastoDOP.ToString("N2")</div>
+                                        <small class="text-muted">$@item.GastoUSD.ToString("N2") USD</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-end font-monospace">
+                                    @if (item.IngresoDOP > 0)
+                                    {
+                                        <div class="fw-bold text-success">RD$ @item.IngresoDOP.ToString("N2")</div>
+                                        <small class="text-muted">$@item.IngresoUSD.ToString("N2") USD</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td class="text-end font-monospace">
+                                    <div class="fw-bold @(item.SaldoDOP < 0 ? "text-danger" : "text-dark")">RD$ @item.SaldoDOP.ToString("N2")</div>
+                                    <small class="text-muted">$@item.SaldoUSD.ToString("N2") USD</small>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTransaccion(@item.TransaccionId, '@item.Fecha.ToString("yyyy-MM-dd")', '@Html.Raw(item.NumeroDocumento ?? "")', '@Html.Raw(item.Descripcion.Replace("'", "\\'"))', '@item.CategoriaId', @item.GastoDOP, @item.IngresoDOP, @item.TasaCambio, '@Html.Raw((item.Notas ?? "").Replace("'", "\\'"))')" title="Editar Movimiento">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMovimiento(@item.TransaccionId)" title="Eliminar Movimiento">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
-                        else
-                        {
-                            foreach (var item in Model.Transacciones)
-                            {
-                                <tr data-id="@item.TransaccionId">
-                                    <td><input type="date" class="form-control form-control-sm inp-fecha" value="@item.Fecha.ToString("yyyy-MM-dd")" /></td>
-                                    <td><input type="text" class="form-control form-control-sm inp-doc font-monospace" value="@item.NumeroDocumento" placeholder="Fact / Ref" /></td>
-                                    <td><input type="text" class="form-control form-control-sm inp-desc fw-semibold" value="@item.Descripcion" /></td>
-                                    <td>
-                                        <select class="form-select form-select-sm inp-cat">
-                                            @foreach (var c in Model.Categorias)
-                                            {
-                                                <option value="@c.Value" data-tipo="@c.Tipo" @(item.CategoriaId == c.Value ? "selected" : "")>@c.Text</option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end inp-gasto font-monospace text-danger fw-semibold" value="@item.GastoDOP.ToString("F2")" /></td>
-                                    <td><input type="text" class="form-control form-control-sm text-end bg-light inp-gasto-usd font-monospace text-muted" value="@item.GastoUSD.ToString("N2")" readonly /></td>
-                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end inp-ingreso font-monospace text-success fw-semibold" value="@item.IngresoDOP.ToString("F2")" /></td>
-                                    <td><input type="text" class="form-control form-control-sm text-end bg-light inp-ingreso-usd font-monospace text-muted" value="@item.IngresoUSD.ToString("N2")" readonly /></td>
-                                    <td><input type="text" class="form-control form-control-sm text-end bg-light fw-bold inp-saldo-dop font-monospace text-dark" value="@item.SaldoDOP.ToString("N2")" readonly /></td>
-                                    <td><input type="text" class="form-control form-control-sm text-end bg-light fw-bold inp-saldo-usd font-monospace text-dark" value="@item.SaldoUSD.ToString("N2")" readonly /></td>
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-primary btn-save" title="Guardar Cambios"><i class="bi bi-save"></i></button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger btn-del" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+                    }
+                    <tr id="rowSinResultadosFiltro" class="d-none">
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-search fs-2 d-block mb-2 text-slate-300"></i>
+                            No se encontraron movimientos que coincidan con los filtros aplicados.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REGISTRAR MOVIMIENTO -->
+<div class="modal fade text-start" id="modalRegistrarTransaccion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold text-white"><i class="bi bi-plus-circle me-2 text-primary"></i>Registrar Movimiento Financiero</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formRegistrarMovimiento">
+                    <input type="hidden" id="regTransaccionId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+                            <input type="date" id="regFecha" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold"># Factura / Comprobante</label>
+                            <input type="text" id="regDoc" class="form-control font-monospace" placeholder="Ej: B0100000452" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tasa de Cambio (DOP/USD)</label>
+                            <input type="number" step="0.0001" id="regTasa" class="form-control font-monospace" value="@Model.TasaCambio.ToString("F4")" oninput="calcularEquivalenteModalReg()" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Descripción del Movimiento <span class="text-danger">*</span></label>
+                            <input type="text" id="regDesc" class="form-control" placeholder="Ej: Compra de almuerzos para capacitación de maestros" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Categoría Presupuestaria <span class="text-danger">*</span></label>
+                            <select id="regCat" class="form-select" onchange="onCategoriaChangeReg()" required>
+                                <option value="">— Seleccione Categoría —</option>
+                                <optgroup label="INGRESOS">
+                                    @foreach (var c in Model.Categorias.Where(x => x.Tipo == "INGRESO"))
+                                    {
+                                        <option value="@c.Value" data-tipo="INGRESO">@c.Text</option>
+                                    }
+                                </optgroup>
+                                <optgroup label="GASTOS">
+                                    @foreach (var c in Model.Categorias.Where(x => x.Tipo == "GASTO"))
+                                    {
+                                        <option value="@c.Value" data-tipo="GASTO">@c.Text</option>
+                                    }
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tipo de Movimiento</label>
+                            <div class="d-flex gap-3 pt-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="regTipoMov" id="tipoMovGasto" value="GASTO" checked onchange="onTipoMovRadioChange()">
+                                    <label class="form-check-label fw-semibold text-danger" for="tipoMovGasto">Gasto (Salida)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="regTipoMov" id="tipoMovIngreso" value="INGRESO" onchange="onTipoMovRadioChange()">
+                                    <label class="form-check-label fw-semibold text-success" for="tipoMovIngreso">Ingreso (Entrada)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Monto en Pesos (RD$) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">RD$</span>
+                                <input type="number" step="0.01" min="0" id="regMontoDOP" class="form-control font-monospace fw-bold" placeholder="0.00" oninput="calcularEquivalenteModalReg()" required />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Equivalente Estimado (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" id="regMontoUSD" class="form-control font-monospace bg-light" value="0.00" readonly />
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notas / Observaciones (Opcional)</label>
+                            <input type="text" id="regNotas" class="form-control" placeholder="Detalles adicionales, número de cheque, lugar..." />
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                <button type="button" class="btn btn-secondary font-semibold" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary font-semibold shadow-sm" onclick="guardarMovimientoModal()">
+                    <i class="bi bi-check2-circle me-1"></i>Guardar Movimiento
+                </button>
             </div>
         </div>
     </div>
@@ -271,13 +412,36 @@
             </div>
             <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary font-semibold" id="btnGuardarPresupuestoModal">
+                <button type="button" class="btn btn-primary font-semibold" onclick="guardarTechosPresupuestariosModal()">
                     <i class="bi bi-check2-circle me-1"></i>Guardar Techos Aprobados
                 </button>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .bg-secondary-soft {
+        background-color: rgba(108, 117, 125, 0.12) !important;
+        color: #6c757d !important;
+    }
+    .bg-primary-soft {
+        background-color: rgba(13, 110, 253, 0.12) !important;
+        color: #0d6efd !important;
+    }
+    .bg-success-soft {
+        background-color: rgba(25, 135, 84, 0.12) !important;
+        color: #198754 !important;
+    }
+    .bg-danger-soft {
+        background-color: rgba(220, 53, 69, 0.12) !important;
+        color: #dc3545 !important;
+    }
+    .bg-warning-soft {
+        background-color: rgba(255, 193, 7, 0.15) !important;
+        color: #b45309 !important;
+    }
+</style>
 
 @section scripts {
 <script>
@@ -288,146 +452,144 @@
         window.location.href = url;
     }
 
-    $(function () {
-        var tasa = parseFloat('@Model.TasaCambio') || 58.63;
-        var saldoInicial = parseFloat('@Model.SaldoMesAnteriorDOP') || 0;
+    function filtrarTablaTransacciones() {
+        var busqueda = (document.getElementById("filtroBuscarTransaccion").value || "").toLowerCase().trim();
+        var cat = (document.getElementById("filtroCategoria").value || "").trim();
 
-        function recalcular() {
-            var acum = saldoInicial;
-            $('#tablaErle tbody tr').each(function () {
-                var $tr = $(this);
-                if ($tr.attr('id') === 'rowSinMovimientos') return;
+        var filas = document.querySelectorAll(".item-fila-transaccion");
+        var visibles = 0;
 
-                var g = parseFloat($tr.find('.inp-gasto').val()) || 0;
-                var i = parseFloat($tr.find('.inp-ingreso').val()) || 0;
-                acum = acum + i - g;
+        filas.forEach(function (tr) {
+            var catFila = tr.getAttribute("data-cat") || "";
+            var texto = tr.textContent.toLowerCase();
 
-                $tr.find('.inp-gasto-usd').val((g / tasa).toFixed(2));
-                $tr.find('.inp-ingreso-usd').val((i / tasa).toFixed(2));
-                $tr.find('.inp-saldo-dop').val(acum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                $tr.find('.inp-saldo-usd').val((acum / tasa).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            });
+            var matchBusqueda = busqueda === "" || texto.indexOf(busqueda) > -1;
+            var matchCat = cat === "" || catFila === cat;
+
+            if (matchBusqueda && matchCat) {
+                tr.style.display = "";
+                visibles++;
+            } else {
+                tr.style.display = "none";
+            }
+        });
+
+        var rowSinRes = document.getElementById("rowSinResultadosFiltro");
+        if (rowSinRes) {
+            if (visibles === 0 && (busqueda !== "" || cat !== "")) {
+                rowSinRes.classList.remove("d-none");
+            } else {
+                rowSinRes.classList.add("d-none");
+            }
+        }
+    }
+
+    function limpiarFiltrosFinanzas() {
+        document.getElementById("filtroBuscarTransaccion").value = "";
+        document.getElementById("filtroCategoria").value = "";
+        filtrarTablaTransacciones();
+    }
+
+    function calcularEquivalenteModalReg() {
+        var tasa = parseFloat(document.getElementById("regTasa").value) || 58.63;
+        var dop = parseFloat(document.getElementById("regMontoDOP").value) || 0;
+        var usd = tasa > 0 ? (dop / tasa).toFixed(2) : "0.00";
+        document.getElementById("regMontoUSD").value = usd;
+    }
+
+    function onCategoriaChangeReg() {
+        var sel = document.getElementById("regCat");
+        var opt = sel.options[sel.selectedIndex];
+        if (opt) {
+            var tipo = opt.getAttribute("data-tipo");
+            if (tipo === "INGRESO") {
+                document.getElementById("tipoMovIngreso").checked = true;
+            } else if (tipo === "GASTO") {
+                document.getElementById("tipoMovGasto").checked = true;
+            }
+        }
+    }
+
+    function onTipoMovRadioChange() {
+        // Opcional para interacción
+    }
+
+    function abrirModalEditarTransaccion(id, fecha, doc, desc, cat, gastoDOP, ingresoDOP, tasa, notas) {
+        document.getElementById("regTransaccionId").value = id;
+        document.getElementById("regFecha").value = fecha;
+        document.getElementById("regDoc").value = doc;
+        document.getElementById("regDesc").value = desc;
+        document.getElementById("regCat").value = cat;
+        document.getElementById("regTasa").value = tasa || 58.63;
+        document.getElementById("regNotas").value = notas;
+
+        if (ingresoDOP > 0) {
+            document.getElementById("tipoMovIngreso").checked = true;
+            document.getElementById("regMontoDOP").value = ingresoDOP;
+        } else {
+            document.getElementById("tipoMovGasto").checked = true;
+            document.getElementById("regMontoDOP").value = gastoDOP;
         }
 
-        $('#tablaErle').on('input', '.inp-gasto, .inp-ingreso', recalcular);
+        calcularEquivalenteModalReg();
+        new bootstrap.Modal(document.getElementById("modalRegistrarTransaccion")).show();
+    }
 
-        $('#btnAgregarFila').on('click', function () {
-            $('#rowSinMovimientos').remove();
-            var cats = `@foreach(var c in Model.Categorias){ <option value="@c.Value">@c.Text</option> }`;
-            var today = new Date().toISOString().slice(0, 10);
-            var fila = `
-                <tr data-id="0" class="table-warning">
-                    <td><input type="date" class="form-control form-control-sm inp-fecha" value="${today}" /></td>
-                    <td><input type="text" class="form-control form-control-sm inp-doc font-monospace" placeholder="Fact / Ref" /></td>
-                    <td><input type="text" class="form-control form-control-sm inp-desc fw-semibold" placeholder="Detalle del gasto o ingreso" /></td>
-                    <td><select class="form-select form-select-sm inp-cat">${cats}</select></td>
-                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end inp-gasto font-monospace text-danger fw-semibold" value="0.00" /></td>
-                    <td><input type="text" class="form-control form-control-sm text-end bg-light inp-gasto-usd font-monospace text-muted" value="0.00" readonly /></td>
-                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end inp-ingreso font-monospace text-success fw-semibold" value="0.00" /></td>
-                    <td><input type="text" class="form-control form-control-sm text-end bg-light inp-ingreso-usd font-monospace text-muted" value="0.00" readonly /></td>
-                    <td><input type="text" class="form-control form-control-sm text-end bg-light fw-bold inp-saldo-dop font-monospace text-dark" value="0.00" readonly /></td>
-                    <td><input type="text" class="form-control form-control-sm text-end bg-light fw-bold inp-saldo-usd font-monospace text-dark" value="0.00" readonly /></td>
-                    <td class="text-center">
-                        <div class="d-flex justify-content-center gap-1">
-                            <button type="button" class="btn btn-sm btn-primary btn-save" title="Guardar"><i class="bi bi-save"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-danger btn-del" title="Cancelar / Eliminar"><i class="bi bi-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>`;
-            $('#tablaErle tbody').append(fila);
-            recalcular();
-        });
+    function guardarMovimientoModal() {
+        var id = parseInt(document.getElementById("regTransaccionId").value) || 0;
+        var fecha = document.getElementById("regFecha").value;
+        var doc = document.getElementById("regDoc").value;
+        var desc = (document.getElementById("regDesc").value || "").trim();
+        var cat = document.getElementById("regCat").value;
+        var tasa = parseFloat(document.getElementById("regTasa").value) || 58.63;
+        var montoDOP = parseFloat(document.getElementById("regMontoDOP").value) || 0;
+        var notas = document.getElementById("regNotas").value;
+        var esIngreso = document.getElementById("tipoMovIngreso").checked;
 
-        $('#tablaErle').on('click', '.btn-save', function () {
-            var $tr = $(this).closest('tr');
-            var dto = {
-                TransaccionId: parseInt($tr.data('id')) || 0,
-                TemporadaId: @Model.TemporadaId,
-                EquipoId: @Model.EquipoId,
-                Mes: '@Model.Mes',
-                Fecha: $tr.find('.inp-fecha').val(),
-                NumeroDocumento: $tr.find('.inp-doc').val(),
-                Descripcion: $tr.find('.inp-desc').val(),
-                CategoriaId: $tr.find('.inp-cat').val(),
-                GastoDOP: parseFloat($tr.find('.inp-gasto').val()) || 0,
-                IngresoDOP: parseFloat($tr.find('.inp-ingreso').val()) || 0,
-                TasaCambio: tasa
-            };
+        if (!fecha || !desc || !cat || montoDOP <= 0) {
+            alert("Por favor complete los campos obligatorios y un monto mayor a 0.");
+            return;
+        }
 
-            if (!dto.Descripcion || dto.Descripcion.trim() === '') {
-                alert('La descripción del movimiento es obligatoria.');
-                $tr.find('.inp-desc').focus();
-                return;
-            }
+        var dto = {
+            TransaccionId: id,
+            TemporadaId: @Model.TemporadaId,
+            EquipoId: @Model.EquipoId,
+            Mes: '@Model.Mes',
+            Fecha: fecha,
+            NumeroDocumento: doc,
+            Descripcion: desc,
+            CategoriaId: cat,
+            GastoDOP: esIngreso ? 0 : montoDOP,
+            IngresoDOP: esIngreso ? montoDOP : 0,
+            TasaCambio: tasa,
+            Notas: notas
+        };
 
-            $.ajax({
-                url: '@Url.Action("GuardarTransaccion", "ErleFinanzas")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(dto),
-                success: function (res) {
-                    if (res.success) {
-                        $tr.data('id', res.transaccionId);
-                        $tr.removeClass('table-warning').addClass('table-success');
-                        setTimeout(function () { 
-                            $tr.removeClass('table-success'); 
-                            location.reload(); 
-                        }, 800);
-                    } else {
-                        alert(res.message);
-                    }
-                },
-                error: function() {
-                    alert('Error de comunicación con el servidor.');
+        $.ajax({
+            url: '@Url.Action("GuardarTransaccion", "ErleFinanzas")',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dto),
+            success: function (res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message);
                 }
-            });
-        });
-
-        $('#tablaErle').on('click', '.btn-del', function () {
-            var $tr = $(this).closest('tr');
-            var id = parseInt($tr.data('id')) || 0;
-            if (id === 0) {
-                $tr.remove();
-                recalcular();
-                return;
-            }
-            if (confirm('¿Desea eliminar esta transacción?')) {
-                $.ajax({
-                    url: '@Url.Action("EliminarTransaccion", "ErleFinanzas")',
-                    type: 'POST',
-                    data: { transaccionId: id },
-                    success: function (res) {
-                        if (res.success) {
-                            $tr.remove();
-                            recalcular();
-                            location.reload();
-                        } else {
-                            alert(res.message);
-                        }
-                    }
-                });
+            },
+            error: function () {
+                alert("Error de comunicación con el servidor.");
             }
         });
+    }
 
-        $('#btnGuardarPresupuestoModal').on('click', function () {
-            var items = [];
-            $('.inp-modal-pres').each(function () {
-                var cat = $(this).data('cat');
-                var val = parseFloat($(this).val()) || 0;
-                items.push({ CategoriaId: cat, MontoAprobadoUSD: val });
-            });
-
-            var payload = {
-                TemporadaId: @Model.TemporadaId,
-                EquipoId: @Model.EquipoId,
-                Items: items
-            };
-
+    function eliminarMovimiento(id) {
+        if (confirm("¿Estás seguro de que deseas eliminar este movimiento financiero?")) {
             $.ajax({
-                url: '@Url.Action("GuardarPresupuesto", "ErleFinanzas")',
+                url: '@Url.Action("EliminarTransaccion", "ErleFinanzas")',
                 type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
+                data: { transaccionId: id },
                 success: function (res) {
                     if (res.success) {
                         location.reload();
@@ -436,10 +598,58 @@
                     }
                 },
                 error: function () {
-                    alert('Error al guardar presupuesto.');
+                    alert("Error al intentar eliminar.");
                 }
             });
+        }
+    }
+
+    function guardarTechosPresupuestariosModal() {
+        var items = [];
+        $('.inp-modal-pres').each(function () {
+            var cat = $(this).data('cat');
+            var val = parseFloat($(this).val()) || 0;
+            items.push({ CategoriaId: cat, MontoAprobadoUSD: val });
         });
+
+        var payload = {
+            TemporadaId: @Model.TemporadaId,
+            EquipoId: @Model.EquipoId,
+            Items: items
+        };
+
+        $.ajax({
+            url: '@Url.Action("GuardarPresupuesto", "ErleFinanzas")',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function (res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function () {
+                alert("Error al guardar presupuesto.");
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var modalReg = document.getElementById("modalRegistrarTransaccion");
+        if (modalReg) {
+            modalReg.addEventListener("hidden.bs.modal", function () {
+                document.getElementById("regTransaccionId").value = "0";
+                document.getElementById("regDoc").value = "";
+                document.getElementById("regDesc").value = "";
+                document.getElementById("regCat").value = "";
+                document.getElementById("regMontoDOP").value = "";
+                document.getElementById("regMontoUSD").value = "0.00";
+                document.getElementById("regNotas").value = "";
+                document.getElementById("tipoMovGasto").checked = true;
+            });
+        }
     });
 </script>
 }
