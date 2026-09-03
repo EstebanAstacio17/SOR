@@ -693,6 +693,37 @@ namespace SOR.Helpers
             {
                 cmd.ExecuteNonQuery();
             }
+
+            // 12. Tabla de Asistencia de Coordinadores a Eventos
+            AsegurarTablasAsistenciaCoordinadores(cn);
+        }
+
+        private static void AsegurarTablasAsistenciaCoordinadores(SqlConnection cn)
+        {
+            string sqlAsistCoord = @"
+                IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.EventosAsistenciaCoordinadores') AND type in (N'U'))
+                BEGIN
+                    CREATE TABLE dbo.EventosAsistenciaCoordinadores (
+                        IdAsistenciaCoordinador INT IDENTITY(1,1) PRIMARY KEY,
+                        IdEvento INT NOT NULL FOREIGN KEY REFERENCES dbo.Eventos(IdEvento),
+                        IdUsuario INT NOT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                        Asistio BIT NOT NULL DEFAULT 1,
+                        RolEnEvento NVARCHAR(100) NULL,
+                        Observaciones NVARCHAR(255) NULL,
+                        FechaRegistro DATETIME NOT NULL DEFAULT GETDATE(),
+                        IdUsuarioRegistro INT NULL
+                    );
+                    CREATE UNIQUE NONCLUSTERED INDEX IX_EventosAsistenciaCoordinadores_Evento_Usuario 
+                    ON dbo.EventosAsistenciaCoordinadores (IdEvento, IdUsuario);
+                    CREATE INDEX IX_EventosAsistenciaCoordinadores_Evento 
+                    ON dbo.EventosAsistenciaCoordinadores (IdEvento, Asistio);
+                END;
+            ";
+
+            using (SqlCommand cmd = new SqlCommand(sqlAsistCoord, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
         }
     }
 }

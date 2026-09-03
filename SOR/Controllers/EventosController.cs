@@ -53,6 +53,21 @@ namespace SOR.Controllers
                             Correo NVARCHAR(255) NULL,
                             FechaRegistro DATETIME DEFAULT GETDATE()
                         );
+                    END
+                    IF OBJECT_ID('dbo.EventosAsistenciaCoordinadores', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.EventosAsistenciaCoordinadores (
+                            IdAsistenciaCoordinador INT IDENTITY(1,1) PRIMARY KEY,
+                            IdEvento INT NOT NULL FOREIGN KEY REFERENCES dbo.Eventos(IdEvento),
+                            IdUsuario INT NOT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
+                            Asistio BIT NOT NULL DEFAULT 1,
+                            RolEnEvento NVARCHAR(100) NULL,
+                            Observaciones NVARCHAR(255) NULL,
+                            FechaRegistro DATETIME NOT NULL DEFAULT GETDATE(),
+                            IdUsuarioRegistro INT NULL
+                        );
+                        CREATE UNIQUE NONCLUSTERED INDEX IX_EventosAsistenciaCoordinadores_Evento_Usuario 
+                        ON dbo.EventosAsistenciaCoordinadores (IdEvento, IdUsuario);
                     END";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -455,6 +470,10 @@ namespace SOR.Controllers
             List<IglesiaParticipacionViewModel> iglesias = ObtenerIglesiasParticipantes(id, evento.IdTemporada);
             // Cargar maestros de estas iglesias
             List<MaestroAsistenciaViewModel> maestros = ObtenerMaestrosYAsistencia(id, evento.IdTemporada);
+            // Cargar asistencia de coordinadores al evento
+            List<CoordinadorEventoAsistenciaViewModel> coordinadoresAsistentes = ObtenerCoordinadoresAsistentesEvento(id);
+            List<CoordinadorDropdownItem> listaCoordinadoresDisponibles = ObtenerCoordinadoresParaDropdown(id);
+            List<string> listaRolesEvento = ObtenerRolesEventoActivos();
 
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
             bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
@@ -463,6 +482,9 @@ namespace SOR.Controllers
             ViewBag.Evento = evento;
             ViewBag.Iglesias = iglesias;
             ViewBag.Maestros = maestros;
+            ViewBag.CoordinadoresAsistentes = coordinadoresAsistentes;
+            ViewBag.ListaCoordinadoresDisponibles = listaCoordinadoresDisponibles;
+            ViewBag.ListaRolesEvento = listaRolesEvento;
             ViewBag.UsuarioActual = u;
             ViewBag.EsAdmin = esAdmin;
             ViewBag.EsCL = esCL || esCE;
@@ -1873,6 +1895,267 @@ namespace SOR.Controllers
                     }
                 }
             }
+        }
+
+        // =====================================================================
+        // MÉTODOS DE ASISTENCIA DE COORDINADORES AL EVENTO
+        // =====================================================================
+
+        private List<CoordinadorEventoAsistenciaViewModel> ObtenerCoordinadoresAsistentesEvento(int idEvento)
+        {
+            var lista = new List<CoordinadorEventoAsistenciaViewModel>();
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = @"
+                    SELECT ac.IdAsistenciaCoordinador, ac.IdEvento, ac.IdUsuario, ac.Asistio, ac.RolEnEvento, ac.Observaciones, ac.FechaRegistro,
+                           ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(p.PrimerNombre, ' ', p.PrimerApellido))), ''), u.Correo) AS NombreCompleto,
+                           u.Correo,
+                           p.TelefonoCelularWhatsApp AS Celular,
+                           pos.NombrePosicion,
+                           eq.NombreEquipo
+                    FROM dbo.EventosAsistenciaCoordinadores ac
+                    INNER JOIN dbo.Usuarios u ON ac.IdUsuario = u.IdUsuario
+                    LEFT JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
+                    LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                    LEFT JOIN dbo.Equipos eq ON a.IdEquipo = eq.IdEquipo
+                    LEFT JOIN dbo.PosicionesOCC pos ON a.IdPosicion = pos.IdPosicion
+                    WHERE ac.IdEvento = @IdEvento
+                    ORDER BY ac.FechaRegistro ASC;";
+
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(new CoordinadorEventoAsistenciaViewModel
+                        {
+                            IdAsistenciaCoordinador = Convert.ToInt32(dr["IdAsistenciaCoordinador"]),
+                            IdEvento = Convert.ToInt32(dr["IdEvento"]),
+                            IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
+                            NombreCompleto = dr["NombreCompleto"].ToString(),
+                            Correo = dr["Correo"].ToString(),
+                            Celular = dr["Celular"] != DBNull.Value ? dr["Celular"].ToString() : "",
+                            NombrePosicion = dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString() : "Coordinador",
+                            NombreEquipo = dr["NombreEquipo"] != DBNull.Value ? dr["NombreEquipo"].ToString() : "Sin Equipo",
+                            Asistio = Convert.ToBoolean(dr["Asistio"]),
+                            RolEnEvento = dr["RolEnEvento"] != DBNull.Value ? dr["RolEnEvento"].ToString() : "",
+                            Observaciones = dr["Observaciones"] != DBNull.Value ? dr["Observaciones"].ToString() : "",
+                            FechaRegistro = Convert.ToDateTime(dr["FechaRegistro"])
+                        });
+                    }
+                }
+            }
+            return lista;
+        }
+
+        private List<CoordinadorDropdownItem> ObtenerCoordinadoresParaDropdown(int idEvento)
+        {
+            var lista = new List<CoordinadorDropdownItem>();
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                // Traer coordinadores activos que NO estén ya agregados en este evento
+                string sql = @"
+                    SELECT u.IdUsuario,
+                           ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(p.PrimerNombre, ' ', p.PrimerApellido))), ''), u.Correo) AS NombreCompleto,
+                           pos.NombrePosicion,
+                           eq.NombreEquipo
+                    FROM dbo.Usuarios u
+                    INNER JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
+                    LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                    LEFT JOIN dbo.Equipos eq ON a.IdEquipo = eq.IdEquipo
+                    LEFT JOIN dbo.PosicionesOCC pos ON a.IdPosicion = pos.IdPosicion
+                    WHERE u.IdEstado = 4
+                      AND u.IdUsuario NOT IN (SELECT IdUsuario FROM dbo.EventosAsistenciaCoordinadores WHERE IdEvento = @IdEvento)
+                    ORDER BY p.PrimerNombre, p.PrimerApellido, u.Correo;";
+
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(new CoordinadorDropdownItem
+                        {
+                            IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
+                            NombreCompleto = dr["NombreCompleto"].ToString(),
+                            NombrePosicion = dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString() : "Coordinador",
+                            NombreEquipo = dr["NombreEquipo"] != DBNull.Value ? dr["NombreEquipo"].ToString() : "Sin Equipo"
+                        });
+                    }
+                }
+            }
+            return lista;
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RegistrarCoordinadorEvento(int idEvento, int idUsuario, string rolEnEvento, string observaciones)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!PuedeEditarEvento(u, idEvento))
+            {
+                TempData["MensajeError"] = "No tiene permiso para gestionar la asistencia de coordinadores en este evento.";
+                return RedirectToAction("Detalle", new { id = idEvento });
+            }
+
+            if (idUsuario <= 0)
+            {
+                TempData["MensajeError"] = "Debe seleccionar un coordinador válido de la lista desplegable.";
+                return RedirectToAction("Detalle", new { id = idEvento });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = @"
+                        IF EXISTS (SELECT 1 FROM dbo.EventosAsistenciaCoordinadores WHERE IdEvento = @IdEvento AND IdUsuario = @IdUsuario)
+                        BEGIN
+                            UPDATE dbo.EventosAsistenciaCoordinadores
+                            SET Asistio = 1,
+                                RolEnEvento = @Rol,
+                                Observaciones = @Obs,
+                                FechaRegistro = GETDATE(),
+                                IdUsuarioRegistro = @IdReg
+                            WHERE IdEvento = @IdEvento AND IdUsuario = @IdUsuario;
+                        END
+                        ELSE
+                        BEGIN
+                            INSERT INTO dbo.EventosAsistenciaCoordinadores (
+                                IdEvento, IdUsuario, Asistio, RolEnEvento, Observaciones, FechaRegistro, IdUsuarioRegistro
+                            ) VALUES (
+                                @IdEvento, @IdUsuario, 1, @Rol, @Obs, GETDATE(), @IdReg
+                            );
+                        END;";
+
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                    cmd.Parameters.AddWithValue("@Rol", (object)rolEnEvento ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Obs", (object)observaciones ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IdReg", u.IdUsuario);
+
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                TempData["MensajeExito"] = "Coordinador registrado en el evento con éxito.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar coordinador: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ToggleAsistenciaCoordinador(int idAsistenciaCoordinador, int idEvento, bool asistio)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!PuedeEditarEvento(u, idEvento))
+            {
+                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de coordinadores en este evento.";
+                return RedirectToAction("Detalle", new { id = idEvento });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "UPDATE dbo.EventosAsistenciaCoordinadores SET Asistio = @Asistio WHERE IdAsistenciaCoordinador = @Id AND IdEvento = @IdEvento;";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Asistio", asistio);
+                    cmd.Parameters.AddWithValue("@Id", idAsistenciaCoordinador);
+                    cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = asistio ? "Asistencia del coordinador confirmada." : "Coordinador marcado como no asistente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al actualizar estado: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RemoverCoordinadorEvento(int idAsistenciaCoordinador, int idEvento)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!PuedeEditarEvento(u, idEvento))
+            {
+                TempData["MensajeError"] = "No tiene permiso para remover coordinadores en este evento.";
+                return RedirectToAction("Detalle", new { id = idEvento });
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "DELETE FROM dbo.EventosAsistenciaCoordinadores WHERE IdAsistenciaCoordinador = @Id AND IdEvento = @IdEvento;";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Id", idAsistenciaCoordinador);
+                    cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Coordinador removido de la lista de asistencia del evento.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al remover coordinador: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idEvento });
+        }
+
+        private List<string> ObtenerRolesEventoActivos()
+        {
+            var lista = new List<string>();
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = @"
+                        IF OBJECT_ID('dbo.RolesEvento', 'U') IS NOT NULL
+                        BEGIN
+                            SELECT Nombre FROM dbo.RolesEvento WHERE Activo = 1 ORDER BY IdRolEvento ASC;
+                        END";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cn.Open();
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            lista.Add(dr["Nombre"].ToString());
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            if (!lista.Any())
+            {
+                lista = new List<string>
+                {
+                    "Coordinador Principal / Encargado",
+                    "Facilitador / Expositor",
+                    "Logística y Despacho",
+                    "Registro y Asistencia",
+                    "Acompañamiento y Bienvenida",
+                    "Intercesión y Oración",
+                    "Apoyo General"
+                };
+            }
+            return lista;
         }
     }
 

@@ -434,4 +434,29 @@ namespace SOR.Models
         public List<ContactoLGAModel> Contactos { get; set; } = new List<ContactoLGAModel>();
         public List<LlamadaAcompanamientoModel> BitacoraLlamadas { get; set; } = new List<LlamadaAcompanamientoModel>();
     }
+
+    public class CoordinadorEventoAsistenciaViewModel
+    {
+        public int IdAsistenciaCoordinador { get; set; }
+        public int IdEvento { get; set; }
+        public int IdUsuario { get; set; }
+        public string NombreCompleto { get; set; }
+        public string Correo { get; set; }
+        public string Celular { get; set; }
+        public string NombrePosicion { get; set; }
+        public string NombreEquipo { get; set; }
+        public bool Asistio { get; set; }
+        public string RolEnEvento { get; set; }
+        public string Observaciones { get; set; }
+        public DateTime FechaRegistro { get; set; }
+    }
+
+    public class CoordinadorDropdownItem
+    {
+        public int IdUsuario { get; set; }
+        public string NombreCompleto { get; set; }
+        public string NombrePosicion { get; set; }
+        public string NombreEquipo { get; set; }
+        public string TextoDesplegable => $"{NombreCompleto} — {(!string.IsNullOrEmpty(NombrePosicion) ? NombrePosicion : "Coordinador")} ({(!string.IsNullOrEmpty(NombreEquipo) ? NombreEquipo : "Sin Equipo")})";
+    }
 }

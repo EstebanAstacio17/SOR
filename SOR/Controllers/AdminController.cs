@@ -988,6 +988,25 @@ namespace SOR.Controllers
                         ('Ministerio Paraeclesiástico', 1),
                         ('Fundación / ONG', 1),
                         ('Colegio Cristiano', 1);
+                    END
+                    
+                    IF OBJECT_ID('dbo.RolesEvento', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.RolesEvento (
+                            IdRolEvento INT IDENTITY(1,1) PRIMARY KEY,
+                            Nombre NVARCHAR(150) NOT NULL,
+                            Descripcion NVARCHAR(255) NULL,
+                            Activo BIT NOT NULL DEFAULT 1,
+                            FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
+                        );
+                        INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo) VALUES 
+                        ('Coordinador Principal / Encargado', 'Responsable general de la conducción del evento', 1),
+                        ('Facilitador / Expositor', 'Imparte el contenido, dinámicas o presentaciones del evento', 1),
+                        ('Logística y Despacho', 'Coordinación de paquetes, materiales y suministros', 1),
+                        ('Registro y Asistencia', 'Mesa de recepción, validación de cédulas y asistencia', 1),
+                        ('Acompañamiento y Bienvenida', 'Atención personalizada a pastores y líderes asistentes', 1),
+                        ('Intercesión y Oración', 'Cobertura espiritual y oración durante el desarrollo del evento', 1),
+                        ('Apoyo General', 'Soporte y asistencia operativa en diversas áreas', 1);
                     END";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -1008,6 +1027,7 @@ namespace SOR.Controllers
 
             List<CatalogoItemViewModel> denominaciones = new List<CatalogoItemViewModel>();
             List<CatalogoItemViewModel> tiposOrg = new List<CatalogoItemViewModel>();
+            List<CatalogoItemViewModel> rolesEvento = new List<CatalogoItemViewModel>();
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -1041,10 +1061,27 @@ namespace SOR.Controllers
                         });
                     }
                 }
+
+                string sqlR = "SELECT IdRolEvento AS Id, Nombre, Descripcion, Activo FROM dbo.RolesEvento ORDER BY IdRolEvento ASC;";
+                using (SqlCommand cmdR = new SqlCommand(sqlR, cn))
+                using (SqlDataReader drR = cmdR.ExecuteReader())
+                {
+                    while (drR.Read())
+                    {
+                        rolesEvento.Add(new CatalogoItemViewModel
+                        {
+                            Id = Convert.ToInt32(drR["Id"]),
+                            Nombre = drR["Nombre"].ToString(),
+                            Descripcion = drR["Descripcion"] != DBNull.Value ? drR["Descripcion"].ToString() : "",
+                            Activo = Convert.ToBoolean(drR["Activo"])
+                        });
+                    }
+                }
             }
 
             ViewBag.Denominaciones = denominaciones;
             ViewBag.TiposOrg = tiposOrg;
+            ViewBag.RolesEvento = rolesEvento;
             return View();
         }
 
@@ -1121,12 +1158,72 @@ namespace SOR.Controllers
             TempData["MensajeExito"] = "Estado de tipo de organización actualizado.";
             return RedirectToAction("Catalogos");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CrearRolEvento(string nombre, string descripcion)
+        {
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                AsegurarTablasCatalogos();
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo) VALUES (@Nombre, @Descripcion, 1);";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Rol/Función de evento agregado correctamente.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditarRolEvento(int id, string nombre, string descripcion)
+        {
+            if (id > 0 && !string.IsNullOrWhiteSpace(nombre))
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "UPDATE dbo.RolesEvento SET Nombre = @Nombre, Descripcion = @Descripcion WHERE IdRolEvento = @Id;";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Rol/Función de evento modificado correctamente.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ToggleRolEvento(int id, bool activo)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "UPDATE dbo.RolesEvento SET Activo = @Activo WHERE IdRolEvento = @Id;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Activo", activo);
+                cmd.Parameters.AddWithValue("@Id", id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            TempData["MensajeExito"] = "Estado de rol/función de evento actualizado.";
+            return RedirectToAction("Catalogos");
+        }
     }
 
     public class CatalogoItemViewModel
     {
         public int Id { get; set; }
         public string Nombre { get; set; }
+        public string Descripcion { get; set; }
         public bool Activo { get; set; }
     }
 }

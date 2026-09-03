@@ -1,18 +1,19 @@
 @{
-    ViewBag.Title = "Mantenedor de Catálogos (Denominaciones y Tipos)";
+    ViewBag.Title = "Mantenedor de Catálogos del Sistema";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var denominaciones = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.Denominaciones;
-    var tiposOrg = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.TiposOrg;
+    var denominaciones = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.Denominaciones ?? new List<SOR.Controllers.CatalogoItemViewModel>();
+    var tiposOrg = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.TiposOrg ?? new List<SOR.Controllers.CatalogoItemViewModel>();
+    var rolesEvento = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.RolesEvento ?? new List<SOR.Controllers.CatalogoItemViewModel>();
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
     <div>
         <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-tags-fill text-primary me-2"></i>Mantenedor de Catálogos</h2>
-        <p class="text-muted mb-0">Administra las opciones de Denominaciones y Tipos de Organización utilizadas en el registro de iglesias.</p>
+        <p class="text-muted mb-0">Administra las opciones de Denominaciones, Tipos de Organización y Roles/Funciones de Eventos utilizadas en la plataforma.</p>
     </div>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 mb-4">
     <!-- PANEL 1: DENOMINACIONES -->
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 bg-white">
@@ -138,6 +139,86 @@
     </div>
 </div>
 
+<!-- PANEL 3: ROLES Y FUNCIONES EN EVENTOS -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h5 class="card-title font-bold mb-0">
+                        <i class="bi bi-person-workspace me-2 text-primary"></i>Roles y Funciones en Eventos
+                    </h5>
+                    <small class="text-slate-300">Opciones desplegables asignables a coordinadores y voluntarios en el registro de eventos.</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearRolEvento">
+                    <i class="bi bi-plus-circle me-1"></i>Agregar Rol / Función
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Rol / Función</th>
+                                <th>Descripción / Alcance</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!rolesEvento.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No hay roles de eventos configurados.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in rolesEvento)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-slate-800">
+                                            <i class="bi bi-person-badge text-primary me-1"></i>@item.Nombre
+                                        </td>
+                                        <td>
+                                            <span class="text-slate-600 small">@(string.IsNullOrEmpty(item.Descripcion) ? "Sin descripción" : item.Descripcion)</span>
+                                        </td>
+                                        <td>
+                                            @if (item.Activo)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill">Activo / Disponible</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill">Inhabilitado</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="d-flex align-items-center justify-content-end gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarRolEvento(@item.Id, '@Html.Raw(item.Nombre.Replace("'", "\\'"))', '@Html.Raw((item.Descripcion ?? "").Replace("'", "\\'"))')" title="Editar Rol">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <form action="@Url.Action("ToggleRolEvento", "Admin")" method="post" class="d-inline m-0">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
+                                                    <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
+                                                        @(item.Activo ? "Inhabilitar" : "Habilitar")
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL CREAR DENOMINACION -->
 <div class="modal fade text-start" id="modalCrearDenominacion" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -183,3 +264,72 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL CREAR ROL EVENTO -->
+<div class="modal fade text-start" id="modalCrearRolEvento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("CrearRolEvento", "Admin")" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo Rol / Función en Evento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Rol / Función <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Registro y Asistencia" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción / Responsabilidad (Opcional)</label>
+                        <textarea name="descripcion" class="form-control" rows="2" placeholder="Ej: Atención de mesa, validación de cédulas y entrega de gafetes"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Guardar Rol</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR ROL EVENTO -->
+<div class="modal fade text-start" id="modalEditarRolEvento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("EditarRolEvento", "Admin")" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="editarRolEventoId" value="0" />
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-pencil-square me-2 text-primary"></i>Editar Rol / Función en Evento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Rol / Función <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" id="editarRolEventoNombre" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción / Responsabilidad</label>
+                        <textarea name="descripcion" id="editarRolEventoDescripcion" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Actualizar Rol</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalEditarRolEvento(id, nombre, descripcion) {
+        document.getElementById('editarRolEventoId').value = id;
+        document.getElementById('editarRolEventoNombre').value = nombre;
+        document.getElementById('editarRolEventoDescripcion').value = descripcion;
+        new bootstrap.Modal(document.getElementById('modalEditarRolEvento')).show();
+    }
+</script>
+
