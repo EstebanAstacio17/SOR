@@ -28,21 +28,6 @@
         </button>
     </div>
 
-    @if (TempData["MensajeExito"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-4 mb-4">
-            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["MensajeError"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-4 mb-4">
-            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-header bg-light py-3 border-0">
             <div class="d-flex align-items-center justify-content-between">

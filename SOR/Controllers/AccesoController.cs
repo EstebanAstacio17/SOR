@@ -251,6 +251,17 @@ namespace SOR.Controllers
                 {
                     // Bloquear por 1 hora
                     ActualizarDatosSeguridad(oUsuario.Correo, nuevosIntentos, ahora, ahora);
+                    
+                    // Registrar alerta de seguridad en auditoría
+                    SOR.Helpers.AuditoriaHelper.Registrar(
+                        null,
+                        oUsuario.Correo,
+                        "BLOQUEO_CUENTA_FUERZA_BRUTA",
+                        "ACCESO_SEGURIDAD",
+                        null,
+                        $"La cuenta '{oUsuario.Correo}' fue bloqueada temporalmente por 1 hora tras registrar múltiples intentos fallidos de inicio de sesión."
+                    );
+
                     ViewData["Mensaje"] = "Su cuenta ha sido bloqueada por 1 hora debido a 3 intentos fallidos de inicio de sesión.";
                 }
                 else
