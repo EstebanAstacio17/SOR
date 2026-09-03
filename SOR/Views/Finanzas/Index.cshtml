@@ -37,7 +37,7 @@
         </div>
         <div class="col-md-3">
             <label class="form-label text-xs fw-semibold mb-1 text-muted">Equipo</label>
-            @if (ViewBag.EsAdmin == true)
+            @if (ViewBag.PuedeCambiarEquipo == true)
             {
                 <select id="selectEquipoFiltro" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosFinanzas()">
                     @foreach (var eq in Model.ListaEquipos)

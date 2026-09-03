@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Web.Mvc;
 using Newtonsoft.Json;
 using SOR.Models;
@@ -20,6 +21,60 @@ namespace SOR.Controllers
             if (ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
                 return ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
             return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
+        }
+
+        private bool TieneAccesoLogistica(Usuario u)
+        {
+            if (u == null) return false;
+            // 1. SuperAdmin y Administrador
+            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true;
+
+            // 2. Coordinador de Equipo (IdPosicion = 1)
+            if (u.IdPosicion == 1 || (!string.IsNullOrEmpty(u.NombrePosicion) && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)) return true;
+
+            // 3. Coordinador de Logística (IdPosicion = 6)
+            if (u.IdPosicion == 6 || (!string.IsNullOrEmpty(u.NombrePosicion) && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0))) return true;
+
+            return false;
+        }
+
+        private HashSet<int> ObtenerEquiposPermitidosJerarquico(Usuario u)
+        {
+            HashSet<int> set = new HashSet<int>();
+            if (u == null) return set;
+            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return null; // Admin: todos
+
+            if (u.IdEquipo.HasValue && u.IdEquipo.Value > 0)
+            {
+                set.Add(u.IdEquipo.Value);
+                ObtenerEquiposHijosRecursivo(u.IdEquipo.Value, set);
+            }
+            return set;
+        }
+
+        private void ObtenerEquiposHijosRecursivo(int idEquipoPadre, HashSet<int> set)
+        {
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = "SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipoPadre = @Id AND Activo = 1;";
+                using (var cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idEquipoPadre);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            int hId = Convert.ToInt32(dr["IdEquipo"]);
+                            if (!set.Contains(hId))
+                            {
+                                set.Add(hId);
+                                ObtenerEquiposHijosRecursivo(hId, set);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private int ObtenerTemporadaActiva()
@@ -42,6 +97,11 @@ namespace SOR.Controllers
         public ActionResult Index()
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
             int idTemporada = ObtenerTemporadaActiva();
             int? idEquipo = u?.IdEquipo;
 
@@ -76,6 +136,11 @@ namespace SOR.Controllers
         public ActionResult Almacenes()
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
             bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
             bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
@@ -116,6 +181,11 @@ namespace SOR.Controllers
         public ActionResult GuardarAlmacen(Almacen modelo, int[] idsEquiposSeleccionados)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             try
             {
                 bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
@@ -164,7 +234,13 @@ namespace SOR.Controllers
 
         public ActionResult Presentaciones(int? idTemporada)
         {
-            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
+            ViewBag.UsuarioActual = u;
             ViewBag.Materiales = _svc.ObtenerMateriales(false);
 
             // Cargar lista de Temporadas para el selector
@@ -199,6 +275,12 @@ namespace SOR.Controllers
         {
             try
             {
+                Usuario u = (Usuario)Session["usuario"];
+                if (!TieneAccesoLogistica(u))
+                {
+                    TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                    return RedirectToAction("Index", "Home");
+                }
                 if (modelo.UnidadesPorEmpaque <= 0)
                 {
                     TempData["MensajeError"] = "Las unidades por empaque deben ser mayores a cero.";
@@ -221,6 +303,12 @@ namespace SOR.Controllers
         {
             try
             {
+                Usuario u = (Usuario)Session["usuario"];
+                if (!TieneAccesoLogistica(u))
+                {
+                    TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                    return RedirectToAction("Index", "Home");
+                }
                 _svc.AlternarEstadoPresentacion(idPresentacion, activo);
                 TempData["MensajeExito"] = activo ? "Presentación habilitada exitosamente." : "Presentación inhabilitada exitosamente.";
             }
@@ -238,6 +326,11 @@ namespace SOR.Controllers
         public ActionResult Recepciones()
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
             int idTemp = ObtenerTemporadaActiva();
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
             bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
@@ -277,6 +370,11 @@ namespace SOR.Controllers
             string detallesJson, System.Web.HttpPostedFileBase[] evidenciasArchivos)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             try
             {
                 var detalles = string.IsNullOrEmpty(detallesJson)
@@ -337,9 +435,15 @@ namespace SOR.Controllers
 
         public ActionResult ComprobanteRecepcion(int id)
         {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             var modelo = _svc.ObtenerRecepcionDetalle(id);
             if (modelo == null) return HttpNotFound();
-            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            ViewBag.UsuarioActual = u;
             return View(modelo);
         }
 
@@ -350,6 +454,11 @@ namespace SOR.Controllers
         public ActionResult InventarioCentral()
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
             int idTemp = ObtenerTemporadaActiva();
             ViewBag.UsuarioActual = u;
             ViewBag.IdTemporadaActiva = idTemp;
@@ -365,6 +474,11 @@ namespace SOR.Controllers
         public ActionResult Transferencias()
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
             int idTemp = ObtenerTemporadaActiva();
             ViewBag.UsuarioActual = u;
             ViewBag.Materiales = _svc.ObtenerMateriales();
@@ -372,18 +486,27 @@ namespace SOR.Controllers
             ViewBag.IdTemporadaActiva = idTemp;
 
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
+            HashSet<int> equiposPermitidos = ObtenerEquiposPermitidosJerarquico(u);
             ViewBag.EsAdmin = esAdmin;
             ViewBag.IdEquipoUsuario = u?.IdEquipo;
 
-            // Equipos
+            // Equipos permitidos por jerarquía
             var equipos = new List<SelectListItem>();
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;", cn))
+                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos WHERE Activo = 1 ORDER BY NombreEquipo;", cn))
                 using (var dr = cmd.ExecuteReader())
+                {
                     while (dr.Read())
-                        equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+                    {
+                        int eqId = Convert.ToInt32(dr["IdEquipo"]);
+                        if (equiposPermitidos == null || equiposPermitidos.Contains(eqId))
+                        {
+                            equipos.Add(new SelectListItem { Value = eqId.ToString(), Text = dr["NombreEquipo"].ToString() });
+                        }
+                    }
+                }
             }
             ViewBag.Equipos = equipos;
 
@@ -402,6 +525,11 @@ namespace SOR.Controllers
             string coordinadorEmisor = null, string personaReceptoraEquipo = null, string observaciones = null, string detallesJson = null)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             try
             {
                 bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
@@ -465,6 +593,11 @@ namespace SOR.Controllers
         public ActionResult ConfirmarRecepcion(int idTransferencia, DateTime? fechaRecepcion = null, string personaReceptora = null, int? idUsuarioReceptor = null)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             try
             {
                 DateTime fRec = fechaRecepcion ?? DateTime.Now;
@@ -483,6 +616,11 @@ namespace SOR.Controllers
         public ActionResult CancelarTransferencia(int idTransferencia, string motivo)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso no autorizado al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             try
             {
                 _svc.CancelarTransferencia(idTransferencia, motivo, u.IdUsuario);
@@ -497,9 +635,15 @@ namespace SOR.Controllers
 
         public ActionResult ConstanciaEquipo(int id)
         {
+            Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido al módulo de Logística.";
+                return RedirectToAction("Index", "Home");
+            }
             var modelo = _svc.ObtenerTransferenciaDetalle(id);
             if (modelo == null) return HttpNotFound();
-            ViewBag.UsuarioActual = (Usuario)Session["usuario"];
+            ViewBag.UsuarioActual = u;
             return View(modelo);
         }
 
@@ -510,26 +654,43 @@ namespace SOR.Controllers
         public ActionResult InventarioEquipos()
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (!TieneAccesoLogistica(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Logística solo está disponible para el Coordinador de Logística, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
             int idTemp = ObtenerTemporadaActiva();
             ViewBag.UsuarioActual = u;
             ViewBag.IdTemporadaActiva = idTemp;
 
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+            HashSet<int> equiposPermitidos = ObtenerEquiposPermitidosJerarquico(u);
 
             var equipos = new List<SelectListItem>();
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;", cn))
+                using (var cmd = new SqlCommand("SELECT IdEquipo, NombreEquipo FROM dbo.Equipos WHERE Activo = 1 ORDER BY NombreEquipo;", cn))
                 using (var dr = cmd.ExecuteReader())
+                {
                     while (dr.Read())
-                        equipos.Add(new SelectListItem { Value = dr["IdEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+                    {
+                        int eqId = Convert.ToInt32(dr["IdEquipo"]);
+                        if (equiposPermitidos == null || equiposPermitidos.Contains(eqId))
+                        {
+                            equipos.Add(new SelectListItem { Value = eqId.ToString(), Text = dr["NombreEquipo"].ToString() });
+                        }
+                    }
+                }
             }
             ViewBag.Equipos = equipos;
 
-            int? idEquipoFiltro = (esAdmin || esCL) ? (int?)null : u?.IdEquipo;
+            int? idEquipoFiltro = (esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1)) ? (int?)null : u?.IdEquipo;
             var resumen = _svc.ObtenerResumenInventarioEquipos(idTemp, idEquipoFiltro);
+            if (equiposPermitidos != null)
+            {
+                resumen = resumen.Where(r => equiposPermitidos.Contains(r.IdEquipo)).ToList();
+            }
             return View(resumen);
         }
 

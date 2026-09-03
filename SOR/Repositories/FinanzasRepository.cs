@@ -82,16 +82,6 @@ namespace SOR.Repositories
                         Notas NVARCHAR(255) NULL,
                         FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
                     );
-                END;
-
-                -- Migrar datos previos si existían
-                IF OBJECT_ID('dbo.ERLE_Transacciones', 'U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Finanzas_Transacciones)
-                BEGIN
-                    INSERT INTO dbo.Finanzas_Transacciones 
-                        (IdTemporada, IdEquipo, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas, FechaCreacion)
-                    SELECT 
-                        TemporadaId, EquipoId, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas, FechaCreacion
-                    FROM dbo.ERLE_Transacciones;
                 END;";
 
                 using (var cmd = new SqlCommand(ddl, conn))
@@ -248,32 +238,70 @@ namespace SOR.Repositories
             }
         }
 
-        public List<SelectListItem> ObtenerListaEquipos(int? idEquipoRestringido = null)
+        public HashSet<int> ObtenerEquiposPermitidosJerarquico(Usuario u)
+        {
+            HashSet<int> set = new HashSet<int>();
+            if (u == null) return set;
+
+            bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            if (esAdmin)
+            {
+                return null; // Null indica acceso irrestricto a todos los equipos
+            }
+
+            if (u.IdEquipo.HasValue && u.IdEquipo.Value > 0)
+            {
+                set.Add(u.IdEquipo.Value);
+                ObtenerEquiposHijosRecursivo(u.IdEquipo.Value, set);
+            }
+
+            return set;
+        }
+
+        public void ObtenerEquiposHijosRecursivo(int idEquipoPadre, HashSet<int> set)
+        {
+            using (var conn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                conn.Open();
+                string sql = "SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipoPadre = @Id AND Activo = 1;";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", idEquipoPadre);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            int hId = Convert.ToInt32(dr["IdEquipo"]);
+                            if (!set.Contains(hId))
+                            {
+                                set.Add(hId);
+                                ObtenerEquiposHijosRecursivo(hId, set);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public List<SelectListItem> ObtenerListaEquipos(HashSet<int> equiposPermitidos = null)
         {
             var list = new List<SelectListItem>();
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 conn.Open();
-                string sql = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos WHERE Activo = 1";
-                if (idEquipoRestringido.HasValue && idEquipoRestringido.Value > 0)
-                {
-                    sql += " AND IdEquipo = @IdRestringido";
-                }
-                sql += " ORDER BY NombreEquipo;";
+                string sql = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos WHERE Activo = 1 ORDER BY NombreEquipo;";
 
                 using (var cmd = new SqlCommand(sql, conn))
+                using (var dr = cmd.ExecuteReader())
                 {
-                    if (idEquipoRestringido.HasValue && idEquipoRestringido.Value > 0)
+                    while (dr.Read())
                     {
-                        cmd.Parameters.AddWithValue("@IdRestringido", idEquipoRestringido.Value);
-                    }
-                    using (var dr = cmd.ExecuteReader())
-                    {
-                        while (dr.Read())
+                        int idEq = Convert.ToInt32(dr["IdEquipo"]);
+                        if (equiposPermitidos == null || equiposPermitidos.Contains(idEq))
                         {
                             list.Add(new SelectListItem
                             {
-                                Value = dr["IdEquipo"].ToString(),
+                                Value = idEq.ToString(),
                                 Text = dr["NombreEquipo"].ToString()
                             });
                         }

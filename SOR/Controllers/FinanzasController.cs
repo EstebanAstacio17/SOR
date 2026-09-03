@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 using SOR.Models;
@@ -17,9 +18,34 @@ namespace SOR.Controllers
             return Session["usuario"] as Usuario;
         }
 
+        private bool TieneAccesoFinanzas(Usuario u)
+        {
+            if (u == null) return false;
+            // 1. SuperAdmin y Administrador
+            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true;
+            
+            // 2. Coordinador de Equipo (IdPosicion = 1)
+            if (u.IdPosicion == 1 || (!string.IsNullOrEmpty(u.NombrePosicion) && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)) return true;
+
+            // 3. Coordinador de Recursos / Finanzas (IdPosicion = 4)
+            if (u.IdPosicion == 4 || (!string.IsNullOrEmpty(u.NombrePosicion) && (u.NombrePosicion.IndexOf("Recursos", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Finanzas", StringComparison.OrdinalIgnoreCase) >= 0))) return true;
+
+            return false;
+        }
+
         [HttpGet]
         public ActionResult Index(int? idTemporada, int? idEquipo, string mes = "OCT")
         {
+            Usuario u = ObtenerUsuarioActual();
+            if (u == null)
+                return RedirectToAction("Login", "Acceso");
+
+            if (!TieneAccesoFinanzas(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Finanzas solo está disponible para el Coordinador de Recursos, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
+
             try
             {
                 _repo.AsegurarEsquema();
@@ -29,14 +55,10 @@ namespace SOR.Controllers
                 ViewBag.ErrorInicializacion = ex.Message;
             }
 
-            Usuario u = ObtenerUsuarioActual();
-            if (u == null)
-                return RedirectToAction("Login", "Acceso");
-
             bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
-            int? idEquipoRestringido = esAdmin ? (int?)null : u.IdEquipo;
+            HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
 
-            var equipos = _repo.ObtenerListaEquipos(idEquipoRestringido);
+            var equipos = _repo.ObtenerListaEquipos(equiposPermitidos);
             var temporadas = _repo.ObtenerListaTemporadas();
 
             int tempId = idTemporada.HasValue && idTemporada.Value > 0 
@@ -44,11 +66,7 @@ namespace SOR.Controllers
                 : (temporadas.Any() ? Convert.ToInt32(temporadas.First().Value) : 1);
 
             int eqId;
-            if (!esAdmin)
-            {
-                eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
-            }
-            else
+            if (esAdmin)
             {
                 int defaultEqId = (u.IdEquipo.HasValue && u.IdEquipo.Value > 0)
                     ? u.IdEquipo.Value 
@@ -56,11 +74,25 @@ namespace SOR.Controllers
 
                 eqId = (idEquipo.HasValue && idEquipo.Value > 0) ? idEquipo.Value : defaultEqId;
             }
+            else
+            {
+                // Coordinador con jerarquía (ENL ve sus ERLE/ERL, ERLE ve sus ERL, ERL solo su equipo)
+                if (idEquipo.HasValue && equiposPermitidos != null && equiposPermitidos.Contains(idEquipo.Value))
+                {
+                    eqId = idEquipo.Value;
+                }
+                else
+                {
+                    eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
+                }
+            }
 
             string mesNormalizado = string.IsNullOrWhiteSpace(mes) ? "OCT" : mes.Trim().ToUpper();
             decimal saldoAnterior = _repo.CalcularSaldoInicialMes(tempId, eqId, mesNormalizado);
 
+            bool puedeCambiarEquipo = esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1);
             ViewBag.EsAdmin = esAdmin;
+            ViewBag.PuedeCambiarEquipo = puedeCambiarEquipo;
             ViewBag.UsuarioActual = u;
 
             var vm = new LibroMensualViewModel
@@ -85,20 +117,26 @@ namespace SOR.Controllers
         [HttpGet]
         public ActionResult ReporteConsolidado(int? idTemporada, int? idEquipo)
         {
+            Usuario u = ObtenerUsuarioActual();
+            if (u == null)
+                return RedirectToAction("Login", "Acceso");
+
+            if (!TieneAccesoFinanzas(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: El módulo de Finanzas solo está disponible para el Coordinador de Recursos, Coordinador de Equipo o Administrador.";
+                return RedirectToAction("Index", "Home");
+            }
+
             try
             {
                 _repo.AsegurarEsquema();
             }
             catch { }
 
-            Usuario u = ObtenerUsuarioActual();
-            if (u == null)
-                return RedirectToAction("Login", "Acceso");
-
             bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
-            int? idEquipoRestringido = esAdmin ? (int?)null : u.IdEquipo;
+            HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
 
-            var equipos = _repo.ObtenerListaEquipos(idEquipoRestringido);
+            var equipos = _repo.ObtenerListaEquipos(equiposPermitidos);
             var temporadas = _repo.ObtenerListaTemporadas();
 
             int tempId = idTemporada.HasValue && idTemporada.Value > 0 
@@ -106,11 +144,7 @@ namespace SOR.Controllers
                 : (temporadas.Any() ? Convert.ToInt32(temporadas.First().Value) : 1);
 
             int eqId;
-            if (!esAdmin)
-            {
-                eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
-            }
-            else
+            if (esAdmin)
             {
                 int defaultEqId = (u.IdEquipo.HasValue && u.IdEquipo.Value > 0)
                     ? u.IdEquipo.Value 
@@ -118,8 +152,21 @@ namespace SOR.Controllers
 
                 eqId = (idEquipo.HasValue && idEquipo.Value > 0) ? idEquipo.Value : defaultEqId;
             }
+            else
+            {
+                if (idEquipo.HasValue && equiposPermitidos != null && equiposPermitidos.Contains(idEquipo.Value))
+                {
+                    eqId = idEquipo.Value;
+                }
+                else
+                {
+                    eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
+                }
+            }
 
+            bool puedeCambiarEquipo = esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1);
             ViewBag.EsAdmin = esAdmin;
+            ViewBag.PuedeCambiarEquipo = puedeCambiarEquipo;
             ViewBag.UsuarioActual = u;
 
             var filas = _repo.ObtenerReporteConsolidado(tempId, eqId);
@@ -147,10 +194,18 @@ namespace SOR.Controllers
                 if (u == null)
                     return Json(new { success = false, message = "Sesión expirada." });
 
+                if (!TieneAccesoFinanzas(u))
+                    return Json(new { success = false, message = "No tienes permisos para registrar movimientos financieros." });
+
                 bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+                HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
+
                 if (!esAdmin)
                 {
-                    model.IdEquipo = u.IdEquipo ?? 1;
+                    if (equiposPermitidos == null || !equiposPermitidos.Contains(model.IdEquipo))
+                    {
+                        model.IdEquipo = u.IdEquipo ?? 1;
+                    }
                 }
 
                 if (model == null || string.IsNullOrWhiteSpace(model.Descripcion) || string.IsNullOrWhiteSpace(model.CategoriaId))
@@ -177,6 +232,9 @@ namespace SOR.Controllers
                 if (u == null)
                     return Json(new { success = false, message = "Sesión expirada." });
 
+                if (!TieneAccesoFinanzas(u))
+                    return Json(new { success = false, message = "No tienes permisos para eliminar movimientos financieros." });
+
                 if (transaccionId <= 0)
                     return Json(new { success = false, message = "Identificador de transacción inválido." });
 
@@ -198,10 +256,18 @@ namespace SOR.Controllers
                 if (u == null)
                     return Json(new { success = false, message = "Sesión expirada." });
 
+                if (!TieneAccesoFinanzas(u))
+                    return Json(new { success = false, message = "No tienes permisos para configurar presupuestos." });
+
                 bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+                HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
+
                 if (!esAdmin)
                 {
-                    request.IdEquipo = u.IdEquipo ?? 1;
+                    if (equiposPermitidos == null || !equiposPermitidos.Contains(request.IdEquipo))
+                    {
+                        request.IdEquipo = u.IdEquipo ?? 1;
+                    }
                 }
 
                 if (request == null || request.IdTemporada <= 0 || request.IdEquipo <= 0 || request.Items == null)
@@ -219,17 +285,26 @@ namespace SOR.Controllers
         [HttpGet]
         public ActionResult ExportarConsolidadoExcel(int? idTemporada, int? idEquipo)
         {
+            Usuario u = ObtenerUsuarioActual();
+            if (u == null)
+                return RedirectToAction("Login", "Acceso");
+
+            if (!TieneAccesoFinanzas(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido al módulo de Finanzas.";
+                return RedirectToAction("Index", "Home");
+            }
+
             try
             {
                 _repo.AsegurarEsquema();
             }
             catch { }
 
-            Usuario u = ObtenerUsuarioActual();
-            bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-            int? idEquipoRestringido = esAdmin ? (int?)null : u?.IdEquipo;
+            bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
 
-            var equipos = _repo.ObtenerListaEquipos(idEquipoRestringido);
+            var equipos = _repo.ObtenerListaEquipos(equiposPermitidos);
             var temporadas = _repo.ObtenerListaTemporadas();
 
             int tempId = idTemporada.HasValue && idTemporada.Value > 0 
@@ -237,17 +312,24 @@ namespace SOR.Controllers
                 : (temporadas.Any() ? Convert.ToInt32(temporadas.First().Value) : 1);
 
             int eqId;
-            if (!esAdmin && u != null)
+            if (esAdmin)
             {
-                eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
-            }
-            else
-            {
-                int defaultEqId = (u != null && u.IdEquipo.HasValue)
+                int defaultEqId = (u.IdEquipo.HasValue && u.IdEquipo.Value > 0)
                     ? u.IdEquipo.Value 
                     : (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
 
                 eqId = (idEquipo.HasValue && idEquipo.Value > 0) ? idEquipo.Value : defaultEqId;
+            }
+            else
+            {
+                if (idEquipo.HasValue && equiposPermitidos != null && equiposPermitidos.Contains(idEquipo.Value))
+                {
+                    eqId = idEquipo.Value;
+                }
+                else
+                {
+                    eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
+                }
             }
 
             string nombreEquipo = _repo.ObtenerNombreEquipo(eqId);
