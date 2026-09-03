@@ -675,8 +675,8 @@ namespace SOR.Repositories
                         m.Codigo,
                         m.NombreMaterial,
                         m.UnidadEntrega,
-                        ISNULL(pres.TipoEmpaque, 'Caja') AS TipoEmpaque,
-                        ISNULL(pres.UnidadesPorEmpaque, 1) AS UnidadesPorEmpaque,
+                        ISNULL(p.TipoEmpaque, 'Caja') AS TipoEmpaque,
+                        ISNULL(p.UnidadesPorEmpaque, 1) AS UnidadesPorEmpaque,
                         ISNULL(rec.TotalRecibido, 0) AS CantidadRecibida,
                         ISNULL(trf.TotalTransferido, 0) AS CantidadDespachada,
                         CASE 
@@ -684,14 +684,20 @@ namespace SOR.Repositories
                             ELSE (ISNULL(rec.TotalRecibido, 0) - ISNULL(trf.TotalTransferido, 0)) 
                         END AS CantidadDisponible
                     FROM dbo.Materiales m
-                    OUTER APPLY (
-                        SELECT TOP 1 p.TipoEmpaque, p.UnidadesPorEmpaque
-                        FROM dbo.PresentacionesMaterial p
-                        WHERE p.IdMaterial = m.IdMaterial
-                          AND p.Activo = 1
-                          AND (p.IdTemporadaVigencia = @IdTemp OR p.IdTemporadaVigencia IS NULL)
-                        ORDER BY CASE WHEN p.IdTemporadaVigencia = @IdTemp THEN 0 ELSE 1 END, p.UnidadesPorEmpaque DESC
-                    ) pres
+                    LEFT JOIN dbo.PresentacionesMaterial p ON m.IdMaterial = p.IdMaterial 
+                                                           AND p.Activo = 1
+                                                           AND (
+                                                               p.IdTemporadaVigencia = @IdTemp
+                                                               OR (
+                                                                   p.IdTemporadaVigencia IS NULL 
+                                                                   AND NOT EXISTS (
+                                                                       SELECT 1 FROM dbo.PresentacionesMaterial p2 
+                                                                       WHERE p2.IdMaterial = p.IdMaterial 
+                                                                         AND p2.IdTemporadaVigencia = @IdTemp 
+                                                                         AND p2.Activo = 1
+                                                                   )
+                                                               )
+                                                           )
                     OUTER APPLY (
                         SELECT SUM(rd.CantidadEmpaques * rd.UnidadesPorEmpaque) AS TotalRecibido
                         FROM dbo.RecepcionesContenedor rc
@@ -709,7 +715,8 @@ namespace SOR.Repositories
                           AND te.Estado IN ('RECIBIDA', 'COMPLETADA', 'EMITIDA', 'EN_TRANSITO')
                     ) trf
                     WHERE m.Activo = 1
-                    ORDER BY m.IdMaterial;";
+                      AND (p.IdPresentacion IS NOT NULL OR NOT EXISTS (SELECT 1 FROM dbo.PresentacionesMaterial p_any WHERE p_any.IdMaterial = m.IdMaterial AND p_any.Activo = 1))
+                    ORDER BY m.IdMaterial, ISNULL(p.UnidadesPorEmpaque, 0);";
 
                 using (var cmdGlobal = new SqlCommand(sqlGlobal, cn))
                 {
@@ -1460,30 +1467,37 @@ namespace SOR.Repositories
                         m.Codigo,
                         m.NombreMaterial,
                         m.UnidadEntrega,
-                        ISNULL(pres.TipoEmpaque, 'Caja') AS TipoEmpaque,
-                        ISNULL(pres.UnidadesPorEmpaque, 1) AS UnidadesPorEmpaque,
+                        ISNULL(p.TipoEmpaque, 'Caja') AS TipoEmpaque,
+                        ISNULL(p.UnidadesPorEmpaque, 1) AS UnidadesPorEmpaque,
                         ISNULL(ie.CantidadRecibida, 0) AS CantidadRecibida,
                         ISNULL(ie.CantidadAsignada, 0) AS CantidadAsignada,
                         ISNULL(ie.CantidadDespachada, 0) AS CantidadDespachada,
                         ISNULL(ie.CantidadDisponible, 0) AS CantidadDisponible
                     FROM dbo.Equipos eq
                     CROSS JOIN dbo.Materiales m
+                    LEFT JOIN dbo.PresentacionesMaterial p ON m.IdMaterial = p.IdMaterial 
+                                                           AND p.Activo = 1
+                                                           AND (
+                                                               p.IdTemporadaVigencia = @IdTempEfectivo
+                                                               OR (
+                                                                   p.IdTemporadaVigencia IS NULL 
+                                                                   AND NOT EXISTS (
+                                                                       SELECT 1 FROM dbo.PresentacionesMaterial p2 
+                                                                       WHERE p2.IdMaterial = p.IdMaterial 
+                                                                         AND p2.IdTemporadaVigencia = @IdTempEfectivo 
+                                                                         AND p2.Activo = 1
+                                                                   )
+                                                               )
+                                                           )
                     INNER JOIN dbo.Temporadas t ON t.IdTemporada = @IdTempEfectivo
-                    OUTER APPLY (
-                        SELECT TOP 1 p.TipoEmpaque, p.UnidadesPorEmpaque
-                        FROM dbo.PresentacionesMaterial p
-                        WHERE p.IdMaterial = m.IdMaterial
-                          AND p.Activo = 1
-                          AND (p.IdTemporadaVigencia = t.IdTemporada OR p.IdTemporadaVigencia IS NULL)
-                        ORDER BY CASE WHEN p.IdTemporadaVigencia = t.IdTemporada THEN 0 ELSE 1 END, p.UnidadesPorEmpaque DESC
-                    ) pres
                     LEFT JOIN dbo.InventarioEquipo ie ON ie.IdTemporada = t.IdTemporada 
                                                      AND ie.IdEquipo = eq.IdEquipo 
                                                      AND ie.IdMaterial = m.IdMaterial
                     WHERE eq.Activo = 1
                       AND m.Activo = 1
                       AND (@IdEq IS NULL OR eq.IdEquipo = @IdEq)
-                    ORDER BY eq.NombreEquipo, m.IdMaterial;";
+                      AND (p.IdPresentacion IS NOT NULL OR NOT EXISTS (SELECT 1 FROM dbo.PresentacionesMaterial p_any WHERE p_any.IdMaterial = m.IdMaterial AND p_any.Activo = 1))
+                    ORDER BY eq.NombreEquipo, m.IdMaterial, ISNULL(p.UnidadesPorEmpaque, 0);";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
                     cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
