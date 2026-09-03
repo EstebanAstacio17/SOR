@@ -1,0 +1,188 @@
+@model SOR.Models.ERLE.ErleReporteConsolidadoViewModel
+@{
+    ViewBag.Title = "Reporte Consolidado Anual de Finanzas — " + Model.NombreEquipo;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var grupos = Model.Filas.GroupBy(f => f.Grupo).ToList();
+}
+
+<div class="container-fluid py-3 px-lg-4">
+    <!-- Encabezado y Filtros Globales -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4 bg-white overflow-hidden">
+        <div class="card-body p-4 bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom">
+            <div>
+                <h3 class="h4 font-bold text-slate-800 mb-1">
+                    <i class="bi bi-grid-3x3 text-primary me-2"></i>Reporte Consolidado Anual de Flujo Financiero
+                </h3>
+                <p class="text-muted mb-0 small">
+                    Matriz de ejecución acumulada por categorías y meses del ciclo financiero expresada en Pesos Dominicanos (DOP) y Dólares (USD).
+                </p>
+            </div>
+
+            <!-- Selectores de Equipo y Temporada -->
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="d-flex align-items-center gap-2 bg-light p-2 rounded-3 border">
+                    <div>
+                        <label class="form-label text-xs fw-bold text-muted mb-0 d-block">Equipo:</label>
+                        <select id="selectEquipoConsolidado" class="form-select form-select-sm bg-white border font-semibold" style="min-width: 180px;" onchange="cambiarFiltrosConsolidado()">
+                            @foreach (var eq in Model.ListaEquipos)
+                            {
+                                <option value="@eq.Value" @(Model.EquipoId.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label text-xs fw-bold text-muted mb-0 d-block">Temporada:</label>
+                        <select id="selectTemporadaConsolidado" class="form-select form-select-sm bg-white border font-semibold" style="min-width: 140px;" onchange="cambiarFiltrosConsolidado()">
+                            @foreach (var tmp in Model.ListaTemporadas)
+                            {
+                                <option value="@tmp.Value" @(Model.TemporadaId.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <a href="@Url.Action("Index", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId, mes = "OCT" })" class="btn btn-outline-secondary font-semibold shadow-sm rounded-3">
+                    <i class="bi bi-arrow-left me-1"></i>Volver al Libro Mensual
+                </a>
+                <button type="button" class="btn btn-primary font-semibold shadow-sm rounded-3" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>Imprimir / Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matriz Consolidada -->
+    <div class="card shadow-sm border-0 rounded-4 bg-white overflow-hidden mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                    <thead class="table-dark text-center align-middle">
+                        <tr>
+                            <th style="min-width: 60px;">Cat.</th>
+                            <th style="min-width: 200px;" class="text-start">Descripción</th>
+                            <th style="min-width: 85px;">SEP</th>
+                            <th style="min-width: 85px;">OCT</th>
+                            <th style="min-width: 85px;">NOV</th>
+                            <th style="min-width: 85px;">DIC</th>
+                            <th style="min-width: 85px;">ENE</th>
+                            <th style="min-width: 85px;">FEB</th>
+                            <th style="min-width: 85px;">MAR</th>
+                            <th style="min-width: 85px;">ABR</th>
+                            <th style="min-width: 85px;">MAY</th>
+                            <th style="min-width: 85px;">JUN</th>
+                            <th style="min-width: 85px;">JUL</th>
+                            <th style="min-width: 85px;">AGO</th>
+                            <th style="min-width: 105px;" class="bg-primary text-white">Total DOP</th>
+                            <th style="min-width: 95px;" class="bg-dark text-warning">Total USD</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in grupos)
+                        {
+                            <tr class="table-secondary fw-bold text-uppercase" style="font-size: 0.85rem;">
+                                <td colspan="16" class="ps-3 py-1.5 text-dark">
+                                    <i class="bi bi-folder-fill me-1 text-primary"></i>@g.Key
+                                </td>
+                            </tr>
+                            foreach (var fila in g)
+                            {
+                                <tr>
+                                    <td class="text-center font-monospace fw-bold text-primary">@fila.CategoriaId</td>
+                                    <td class="fw-semibold text-slate-800">@fila.Descripcion</td>
+                                    <td class="text-end font-monospace">@(fila.SEP > 0 ? fila.SEP.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.OCT > 0 ? fila.OCT.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.NOV > 0 ? fila.NOV.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.DIC > 0 ? fila.DIC.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.ENE > 0 ? fila.ENE.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.FEB > 0 ? fila.FEB.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.MAR > 0 ? fila.MAR.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.ABR > 0 ? fila.ABR.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.MAY > 0 ? fila.MAY.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.JUN > 0 ? fila.JUN.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.JUL > 0 ? fila.JUL.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace">@(fila.AGO > 0 ? fila.AGO.ToString("N0") : "-")</td>
+                                    <td class="text-end font-monospace fw-bold bg-light text-primary">RD$ @fila.TotalDOP.ToString("N2")</td>
+                                    <td class="text-end font-monospace fw-bold bg-light text-success">$@fila.TotalUSD.ToString("N2")</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot class="table-dark text-end fw-bold font-monospace">
+                        @{
+                            var ingresos = Model.Filas.Where(f => f.Tipo == "INGRESO").ToList();
+                            var gastos = Model.Filas.Where(f => f.Tipo == "GASTO").ToList();
+
+                            decimal totIngDOP = ingresos.Sum(i => i.TotalDOP);
+                            decimal totGasDOP = gastos.Sum(g => g.TotalDOP);
+                            decimal saldoNetoDOP = totIngDOP - totGasDOP;
+                            decimal saldoNetoUSD = Model.TasaCambio > 0 ? Math.Round(saldoNetoDOP / Model.TasaCambio, 2) : 0m;
+                        }
+                        <tr class="table-info text-dark">
+                            <td colspan="2" class="text-start">TOTAL INGRESOS (DOP):</td>
+                            <td>@ingresos.Sum(i => i.SEP).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.OCT).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.NOV).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.DIC).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.ENE).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.FEB).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.MAR).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.ABR).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.MAY).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.JUN).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.JUL).ToString("N0")</td>
+                            <td>@ingresos.Sum(i => i.AGO).ToString("N0")</td>
+                            <td class="text-primary fw-bold">RD$ @totIngDOP.ToString("N2")</td>
+                            <td class="text-success fw-bold">$@((Model.TasaCambio > 0 ? Math.Round(totIngDOP / Model.TasaCambio, 2) : 0).ToString("N2"))</td>
+                        </tr>
+                        <tr class="table-warning text-dark">
+                            <td colspan="2" class="text-start">TOTAL GASTOS (DOP):</td>
+                            <td>@gastos.Sum(g => g.SEP).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.OCT).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.NOV).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.DIC).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.ENE).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.FEB).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.MAR).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.ABR).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.MAY).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.JUN).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.JUL).ToString("N0")</td>
+                            <td>@gastos.Sum(g => g.AGO).ToString("N0")</td>
+                            <td class="text-danger fw-bold">RD$ @totGasDOP.ToString("N2")</td>
+                            <td class="text-danger fw-bold">$@((Model.TasaCambio > 0 ? Math.Round(totGasDOP / Model.TasaCambio, 2) : 0).ToString("N2"))</td>
+                        </tr>
+                        <tr class="table-primary text-dark fs-6">
+                            <td colspan="2" class="text-start fw-bold">BALANCE NETO DISPONIBLE:</td>
+                            <td>@((ingresos.Sum(i => i.SEP) - gastos.Sum(g => g.SEP)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.OCT) - gastos.Sum(g => g.OCT)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.NOV) - gastos.Sum(g => g.NOV)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.DIC) - gastos.Sum(g => g.DIC)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.ENE) - gastos.Sum(g => g.ENE)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.FEB) - gastos.Sum(g => g.FEB)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.MAR) - gastos.Sum(g => g.MAR)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.ABR) - gastos.Sum(g => g.ABR)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.MAY) - gastos.Sum(g => g.MAY)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.JUN) - gastos.Sum(g => g.JUN)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.JUL) - gastos.Sum(g => g.JUL)).ToString("N0"))</td>
+                            <td>@((ingresos.Sum(i => i.AGO) - gastos.Sum(g => g.AGO)).ToString("N0"))</td>
+                            <td class="fw-bold @(saldoNetoDOP < 0 ? "text-danger" : "text-success")">RD$ @saldoNetoDOP.ToString("N2")</td>
+                            <td class="fw-bold @(saldoNetoUSD < 0 ? "text-danger" : "text-success")">$@saldoNetoUSD.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+<script>
+    function cambiarFiltrosConsolidado() {
+        var eqId = document.getElementById("selectEquipoConsolidado").value;
+        var tmpId = document.getElementById("selectTemporadaConsolidado").value;
+        var url = '@Url.Action("ReporteConsolidado", "ErleFinanzas")' + '?temporadaId=' + tmpId + '&equipoId=' + eqId;
+        window.location.href = url;
+    }
+</script>
+}

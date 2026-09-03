@@ -243,6 +243,23 @@
                                     }
                                 </ul>
                             </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle fw-medium" href="#" id="navbarDropdownFinanzas" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-cash-stack me-1 text-success"></i> Finanzas
+                                </a>
+                                <ul class="dropdown-menu border-0 shadow-lg" aria-labelledby="navbarDropdownFinanzas">
+                                    <li>
+                                        <a class="dropdown-item fw-medium" href="@Url.Action("Index", "ErleFinanzas")">
+                                            <i class="bi bi-journal-check me-2 text-success"></i>Libro Diario Mensual
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item fw-medium" href="@Url.Action("ReporteConsolidado", "ErleFinanzas")">
+                                            <i class="bi bi-grid-3x3 me-2 text-primary"></i>Reporte Consolidado Anual
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link fw-medium" href="@Url.Action("Index", "Reporte")"><i class="bi bi-bar-chart-line me-1"></i> Reportes</a>
                             </li>
