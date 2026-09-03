@@ -418,11 +418,8 @@ namespace SOR.Models
     public class DashboardLogistico
     {
         public string NombreTemporada { get; set; }
-        public int TotalMateriales { get; set; }
+        public InventarioCentralViewModel ResumenCentral { get; set; } = new InventarioCentralViewModel();
         public List<ItemInventarioCentral> InventarioCentral { get; set; } = new List<ItemInventarioCentral>();
         public List<ItemInventarioEquipo> InventarioEquipo { get; set; } = new List<ItemInventarioEquipo>();
-        public int TotalIglesiasDisponiblesDespacho { get; set; }
-        public int TotalIglesiasDespachadas { get; set; }
-        public int TotalEventosDespacho { get; set; }
     }
 }

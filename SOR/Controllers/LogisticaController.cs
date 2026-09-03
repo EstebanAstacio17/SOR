@@ -47,12 +47,12 @@ namespace SOR.Controllers
 
             var vm = new DashboardLogistico
             {
+                ResumenCentral = _svc.ObtenerResumenInventarioCentral(idTemporada),
                 InventarioCentral = _svc.ObtenerInventarioCentral(idTemporada),
-                InventarioEquipo = _svc.ObtenerInventarioEquipo(idTemporada, idEquipo),
-                TotalEventosDespacho = _svc.ObtenerEventosDespacho(idTemporada, idEquipo).Count
+                InventarioEquipo = _svc.ObtenerInventarioEquipo(idTemporada, idEquipo)
             };
 
-            // Contar iglesias disponibles y despachadas
+            // Obtener nombre de la temporada activa
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -63,10 +63,6 @@ namespace SOR.Controllers
                     object val = cmd.ExecuteScalar();
                     vm.NombreTemporada = val != null ? val.ToString() : "";
                 }
-                using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.AsignacionesRecursos WHERE EstadoAsignacion IN ('ASIGNADO','DISPONIBLE_PARA_DESPACHO');", cn))
-                    vm.TotalIglesiasDisponiblesDespacho = Convert.ToInt32(cmd.ExecuteScalar());
-                using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.AsignacionesRecursos WHERE EstadoAsignacion='DESPACHADA';", cn))
-                    vm.TotalIglesiasDespachadas = Convert.ToInt32(cmd.ExecuteScalar());
             }
 
             ViewBag.UsuarioActual = u;

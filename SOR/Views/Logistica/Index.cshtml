@@ -24,112 +24,8 @@
         </div>
     </div>
 
-    <!-- KPIs -->
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(0,113,227,0.1)">
-                            <i class="bi bi-archive fs-5" style="color:var(--apple-accent)"></i>
-                        </div>
-                        <div>
-                            <div class="small text-muted">Materiales en Central</div>
-                            <div class="h4 fw-bold mb-0">@(Model.InventarioCentral?.Count ?? 0)</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(52,199,89,0.1)">
-                            <i class="bi bi-check2-circle fs-5" style="color:var(--apple-success)"></i>
-                        </div>
-                        <div>
-                            <div class="small text-muted">Iglesias Despachadas</div>
-                            <div class="h4 fw-bold mb-0">@Model.TotalIglesiasDespachadas</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(255,149,0,0.1)">
-                            <i class="bi bi-hourglass-split fs-5" style="color:var(--apple-warning)"></i>
-                        </div>
-                        <div>
-                            <div class="small text-muted">Disponibles p/Despacho</div>
-                            <div class="h4 fw-bold mb-0">@Model.TotalIglesiasDisponiblesDespacho</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(0,113,227,0.08)">
-                            <i class="bi bi-calendar-event fs-5" style="color:var(--apple-accent)"></i>
-                        </div>
-                        <div>
-                            <div class="small text-muted">Eventos de Despacho</div>
-                            <div class="h4 fw-bold mb-0">@Model.TotalEventosDespacho</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Inventario Central -->
-    @if (Model.InventarioCentral != null && Model.InventarioCentral.Count > 0)
-    {
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-semibold"><i class="bi bi-building me-2"></i>Inventario Central</h6>
-                <a href="@Url.Action("InventarioCentral","Logistica")" class="btn btn-sm btn-outline-primary">Ver detalle</a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Material</th>
-                            <th>Almacén</th>
-                            <th class="text-center">Físico</th>
-                            <th class="text-center">Transferido</th>
-                            <th class="text-center">Disponible</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.InventarioCentral)
-                        {
-                            <tr>
-                                <td><span class="badge bg-primary me-2">@item.CodigoMaterial</span>@item.NombreMaterial</td>
-                                <td class="text-muted">@item.NombreAlmacen</td>
-                                <td class="text-center">@item.CantidadFisica.ToString("N0") <small class="text-muted">@item.UnidadEntrega</small></td>
-                                <td class="text-center">@item.CantidadTransferida.ToString("N0")</td>
-                                <td class="text-center">
-                                    <span class="fw-semibold @(item.CantidadDisponible > 0 ? "text-success" : "text-danger")">
-                                        @item.CantidadDisponible.ToString("N0")
-                                    </span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
-
     <!-- Menú de Accesos Rápidos -->
-    <div class="row g-3">
+    <div class="row g-3 mb-4">
         @{
             var modulos = new[]
             {
@@ -157,6 +53,151 @@
             </div>
         }
     </div>
+
+    <!-- Inventario Central: Stock Global por Material -->
+    @if (Model.ResumenCentral?.MaterialesGlobal != null && Model.ResumenCentral.MaterialesGlobal.Any())
+    {
+        var listaMat = Model.ResumenCentral.MaterialesGlobal;
+        int sumRec = listaMat.Sum(x => x.CantidadRecibida);
+        int sumDesp = listaMat.Sum(x => x.CantidadDespachada);
+        int sumDisp = listaMat.Sum(x => x.CantidadDisponible);
+        int pctTotal = sumRec > 0 ? Math.Min(100, (int)Math.Round((double)sumDesp * 100 / sumRec)) : 0;
+
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 bg-white">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h6 class="mb-0 fw-bold text-slate-800"><i class="bi bi-box-seam me-2 text-primary"></i>Stock Global por Material</h6>
+                    <small class="text-muted text-xs">Consolidado general de la temporada en curso</small>
+                </div>
+                <a href="@Url.Action("InventarioCentral","Logistica")" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">
+                    <i class="bi bi-sliders me-1"></i>Filtrar por Equipo / Ver Detalle
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-slate-700">
+                        <tr class="text-xs text-uppercase">
+                            <th class="ps-4 text-center" style="width: 10%;">Código</th>
+                            <th style="width: 30%;">Material</th>
+                            <th class="text-center" style="width: 18%;">Por Caja / Empaque</th>
+                            <th class="text-center" style="width: 13%;">Recibido</th>
+                            <th class="text-center" style="width: 13%;">Despachado</th>
+                            <th class="text-center" style="width: 16%;">Existencia Disponible</th>
+                            <th class="text-center pe-4" style="width: 10%;">% Despachado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mat in listaMat)
+                        {
+                            var rec = mat.CantidadRecibida;
+                            var desp = mat.CantidadDespachada;
+                            var disp = mat.CantidadDisponible;
+                            var upe = mat.UnidadesPorEmpaque > 0 ? mat.UnidadesPorEmpaque : 1;
+                            var tipoEmp = !string.IsNullOrEmpty(mat.TipoEmpaque) ? mat.TipoEmpaque : "Caja";
+                            var unidad = !string.IsNullOrEmpty(mat.UnidadEntrega) ? mat.UnidadEntrega : "Unidades";
+                            int pct = rec > 0 ? Math.Min(100, (int)Math.Round((double)desp * 100 / rec)) : 0;
+
+                            <tr>
+                                <td class="ps-4 text-center">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill font-mono">@(mat.Codigo ?? "—")</span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark d-block">@(mat.NombreMaterial ?? "Material")</strong>
+                                </td>
+                                <td class="text-center">
+                                    @if (upe > 1)
+                                    {
+                                        <span class="badge bg-light text-slate-700 border px-2.5 py-1 rounded-pill font-mono">
+                                            <i class="bi bi-box-seam me-1 text-primary"></i>@upe.ToString("N0") @unidad / @tipoEmp
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted border px-2 py-1 rounded-pill">@tipoEmp estándar</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (rec > 0 && upe > 1)
+                                    {
+                                        var cajasRec = (double)rec / upe;
+                                        <div class="fw-bold text-primary">@cajasRec.ToString("N1") @(tipoEmp)s</div>
+                                        <div class="text-xs text-muted font-mono">@rec.ToString("N0") @unidad</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-semibold @(rec > 0 ? "text-primary" : "text-muted")">@rec.ToString("N0") @unidad</div>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (desp > 0 && upe > 1)
+                                    {
+                                        var cajasDesp = (double)desp / upe;
+                                        <div class="fw-bold text-info">@cajasDesp.ToString("N1") @(tipoEmp)s</div>
+                                        <div class="text-xs text-muted font-mono">@desp.ToString("N0") @unidad</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-semibold @(desp > 0 ? "text-info" : "text-muted")">@desp.ToString("N0") @unidad</div>
+                                    }
+                                </td>
+                                <td class="text-center bg-light bg-opacity-25">
+                                    @if (disp > 0)
+                                    {
+                                        if (upe > 1)
+                                        {
+                                            var cajasDisp = (double)disp / upe;
+                                            <div class="d-inline-flex flex-column align-items-center">
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill fw-bold fs-6">
+                                                    @cajasDisp.ToString("N1") @(tipoEmp)s
+                                                </span>
+                                                <span class="small fw-semibold text-slate-700 mt-1">@disp.ToString("N0") @unidad disp.</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1 rounded-pill fw-bold fs-6">
+                                                @disp.ToString("N0") @unidad
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted border px-2.5 py-1 rounded-pill fw-semibold">0 @(tipoEmp)s (0 @unidad)</span>
+                                    }
+                                </td>
+                                <td class="text-center pe-4">
+                                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 80px; background-color: #e9ecef;">
+                                            <div class="progress-bar @(pct >= 100 ? "bg-success" : "bg-primary")" role="progressbar" style="width: @(pct)%;"></div>
+                                        </div>
+                                        <span class="text-xs text-muted font-mono" style="min-width: 32px;">@(pct)%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr class="bg-light">
+                            <td colspan="3" class="ps-4 text-end text-uppercase text-xs fw-bold">TOTALES CONSOLIDADOS (UNIDADES):</td>
+                            <td class="text-center text-primary fw-bold fs-6">@sumRec.ToString("N0")</td>
+                            <td class="text-center text-info fw-bold fs-6">@sumDesp.ToString("N0")</td>
+                            <td class="text-center fs-6">
+                                @if (sumDisp > 0)
+                                {
+                                    <span class="text-success fw-bold">@sumDisp.ToString("N0")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">0</span>
+                                }
+                            </td>
+                            <td class="text-center pe-4 text-xs text-muted font-mono fw-bold">@(pctTotal)% despachado</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
 </div>
 
 <style>
