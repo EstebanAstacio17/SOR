@@ -570,23 +570,27 @@ namespace SOR.Helpers
                 -- 8.16 Sincronización automática de recepciones de contenedor y transferencias hacia InventarioEquipo
                 MERGE dbo.InventarioEquipo AS tgt
                 USING (
-                    SELECT t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial, SUM(t_all.TotalRecibido) AS TotalRecibido
+                    SELECT t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial, 
+                           CASE WHEN SUM(t_all.TotalRecibido) < 0 THEN 0 ELSE SUM(t_all.TotalRecibido) END AS TotalRecibido
                     FROM (
                         -- 1. Recepciones directas de contenedor
                         SELECT rc.IdTemporada, 
-                               COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) AS IdEquipo, 
+                               COALESCE(rc.IdEquipoReceptor, ae.IdEquipo, asig_alm.IdEquipo, asig_reg.IdEquipo) AS IdEquipo, 
                                rd.IdMaterial,
                                SUM(rd.CantidadEmpaques * rd.UnidadesPorEmpaque) AS TotalRecibido
                         FROM dbo.RecepcionesContenedor rc
                         INNER JOIN dbo.RecepcionesContenedorDetalle rd ON rc.IdRecepcion = rd.IdRecepcion
+                        LEFT JOIN dbo.Almacenes a ON rc.IdAlmacen = a.IdAlmacen
                         LEFT JOIN dbo.AlmacenesEquipos ae ON rc.IdAlmacen = ae.IdAlmacen
+                        LEFT JOIN dbo.AsignacionesEquipo asig_alm ON a.IdUsuarioResponsable = asig_alm.IdUsuario AND asig_alm.Activo = 1
+                        LEFT JOIN dbo.AsignacionesEquipo asig_reg ON rc.IdUsuarioRegistro = asig_reg.IdUsuario AND asig_reg.Activo = 1
                         WHERE rc.EstadoRecepcion != 'ANULADA'
-                          AND COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) IS NOT NULL
-                        GROUP BY rc.IdTemporada, COALESCE(rc.IdEquipoReceptor, ae.IdEquipo), rd.IdMaterial
+                          AND COALESCE(rc.IdEquipoReceptor, ae.IdEquipo, asig_alm.IdEquipo, asig_reg.IdEquipo) IS NOT NULL
+                        GROUP BY rc.IdTemporada, COALESCE(rc.IdEquipoReceptor, ae.IdEquipo, asig_alm.IdEquipo, asig_reg.IdEquipo), rd.IdMaterial
 
                         UNION ALL
 
-                        -- 2. Transferencias recibidas
+                        -- 2. Transferencias recibidas por el equipo receptor (Entradas)
                         SELECT te.IdTemporada,
                                te.IdEquipo AS IdEquipo,
                                td.IdMaterial,
@@ -595,16 +599,34 @@ namespace SOR.Helpers
                         INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
                         WHERE te.Estado IN ('RECIBIDA', 'COMPLETADA')
                         GROUP BY te.IdTemporada, te.IdEquipo, td.IdMaterial
+
+                        UNION ALL
+
+                        -- 3. Transferencias enviadas por un equipo emisor (Salidas)
+                        SELECT te.IdTemporada,
+                               te.IdEquipoEmisor AS IdEquipo,
+                               td.IdMaterial,
+                               -SUM(td.CantidadUnidades) AS TotalRecibido
+                        FROM dbo.TransferenciasEquipo te
+                        INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
+                        WHERE te.Estado IN ('RECIBIDA', 'COMPLETADA', 'EMITIDA', 'EN_TRANSITO')
+                          AND te.IdEquipoEmisor IS NOT NULL
+                        GROUP BY te.IdTemporada, te.IdEquipoEmisor, td.IdMaterial
                     ) t_all
+                    WHERE t_all.IdEquipo IS NOT NULL
                     GROUP BY t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial
                 ) AS src
                 ON tgt.IdTemporada = src.IdTemporada AND tgt.IdEquipo = src.IdEquipo AND tgt.IdMaterial = src.IdMaterial
                 WHEN MATCHED THEN
                     UPDATE SET CantidadRecibida = src.TotalRecibido,
-                               CantidadDisponible = src.TotalRecibido - tgt.CantidadDespachada
+                               CantidadDisponible = CASE 
+                                   WHEN (src.TotalRecibido - ISNULL(tgt.CantidadDespachada, 0)) < 0 THEN 0 
+                                   ELSE (src.TotalRecibido - ISNULL(tgt.CantidadDespachada, 0)) 
+                               END
                 WHEN NOT MATCHED THEN
                     INSERT (IdTemporada, IdEquipo, IdMaterial, CantidadRecibida, CantidadAsignada, CantidadDespachada, CantidadDisponible)
-                    VALUES (src.IdTemporada, src.IdEquipo, src.IdMaterial, src.TotalRecibido, 0, 0, src.TotalRecibido);
+                    VALUES (src.IdTemporada, src.IdEquipo, src.IdMaterial, 
+                            src.TotalRecibido, 0, 0, src.TotalRecibido);
             ";
 
             using (SqlCommand cmd = new SqlCommand(sqlLogistica, cn))

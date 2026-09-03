@@ -755,6 +755,24 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
+                            // 5c.2 Si la transferencia sale de un equipo emisor, descontar del inventario del equipo emisor
+                            if (modelo.IdEquipoEmisor.HasValue && modelo.IdEquipoEmisor.Value > 0)
+                            {
+                                string sqlDescEmisor = @"
+                                    UPDATE dbo.InventarioEquipo
+                                    SET CantidadRecibida = CantidadRecibida - @Cant,
+                                        CantidadDisponible = CantidadDisponible - @Cant
+                                    WHERE IdTemporada=@IdT AND IdEquipo=@IdEq AND IdMaterial=@IdM;";
+                                using (var cmdEmisor = new SqlCommand(sqlDescEmisor, cn, tran))
+                                {
+                                    cmdEmisor.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
+                                    cmdEmisor.Parameters.AddWithValue("@IdT", idTemporada);
+                                    cmdEmisor.Parameters.AddWithValue("@IdEq", modelo.IdEquipoEmisor.Value);
+                                    cmdEmisor.Parameters.AddWithValue("@IdM", det.IdMaterial);
+                                    cmdEmisor.ExecuteNonQuery();
+                                }
+                            }
+
                             // 5d. Si la recepción es inmediata, acreditar en inventario del equipo receptor
                             if (esRecibidaInmediata)
                             {
@@ -930,11 +948,12 @@ namespace SOR.Repositories
                     {
                         int idTemporada = 0;
                         int idAlmacenOrigen = 0;
+                        int? idEquipoEmisor = null;
                         string estadoActual = "";
                         string constancia = "";
 
                         string sqlHead = @"
-                            SELECT IdTemporada, IdAlmacenOrigen, Estado, NumeroConstancia 
+                            SELECT IdTemporada, IdAlmacenOrigen, IdEquipoEmisor, Estado, NumeroConstancia 
                             FROM dbo.TransferenciasEquipo WITH (UPDLOCK, ROWLOCK)
                             WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlHead, cn, tran))
@@ -946,6 +965,7 @@ namespace SOR.Repositories
                                 {
                                     idTemporada = Convert.ToInt32(dr["IdTemporada"]);
                                     idAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]);
+                                    idEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null;
                                     estadoActual = dr["Estado"].ToString();
                                     constancia = dr["NumeroConstancia"].ToString();
                                 }
@@ -993,6 +1013,24 @@ namespace SOR.Repositories
                                 cmd.Parameters.AddWithValue("@IdA", idAlmacenOrigen);
                                 cmd.Parameters.AddWithValue("@IdM", idMat);
                                 cmd.ExecuteNonQuery();
+                            }
+
+                            // Revertir inventario del equipo emisor si correspondía
+                            if (idEquipoEmisor.HasValue && idEquipoEmisor.Value > 0)
+                            {
+                                string sqlRevEq = @"
+                                    UPDATE dbo.InventarioEquipo
+                                    SET CantidadRecibida = CantidadRecibida + @Cant,
+                                        CantidadDisponible = CantidadDisponible + @Cant
+                                    WHERE IdTemporada=@IdT AND IdEquipo=@IdEq AND IdMaterial=@IdM;";
+                                using (var cmdRevEq = new SqlCommand(sqlRevEq, cn, tran))
+                                {
+                                    cmdRevEq.Parameters.AddWithValue("@Cant", cant);
+                                    cmdRevEq.Parameters.AddWithValue("@IdT", idTemporada);
+                                    cmdRevEq.Parameters.AddWithValue("@IdEq", idEquipoEmisor.Value);
+                                    cmdRevEq.Parameters.AddWithValue("@IdM", idMat);
+                                    cmdRevEq.ExecuteNonQuery();
+                                }
                             }
 
                             RegistrarMovimiento(cn, tran, idTemporada, "CANCELACION_TRANSFERENCIA", idMat,
@@ -1183,23 +1221,27 @@ namespace SOR.Repositories
                 string sqlSync = @"
                     MERGE dbo.InventarioEquipo AS tgt
                     USING (
-                        SELECT t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial, SUM(t_all.TotalRecibido) AS TotalRecibido
+                        SELECT t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial, 
+                               CASE WHEN SUM(t_all.TotalRecibido) < 0 THEN 0 ELSE SUM(t_all.TotalRecibido) END AS TotalRecibido
                         FROM (
                             -- 1. Recepciones directas de contenedor
                             SELECT rc.IdTemporada, 
-                                   COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) AS IdEquipo, 
+                                   COALESCE(rc.IdEquipoReceptor, ae.IdEquipo, asig_alm.IdEquipo, asig_reg.IdEquipo) AS IdEquipo, 
                                    rd.IdMaterial,
                                    SUM(rd.CantidadEmpaques * rd.UnidadesPorEmpaque) AS TotalRecibido
                             FROM dbo.RecepcionesContenedor rc
                             INNER JOIN dbo.RecepcionesContenedorDetalle rd ON rc.IdRecepcion = rd.IdRecepcion
+                            LEFT JOIN dbo.Almacenes a ON rc.IdAlmacen = a.IdAlmacen
                             LEFT JOIN dbo.AlmacenesEquipos ae ON rc.IdAlmacen = ae.IdAlmacen
+                            LEFT JOIN dbo.AsignacionesEquipo asig_alm ON a.IdUsuarioResponsable = asig_alm.IdUsuario AND asig_alm.Activo = 1
+                            LEFT JOIN dbo.AsignacionesEquipo asig_reg ON rc.IdUsuarioRegistro = asig_reg.IdUsuario AND asig_reg.Activo = 1
                             WHERE rc.EstadoRecepcion != 'ANULADA'
-                              AND COALESCE(rc.IdEquipoReceptor, ae.IdEquipo) IS NOT NULL
-                            GROUP BY rc.IdTemporada, COALESCE(rc.IdEquipoReceptor, ae.IdEquipo), rd.IdMaterial
+                              AND COALESCE(rc.IdEquipoReceptor, ae.IdEquipo, asig_alm.IdEquipo, asig_reg.IdEquipo) IS NOT NULL
+                            GROUP BY rc.IdTemporada, COALESCE(rc.IdEquipoReceptor, ae.IdEquipo, asig_alm.IdEquipo, asig_reg.IdEquipo), rd.IdMaterial
 
                             UNION ALL
 
-                            -- 2. Transferencias recibidas
+                            -- 2. Transferencias recibidas por el equipo receptor (Entradas)
                             SELECT te.IdTemporada,
                                    te.IdEquipo AS IdEquipo,
                                    td.IdMaterial,
@@ -1208,16 +1250,34 @@ namespace SOR.Repositories
                             INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
                             WHERE te.Estado IN ('RECIBIDA', 'COMPLETADA')
                             GROUP BY te.IdTemporada, te.IdEquipo, td.IdMaterial
+
+                            UNION ALL
+
+                            -- 3. Transferencias enviadas por un equipo emisor (Salidas)
+                            SELECT te.IdTemporada,
+                                   te.IdEquipoEmisor AS IdEquipo,
+                                   td.IdMaterial,
+                                   -SUM(td.CantidadUnidades) AS TotalRecibido
+                            FROM dbo.TransferenciasEquipo te
+                            INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
+                            WHERE te.Estado IN ('RECIBIDA', 'COMPLETADA', 'EMITIDA', 'EN_TRANSITO')
+                              AND te.IdEquipoEmisor IS NOT NULL
+                            GROUP BY te.IdTemporada, te.IdEquipoEmisor, td.IdMaterial
                         ) t_all
+                        WHERE t_all.IdEquipo IS NOT NULL
                         GROUP BY t_all.IdTemporada, t_all.IdEquipo, t_all.IdMaterial
                     ) AS src
                     ON tgt.IdTemporada = src.IdTemporada AND tgt.IdEquipo = src.IdEquipo AND tgt.IdMaterial = src.IdMaterial
                     WHEN MATCHED THEN
                         UPDATE SET CantidadRecibida = src.TotalRecibido,
-                                   CantidadDisponible = src.TotalRecibido - tgt.CantidadDespachada
+                                   CantidadDisponible = CASE 
+                                       WHEN (src.TotalRecibido - ISNULL(tgt.CantidadDespachada, 0)) < 0 THEN 0 
+                                       ELSE (src.TotalRecibido - ISNULL(tgt.CantidadDespachada, 0)) 
+                                   END
                     WHEN NOT MATCHED THEN
                         INSERT (IdTemporada, IdEquipo, IdMaterial, CantidadRecibida, CantidadAsignada, CantidadDespachada, CantidadDisponible)
-                        VALUES (src.IdTemporada, src.IdEquipo, src.IdMaterial, src.TotalRecibido, 0, 0, src.TotalRecibido);";
+                        VALUES (src.IdTemporada, src.IdEquipo, src.IdMaterial, 
+                                src.TotalRecibido, 0, 0, src.TotalRecibido);";
                 using (var cmdSync = new SqlCommand(sqlSync, cn))
                 {
                     cmdSync.ExecuteNonQuery();
@@ -1470,7 +1530,9 @@ namespace SOR.Repositories
                     cmd.Parameters.AddWithValue("@IdEv", idEvento);
                     cmd.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@IdEq", idEquipo);
-                    return Convert.ToInt32(cmd.ExecuteScalar());
+                    int idCreado = Convert.ToInt32(cmd.ExecuteScalar());
+                    AuditoriaHelper.Registrar("Evento Despacho", "Logistica", idEvento.ToString(), idUsuario, "Creación de evento de despacho");
+                    return idCreado;
                 }
             }
         }
@@ -1729,6 +1791,7 @@ namespace SOR.Repositories
                     cmd.ExecuteNonQuery();
                 }
 
+                AuditoriaHelper.Registrar("Programar Despacho", "Logistica", idDespacho.ToString(), idUsuario, $"Programación de despacho {comprobante} para la iglesia ID {idIglesia}");
                 return idDespacho;
             }
         }
@@ -1889,8 +1952,7 @@ namespace SOR.Repositories
 
                         foreach (var (idDet, idMat, cantAsig) in detalles)
                         {
-                            int cantDesp = 0;
-                            cantidades.TryGetValue(idMat.ToString(), out cantDesp);
+                            cantidades.TryGetValue(idMat.ToString(), out int cantDesp);
                             if (cantDesp < 0) cantDesp = 0;
                             if (cantDesp > cantAsig) cantDesp = cantAsig; // No puede despachar más de lo asignado
 
