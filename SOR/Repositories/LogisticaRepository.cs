@@ -635,6 +635,164 @@ namespace SOR.Repositories
             return lista;
         }
 
+        public InventarioCentralViewModel ObtenerResumenInventarioCentral(int? idTemporada = null)
+        {
+            var vm = new InventarioCentralViewModel();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+
+                // 1. Temporada activa
+                string sqlTemp = @"
+                    DECLARE @IdTempEfectivo INT = @IdTemp;
+                    IF @IdTempEfectivo IS NULL OR @IdTempEfectivo <= 0
+                    BEGIN
+                        SELECT TOP 1 @IdTempEfectivo = IdTemporada 
+                        FROM dbo.Temporadas 
+                        ORDER BY Activa DESC, FechaInicio DESC, IdTemporada DESC;
+                    END
+                    SELECT IdTemporada, NombreTemporada FROM dbo.Temporadas WHERE IdTemporada = @IdTempEfectivo;";
+
+                using (var cmdTemp = new SqlCommand(sqlTemp, cn))
+                {
+                    cmdTemp.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
+                    using (var dr = cmdTemp.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            vm.IdTemporada = Convert.ToInt32(dr["IdTemporada"]);
+                            vm.NombreTemporada = dr["NombreTemporada"].ToString();
+                        }
+                    }
+                }
+
+                if (vm.IdTemporada == 0) vm.IdTemporada = 1;
+
+                // 2. Consolidado Global por Material
+                string sqlGlobal = @"
+                    SELECT 
+                        m.IdMaterial,
+                        m.Codigo,
+                        m.NombreMaterial,
+                        m.UnidadEntrega,
+                        ISNULL(pres.TipoEmpaque, 'Caja') AS TipoEmpaque,
+                        ISNULL(pres.UnidadesPorEmpaque, 1) AS UnidadesPorEmpaque,
+                        ISNULL(rec.TotalRecibido, 0) AS CantidadRecibida,
+                        ISNULL(trf.TotalTransferido, 0) AS CantidadDespachada,
+                        CASE 
+                            WHEN (ISNULL(rec.TotalRecibido, 0) - ISNULL(trf.TotalTransferido, 0)) < 0 THEN 0 
+                            ELSE (ISNULL(rec.TotalRecibido, 0) - ISNULL(trf.TotalTransferido, 0)) 
+                        END AS CantidadDisponible
+                    FROM dbo.Materiales m
+                    OUTER APPLY (
+                        SELECT TOP 1 p.TipoEmpaque, p.UnidadesPorEmpaque
+                        FROM dbo.PresentacionesMaterial p
+                        WHERE p.IdMaterial = m.IdMaterial
+                          AND p.Activo = 1
+                          AND (p.IdTemporadaVigencia = @IdTemp OR p.IdTemporadaVigencia IS NULL)
+                        ORDER BY CASE WHEN p.IdTemporadaVigencia = @IdTemp THEN 0 ELSE 1 END, p.UnidadesPorEmpaque DESC
+                    ) pres
+                    OUTER APPLY (
+                        SELECT SUM(rd.CantidadEmpaques * rd.UnidadesPorEmpaque) AS TotalRecibido
+                        FROM dbo.RecepcionesContenedor rc
+                        INNER JOIN dbo.RecepcionesContenedorDetalle rd ON rc.IdRecepcion = rd.IdRecepcion
+                        WHERE rc.IdTemporada = @IdTemp
+                          AND rd.IdMaterial = m.IdMaterial
+                          AND rc.EstadoRecepcion != 'ANULADA'
+                    ) rec
+                    OUTER APPLY (
+                        SELECT SUM(td.CantidadUnidades) AS TotalTransferido
+                        FROM dbo.TransferenciasEquipo te
+                        INNER JOIN dbo.TransferenciasEquipoDetalle td ON te.IdTransferencia = td.IdTransferencia
+                        WHERE te.IdTemporada = @IdTemp
+                          AND td.IdMaterial = m.IdMaterial
+                          AND te.Estado IN ('RECIBIDA', 'COMPLETADA', 'EMITIDA', 'EN_TRANSITO')
+                    ) trf
+                    WHERE m.Activo = 1
+                    ORDER BY m.IdMaterial;";
+
+                using (var cmdGlobal = new SqlCommand(sqlGlobal, cn))
+                {
+                    cmdGlobal.Parameters.AddWithValue("@IdTemp", vm.IdTemporada);
+                    using (var dr = cmdGlobal.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            vm.MaterialesGlobal.Add(new ItemInventarioMaterial
+                            {
+                                IdMaterial = Convert.ToInt32(dr["IdMaterial"]),
+                                Codigo = dr["Codigo"].ToString(),
+                                NombreMaterial = dr["NombreMaterial"].ToString(),
+                                UnidadEntrega = dr["UnidadEntrega"].ToString(),
+                                TipoEmpaque = dr["TipoEmpaque"].ToString(),
+                                UnidadesPorEmpaque = Convert.ToInt32(dr["UnidadesPorEmpaque"]),
+                                CantidadRecibida = Convert.ToInt32(dr["CantidadRecibida"]),
+                                CantidadDespachada = Convert.ToInt32(dr["CantidadDespachada"]),
+                                CantidadDisponible = Convert.ToInt32(dr["CantidadDisponible"])
+                            });
+                        }
+                    }
+                }
+
+                // 3. Obtener inventario por equipos para el filtro rápido
+                string sqlEquipos = @"
+                    SELECT e.IdEquipo, e.NombreEquipo, n.NombreNivel
+                    FROM dbo.Equipos e
+                    INNER JOIN dbo.NivelesEquipo n ON e.IdNivelEquipo = n.IdNivelEquipo
+                    WHERE e.Activo = 1
+                    ORDER BY n.RangoJerarquico, e.NombreEquipo;";
+
+                var listaEquipos = new List<EquipoInventarioResumen>();
+                using (var cmdEq = new SqlCommand(sqlEquipos, cn))
+                {
+                    using (var dr = cmdEq.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            listaEquipos.Add(new EquipoInventarioResumen
+                            {
+                                IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
+                                NombreEquipo = dr["NombreEquipo"].ToString(),
+                                NombreNivel = dr["NombreNivel"].ToString(),
+                                Materiales = new List<ItemInventarioMaterial>()
+                            });
+                        }
+                    }
+                }
+
+                // Cargar ítems de equipos
+                var itemsEquipos = ObtenerInventarioEquipo(vm.IdTemporada, null);
+                var lookup = System.Linq.Enumerable.ToDictionary(
+                    System.Linq.Enumerable.GroupBy(itemsEquipos, x => x.IdEquipo),
+                    g => g.Key,
+                    g => System.Linq.Enumerable.ToList(g)
+                );
+
+                foreach (var eq in listaEquipos)
+                {
+                    if (lookup.TryGetValue(eq.IdEquipo, out var mats))
+                    {
+                        eq.Materiales = System.Linq.Enumerable.ToList(
+                            System.Linq.Enumerable.Select(mats, m => new ItemInventarioMaterial
+                            {
+                                IdMaterial = m.IdMaterial,
+                                Codigo = m.CodigoMaterial,
+                                NombreMaterial = m.NombreMaterial,
+                                UnidadEntrega = m.UnidadEntrega,
+                                TipoEmpaque = m.TipoEmpaque,
+                                UnidadesPorEmpaque = m.UnidadesPorEmpaque,
+                                CantidadRecibida = m.CantidadRecibida,
+                                CantidadDespachada = m.CantidadDespachada,
+                                CantidadDisponible = m.CantidadDisponible
+                            })
+                        );
+                    }
+                }
+                vm.Equipos = listaEquipos;
+            }
+            return vm;
+        }
+
         // =====================================================================
         // TRANSFERENCIA A EQUIPOS (TRANSACCIÓN ACID Y TRAZABILIDAD COMPLETA)
         // =====================================================================
@@ -1302,6 +1460,8 @@ namespace SOR.Repositories
                         m.Codigo,
                         m.NombreMaterial,
                         m.UnidadEntrega,
+                        ISNULL(pres.TipoEmpaque, 'Caja') AS TipoEmpaque,
+                        ISNULL(pres.UnidadesPorEmpaque, 1) AS UnidadesPorEmpaque,
                         ISNULL(ie.CantidadRecibida, 0) AS CantidadRecibida,
                         ISNULL(ie.CantidadAsignada, 0) AS CantidadAsignada,
                         ISNULL(ie.CantidadDespachada, 0) AS CantidadDespachada,
@@ -1309,6 +1469,14 @@ namespace SOR.Repositories
                     FROM dbo.Equipos eq
                     CROSS JOIN dbo.Materiales m
                     INNER JOIN dbo.Temporadas t ON t.IdTemporada = @IdTempEfectivo
+                    OUTER APPLY (
+                        SELECT TOP 1 p.TipoEmpaque, p.UnidadesPorEmpaque
+                        FROM dbo.PresentacionesMaterial p
+                        WHERE p.IdMaterial = m.IdMaterial
+                          AND p.Activo = 1
+                          AND (p.IdTemporadaVigencia = t.IdTemporada OR p.IdTemporadaVigencia IS NULL)
+                        ORDER BY CASE WHEN p.IdTemporadaVigencia = t.IdTemporada THEN 0 ELSE 1 END, p.UnidadesPorEmpaque DESC
+                    ) pres
                     LEFT JOIN dbo.InventarioEquipo ie ON ie.IdTemporada = t.IdTemporada 
                                                      AND ie.IdEquipo = eq.IdEquipo 
                                                      AND ie.IdMaterial = m.IdMaterial
@@ -1335,6 +1503,8 @@ namespace SOR.Repositories
                                 CodigoMaterial = dr["Codigo"].ToString(),
                                 NombreMaterial = dr["NombreMaterial"].ToString(),
                                 UnidadEntrega = dr["UnidadEntrega"].ToString(),
+                                TipoEmpaque = dr["TipoEmpaque"].ToString(),
+                                UnidadesPorEmpaque = Convert.ToInt32(dr["UnidadesPorEmpaque"]),
                                 CantidadRecibida = Convert.ToInt32(dr["CantidadRecibida"]),
                                 CantidadAsignada = Convert.ToInt32(dr["CantidadAsignada"]),
                                 CantidadDespachada = Convert.ToInt32(dr["CantidadDespachada"]),

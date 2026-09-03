@@ -78,6 +78,9 @@ namespace SOR.Services
         public List<ItemInventarioCentral> ObtenerInventarioCentral(int? idTemporada = null, int? idAlmacen = null) =>
             _repo.ObtenerInventarioCentral(idTemporada, idAlmacen);
 
+        public InventarioCentralViewModel ObtenerResumenInventarioCentral(int? idTemporada = null) =>
+            _repo.ObtenerResumenInventarioCentral(idTemporada);
+
         // =====================================================================
         // TRANSFERENCIAS
         // =====================================================================

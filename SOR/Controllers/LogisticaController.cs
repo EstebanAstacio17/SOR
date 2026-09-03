@@ -356,9 +356,10 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             int idTemp = ObtenerTemporadaActiva();
             ViewBag.UsuarioActual = u;
-            ViewBag.Almacenes = _svc.ObtenerAlmacenes();
             ViewBag.IdTemporadaActiva = idTemp;
-            return View(_svc.ObtenerInventarioCentral(idTemp));
+
+            var modelo = _svc.ObtenerResumenInventarioCentral(idTemp);
+            return View(modelo);
         }
 
         // =====================================================================

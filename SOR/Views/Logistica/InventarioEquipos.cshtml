@@ -257,34 +257,6 @@
                     </div>
                 </div>
 
-                <!-- Tarjetas KPI de Resumen del Equipo -->
-                <div class="row g-3 mb-4">
-                    <div class="col-3">
-                        <div class="p-3 bg-white rounded-3 border text-center shadow-sm">
-                            <span class="text-xs text-muted text-uppercase fw-semibold d-block mb-1">Total Recibido</span>
-                            <h4 class="fw-bold mb-0 text-primary" id="kpiRecibido">0</h4>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="p-3 bg-white rounded-3 border text-center shadow-sm">
-                            <span class="text-xs text-muted text-uppercase fw-semibold d-block mb-1">Total Asignado</span>
-                            <h4 class="fw-bold mb-0 text-warning" id="kpiAsignado">0</h4>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="p-3 bg-white rounded-3 border text-center shadow-sm">
-                            <span class="text-xs text-muted text-uppercase fw-semibold d-block mb-1">Total Despachado</span>
-                            <h4 class="fw-bold mb-0 text-info" id="kpiDespachado">0</h4>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="p-3 bg-white rounded-3 border text-center shadow-sm" style="border-left: 4px solid var(--apple-success) !important;">
-                            <span class="text-xs text-muted text-uppercase fw-semibold d-block mb-1">Stock Disponible</span>
-                            <h4 class="fw-bold mb-0 text-success" id="kpiDisponible">0</h4>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Tabla Detallada de Materiales -->
                 <div class="bg-white rounded-4 p-4 border shadow-sm mb-4">
                     <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
@@ -431,18 +403,7 @@
         document.getElementById('firmaCoordNombre').textContent = equipo.nombreCoordinador || 'Coordinador Responsable';
         document.getElementById('firmaCoordPosicion').textContent = (equipo.posicionCoordinador || 'Coordinador') + ' — ' + (equipo.nombreEquipo || '');
 
-        // 2. Rellenar Tarjetas KPI
-        var totalRec = equipo.totalRecibido || 0;
-        var totalAsig = equipo.totalAsignado || 0;
-        var totalDesp = equipo.totalDespachado || 0;
-        var totalDisp = equipo.totalDisponible || 0;
-
-        document.getElementById('kpiRecibido').textContent = totalRec.toLocaleString('es-DO');
-        document.getElementById('kpiAsignado').textContent = totalAsig.toLocaleString('es-DO');
-        document.getElementById('kpiDespachado').textContent = totalDesp.toLocaleString('es-DO');
-        document.getElementById('kpiDisponible').textContent = totalDisp.toLocaleString('es-DO');
-
-        // 3. Rellenar Tabla de Materiales
+        // 2. Rellenar Tabla de Materiales
         var tbody = document.getElementById('cuerpoPlantillaMateriales');
         tbody.innerHTML = '';
 

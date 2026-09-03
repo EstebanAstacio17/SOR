@@ -123,6 +123,35 @@ namespace SOR.Models
         public int CantidadDisponible { get; set; }
     }
 
+    public class ItemInventarioMaterial
+    {
+        public int IdMaterial { get; set; }
+        public string Codigo { get; set; }
+        public string NombreMaterial { get; set; }
+        public string UnidadEntrega { get; set; }
+        public string TipoEmpaque { get; set; }
+        public int UnidadesPorEmpaque { get; set; }
+        public int CantidadRecibida { get; set; }
+        public int CantidadDespachada { get; set; }
+        public int CantidadDisponible { get; set; }
+    }
+
+    public class EquipoInventarioResumen
+    {
+        public int IdEquipo { get; set; }
+        public string NombreEquipo { get; set; }
+        public string NombreNivel { get; set; }
+        public List<ItemInventarioMaterial> Materiales { get; set; } = new List<ItemInventarioMaterial>();
+    }
+
+    public class InventarioCentralViewModel
+    {
+        public int IdTemporada { get; set; }
+        public string NombreTemporada { get; set; }
+        public List<ItemInventarioMaterial> MaterialesGlobal { get; set; } = new List<ItemInventarioMaterial>();
+        public List<EquipoInventarioResumen> Equipos { get; set; } = new List<EquipoInventarioResumen>();
+    }
+
     // =========================================================================
     // MOVIMIENTOS DE INVENTARIO (KARDEX)
     // =========================================================================
@@ -207,6 +236,8 @@ namespace SOR.Models
         public string CodigoMaterial { get; set; }
         public string NombreMaterial { get; set; }
         public string UnidadEntrega { get; set; }
+        public string TipoEmpaque { get; set; }
+        public int UnidadesPorEmpaque { get; set; }
         public int CantidadRecibida { get; set; }
         public int CantidadAsignada { get; set; }
         public int CantidadDespachada { get; set; }
