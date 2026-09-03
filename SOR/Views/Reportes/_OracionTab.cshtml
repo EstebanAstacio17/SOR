@@ -1,0 +1,60 @@
+@model SOR.Models.Reportes.OracionReporteDTO
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #8b5cf6 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Eventos de Oración</div>
+                    <div class="h3 font-bold text-dark mb-0 font-monospace">@Model.EventosOracionOrganizados</div>
+                    <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>Organizados y dirigidos</small>
+                </div>
+                <div class="rounded-circle p-3 bg-purple-soft text-purple">
+                    <i class="bi bi-fire fs-4 text-danger"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #06b6d4 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Asistentes en Oración</div>
+                    <div class="h3 font-bold text-cyan mb-0 font-monospace">@Model.TotalAsistentesOracion.ToString("N0")</div>
+                    <small class="text-muted"><i class="bi bi-people me-1"></i>Participantes en vigilias y clamores</small>
+                </div>
+                <div class="rounded-circle p-3 bg-cyan-soft text-cyan">
+                    <i class="bi bi-heart-pulse fs-4 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #ec4899 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Compañeros de Oración</div>
+                    <div class="h3 font-bold text-pink mb-0 font-monospace">@Model.CompanerosOracionReportados.ToString("N0")</div>
+                    <small class="text-muted"><i class="bi bi-person-heart me-1"></i>Reportados por iglesias y equipos</small>
+                </div>
+                <div class="rounded-circle p-3 bg-pink-soft text-pink">
+                    <i class="bi bi-chat-heart fs-4 text-danger"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #10b981 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Red de Oración Local</div>
+                    <div class="h3 font-bold text-success mb-0 font-monospace">@Model.MiembrosRedOracionLocal.ToString("N0")</div>
+                    <small class="text-muted"><i class="bi bi-whatsapp me-1"></i>Contactos activos en chats/SMS</small>
+                </div>
+                <div class="rounded-circle p-3 bg-success-soft text-success">
+                    <i class="bi bi-broadcast fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

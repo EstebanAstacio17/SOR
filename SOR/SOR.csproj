@@ -149,6 +149,9 @@
     <Compile Include="Models\FinanzasModels.cs" />
     <Compile Include="Repositories\FinanzasRepository.cs" />
     <Compile Include="Controllers\FinanzasController.cs" />
+    <Compile Include="Models\Reportes\EosModels.cs" />
+    <Compile Include="DAL\ReportesRepository.cs" />
+    <Compile Include="Controllers\ReportesController.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap-grid.css" />
