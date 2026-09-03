@@ -2110,7 +2110,7 @@ namespace SOR.Repositories
 
         public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador, int? idRolSeguridad = null, int? idPosicion = null)
         {
-            // Validar autorización estricta: Solo CL (IdPosicion == 6) o Admin (IdRolSeguridad in (1, 2))
+            // Validar autorización: Solo CL (IdPosicion == 6), CE (IdPosicion == 1) o Admin (IdRolSeguridad in (1, 2))
             using (var cnAuth = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cnAuth.Open();
@@ -2119,7 +2119,7 @@ namespace SOR.Repositories
                 {
                     esAutorizado = true;
                 }
-                else if (idPosicion.HasValue && idPosicion.Value == 6)
+                else if (idPosicion.HasValue && (idPosicion.Value == 6 || idPosicion.Value == 1))
                 {
                     esAutorizado = true;
                 }
@@ -2141,7 +2141,10 @@ namespace SOR.Repositories
                                 int rol = Convert.ToInt32(drAuth["IdRolSeguridad"]);
                                 int? pos = drAuth["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(drAuth["IdPosicion"]) : null;
                                 string nomPos = drAuth["NombrePosicion"] != DBNull.Value ? drAuth["NombrePosicion"].ToString() : "";
-                                if (rol == 1 || rol == 2 || pos == 6 || nomPos.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || nomPos.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)
+                                if (rol == 1 || rol == 2 || pos == 6 || pos == 1 ||
+                                    nomPos.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || 
+                                    nomPos.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    nomPos.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
                                     esAutorizado = true;
                                 }
@@ -2152,7 +2155,7 @@ namespace SOR.Repositories
 
                 if (!esAutorizado)
                 {
-                    throw new UnauthorizedAccessException("Acceso denegado: Únicamente el Coordinador de Logística (CL) tiene autorización para confirmar y ejecutar el despacho de materiales.");
+                    throw new UnauthorizedAccessException("Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) tienen autorización para confirmar y ejecutar el despacho de materiales.");
                 }
             }
 

@@ -457,14 +457,16 @@ namespace SOR.Controllers
             List<MaestroAsistenciaViewModel> maestros = ObtenerMaestrosYAsistencia(id, evento.IdTemporada);
 
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+            bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 
             ViewBag.Evento = evento;
             ViewBag.Iglesias = iglesias;
             ViewBag.Maestros = maestros;
             ViewBag.UsuarioActual = u;
             ViewBag.EsAdmin = esAdmin;
-            ViewBag.EsCL = esCL;
+            ViewBag.EsCL = esCL || esCE;
+            ViewBag.EsCE = esCE;
             ViewBag.PuedeEditar = PuedeEditarEvento(u, id);
 
             return View();
@@ -511,11 +513,12 @@ namespace SOR.Controllers
             try
             {
                 bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0) || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
+                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+                bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 
-                if (!esAdmin && !esCL)
+                if (!esAdmin && !esCL && !esCE)
                 {
-                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) tiene autorización para confirmar y ejecutar el despacho de materiales.";
+                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) tienen autorización para confirmar y ejecutar el despacho de materiales.";
                     return RedirectToAction("Detalle", new { id = idEvento });
                 }
 

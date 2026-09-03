@@ -155,8 +155,10 @@ namespace SOR.Controllers
 
         private bool PuedeRegistrarOracion(Usuario u)
         {
+            if (u == null) return false;
             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true; // Admins
             if (u.IdPosicion == 5) return true; // Coordinador de Oración (CO)
+            if (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)) return true; // Coordinador de Equipo (CE)
             return false;
         }
 

@@ -398,7 +398,7 @@ namespace SOR.Controllers
 
             bool esAdmin = (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
             bool puedeAprobarCE = esAdmin || (u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
-            bool puedeAprobarCMI = esAdmin || (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+            bool puedeAprobarCMI = esAdmin || (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo))) || puedeAprobarCE;
             bool puedeSolicitarExcepcion = esAdmin || PuedeEditarIglesia(u, iglesia.IdEquipo);
 
             ViewBag.PuedeAprobarCE = puedeAprobarCE;
@@ -501,10 +501,11 @@ namespace SOR.Controllers
 
             bool esAdmin = (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
             bool esCMI = (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
+            bool esCE = (u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
 
-            if (!esAdmin && !esCMI)
+            if (!esAdmin && !esCMI && !esCE)
             {
-                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Movilización (CMI) autorizado o un Administrador pueden registrar la aprobación de CMI.";
+                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Movilización (CMI), Coordinador de Equipo (CE) autorizado o un Administrador pueden registrar la aprobación de CMI.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
