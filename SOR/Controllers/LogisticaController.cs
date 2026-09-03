@@ -245,6 +245,8 @@ namespace SOR.Controllers
 
             // Cargar lista de Temporadas para el selector
             var temporadas = new List<SelectListItem>();
+            var tiposEmpaque = new List<string>();
+
             using (var cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -262,8 +264,33 @@ namespace SOR.Controllers
                         });
                     }
                 }
+
+                // Cargar Tipos de Empaque configurados desde el catálogo
+                try
+                {
+                    string sqlE = "SELECT Nombre FROM dbo.TiposEmpaque WHERE Activo = 1 ORDER BY IdTipoEmpaque ASC;";
+                    using (var cmdE = new SqlCommand(sqlE, cn))
+                    using (var drE = cmdE.ExecuteReader())
+                    {
+                        while (drE.Read())
+                        {
+                            tiposEmpaque.Add(drE["Nombre"].ToString());
+                        }
+                    }
+                }
+                catch
+                {
+                    // Fallback si la tabla aún se está inicializando
+                }
             }
+
+            if (!tiposEmpaque.Any())
+            {
+                tiposEmpaque.AddRange(new[] { "Caja", "Paquete", "Bolsa", "Rollo", "Resma", "Atado", "Fardo / Palet", "Unidad Suelta", "Otro" });
+            }
+
             ViewBag.Temporadas = temporadas;
+            ViewBag.TiposEmpaque = tiposEmpaque;
             ViewBag.IdTemporadaSeleccionada = idTemporada;
 
             return View(_svc.ObtenerPresentaciones(false, idTemporada));

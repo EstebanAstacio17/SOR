@@ -1046,6 +1046,27 @@ namespace SOR.Controllers
                             ('MAT-DIP', 'Diplomas de Graduación', 'Diploma', 'Taller', 1),
                             ('MAT-EMV', 'El Mejor Viaje / Evangelismo', 'Folleto', 'Despacho', 1);
                         END
+                    END
+
+                    IF OBJECT_ID('dbo.TiposEmpaque', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.TiposEmpaque (
+                            IdTipoEmpaque INT IDENTITY(1,1) PRIMARY KEY,
+                            Nombre NVARCHAR(100) NOT NULL,
+                            Descripcion NVARCHAR(255) NULL,
+                            Activo BIT NOT NULL DEFAULT 1,
+                            FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
+                        );
+                        INSERT INTO dbo.TiposEmpaque (Nombre, Descripcion, Activo, FechaCreacion) VALUES 
+                        ('Caja', 'Caja de cartón estándar o de distribución', 1, GETDATE()),
+                        ('Paquete', 'Paquete o bulto retractilado / termoencogido', 1, GETDATE()),
+                        ('Bolsa', 'Bolsa plástica o tela sellada', 1, GETDATE()),
+                        ('Rollo', 'Material continuo en formato de bobina o rollo', 1, GETDATE()),
+                        ('Resma', 'Paquete de hojas impresas o papelería', 1, GETDATE()),
+                        ('Atado', 'Conjunto atado con fleje o cuerda', 1, GETDATE()),
+                        ('Fardo / Palet', 'Estiba, tarima o fardo consolidado', 1, GETDATE()),
+                        ('Unidad Suelta', 'Piezas o artículos individuales sin contenedor secundario', 1, GETDATE()),
+                        ('Otro', 'Presentación o embalaje especial', 1, GETDATE());
                     END";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -1068,6 +1089,7 @@ namespace SOR.Controllers
             List<CatalogoItemViewModel> tiposOrg = new List<CatalogoItemViewModel>();
             List<CatalogoItemViewModel> rolesEvento = new List<CatalogoItemViewModel>();
             List<CatalogoItemViewModel> materiales = new List<CatalogoItemViewModel>();
+            List<CatalogoItemViewModel> tiposEmpaque = new List<CatalogoItemViewModel>();
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -1135,12 +1157,29 @@ namespace SOR.Controllers
                         });
                     }
                 }
+
+                string sqlE = "SELECT IdTipoEmpaque AS Id, Nombre, Descripcion, Activo FROM dbo.TiposEmpaque ORDER BY IdTipoEmpaque ASC;";
+                using (SqlCommand cmdE = new SqlCommand(sqlE, cn))
+                using (SqlDataReader drE = cmdE.ExecuteReader())
+                {
+                    while (drE.Read())
+                    {
+                        tiposEmpaque.Add(new CatalogoItemViewModel
+                        {
+                            Id = Convert.ToInt32(drE["Id"]),
+                            Nombre = drE["Nombre"].ToString(),
+                            Descripcion = drE["Descripcion"] != DBNull.Value ? drE["Descripcion"].ToString() : "",
+                            Activo = Convert.ToBoolean(drE["Activo"])
+                        });
+                    }
+                }
             }
 
             ViewBag.Denominaciones = denominaciones;
             ViewBag.TiposOrg = tiposOrg;
             ViewBag.RolesEvento = rolesEvento;
             ViewBag.Materiales = materiales;
+            ViewBag.TiposEmpaque = tiposEmpaque;
             return View();
         }
 
@@ -1337,6 +1376,65 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
             TempData["MensajeExito"] = "Estado del material actualizado.";
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CrearTipoEmpaque(string nombre, string descripcion)
+        {
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                AsegurarTablasCatalogos();
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "INSERT INTO dbo.TiposEmpaque (Nombre, Descripcion, Activo, FechaCreacion) VALUES (@Nombre, @Descripcion, 1, GETDATE());";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Tipo de empaque agregado correctamente al catálogo.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditarTipoEmpaque(int id, string nombre, string descripcion)
+        {
+            if (id > 0 && !string.IsNullOrWhiteSpace(nombre))
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "UPDATE dbo.TiposEmpaque SET Nombre = @Nombre, Descripcion = @Descripcion WHERE IdTipoEmpaque = @Id;";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Tipo de empaque modificado correctamente.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ToggleTipoEmpaque(int id, bool activo)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "UPDATE dbo.TiposEmpaque SET Activo = @Activo WHERE IdTipoEmpaque = @Id;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Activo", activo);
+                cmd.Parameters.AddWithValue("@Id", id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            TempData["MensajeExito"] = "Estado del tipo de empaque actualizado.";
             return RedirectToAction("Catalogos");
         }
     }

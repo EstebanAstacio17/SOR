@@ -4,6 +4,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var materiales = ViewBag.Materiales as IEnumerable<SOR.Models.Material> ?? new List<SOR.Models.Material>();
     var temporadas = ViewBag.Temporadas as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+    var tiposEmpaque = ViewBag.TiposEmpaque as List<string> ?? new List<string>();
     int? idTempSel = ViewBag.IdTemporadaSeleccionada as int?;
     var lista = Model ?? new List<SOR.Models.PresentacionMaterial>();
     int totalActivas = lista.Count(x => x.Activo);
@@ -236,14 +237,25 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold text-slate-700">Tipo de Empaque <span class="text-danger">*</span></label>
                             <select name="TipoEmpaque" id="selTipoEmpaque" class="form-select" required>
-                                <option value="Caja">Caja</option>
-                                <option value="Paquete">Paquete</option>
-                                <option value="Rollo">Rollo</option>
-                                <option value="Bolsa">Bolsa</option>
-                                <option value="Resma">Resma</option>
-                                <option value="Atado">Atado</option>
-                                <option value="Otro">Otro</option>
+                                @if (tiposEmpaque.Any())
+                                {
+                                    foreach (var t in tiposEmpaque)
+                                    {
+                                        <option value="@t">@t</option>
+                                    }
+                                }
+                                else
+                                {
+                                    <option value="Caja">Caja</option>
+                                    <option value="Paquete">Paquete</option>
+                                    <option value="Bolsa">Bolsa</option>
+                                    <option value="Rollo">Rollo</option>
+                                    <option value="Otro">Otro</option>
+                                }
                             </select>
+                            <div class="form-text small mt-1">
+                                <i class="bi bi-info-circle me-1"></i>¿Deseas agregar o editar tipos de empaque? Adminístralos en el <a href="@Url.Action("Catalogos", "Admin")" class="fw-semibold text-decoration-none">Mantenedor de Catálogos</a>.
+                            </div>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold text-slate-700">Unidades por Empaque <span class="text-danger">*</span></label>
@@ -304,7 +316,12 @@
         document.getElementById('lblModalTitulo').innerHTML = '<i class="bi bi-box-seam me-2 text-primary"></i>Nueva Presentación de Empaque';
         document.getElementById('hdIdPresentacion').value = '0';
         document.getElementById('selIdMaterial').value = '';
-        document.getElementById('selTipoEmpaque').value = 'Caja';
+        
+        var selEmp = document.getElementById('selTipoEmpaque');
+        if (selEmp.options.length > 0) {
+            selEmp.selectedIndex = 0;
+        }
+
         document.getElementById('txtUnidadesPorEmpaque').value = '';
         
         // Conservar la temporada seleccionada en el filtro si existe
@@ -321,7 +338,25 @@
         document.getElementById('lblModalTitulo').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i>Editar Presentación de Empaque';
         document.getElementById('hdIdPresentacion').value = idPres;
         document.getElementById('selIdMaterial').value = idMat;
-        document.getElementById('selTipoEmpaque').value = tipoEmp || 'Caja';
+        
+        var selEmp = document.getElementById('selTipoEmpaque');
+        var valTarget = tipoEmp || 'Caja';
+        var optionFound = false;
+        for (var i = 0; i < selEmp.options.length; i++) {
+            if (selEmp.options[i].value.toLowerCase() === valTarget.toLowerCase()) {
+                selEmp.selectedIndex = i;
+                optionFound = true;
+                break;
+            }
+        }
+        if (!optionFound && valTarget) {
+            var opt = document.createElement('option');
+            opt.value = valTarget;
+            opt.text = valTarget;
+            opt.selected = true;
+            selEmp.appendChild(opt);
+        }
+
         document.getElementById('txtUnidadesPorEmpaque').value = unidades;
         document.getElementById('selIdTemporadaVigencia').value = idTemp || '';
         document.getElementById('chkActivo').checked = (activo === true);

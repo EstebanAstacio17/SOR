@@ -5,12 +5,13 @@
     var tiposOrg = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.TiposOrg ?? new List<SOR.Controllers.CatalogoItemViewModel>();
     var rolesEvento = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.RolesEvento ?? new List<SOR.Controllers.CatalogoItemViewModel>();
     var materiales = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.Materiales ?? new List<SOR.Controllers.CatalogoItemViewModel>();
+    var tiposEmpaque = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.TiposEmpaque ?? new List<SOR.Controllers.CatalogoItemViewModel>();
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
     <div>
         <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-tags-fill text-primary me-2"></i>Mantenedor de Catálogos</h2>
-        <p class="text-muted mb-0">Administra las opciones de Denominaciones, Tipos de Organización, Roles de Eventos y Catálogo de Materiales del sistema.</p>
+        <p class="text-muted mb-0">Administra las opciones de Denominaciones, Tipos de Organización, Roles de Eventos, Materiales y Tipos de Empaque del sistema.</p>
     </div>
 </div>
 
@@ -504,6 +505,145 @@
     </div>
 </div>
 
+<!-- PANEL 5: CATÁLOGO DE TIPOS DE EMPAQUE -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h5 class="card-title font-bold mb-0">
+                        <i class="bi bi-box me-2 text-warning"></i>Catálogo de Tipos de Empaque y Embalaje
+                    </h5>
+                    <small class="text-slate-300">Configura las opciones de embalaje (Caja, Paquete, Bolsa, Rollo, etc.) disponibles al registrar presentaciones de materiales.</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearTipoEmpaque">
+                    <i class="bi bi-plus-circle me-1"></i>Agregar Tipo de Empaque
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Tipo de Empaque</th>
+                                <th>Descripción / Uso Sugerido</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!tiposEmpaque.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No hay tipos de empaque configurados.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in tiposEmpaque)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-slate-800">
+                                            <i class="bi bi-box-seam text-primary me-2"></i>@item.Nombre
+                                        </td>
+                                        <td>
+                                            <span class="text-slate-600 small">@(string.IsNullOrEmpty(item.Descripcion) ? "Sin descripción" : item.Descripcion)</span>
+                                        </td>
+                                        <td>
+                                            @if (item.Activo)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill">Activo / Disponible</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill">Inhabilitado</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="d-flex align-items-center justify-content-end gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTipoEmpaque(@item.Id, '@Html.Raw(item.Nombre.Replace("'", "\\'"))', '@Html.Raw((item.Descripcion ?? "").Replace("'", "\\'"))')" title="Editar Tipo de Empaque">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <form action="@Url.Action("ToggleTipoEmpaque", "Admin")" method="post" class="d-inline m-0">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
+                                                    <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
+                                                        @(item.Activo ? "Inhabilitar" : "Habilitar")
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR TIPO EMPAQUE -->
+<div class="modal fade text-start" id="modalCrearTipoEmpaque" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("CrearTipoEmpaque", "Admin")" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-box me-2 text-primary"></i>Nuevo Tipo de Empaque</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Tipo de Empaque <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Caja Master, Fardo, Tarima, Paquete 50" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción / Uso (Opcional)</label>
+                        <textarea name="descripcion" class="form-control" rows="2" placeholder="Ej: Contenedor corrugado de alta resistencia para transporte pesado"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Guardar Tipo de Empaque</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR TIPO EMPAQUE -->
+<div class="modal fade text-start" id="modalEditarTipoEmpaque" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("EditarTipoEmpaque", "Admin")" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="editarTipoEmpaqueId" value="0" />
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-pencil-square me-2 text-primary"></i>Editar Tipo de Empaque</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Tipo de Empaque <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" id="editarTipoEmpaqueNombre" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción / Uso</label>
+                        <textarea name="descripcion" id="editarTipoEmpaqueDescripcion" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Actualizar Tipo de Empaque</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     function abrirModalEditarRolEvento(id, nombre, descripcion) {
         document.getElementById('editarRolEventoId').value = id;
@@ -519,6 +659,13 @@
         document.getElementById('editarMaterialUnidad').value = unidad;
         document.getElementById('editarMaterialMomento').value = momento;
         new bootstrap.Modal(document.getElementById('modalEditarMaterial')).show();
+    }
+
+    function abrirModalEditarTipoEmpaque(id, nombre, descripcion) {
+        document.getElementById('editarTipoEmpaqueId').value = id;
+        document.getElementById('editarTipoEmpaqueNombre').value = nombre;
+        document.getElementById('editarTipoEmpaqueDescripcion').value = descripcion;
+        new bootstrap.Modal(document.getElementById('modalEditarTipoEmpaque')).show();
     }
 </script>
 
