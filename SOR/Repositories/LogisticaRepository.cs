@@ -1284,17 +1284,41 @@ namespace SOR.Repositories
                 }
 
                 string sql = @"
-                    SELECT ie.*, t.NombreTemporada, eq.NombreEquipo, m.Codigo, m.NombreMaterial, m.UnidadEntrega
-                    FROM dbo.InventarioEquipo ie
-                    INNER JOIN dbo.Temporadas t ON ie.IdTemporada = t.IdTemporada
-                    INNER JOIN dbo.Equipos eq ON ie.IdEquipo = eq.IdEquipo
-                    INNER JOIN dbo.Materiales m ON ie.IdMaterial = m.IdMaterial
-                    WHERE (@IdTemp IS NULL OR ie.IdTemporada = @IdTemp)
-                      AND (@IdEq IS NULL OR ie.IdEquipo = @IdEq)
-                    ORDER BY eq.NombreEquipo, m.Codigo;";
+                    DECLARE @IdTempEfectivo INT = @IdTemp;
+                    IF @IdTempEfectivo IS NULL OR @IdTempEfectivo <= 0
+                    BEGIN
+                        SELECT TOP 1 @IdTempEfectivo = IdTemporada 
+                        FROM dbo.Temporadas 
+                        ORDER BY Activa DESC, FechaInicio DESC, IdTemporada DESC;
+                    END
+
+                    SELECT 
+                        ISNULL(ie.IdInventarioEquipo, 0) AS IdInventarioEquipo,
+                        t.IdTemporada,
+                        t.NombreTemporada,
+                        eq.IdEquipo,
+                        eq.NombreEquipo,
+                        m.IdMaterial,
+                        m.Codigo,
+                        m.NombreMaterial,
+                        m.UnidadEntrega,
+                        ISNULL(ie.CantidadRecibida, 0) AS CantidadRecibida,
+                        ISNULL(ie.CantidadAsignada, 0) AS CantidadAsignada,
+                        ISNULL(ie.CantidadDespachada, 0) AS CantidadDespachada,
+                        ISNULL(ie.CantidadDisponible, 0) AS CantidadDisponible
+                    FROM dbo.Equipos eq
+                    CROSS JOIN dbo.Materiales m
+                    INNER JOIN dbo.Temporadas t ON t.IdTemporada = @IdTempEfectivo
+                    LEFT JOIN dbo.InventarioEquipo ie ON ie.IdTemporada = t.IdTemporada 
+                                                     AND ie.IdEquipo = eq.IdEquipo 
+                                                     AND ie.IdMaterial = m.IdMaterial
+                    WHERE eq.Activo = 1
+                      AND m.Activo = 1
+                      AND (@IdEq IS NULL OR eq.IdEquipo = @IdEq)
+                    ORDER BY eq.NombreEquipo, m.IdMaterial;";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
                     using (var dr = cmd.ExecuteReader())
                     {

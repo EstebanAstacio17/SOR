@@ -462,15 +462,19 @@
                 sumDesp += desp;
                 sumDisp += disp;
 
+                var dispStyle = disp > 0 
+                    ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold fs-6">${disp.toLocaleString('es-DO')}</span>`
+                    : `<span class="badge bg-light text-muted border px-2.5 py-1 rounded-pill fw-semibold">0</span>`;
+
                 var tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="text-center"><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill font-mono">${mat.CodigoMaterial || '—'}</span></td>
                     <td class="fw-semibold text-slate-800">${mat.NombreMaterial || 'Material'}</td>
                     <td class="text-center text-muted small">${mat.UnidadEntrega || 'Unidades'}</td>
-                    <td class="text-center fw-semibold text-primary">${rec.toLocaleString('es-DO')}</td>
-                    <td class="text-center fw-semibold text-warning">${asig.toLocaleString('es-DO')}</td>
-                    <td class="text-center fw-semibold text-info">${desp.toLocaleString('es-DO')}</td>
-                    <td class="text-center bg-success bg-opacity-10 text-success fw-bold fs-6">${disp.toLocaleString('es-DO')}</td>
+                    <td class="text-center fw-semibold ${rec > 0 ? 'text-primary' : 'text-muted'}">${rec.toLocaleString('es-DO')}</td>
+                    <td class="text-center fw-semibold ${asig > 0 ? 'text-warning' : 'text-muted'}">${asig.toLocaleString('es-DO')}</td>
+                    <td class="text-center fw-semibold ${desp > 0 ? 'text-info' : 'text-muted'}">${desp.toLocaleString('es-DO')}</td>
+                    <td class="text-center bg-light bg-opacity-50">${dispStyle}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -483,7 +487,7 @@
                     <td class="text-center text-primary fs-6">${sumRec.toLocaleString('es-DO')}</td>
                     <td class="text-center text-warning fs-6">${sumAsig.toLocaleString('es-DO')}</td>
                     <td class="text-center text-info fs-6">${sumDesp.toLocaleString('es-DO')}</td>
-                    <td class="text-center bg-success bg-opacity-10 text-success fw-bold fs-5">${sumDisp.toLocaleString('es-DO')}</td>
+                    <td class="text-center bg-light fw-bold fs-6">${sumDisp > 0 ? '<span class="text-success">' + sumDisp.toLocaleString('es-DO') + '</span>' : '<span class="text-muted">0</span>'}</td>
                 </tr>
             `;
         }
