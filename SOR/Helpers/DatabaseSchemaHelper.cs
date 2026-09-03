@@ -775,6 +775,146 @@ namespace SOR.Helpers
                         END TRY BEGIN CATCH END CATCH
                     END
                 END
+
+                -- Almacenes.FechaCreacion, Activo, EsCentral
+                IF OBJECT_ID('dbo.Almacenes', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.Almacenes') AND c.name = 'FechaCreacion'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.Almacenes ADD CONSTRAINT DF_Almacenes_FechaCreacion DEFAULT (GETDATE()) FOR FechaCreacion;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.Almacenes') AND c.name = 'Activo'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.Almacenes ADD CONSTRAINT DF_Almacenes_Activo DEFAULT ((1)) FOR Activo;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.Almacenes') AND c.name = 'EsCentral'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.Almacenes ADD CONSTRAINT DF_Almacenes_EsCentral DEFAULT ((0)) FOR EsCentral;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- ERLE_Transacciones.FechaCreacion
+                IF OBJECT_ID('dbo.ERLE_Transacciones', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.ERLE_Transacciones') AND c.name = 'FechaCreacion'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.ERLE_Transacciones ADD CONSTRAINT DF_ERLE_Transacciones_FechaCreacion DEFAULT (GETDATE()) FOR FechaCreacion;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- EvidenciasRecepcion.FechaCarga
+                IF OBJECT_ID('dbo.EvidenciasRecepcion', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.EvidenciasRecepcion') AND c.name = 'FechaCarga'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.EvidenciasRecepcion ADD CONSTRAINT DF_EvidenciasRecepcion_FechaCarga DEFAULT (GETDATE()) FOR FechaCarga;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- EvidenciasRecepcionContenedor.FechaRegistro
+                IF OBJECT_ID('dbo.EvidenciasRecepcionContenedor', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.EvidenciasRecepcionContenedor') AND c.name = 'FechaRegistro'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.EvidenciasRecepcionContenedor ADD CONSTRAINT DF_EvidenciasRecepcionContenedor_FechaRegistro DEFAULT (GETDATE()) FOR FechaRegistro;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- InventarioCentral.FechaActualizacion
+                IF OBJECT_ID('dbo.InventarioCentral', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.InventarioCentral') AND c.name = 'FechaActualizacion'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.InventarioCentral ADD CONSTRAINT DF_InventarioCentral_FechaActualizacion DEFAULT (GETDATE()) FOR FechaActualizacion;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- InventarioEquipo.FechaActualizacion
+                IF OBJECT_ID('dbo.InventarioEquipo', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.InventarioEquipo') AND c.name = 'FechaActualizacion'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.InventarioEquipo ADD CONSTRAINT DF_InventarioEquipo_FechaActualizacion DEFAULT (GETDATE()) FOR FechaActualizacion;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- MovimientosInventario.FechaHora
+                IF OBJECT_ID('dbo.MovimientosInventario', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.MovimientosInventario') AND c.name = 'FechaHora'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.MovimientosInventario ADD CONSTRAINT DF_MovimientosInventario_FechaHora DEFAULT (GETDATE()) FOR FechaHora;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- TransferenciasEquipo.FechaRegistro
+                IF OBJECT_ID('dbo.TransferenciasEquipo', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.TransferenciasEquipo') AND c.name = 'FechaRegistro'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.TransferenciasEquipo ADD CONSTRAINT DF_TransferenciasEquipo_FechaRegistro DEFAULT (GETDATE()) FOR FechaRegistro;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
             ";
 
             using (SqlCommand cmd = new SqlCommand(sqlConstraints, cn))

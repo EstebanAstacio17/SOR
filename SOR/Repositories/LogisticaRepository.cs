@@ -314,9 +314,9 @@ namespace SOR.Repositories
                         {
                             string sql = @"
                                 INSERT INTO dbo.Almacenes 
-                                    (NombreAlmacen, Direccion, Responsable, IdUsuarioResponsable, Telefono, EsCentral, Activo)
+                                    (NombreAlmacen, Direccion, Responsable, IdUsuarioResponsable, Telefono, EsCentral, Activo, FechaCreacion)
                                 VALUES 
-                                    (@Nombre, @Dir, @Resp, @IdUResp, @Tel, @EsCentral, 1);
+                                    (@Nombre, @Dir, @Resp, @IdUResp, @Tel, @EsCentral, 1, GETDATE());
                                 SELECT SCOPE_IDENTITY();";
                             using (var cmd = new SqlCommand(sql, cn, tx))
                             {
