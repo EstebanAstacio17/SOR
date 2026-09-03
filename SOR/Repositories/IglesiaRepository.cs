@@ -391,7 +391,7 @@ namespace SOR.Repositories
                                     IdTemporada = ig.ParticipacionActual.IdTemporada,
                                     IdUsuarioRegistro = Convert.ToInt32(drOr["IdUsuarioRegistro"]),
                                     CorreoRegistrador = drOr["CorreoRegistrador"].ToString(),
-                                    FechaRegistro = Convert.ToDateTime(drOr["FechaRegistro"])
+                                    FechaRegistro = drOr["FechaRegistro"] != DBNull.Value ? Convert.ToDateTime(drOr["FechaRegistro"]) : DateTime.Now
                                 });
                             }
                         }
@@ -425,7 +425,7 @@ namespace SOR.Repositories
                                 {
                                     IdHistorial = Convert.ToInt32(drH["IdHistorial"]),
                                     IdParticipacion = ig.ParticipacionActual.IdParticipacion,
-                                    FechaHora = Convert.ToDateTime(drH["FechaHora"]),
+                                    FechaHora = drH["FechaHora"] != DBNull.Value ? Convert.ToDateTime(drH["FechaHora"]) : DateTime.Now,
                                     AccionRealizada = drH["AccionRealizada"].ToString(),
                                     EstadoAnterior = drH["EstadoAnterior"] != DBNull.Value ? drH["EstadoAnterior"].ToString() : "",
                                     EstadoNuevo = drH["EstadoNuevo"] != DBNull.Value ? drH["EstadoNuevo"].ToString() : "",
@@ -472,7 +472,7 @@ namespace SOR.Repositories
                                 IdUsuario = Convert.ToInt32(drC["IdUsuario"]),
                                 CorreoUsuario = drC["Correo"].ToString(),
                                 Comentario = drC["Comentario"].ToString(),
-                                FechaCreacion = Convert.ToDateTime(drC["FechaCreacion"]),
+                                FechaCreacion = drC["FechaCreacion"] != DBNull.Value ? Convert.ToDateTime(drC["FechaCreacion"]) : DateTime.Now,
                                 NombreCoordinador = drC["NombreCoordinador"].ToString(),
                                 PosicionCoordinador = drC["PosicionCoordinador"].ToString(),
                                 EquipoCoordinador = drC["EquipoCoordinador"].ToString(),
@@ -618,8 +618,8 @@ namespace SOR.Repositories
         public void RegistrarLogHistorial(SqlConnection cn, SqlTransaction tran, int idParticipacion, string accion, string anterior, string nuevo, int idUsuario, string comentario, string razon = null)
         {
             string sql = @"
-                INSERT INTO dbo.HistorialParticipacion (IdParticipacion, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario, Razon)
-                VALUES (@IdPart, @Accion, @Ant, @Nue, @IdUsuario, @Com, @Raz);";
+                INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario, Razon)
+                VALUES (@IdPart, GETDATE(), @Accion, @Ant, @Nue, @IdUsuario, @Com, @Raz);";
 
             SqlCommand cmd = new SqlCommand(sql, cn, tran);
             cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
@@ -824,7 +824,7 @@ namespace SOR.Repositories
                 ResultadoDesempeno = dr["ResultadoDesempeno"] != DBNull.Value ? dr["ResultadoDesempeno"].ToString() : "",
                 SolicitadoPor = Convert.ToInt32(dr["SolicitadoPor"]),
                 NombreSolicitante = dr.TableHasColumn("NombreSolicitante") && dr["NombreSolicitante"] != DBNull.Value ? dr["NombreSolicitante"].ToString() : "",
-                FechaSolicitud = Convert.ToDateTime(dr["FechaSolicitud"]),
+                FechaSolicitud = dr["FechaSolicitud"] != DBNull.Value ? Convert.ToDateTime(dr["FechaSolicitud"]) : DateTime.Now,
                 AprobadoCE = Convert.ToBoolean(dr["AprobadoCE"]),
                 UsuarioAprobacionCE = dr["UsuarioAprobacionCE"] != DBNull.Value ? (int?)Convert.ToInt32(dr["UsuarioAprobacionCE"]) : null,
                 NombreUsuarioAprobacionCE = dr.TableHasColumn("NombreUsuarioCE") && dr["NombreUsuarioCE"] != DBNull.Value ? dr["NombreUsuarioCE"].ToString() : "",
@@ -841,7 +841,7 @@ namespace SOR.Repositories
                 FechaRechazo = dr["FechaRechazo"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRechazo"]) : null,
                 MotivoRechazo = dr["MotivoRechazo"] != DBNull.Value ? dr["MotivoRechazo"].ToString() : "",
                 Estado = dr["Estado"].ToString(),
-                FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]),
+                FechaCreacion = dr["FechaCreacion"] != DBNull.Value ? Convert.ToDateTime(dr["FechaCreacion"]) : DateTime.Now,
                 FechaModificacion = dr["FechaModificacion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaModificacion"]) : null,
                 RowVersion = dr.TableHasColumn("RowVersion") && dr["RowVersion"] != DBNull.Value ? (byte[])dr["RowVersion"] : null
             };
@@ -1435,7 +1435,7 @@ namespace SOR.Repositories
                                 DecisionTomada = dr["DecisionTomada"]?.ToString(),
                                 ComentarioAccion = dr["ComentarioAccion"]?.ToString(),
                                 EstadoContacto = dr["EstadoContacto"]?.ToString() ?? "PENDIENTE",
-                                FechaRegistro = Convert.ToDateTime(dr["FechaRegistro"]),
+                                FechaRegistro = dr["FechaRegistro"] != DBNull.Value ? Convert.ToDateTime(dr["FechaRegistro"]) : DateTime.Now,
                                 FechaModificacion = dr["FechaModificacion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaModificacion"]) : null
                             });
                         }
@@ -1515,7 +1515,7 @@ namespace SOR.Repositories
                                 IdLlamada = Convert.ToInt32(dr["IdLlamada"]),
                                 IdParticipacion = Convert.ToInt32(dr["IdParticipacion"]),
                                 IdIglesia = Convert.ToInt32(dr["IdIglesia"]),
-                                FechaHora = Convert.ToDateTime(dr["FechaHora"]),
+                                FechaHora = dr["FechaHora"] != DBNull.Value ? Convert.ToDateTime(dr["FechaHora"]) : DateTime.Now,
                                 IdUsuarioCoordinador = dr["IdUsuarioCoordinador"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioCoordinador"]) : null,
                                 NombreCoordinador = dr["NombreCoordinador"]?.ToString(),
                                 EtapaDiscipulado = dr["EtapaDiscipulado"]?.ToString(),

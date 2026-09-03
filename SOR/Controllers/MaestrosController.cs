@@ -608,7 +608,7 @@ namespace SOR.Controllers
                     if (idParticipacion > 0)
                     {
                         string histMsg = $"{accionRealizada}. {comentario}";
-                        string sqlHist = "INSERT INTO dbo.HistorialParticipacion (IdParticipacion, AccionRealizada, IdUsuarioResponsable, Comentario) VALUES (@IdPart, @Acc, @IdUsu, @Cmt);";
+                        string sqlHist = "INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, IdUsuarioResponsable, Comentario) VALUES (@IdPart, GETDATE(), @Acc, @IdUsu, @Cmt);";
                         using (SqlCommand cmdHist = new SqlCommand(sqlHist, cn))
                         {
                             cmdHist.Parameters.AddWithValue("@IdPart", idParticipacion);

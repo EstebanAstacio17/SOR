@@ -10,6 +10,16 @@
 }
 
 <style>
+    .card-usuarios {
+        overflow: visible !important;
+    }
+    .table-usuarios-wrapper {
+        min-height: 320px;
+        overflow-y: visible !important;
+    }
+    .table-premium {
+        margin-bottom: 0;
+    }
     .table-premium th {
         font-weight: 600;
         font-size: 0.78rem;
@@ -20,6 +30,9 @@
         border-bottom: 2px solid #e2e8f0;
         padding-top: 14px;
         padding-bottom: 14px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
     .table-premium td {
         padding-top: 16px;
@@ -70,13 +83,15 @@
     }
     .dropdown-menu-premium {
         border: 1px solid #e2e8f0;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-        border-radius: 8px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+        border-radius: 10px;
         padding: 6px;
+        z-index: 1060;
+        min-width: 200px;
     }
     .dropdown-menu-premium .dropdown-item {
         font-size: 0.85rem;
-        padding: 7px 12px;
+        padding: 8px 12px;
         border-radius: 6px;
         color: #334155;
         display: flex;
@@ -89,6 +104,12 @@
     }
     .text-nowrap-th {
         white-space: nowrap;
+    }
+    @@media (max-width: 991.98px) {
+        .table-usuarios-wrapper {
+            overflow-x: auto;
+            padding-bottom: 120px;
+        }
     }
 </style>
 
@@ -107,8 +128,8 @@
     }
 </div>
 
-<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-    <div class="card-header bg-white border-bottom p-3">
+<div class="card border-0 shadow-sm rounded-4 card-usuarios bg-white">
+    <div class="card-header bg-white border-bottom p-3 rounded-top-4">
         <div class="row g-2 align-items-center">
             <div class="col-md-2">
                 <div class="input-group">
@@ -150,7 +171,7 @@
         </div>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive table-usuarios-wrapper">
             <table class="table table-hover table-premium align-middle mb-0" id="tablaUsuarios">
                 <thead>
                     <tr>
@@ -252,11 +273,11 @@
                                     }
                                 </td>
                                 <td class="text-end pe-4">
-                                    <div class="dropdown d-inline-block">
-                                        <button class="btn btn-action-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <div class="dropdown d-inline-block position-relative">
+                                        <button class="btn btn-action-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-display="static" aria-expanded="false">
                                             <i class="bi bi-three-dots-vertical me-1"></i> Acciones
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-premium">
+                                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-premium shadow">
                                             <li>
                                                 <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalVerExpediente_@u.IdUsuario">
                                                     <i class="bi bi-eye text-info"></i> Ver Perfil

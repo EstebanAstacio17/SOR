@@ -696,6 +696,91 @@ namespace SOR.Helpers
 
             // 12. Tabla de Asistencia de Coordinadores a Eventos
             AsegurarTablasAsistenciaCoordinadores(cn);
+
+            // 13. Asegurar Constraints de Fecha y Defaults en Tablas Clave
+            AsegurarConstraintsAuditoriaYCatalogos(cn);
+        }
+
+        private static void AsegurarConstraintsAuditoriaYCatalogos(SqlConnection cn)
+        {
+            string sqlConstraints = @"
+                -- HistorialParticipacion.FechaHora
+                IF OBJECT_ID('dbo.HistorialParticipacion', 'U') IS NOT NULL
+                BEGIN
+                    UPDATE dbo.HistorialParticipacion SET FechaHora = GETDATE() WHERE FechaHora IS NULL;
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.HistorialParticipacion') AND c.name = 'FechaHora'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.HistorialParticipacion ADD CONSTRAINT DF_HistorialParticipacion_FechaHora DEFAULT (GETDATE()) FOR FechaHora;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- RolesEvento Defaults
+                IF OBJECT_ID('dbo.RolesEvento', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.RolesEvento') AND c.name = 'FechaCreacion'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.RolesEvento ADD CONSTRAINT DF_RolesEvento_FechaCreacion DEFAULT (GETDATE()) FOR FechaCreacion;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.RolesEvento') AND c.name = 'Activo'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.RolesEvento ADD CONSTRAINT DF_RolesEvento_Activo DEFAULT ((1)) FOR Activo;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- CompanerosOracion.FechaRegistro
+                IF OBJECT_ID('dbo.CompanerosOracion', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.CompanerosOracion') AND c.name = 'FechaRegistro'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.CompanerosOracion ADD CONSTRAINT DF_CompanerosOracion_FechaRegistro DEFAULT (GETDATE()) FOR FechaRegistro;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+
+                -- ComentariosObservaciones.FechaCreacion
+                IF OBJECT_ID('dbo.ComentariosObservaciones', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM sys.default_constraints dc 
+                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                        WHERE parent_object_id = OBJECT_ID('dbo.ComentariosObservaciones') AND c.name = 'FechaCreacion'
+                    )
+                    BEGIN
+                        BEGIN TRY
+                            ALTER TABLE dbo.ComentariosObservaciones ADD CONSTRAINT DF_ComentariosObservaciones_FechaCreacion DEFAULT (GETDATE()) FOR FechaCreacion;
+                        END TRY BEGIN CATCH END CATCH
+                    END
+                END
+            ";
+
+            using (SqlCommand cmd = new SqlCommand(sqlConstraints, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
         }
 
         private static void AsegurarTablasAsistenciaCoordinadores(SqlConnection cn)
