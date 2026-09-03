@@ -2,12 +2,6 @@
 @{
     ViewBag.Title = "Inventario por Equipo — Logística OCC";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var equipos = ViewBag.Equipos as IEnumerable<System.Web.Mvc.SelectListItem> ?? new List<System.Web.Mvc.SelectListItem>();
-    
-    int totalEquipos = Model.Count();
-    int totalRecibido = Model.Sum(x => x.TotalRecibido);
-    int totalDespachado = Model.Sum(x => x.TotalDespachado);
-    int totalDisponible = Model.Sum(x => x.TotalDisponible);
 }
 
 <div class="container-fluid py-4">
@@ -31,62 +25,6 @@
             <a href="@Url.Action("Recepciones","Logistica")" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
                 <i class="bi bi-truck-front me-1"></i>Recepciones
             </a>
-        </div>
-    </div>
-
-    <!-- Tarjetas de Resumen Global -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-xs text-muted text-uppercase fw-semibold">Equipos Activos</span>
-                        <h4 class="fw-bold mb-0 text-slate-800">@totalEquipos</h4>
-                    </div>
-                    <div class="rounded-circle p-2.5 bg-primary bg-opacity-10 text-primary">
-                        <i class="bi bi-people fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-xs text-muted text-uppercase fw-semibold">Total Recibido</span>
-                        <h4 class="fw-bold mb-0 text-primary">@totalRecibido.ToString("N0")</h4>
-                    </div>
-                    <div class="rounded-circle p-2.5 bg-primary bg-opacity-10 text-primary">
-                        <i class="bi bi-box-arrow-in-down fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-xs text-muted text-uppercase fw-semibold">Total Despachado</span>
-                        <h4 class="fw-bold mb-0 text-info">@totalDespachado.ToString("N0")</h4>
-                    </div>
-                    <div class="rounded-circle p-2.5 bg-info bg-opacity-10 text-info">
-                        <i class="bi bi-send-check fs-4"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-xs text-muted text-uppercase fw-semibold">Stock Disponible</span>
-                        <h4 class="fw-bold mb-0 text-success">@totalDisponible.ToString("N0")</h4>
-                    </div>
-                    <div class="rounded-circle p-2.5 bg-success bg-opacity-10 text-success">
-                        <i class="bi bi-check2-circle fs-4"></i>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
