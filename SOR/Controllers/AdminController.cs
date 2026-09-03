@@ -999,14 +999,36 @@ namespace SOR.Controllers
                             Activo BIT NOT NULL DEFAULT 1,
                             FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
                         );
-                        INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo) VALUES 
-                        ('Coordinador Principal / Encargado', 'Responsable general de la conducción del evento', 1),
-                        ('Facilitador / Expositor', 'Imparte el contenido, dinámicas o presentaciones del evento', 1),
-                        ('Logística y Despacho', 'Coordinación de paquetes, materiales y suministros', 1),
-                        ('Registro y Asistencia', 'Mesa de recepción, validación de cédulas y asistencia', 1),
-                        ('Acompañamiento y Bienvenida', 'Atención personalizada a pastores y líderes asistentes', 1),
-                        ('Intercesión y Oración', 'Cobertura espiritual y oración durante el desarrollo del evento', 1),
-                        ('Apoyo General', 'Soporte y asistencia operativa en diversas áreas', 1);
+                        INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo, FechaCreacion) VALUES 
+                        ('Coordinador Principal / Encargado', 'Responsable general de la conducción del evento', 1, GETDATE()),
+                        ('Facilitador / Expositor', 'Imparte el contenido, dinámicas o presentaciones del evento', 1, GETDATE()),
+                        ('Logística y Despacho', 'Coordinación de paquetes, materiales y suministros', 1, GETDATE()),
+                        ('Registro y Asistencia', 'Mesa de recepción, validación de cédulas y asistencia', 1, GETDATE()),
+                        ('Acompañamiento y Bienvenida', 'Atención personalizada a pastores y líderes asistentes', 1, GETDATE()),
+                        ('Intercesión y Oración', 'Cobertura espiritual y oración durante el desarrollo del evento', 1, GETDATE()),
+                        ('Apoyo General', 'Soporte y asistencia operativa en diversas áreas', 1, GETDATE());
+                    END
+                    ELSE
+                    BEGIN
+                        IF COL_LENGTH('dbo.RolesEvento', 'FechaCreacion') IS NULL
+                        BEGIN
+                            ALTER TABLE dbo.RolesEvento ADD FechaCreacion DATETIME NOT NULL DEFAULT GETDATE();
+                        END
+                        ELSE
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM sys.default_constraints dc 
+                                JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                                WHERE parent_object_id = OBJECT_ID('dbo.RolesEvento') AND c.name = 'FechaCreacion'
+                            )
+                            BEGIN
+                                BEGIN TRY
+                                    ALTER TABLE dbo.RolesEvento ADD CONSTRAINT DF_RolesEvento_FechaCreacion DEFAULT GETDATE() FOR FechaCreacion;
+                                END TRY
+                                BEGIN CATCH
+                                END CATCH
+                            END
+                        END
                     END";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -1168,7 +1190,7 @@ namespace SOR.Controllers
                 AsegurarTablasCatalogos();
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
-                    string sql = "INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo) VALUES (@Nombre, @Descripcion, 1);";
+                    string sql = "INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo, FechaCreacion) VALUES (@Nombre, @Descripcion, 1, GETDATE());";
                     SqlCommand cmd = new SqlCommand(sql, cn);
                     cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
                     cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
