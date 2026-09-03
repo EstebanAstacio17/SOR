@@ -532,7 +532,8 @@ namespace SOR.Controllers
             ViewBag.Equipos = equipos;
 
             int? idEquipoFiltro = (esAdmin || esCL) ? (int?)null : u?.IdEquipo;
-            return View(_svc.ObtenerInventarioEquipo(idTemp, idEquipoFiltro));
+            var resumen = _svc.ObtenerResumenInventarioEquipos(idTemp, idEquipoFiltro);
+            return View(resumen);
         }
 
         // =====================================================================

@@ -131,6 +131,9 @@ namespace SOR.Services
         public List<ItemInventarioEquipo> ObtenerInventarioEquipo(int? idTemporada = null, int? idEquipo = null) =>
             _repo.ObtenerInventarioEquipo(idTemporada, idEquipo);
 
+        public List<ResumenInventarioEquipo> ObtenerResumenInventarioEquipos(int? idTemporada = null, int? idEquipo = null) =>
+            _repo.ObtenerResumenInventarioEquipos(idTemporada, idEquipo);
+
         // =====================================================================
         // EVENTOS DE DESPACHO
         // =====================================================================

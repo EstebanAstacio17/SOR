@@ -213,6 +213,31 @@ namespace SOR.Models
         public int CantidadDisponible { get; set; }
     }
 
+    public class ResumenInventarioEquipo
+    {
+        public int IdEquipo { get; set; }
+        public string NombreEquipo { get; set; }
+        public string NombreNivel { get; set; }
+        public int? IdAlmacen { get; set; }
+        public string NombreAlmacen { get; set; }
+
+        // Coordinador Responsable
+        public int? IdUsuarioCoordinador { get; set; }
+        public string NombreCoordinador { get; set; }
+        public string TelefonoCoordinador { get; set; }
+        public string PosicionCoordinador { get; set; }
+        public string CorreoCoordinador { get; set; }
+
+        // Totales de inventario
+        public int TotalRecibido { get; set; }
+        public int TotalAsignado { get; set; }
+        public int TotalDespachado { get; set; }
+        public int TotalDisponible { get; set; }
+
+        // Desglose de materiales del equipo
+        public List<ItemInventarioEquipo> Materiales { get; set; } = new List<ItemInventarioEquipo>();
+    }
+
     // =========================================================================
     // EVENTOS DE DESPACHO
     // =========================================================================

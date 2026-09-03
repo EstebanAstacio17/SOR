@@ -1323,6 +1323,106 @@ namespace SOR.Repositories
             return lista;
         }
 
+        public List<ResumenInventarioEquipo> ObtenerResumenInventarioEquipos(int? idTemporada = null, int? idEquipo = null)
+        {
+            var lista = new List<ResumenInventarioEquipo>();
+            using (var cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+
+                // 1. Obtener lista de equipos con su almacén asignado y coordinador responsable
+                string sqlEquipos = @"
+                    SELECT 
+                        e.IdEquipo,
+                        e.NombreEquipo,
+                        n.NombreNivel,
+                        alm.IdAlmacen,
+                        ISNULL(alm.NombreAlmacen, 'Sin Almacén Asignado') AS NombreAlmacen,
+                        coord.IdUsuario AS IdUsuarioCoordinador,
+                        ISNULL(coord.NombreCompleto, ISNULL(alm.Responsable, 'Sin Coordinador')) AS NombreCoordinador,
+                        ISNULL(coord.Telefono, ISNULL(alm.Telefono, '')) AS TelefonoCoordinador,
+                        ISNULL(coord.NombrePosicion, 'Coordinador') AS PosicionCoordinador,
+                        coord.Correo AS CorreoCoordinador
+                    FROM dbo.Equipos e
+                    INNER JOIN dbo.NivelesEquipo n ON e.IdNivelEquipo = n.IdNivelEquipo
+                    OUTER APPLY (
+                        SELECT TOP 1 a.IdAlmacen, a.NombreAlmacen, a.Responsable, a.Telefono
+                        FROM dbo.AlmacenesEquipos ae
+                        INNER JOIN dbo.Almacenes a ON ae.IdAlmacen = a.IdAlmacen
+                        WHERE ae.IdEquipo = e.IdEquipo AND a.Activo = 1
+                        ORDER BY a.EsCentral DESC, a.IdAlmacen ASC
+                    ) alm
+                    OUTER APPLY (
+                        SELECT TOP 1 
+                            u.IdUsuario,
+                            CONCAT(p.PrimerNombre, ' ', p.PrimerApellido) AS NombreCompleto,
+                            p.TelefonoCelularWhatsApp AS Telefono,
+                            pos.NombrePosicion,
+                            u.Correo
+                        FROM dbo.AsignacionesEquipo asig
+                        INNER JOIN dbo.Usuarios u ON asig.IdUsuario = u.IdUsuario
+                        LEFT JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
+                        LEFT JOIN dbo.PosicionesOCC pos ON asig.IdPosicion = pos.IdPosicion
+                        WHERE asig.IdEquipo = e.IdEquipo AND asig.Activo = 1
+                        ORDER BY 
+                            CASE 
+                                WHEN pos.NombrePosicion LIKE '%Logística%' OR pos.NombrePosicion LIKE '%Logistica%' THEN 1
+                                WHEN pos.NombrePosicion LIKE '%Equipo%' OR pos.NombrePosicion LIKE '%Líder%' OR pos.NombrePosicion LIKE '%Lider%' THEN 2
+                                ELSE 3 
+                            END,
+                            asig.IdAsignacion ASC
+                    ) coord
+                    WHERE e.Activo = 1
+                      AND (@IdEq IS NULL OR e.IdEquipo = @IdEq)
+                    ORDER BY n.RangoJerarquico, e.NombreEquipo;";
+
+                using (var cmd = new SqlCommand(sqlEquipos, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            lista.Add(new ResumenInventarioEquipo
+                            {
+                                IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
+                                NombreEquipo = dr["NombreEquipo"].ToString(),
+                                NombreNivel = dr["NombreNivel"].ToString(),
+                                IdAlmacen = dr["IdAlmacen"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdAlmacen"]) : null,
+                                NombreAlmacen = dr["NombreAlmacen"].ToString(),
+                                IdUsuarioCoordinador = dr["IdUsuarioCoordinador"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioCoordinador"]) : null,
+                                NombreCoordinador = dr["NombreCoordinador"].ToString().Trim(),
+                                TelefonoCoordinador = dr["TelefonoCoordinador"].ToString().Trim(),
+                                PosicionCoordinador = dr["PosicionCoordinador"].ToString().Trim(),
+                                CorreoCoordinador = dr["CorreoCoordinador"] != DBNull.Value ? dr["CorreoCoordinador"].ToString() : ""
+                            });
+                        }
+                    }
+                }
+
+                // 2. Cargar todos los materiales de inventario agrupados por equipo
+                var todosLosItems = ObtenerInventarioEquipo(idTemporada, idEquipo);
+                var lookup = System.Linq.Enumerable.ToDictionary(
+                    System.Linq.Enumerable.GroupBy(todosLosItems, x => x.IdEquipo),
+                    g => g.Key,
+                    g => System.Linq.Enumerable.ToList(g)
+                );
+
+                foreach (var eq in lista)
+                {
+                    if (lookup.TryGetValue(eq.IdEquipo, out var mats))
+                    {
+                        eq.Materiales = mats;
+                        eq.TotalRecibido = System.Linq.Enumerable.Sum(mats, m => m.CantidadRecibida);
+                        eq.TotalAsignado = System.Linq.Enumerable.Sum(mats, m => m.CantidadAsignada);
+                        eq.TotalDespachado = System.Linq.Enumerable.Sum(mats, m => m.CantidadDespachada);
+                        eq.TotalDisponible = System.Linq.Enumerable.Sum(mats, m => m.CantidadDisponible);
+                    }
+                }
+            }
+            return lista;
+        }
+
         // =====================================================================
         // RECEPCIONES — CONSULTA
         // =====================================================================
