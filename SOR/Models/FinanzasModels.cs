@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Web.Mvc;
 
-namespace SOR.Models.ERLE
+namespace SOR.Models
 {
-    public class ErleTransaccionDTO
+    public class TransaccionFinancieraDTO
     {
         public long TransaccionId { get; set; }
-        public int TemporadaId { get; set; }
-        public int EquipoId { get; set; }
+        public int IdTemporada { get; set; }
+        public int IdEquipo { get; set; }
         public string Mes { get; set; }
 
         [Required(ErrorMessage = "La fecha es requerida")]
@@ -24,7 +25,7 @@ namespace SOR.Models.ERLE
 
         public decimal GastoDOP { get; set; }
         public decimal IngresoDOP { get; set; }
-        public decimal TasaCambio { get; set; }
+        public decimal TasaCambio { get; set; } = 58.63m;
         public decimal GastoUSD { get; set; }
         public decimal IngresoUSD { get; set; }
         public decimal SaldoDOP { get; set; }
@@ -32,7 +33,7 @@ namespace SOR.Models.ERLE
         public string Notas { get; set; }
     }
 
-    public class ErlePresupuestoVsRealDTO
+    public class PresupuestoVsRealDTO
     {
         public string Grupo { get; set; }
         public string CategoriaId { get; set; }
@@ -48,30 +49,30 @@ namespace SOR.Models.ERLE
             : 0m;
     }
 
-    public class ErleLibroMensualViewModel
+    public class LibroMensualViewModel
     {
-        public int TemporadaId { get; set; }
+        public int IdTemporada { get; set; }
         public string NombreTemporada { get; set; }
-        public int EquipoId { get; set; }
+        public int IdEquipo { get; set; }
         public string NombreEquipo { get; set; }
         public string Mes { get; set; }
-        public decimal TasaCambio { get; set; }
+        public decimal TasaCambio { get; set; } = 58.63m;
         public decimal SaldoMesAnteriorDOP { get; set; }
-        public List<System.Web.Mvc.SelectListItem> ListaEquipos { get; set; } = new List<System.Web.Mvc.SelectListItem>();
-        public List<System.Web.Mvc.SelectListItem> ListaTemporadas { get; set; } = new List<System.Web.Mvc.SelectListItem>();
-        public List<ErleTransaccionDTO> Transacciones { get; set; } = new List<ErleTransaccionDTO>();
-        public List<ErleOpcionCategoriaDTO> Categorias { get; set; } = new List<ErleOpcionCategoriaDTO>();
-        public List<ErlePresupuestoVsRealDTO> ResumenPresupuestario { get; set; } = new List<ErlePresupuestoVsRealDTO>();
+        public List<SelectListItem> ListaEquipos { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> ListaTemporadas { get; set; } = new List<SelectListItem>();
+        public List<TransaccionFinancieraDTO> Transacciones { get; set; } = new List<TransaccionFinancieraDTO>();
+        public List<OpcionCategoriaFinancieraDTO> Categorias { get; set; } = new List<OpcionCategoriaFinancieraDTO>();
+        public List<PresupuestoVsRealDTO> ResumenPresupuestario { get; set; } = new List<PresupuestoVsRealDTO>();
     }
 
-    public class ErleOpcionCategoriaDTO
+    public class OpcionCategoriaFinancieraDTO
     {
         public string Value { get; set; }
         public string Text { get; set; }
         public string Tipo { get; set; }
     }
 
-    public class ErleReporteConsolidadoFila
+    public class ReporteConsolidadoFila
     {
         public string Grupo { get; set; }
         public string CategoriaId { get; set; }
@@ -94,28 +95,28 @@ namespace SOR.Models.ERLE
         public decimal TasaCambio { get; set; } = 58.63m;
     }
 
-    public class ErleReporteConsolidadoViewModel
+    public class ReporteConsolidadoViewModel
     {
-        public int TemporadaId { get; set; }
+        public int IdTemporada { get; set; }
         public string NombreTemporada { get; set; }
-        public int EquipoId { get; set; }
+        public int IdEquipo { get; set; }
         public string NombreEquipo { get; set; }
         public decimal TasaCambio { get; set; } = 58.63m;
-        public List<System.Web.Mvc.SelectListItem> ListaEquipos { get; set; } = new List<System.Web.Mvc.SelectListItem>();
-        public List<System.Web.Mvc.SelectListItem> ListaTemporadas { get; set; } = new List<System.Web.Mvc.SelectListItem>();
-        public List<ErleReporteConsolidadoFila> Filas { get; set; } = new List<ErleReporteConsolidadoFila>();
+        public List<SelectListItem> ListaEquipos { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> ListaTemporadas { get; set; } = new List<SelectListItem>();
+        public List<ReporteConsolidadoFila> Filas { get; set; } = new List<ReporteConsolidadoFila>();
     }
 
-    public class ErlePresupuestoItemDTO
+    public class PresupuestoItemDTO
     {
         public string CategoriaId { get; set; }
         public decimal MontoAprobadoUSD { get; set; }
     }
 
-    public class ErleGuardarPresupuestoRequest
+    public class GuardarPresupuestoRequest
     {
-        public int TemporadaId { get; set; }
-        public int EquipoId { get; set; }
-        public List<ErlePresupuestoItemDTO> Items { get; set; } = new List<ErlePresupuestoItemDTO>();
+        public int IdTemporada { get; set; }
+        public int IdEquipo { get; set; }
+        public List<PresupuestoItemDTO> Items { get; set; } = new List<PresupuestoItemDTO>();
     }
 }

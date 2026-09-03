@@ -146,9 +146,9 @@
     <Compile Include="Services\LogisticaService.cs" />
     <Compile Include="Permisos\ValidarSesionAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Models\ERLE\ErleModels.cs" />
-    <Compile Include="DAL\ERLE\ErleFinanzasRepository.cs" />
-    <Compile Include="Controllers\ErleFinanzasController.cs" />
+    <Compile Include="Models\FinanzasModels.cs" />
+    <Compile Include="Repositories\FinanzasRepository.cs" />
+    <Compile Include="Controllers\FinanzasController.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap-grid.css" />

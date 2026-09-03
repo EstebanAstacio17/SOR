@@ -1,95 +1,33 @@
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Web.Mvc;
-using SOR.Models.ERLE;
+using SOR.Models;
 
-namespace SOR.DAL.ERLE
+namespace SOR.Repositories
 {
-    public class ErleFinanzasRepository
+    public class FinanzasRepository : BaseRepository
     {
-        private static string ObtenerCadenaConexion()
-        {
-            if (ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
-            {
-                return ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
-            }
-            if (ConfigurationManager.ConnectionStrings["DefaultConnection"] != null)
-            {
-                return ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-            }
-            return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
-        }
-
         public void AsegurarEsquema()
         {
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 conn.Open();
 
-                string ddlTablas = @"
-                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ERLE_Temporadas')
+                string ddl = @"
+                -- Categorías Financieras Universales
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Finanzas_Categorias')
                 BEGIN
-                    CREATE TABLE dbo.ERLE_Temporadas (
-                        TemporadaId INT IDENTITY(1,1) PRIMARY KEY,
-                        Nombre VARCHAR(50) NOT NULL UNIQUE,
-                        TasaCambioReferencia DECIMAL(10,4) NOT NULL DEFAULT 58.63,
-                        Activa BIT NOT NULL DEFAULT 1
-                    );
-                    INSERT INTO dbo.ERLE_Temporadas (Nombre, TasaCambioReferencia, Activa) 
-                    VALUES ('2026 - 2027', 58.6300, 1);
-                END;
-
-                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ERLE_Equipos')
-                BEGIN
-                    CREATE TABLE dbo.ERLE_Equipos (
-                        EquipoId INT IDENTITY(1,1) PRIMARY KEY,
-                        Codigo VARCHAR(50) NOT NULL UNIQUE,
-                        Nombre NVARCHAR(150) NOT NULL,
-                        EsENL BIT NOT NULL DEFAULT 0,
-                        Activo BIT NOT NULL DEFAULT 1
-                    );
-                    INSERT INTO dbo.ERLE_Equipos (Codigo, Nombre, EsENL) 
-                    VALUES ('DN-ERLE', 'Distrito Nacional - ERLE', 1);
-                END;
-
-                -- Sincronizar automáticamente equipos de la plataforma
-                IF OBJECT_ID('dbo.Equipos', 'U') IS NOT NULL
-                BEGIN
-                    INSERT INTO dbo.ERLE_Equipos (Codigo, Nombre, EsENL, Activo)
-                    SELECT 
-                        'EQ-' + CAST(e.IdEquipo AS VARCHAR(10)),
-                        e.NombreEquipo,
-                        CASE WHEN e.NombreEquipo LIKE '%Nacional%' OR e.NombreEquipo LIKE '%ENL%' THEN 1 ELSE 0 END,
-                        e.Activo
-                    FROM dbo.Equipos e
-                    WHERE NOT EXISTS (SELECT 1 FROM dbo.ERLE_Equipos x WHERE x.Nombre = e.NombreEquipo OR x.Codigo = 'EQ-' + CAST(e.IdEquipo AS VARCHAR(10)));
-                END;
-
-                -- Sincronizar automáticamente temporadas de la plataforma
-                IF OBJECT_ID('dbo.Temporadas', 'U') IS NOT NULL
-                BEGIN
-                    INSERT INTO dbo.ERLE_Temporadas (Nombre, TasaCambioReferencia, Activa)
-                    SELECT 
-                        t.NombreTemporada,
-                        58.6300,
-                        t.Activa
-                    FROM dbo.Temporadas t
-                    WHERE NOT EXISTS (SELECT 1 FROM dbo.ERLE_Temporadas x WHERE x.Nombre = t.NombreTemporada);
-                END;
-
-                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ERLE_Categorias')
-                BEGIN
-                    CREATE TABLE dbo.ERLE_Categorias (
+                    CREATE TABLE dbo.Finanzas_Categorias (
                         CategoriaId VARCHAR(10) PRIMARY KEY,
                         Tipo VARCHAR(10) NOT NULL CHECK (Tipo IN ('INGRESO', 'GASTO')),
                         Grupo VARCHAR(50) NOT NULL,
                         Descripcion NVARCHAR(150) NOT NULL,
                         Orden INT NOT NULL DEFAULT 0
                     );
-                    INSERT INTO dbo.ERLE_Categorias (CategoriaId, Tipo, Grupo, Descripcion, Orden) VALUES
+
+                    INSERT INTO dbo.Finanzas_Categorias (CategoriaId, Tipo, Grupo, Descripcion, Orden) VALUES
                     ('I-1', 'INGRESO', 'INGRESOS', 'Subvención - Entrenamientos', 1),
                     ('I-2', 'INGRESO', 'INGRESOS', 'Subvención - Mentoreo', 2),
                     ('I-3', 'INGRESO', 'INGRESOS', 'Ingresos para Logística', 3),
@@ -110,42 +48,32 @@ namespace SOR.DAL.ERLE
                     ('O-1', 'GASTO', 'OTROS', 'Otros eventos o gastos aprobados', 18);
                 END;
 
-                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ERLE_PresupuestosAprobados')
+                -- Techos Presupuestarios por Equipo y Temporada
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Finanzas_PresupuestosAprobados')
                 BEGIN
-                    CREATE TABLE dbo.ERLE_PresupuestosAprobados (
+                    CREATE TABLE dbo.Finanzas_PresupuestosAprobados (
                         PresupuestoId INT IDENTITY(1,1) PRIMARY KEY,
-                        TemporadaId INT NOT NULL FOREIGN KEY REFERENCES dbo.ERLE_Temporadas(TemporadaId),
-                        EquipoId INT NOT NULL FOREIGN KEY REFERENCES dbo.ERLE_Equipos(EquipoId),
-                        CategoriaId VARCHAR(10) NOT NULL FOREIGN KEY REFERENCES dbo.ERLE_Categorias(CategoriaId),
+                        IdTemporada INT NOT NULL,
+                        IdEquipo INT NOT NULL,
+                        CategoriaId VARCHAR(10) NOT NULL FOREIGN KEY REFERENCES dbo.Finanzas_Categorias(CategoriaId),
                         MontoAprobadoUSD DECIMAL(18,2) NOT NULL DEFAULT 0,
                         MontoAprobadoDOP AS (CAST(ROUND(MontoAprobadoUSD * 58.63, 2) AS DECIMAL(18,2))),
-                        CONSTRAINT UQ_ERLE_Presupuesto UNIQUE (TemporadaId, EquipoId, CategoriaId)
+                        CONSTRAINT UQ_Finanzas_Presupuesto UNIQUE (IdTemporada, IdEquipo, CategoriaId)
                     );
-
-                    INSERT INTO dbo.ERLE_PresupuestosAprobados (TemporadaId, EquipoId, CategoriaId, MontoAprobadoUSD) VALUES
-                    (1, 1, 'I-1', 3685.00),
-                    (1, 1, 'I-2', 1200.00),
-                    (1, 1, 'E-1', 546.00),
-                    (1, 1, 'E-2', 298.00),
-                    (1, 1, 'E-3', 2148.00),
-                    (1, 1, 'E-4', 693.00),
-                    (1, 1, 'M-1', 140.00),
-                    (1, 1, 'M-2', 160.00),
-                    (1, 1, 'M-3', 150.00),
-                    (1, 1, 'M-4', 750.00);
                 END;
 
-                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ERLE_Transacciones')
+                -- Libro Diario de Transacciones por Equipo y Temporada
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Finanzas_Transacciones')
                 BEGIN
-                    CREATE TABLE dbo.ERLE_Transacciones (
+                    CREATE TABLE dbo.Finanzas_Transacciones (
                         TransaccionId BIGINT IDENTITY(1,1) PRIMARY KEY,
-                        TemporadaId INT NOT NULL FOREIGN KEY REFERENCES dbo.ERLE_Temporadas(TemporadaId),
-                        EquipoId INT NOT NULL FOREIGN KEY REFERENCES dbo.ERLE_Equipos(EquipoId),
+                        IdTemporada INT NOT NULL,
+                        IdEquipo INT NOT NULL,
                         Mes VARCHAR(3) NOT NULL CHECK (Mes IN ('SEP','OCT','NOV','DIC','ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO')),
                         Fecha DATE NOT NULL,
                         NumeroDocumento NVARCHAR(50) NULL,
                         Descripcion NVARCHAR(255) NOT NULL,
-                        CategoriaId VARCHAR(10) NOT NULL FOREIGN KEY REFERENCES dbo.ERLE_Categorias(CategoriaId),
+                        CategoriaId VARCHAR(10) NOT NULL FOREIGN KEY REFERENCES dbo.Finanzas_Categorias(CategoriaId),
                         GastoDOP DECIMAL(18,2) NOT NULL DEFAULT 0,
                         IngresoDOP DECIMAL(18,2) NOT NULL DEFAULT 0,
                         TasaCambio DECIMAL(10,4) NOT NULL DEFAULT 58.63,
@@ -154,24 +82,37 @@ namespace SOR.DAL.ERLE
                         Notas NVARCHAR(255) NULL,
                         FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
                     );
+                END;
+
+                -- Migrar datos previos si existían
+                IF OBJECT_ID('dbo.ERLE_Transacciones', 'U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Finanzas_Transacciones)
+                BEGIN
+                    INSERT INTO dbo.Finanzas_Transacciones 
+                        (IdTemporada, IdEquipo, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas, FechaCreacion)
+                    SELECT 
+                        TemporadaId, EquipoId, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas, FechaCreacion
+                    FROM dbo.ERLE_Transacciones;
                 END;";
 
-                using (var cmd = new SqlCommand(ddlTablas, conn))
+                using (var cmd = new SqlCommand(ddl, conn))
                 {
                     cmd.ExecuteNonQuery();
                 }
 
-                // Procedimientos Almacenados
+                // Procedimientos Almacenados Genéricos
                 string sp1 = @"
-                CREATE OR ALTER PROCEDURE dbo.usp_ERLE_ObtenerTransaccionesMes
-                    @TemporadaId INT,
-                    @EquipoId INT,
+                CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_ObtenerTransaccionesMes
+                    @IdTemporada INT,
+                    @IdEquipo INT,
                     @Mes VARCHAR(3)
                 AS
                 BEGIN
                     SET NOCOUNT ON;
                     SELECT 
                         t.TransaccionId,
+                        t.IdTemporada,
+                        t.IdEquipo,
+                        t.Mes,
                         t.Fecha,
                         t.NumeroDocumento,
                         t.Descripcion,
@@ -183,20 +124,20 @@ namespace SOR.DAL.ERLE
                         t.IngresoUSD,
                         t.TasaCambio,
                         t.Notas
-                    FROM dbo.ERLE_Transacciones t
-                    INNER JOIN dbo.ERLE_Categorias c ON t.CategoriaId = c.CategoriaId
-                    WHERE t.TemporadaId = @TemporadaId 
-                      AND t.EquipoId = @EquipoId 
+                    FROM dbo.Finanzas_Transacciones t
+                    INNER JOIN dbo.Finanzas_Categorias c ON t.CategoriaId = c.CategoriaId
+                    WHERE t.IdTemporada = @IdTemporada 
+                      AND t.IdEquipo = @IdEquipo 
                       AND t.Mes = @Mes
                     ORDER BY t.Fecha ASC, t.TransaccionId ASC;
                 END;";
                 using (var cmd = new SqlCommand(sp1, conn)) { cmd.ExecuteNonQuery(); }
 
                 string sp2 = @"
-                CREATE OR ALTER PROCEDURE dbo.usp_ERLE_GuardarTransaccion
+                CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_GuardarTransaccion
                     @TransaccionId BIGINT OUTPUT,
-                    @TemporadaId INT,
-                    @EquipoId INT,
+                    @IdTemporada INT,
+                    @IdEquipo INT,
                     @Mes VARCHAR(3),
                     @Fecha DATE,
                     @NumeroDocumento NVARCHAR(50),
@@ -211,15 +152,15 @@ namespace SOR.DAL.ERLE
                     SET NOCOUNT ON;
                     IF @TransaccionId IS NULL OR @TransaccionId = 0
                     BEGIN
-                        INSERT INTO dbo.ERLE_Transacciones 
-                            (TemporadaId, EquipoId, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas)
+                        INSERT INTO dbo.Finanzas_Transacciones 
+                            (IdTemporada, IdEquipo, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas)
                         VALUES 
-                            (@TemporadaId, @EquipoId, @Mes, @Fecha, @NumeroDocumento, @Descripcion, @CategoriaId, @GastoDOP, @IngresoDOP, @TasaCambio, @Notas);
+                            (@IdTemporada, @IdEquipo, @Mes, @Fecha, @NumeroDocumento, @Descripcion, @CategoriaId, @GastoDOP, @IngresoDOP, @TasaCambio, @Notas);
                         SET @TransaccionId = SCOPE_IDENTITY();
                     END
                     ELSE
                     BEGIN
-                        UPDATE dbo.ERLE_Transacciones
+                        UPDATE dbo.Finanzas_Transacciones
                         SET Fecha = @Fecha,
                             NumeroDocumento = @NumeroDocumento,
                             Descripcion = @Descripcion,
@@ -234,19 +175,19 @@ namespace SOR.DAL.ERLE
                 using (var cmd = new SqlCommand(sp2, conn)) { cmd.ExecuteNonQuery(); }
 
                 string sp3 = @"
-                CREATE OR ALTER PROCEDURE dbo.usp_ERLE_EliminarTransaccion
+                CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_EliminarTransaccion
                     @TransaccionId BIGINT
                 AS
                 BEGIN
                     SET NOCOUNT ON;
-                    DELETE FROM dbo.ERLE_Transacciones WHERE TransaccionId = @TransaccionId;
+                    DELETE FROM dbo.Finanzas_Transacciones WHERE TransaccionId = @TransaccionId;
                 END;";
                 using (var cmd = new SqlCommand(sp3, conn)) { cmd.ExecuteNonQuery(); }
 
                 string sp4 = @"
-                CREATE OR ALTER PROCEDURE dbo.usp_ERLE_ObtenerReportePresupuestoVsReal
-                    @TemporadaId INT,
-                    @EquipoId INT
+                CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_ObtenerReportePresupuestoVsReal
+                    @IdTemporada INT,
+                    @IdEquipo INT
                 AS
                 BEGIN
                     SET NOCOUNT ON;
@@ -260,20 +201,20 @@ namespace SOR.DAL.ERLE
                         ISNULL(SUM(CASE WHEN c.Tipo = 'INGRESO' THEN t.IngresoDOP ELSE t.GastoDOP END), 0) AS EjecutadoDOP,
                         (ISNULL(p.MontoAprobadoUSD, 0) - ISNULL(SUM(CASE WHEN c.Tipo = 'INGRESO' THEN t.IngresoUSD ELSE t.GastoUSD END), 0)) AS RemanenteUSD,
                         (ISNULL(p.MontoAprobadoDOP, 0) - ISNULL(SUM(CASE WHEN c.Tipo = 'INGRESO' THEN t.IngresoDOP ELSE t.GastoDOP END), 0)) AS RemanenteDOP
-                    FROM dbo.ERLE_Categorias c
-                    LEFT JOIN dbo.ERLE_PresupuestosAprobados p 
-                        ON c.CategoriaId = p.CategoriaId AND p.TemporadaId = @TemporadaId AND p.EquipoId = @EquipoId
-                    LEFT JOIN dbo.ERLE_Transacciones t 
-                        ON c.CategoriaId = t.CategoriaId AND t.TemporadaId = @TemporadaId AND t.EquipoId = @EquipoId
+                    FROM dbo.Finanzas_Categorias c
+                    LEFT JOIN dbo.Finanzas_PresupuestosAprobados p 
+                        ON c.CategoriaId = p.CategoriaId AND p.IdTemporada = @IdTemporada AND p.IdEquipo = @IdEquipo
+                    LEFT JOIN dbo.Finanzas_Transacciones t 
+                        ON c.CategoriaId = t.CategoriaId AND t.IdTemporada = @IdTemporada AND t.IdEquipo = @IdEquipo
                     GROUP BY c.Grupo, c.CategoriaId, c.Descripcion, c.Orden, c.Tipo, p.MontoAprobadoUSD, p.MontoAprobadoDOP
                     ORDER BY c.Orden;
                 END;";
                 using (var cmd = new SqlCommand(sp4, conn)) { cmd.ExecuteNonQuery(); }
 
                 string sp5 = @"
-                CREATE OR ALTER PROCEDURE dbo.usp_ERLE_ObtenerReporteConsolidado
-                    @TemporadaId INT,
-                    @EquipoId INT = NULL
+                CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_ObtenerReporteConsolidado
+                    @IdTemporada INT,
+                    @IdEquipo INT = NULL
                 AS
                 BEGIN
                     SET NOCOUNT ON;
@@ -295,11 +236,11 @@ namespace SOR.DAL.ERLE
                         ISNULL(SUM(CASE WHEN t.Mes = 'JUL' THEN (CASE WHEN c.Tipo = 'INGRESO' THEN t.IngresoDOP ELSE t.GastoDOP END) ELSE 0 END), 0) AS JUL,
                         ISNULL(SUM(CASE WHEN t.Mes = 'AGO' THEN (CASE WHEN c.Tipo = 'INGRESO' THEN t.IngresoDOP ELSE t.GastoDOP END) ELSE 0 END), 0) AS AGO,
                         ISNULL(SUM(CASE WHEN c.Tipo = 'INGRESO' THEN t.IngresoDOP ELSE t.GastoDOP END), 0) AS TotalDOP
-                    FROM dbo.ERLE_Categorias c
-                    LEFT JOIN dbo.ERLE_Transacciones t 
+                    FROM dbo.Finanzas_Categorias c
+                    LEFT JOIN dbo.Finanzas_Transacciones t 
                         ON c.CategoriaId = t.CategoriaId 
-                       AND t.TemporadaId = @TemporadaId 
-                       AND (@EquipoId IS NULL OR t.EquipoId = @EquipoId)
+                       AND t.IdTemporada = @IdTemporada 
+                       AND (@IdEquipo IS NULL OR t.IdEquipo = @IdEquipo)
                     GROUP BY c.Grupo, c.CategoriaId, c.Descripcion, c.Orden, c.Tipo
                     ORDER BY c.Orden;
                 END;";
@@ -307,23 +248,35 @@ namespace SOR.DAL.ERLE
             }
         }
 
-        public List<SelectListItem> ObtenerListaEquipos()
+        public List<SelectListItem> ObtenerListaEquipos(int? idEquipoRestringido = null)
         {
             var list = new List<SelectListItem>();
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 conn.Open();
-                string sql = "SELECT EquipoId, Nombre FROM dbo.ERLE_Equipos WHERE Activo = 1 ORDER BY Nombre;";
-                using (var cmd = new SqlCommand(sql, conn))
-                using (var dr = cmd.ExecuteReader())
+                string sql = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos WHERE Activo = 1";
+                if (idEquipoRestringido.HasValue && idEquipoRestringido.Value > 0)
                 {
-                    while (dr.Read())
+                    sql += " AND IdEquipo = @IdRestringido";
+                }
+                sql += " ORDER BY NombreEquipo;";
+
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    if (idEquipoRestringido.HasValue && idEquipoRestringido.Value > 0)
                     {
-                        list.Add(new SelectListItem
+                        cmd.Parameters.AddWithValue("@IdRestringido", idEquipoRestringido.Value);
+                    }
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
                         {
-                            Value = dr["EquipoId"].ToString(),
-                            Text = dr["Nombre"].ToString()
-                        });
+                            list.Add(new SelectListItem
+                            {
+                                Value = dr["IdEquipo"].ToString(),
+                                Text = dr["NombreEquipo"].ToString()
+                            });
+                        }
                     }
                 }
             }
@@ -336,7 +289,7 @@ namespace SOR.DAL.ERLE
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 conn.Open();
-                string sql = "SELECT TemporadaId, Nombre FROM dbo.ERLE_Temporadas ORDER BY Activa DESC, TemporadaId DESC;";
+                string sql = "SELECT IdTemporada, NombreTemporada FROM dbo.Temporadas ORDER BY Activa DESC, IdTemporada DESC;";
                 using (var cmd = new SqlCommand(sql, conn))
                 using (var dr = cmd.ExecuteReader())
                 {
@@ -344,8 +297,8 @@ namespace SOR.DAL.ERLE
                     {
                         list.Add(new SelectListItem
                         {
-                            Value = dr["TemporadaId"].ToString(),
-                            Text = dr["Nombre"].ToString()
+                            Value = dr["IdTemporada"].ToString(),
+                            Text = dr["NombreTemporada"].ToString()
                         });
                     }
                 }
@@ -353,37 +306,37 @@ namespace SOR.DAL.ERLE
             return list;
         }
 
-        public string ObtenerNombreEquipo(int equipoId)
+        public string ObtenerNombreEquipo(int idEquipo)
         {
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 conn.Open();
-                string sql = "SELECT Nombre FROM dbo.ERLE_Equipos WHERE EquipoId = @Id;";
+                string sql = "SELECT NombreEquipo FROM dbo.Equipos WHERE IdEquipo = @Id;";
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", equipoId);
+                    cmd.Parameters.AddWithValue("@Id", idEquipo);
                     object val = cmd.ExecuteScalar();
-                    return val != null ? val.ToString() : "Equipo " + equipoId;
+                    return val != null ? val.ToString() : "Equipo " + idEquipo;
                 }
             }
         }
 
-        public string ObtenerNombreTemporada(int temporadaId)
+        public string ObtenerNombreTemporada(int idTemporada)
         {
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 conn.Open();
-                string sql = "SELECT Nombre FROM dbo.ERLE_Temporadas WHERE TemporadaId = @Id;";
+                string sql = "SELECT NombreTemporada FROM dbo.Temporadas WHERE IdTemporada = @Id;";
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", temporadaId);
+                    cmd.Parameters.AddWithValue("@Id", idTemporada);
                     object val = cmd.ExecuteScalar();
-                    return val != null ? val.ToString() : "Temporada " + temporadaId;
+                    return val != null ? val.ToString() : "Temporada " + idTemporada;
                 }
             }
         }
 
-        public decimal CalcularSaldoInicialMes(int temporadaId, int equipoId, string mesActual)
+        public decimal CalcularSaldoInicialMes(int idTemporada, int idEquipo, string mesActual)
         {
             string[] meses = new[] { "SEP", "OCT", "NOV", "DIC", "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO" };
             int idxActual = Array.IndexOf(meses, mesActual.ToUpper());
@@ -402,30 +355,30 @@ namespace SOR.DAL.ERLE
                 conn.Open();
                 string sql = $@"
                     SELECT ISNULL(SUM(IngresoDOP - GastoDOP), 0)
-                    FROM dbo.ERLE_Transacciones
-                    WHERE TemporadaId = @TemporadaId AND EquipoId = @EquipoId AND Mes IN ({inClause});";
+                    FROM dbo.Finanzas_Transacciones
+                    WHERE IdTemporada = @IdTemporada AND IdEquipo = @IdEquipo AND Mes IN ({inClause});";
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@TemporadaId", temporadaId);
-                    cmd.Parameters.AddWithValue("@EquipoId", equipoId);
+                    cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                    cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
                     object res = cmd.ExecuteScalar();
                     return res != null ? Convert.ToDecimal(res) : 0m;
                 }
             }
         }
 
-        public List<ErleTransaccionDTO> ObtenerTransaccionesMes(int temporadaId, int equipoId, string mes, decimal saldoInicialDOP)
+        public List<TransaccionFinancieraDTO> ObtenerTransaccionesMes(int idTemporada, int idEquipo, string mes, decimal saldoInicialDOP)
         {
-            var lista = new List<ErleTransaccionDTO>();
+            var lista = new List<TransaccionFinancieraDTO>();
             decimal saldoAcum = saldoInicialDOP;
 
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
-            using (var cmd = new SqlCommand("dbo.usp_ERLE_ObtenerTransaccionesMes", conn))
+            using (var cmd = new SqlCommand("dbo.usp_Finanzas_ObtenerTransaccionesMes", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add(new SqlParameter("@TemporadaId", SqlDbType.Int) { Value = temporadaId });
-                cmd.Parameters.Add(new SqlParameter("@EquipoId", SqlDbType.Int) { Value = equipoId });
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", SqlDbType.Int) { Value = idTemporada });
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", SqlDbType.Int) { Value = idEquipo });
                 cmd.Parameters.Add(new SqlParameter("@Mes", SqlDbType.VarChar, 3) { Value = mes });
 
                 conn.Open();
@@ -433,9 +386,12 @@ namespace SOR.DAL.ERLE
                 {
                     while (r.Read())
                     {
-                        var t = new ErleTransaccionDTO
+                        var t = new TransaccionFinancieraDTO
                         {
                             TransaccionId = Convert.ToInt64(r["TransaccionId"]),
+                            IdTemporada = Convert.ToInt32(r["IdTemporada"]),
+                            IdEquipo = Convert.ToInt32(r["IdEquipo"]),
+                            Mes = r["Mes"].ToString(),
                             Fecha = Convert.ToDateTime(r["Fecha"]),
                             NumeroDocumento = r["NumeroDocumento"] != DBNull.Value ? r["NumeroDocumento"].ToString() : string.Empty,
                             Descripcion = r["Descripcion"].ToString(),
@@ -459,10 +415,10 @@ namespace SOR.DAL.ERLE
             return lista;
         }
 
-        public long GuardarTransaccion(ErleTransaccionDTO t)
+        public long GuardarTransaccion(TransaccionFinancieraDTO t)
         {
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
-            using (var cmd = new SqlCommand("dbo.usp_ERLE_GuardarTransaccion", conn))
+            using (var cmd = new SqlCommand("dbo.usp_Finanzas_GuardarTransaccion", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 var pId = new SqlParameter("@TransaccionId", SqlDbType.BigInt)
@@ -471,8 +427,8 @@ namespace SOR.DAL.ERLE
                     Value = t.TransaccionId == 0 ? (object)DBNull.Value : t.TransaccionId
                 };
                 cmd.Parameters.Add(pId);
-                cmd.Parameters.Add(new SqlParameter("@TemporadaId", SqlDbType.Int) { Value = t.TemporadaId });
-                cmd.Parameters.Add(new SqlParameter("@EquipoId", SqlDbType.Int) { Value = t.EquipoId });
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", SqlDbType.Int) { Value = t.IdTemporada });
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", SqlDbType.Int) { Value = t.IdEquipo });
                 cmd.Parameters.Add(new SqlParameter("@Mes", SqlDbType.VarChar, 3) { Value = t.Mes });
                 cmd.Parameters.Add(new SqlParameter("@Fecha", SqlDbType.Date) { Value = t.Fecha });
                 cmd.Parameters.Add(new SqlParameter("@NumeroDocumento", SqlDbType.NVarChar, 50) { Value = (object)t.NumeroDocumento ?? DBNull.Value });
@@ -492,7 +448,7 @@ namespace SOR.DAL.ERLE
         public bool EliminarTransaccion(long id)
         {
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
-            using (var cmd = new SqlCommand("dbo.usp_ERLE_EliminarTransaccion", conn))
+            using (var cmd = new SqlCommand("dbo.usp_Finanzas_EliminarTransaccion", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add(new SqlParameter("@TransaccionId", SqlDbType.BigInt) { Value = id });
@@ -501,22 +457,22 @@ namespace SOR.DAL.ERLE
             }
         }
 
-        public List<ErlePresupuestoVsRealDTO> ObtenerPresupuestoVsReal(int temporadaId, int equipoId)
+        public List<PresupuestoVsRealDTO> ObtenerPresupuestoVsReal(int idTemporada, int idEquipo)
         {
-            var list = new List<ErlePresupuestoVsRealDTO>();
+            var list = new List<PresupuestoVsRealDTO>();
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
-            using (var cmd = new SqlCommand("dbo.usp_ERLE_ObtenerReportePresupuestoVsReal", conn))
+            using (var cmd = new SqlCommand("dbo.usp_Finanzas_ObtenerReportePresupuestoVsReal", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add(new SqlParameter("@TemporadaId", SqlDbType.Int) { Value = temporadaId });
-                cmd.Parameters.Add(new SqlParameter("@EquipoId", SqlDbType.Int) { Value = equipoId });
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", SqlDbType.Int) { Value = idTemporada });
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", SqlDbType.Int) { Value = idEquipo });
 
                 conn.Open();
                 using (var r = cmd.ExecuteReader())
                 {
                     while (r.Read())
                     {
-                        list.Add(new ErlePresupuestoVsRealDTO
+                        list.Add(new PresupuestoVsRealDTO
                         {
                             Grupo = r["Grupo"].ToString(),
                             CategoriaId = r["CategoriaId"].ToString(),
@@ -534,18 +490,18 @@ namespace SOR.DAL.ERLE
             return list;
         }
 
-        public List<ErleOpcionCategoriaDTO> ObtenerCategorias()
+        public List<OpcionCategoriaFinancieraDTO> ObtenerCategorias()
         {
-            var list = new List<ErleOpcionCategoriaDTO>();
+            var list = new List<OpcionCategoriaFinancieraDTO>();
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
-            using (var cmd = new SqlCommand("SELECT CategoriaId, Descripcion, Tipo FROM dbo.ERLE_Categorias ORDER BY Orden", conn))
+            using (var cmd = new SqlCommand("SELECT CategoriaId, Descripcion, Tipo FROM dbo.Finanzas_Categorias ORDER BY Orden", conn))
             {
                 conn.Open();
                 using (var r = cmd.ExecuteReader())
                 {
                     while (r.Read())
                     {
-                        list.Add(new ErleOpcionCategoriaDTO
+                        list.Add(new OpcionCategoriaFinancieraDTO
                         {
                             Value = r["CategoriaId"].ToString(),
                             Text = $"{r["CategoriaId"]} - {r["Descripcion"]}",
@@ -557,22 +513,22 @@ namespace SOR.DAL.ERLE
             return list;
         }
 
-        public List<ErleReporteConsolidadoFila> ObtenerReporteConsolidado(int temporadaId, int? equipoId)
+        public List<ReporteConsolidadoFila> ObtenerReporteConsolidado(int idTemporada, int? idEquipo)
         {
-            var list = new List<ErleReporteConsolidadoFila>();
+            var list = new List<ReporteConsolidadoFila>();
             using (var conn = new SqlConnection(ObtenerCadenaConexion()))
-            using (var cmd = new SqlCommand("dbo.usp_ERLE_ObtenerReporteConsolidado", conn))
+            using (var cmd = new SqlCommand("dbo.usp_Finanzas_ObtenerReporteConsolidado", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add(new SqlParameter("@TemporadaId", SqlDbType.Int) { Value = temporadaId });
-                cmd.Parameters.Add(new SqlParameter("@EquipoId", SqlDbType.Int) { Value = (object)equipoId ?? DBNull.Value });
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", SqlDbType.Int) { Value = idTemporada });
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", SqlDbType.Int) { Value = (object)idEquipo ?? DBNull.Value });
 
                 conn.Open();
                 using (var r = cmd.ExecuteReader())
                 {
                     while (r.Read())
                     {
-                        list.Add(new ErleReporteConsolidadoFila
+                        list.Add(new ReporteConsolidadoFila
                         {
                             Grupo = r["Grupo"].ToString(),
                             CategoriaId = r["CategoriaId"].ToString(),
@@ -598,7 +554,7 @@ namespace SOR.DAL.ERLE
             return list;
         }
 
-        public bool GuardarPresupuestoAprobado(int temporadaId, int equipoId, List<ErlePresupuestoItemDTO> items)
+        public bool GuardarPresupuestoAprobado(int idTemporada, int idEquipo, List<PresupuestoItemDTO> items)
         {
             if (items == null || items.Count == 0) return false;
 
@@ -612,22 +568,22 @@ namespace SOR.DAL.ERLE
                         foreach (var item in items)
                         {
                             string sql = @"
-                                IF EXISTS (SELECT 1 FROM dbo.ERLE_PresupuestosAprobados WHERE TemporadaId = @TemporadaId AND EquipoId = @EquipoId AND CategoriaId = @CatId)
+                                IF EXISTS (SELECT 1 FROM dbo.Finanzas_PresupuestosAprobados WHERE IdTemporada = @IdTemporada AND IdEquipo = @IdEquipo AND CategoriaId = @CatId)
                                 BEGIN
-                                    UPDATE dbo.ERLE_PresupuestosAprobados
+                                    UPDATE dbo.Finanzas_PresupuestosAprobados
                                     SET MontoAprobadoUSD = @Monto
-                                    WHERE TemporadaId = @TemporadaId AND EquipoId = @EquipoId AND CategoriaId = @CatId;
+                                    WHERE IdTemporada = @IdTemporada AND IdEquipo = @IdEquipo AND CategoriaId = @CatId;
                                 END
                                 ELSE
                                 BEGIN
-                                    INSERT INTO dbo.ERLE_PresupuestosAprobados (TemporadaId, EquipoId, CategoriaId, MontoAprobadoUSD)
-                                    VALUES (@TemporadaId, @EquipoId, @CatId, @Monto);
+                                    INSERT INTO dbo.Finanzas_PresupuestosAprobados (IdTemporada, IdEquipo, CategoriaId, MontoAprobadoUSD)
+                                    VALUES (@IdTemporada, @IdEquipo, @CatId, @Monto);
                                 END";
 
                             using (var cmd = new SqlCommand(sql, conn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@TemporadaId", temporadaId);
-                                cmd.Parameters.AddWithValue("@EquipoId", equipoId);
+                                cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                                cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
                                 cmd.Parameters.AddWithValue("@CatId", item.CategoriaId);
                                 cmd.Parameters.AddWithValue("@Monto", item.MontoAprobadoUSD);
                                 cmd.ExecuteNonQuery();

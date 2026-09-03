@@ -1,4 +1,4 @@
-@model SOR.Models.ERLE.ErleReporteConsolidadoViewModel
+@model SOR.Models.ReporteConsolidadoViewModel
 @{
     ViewBag.Title = "Reporte Consolidado Anual de Finanzas — " + Model.NombreEquipo;
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -21,12 +21,30 @@
         <p class="text-muted mb-0">Matriz anual de ejecución acumulada mensual por categorías para @Model.NombreEquipo (@Model.NombreTemporada).</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="@Url.Action("Index", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId, mes = "OCT" })" class="btn btn-outline-secondary font-semibold px-3 shadow-sm">
+        <a href="@Url.Action("Index", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo, mes = "OCT" })" class="btn btn-outline-secondary font-semibold px-3 shadow-sm">
             <i class="bi bi-arrow-left me-1"></i>Volver al Libro Mensual
         </a>
-        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" onclick="window.print()">
-            <i class="bi bi-printer me-2"></i>Imprimir / Exportar
-        </button>
+        <div class="btn-group shadow-sm">
+            <button type="button" class="btn btn-primary font-semibold px-3" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>Imprimir / PDF
+            </button>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">
+                <li>
+                    <a class="dropdown-item fw-semibold" href="javascript:void(0)" onclick="window.print()">
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Imprimir / Guardar en PDF
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item fw-semibold" href="@Url.Action("ExportarConsolidadoExcel", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo })">
+                        <i class="bi bi-file-earmark-excel me-2 text-success"></i>Exportar a Excel (.xls)
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
 
@@ -35,24 +53,35 @@
     <div class="row g-3 align-items-end">
         <div class="col-md-5">
             <label class="form-label text-xs fw-semibold mb-1 text-muted">Equipo</label>
-            <select id="selectEquipoConsolidado" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosConsolidado()">
-                @foreach (var eq in Model.ListaEquipos)
-                {
-                    <option value="@eq.Value" @(Model.EquipoId.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
-                }
-            </select>
+            @if (ViewBag.EsAdmin == true)
+            {
+                <select id="selectEquipoConsolidado" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosConsolidado()">
+                    @foreach (var eq in Model.ListaEquipos)
+                    {
+                        <option value="@eq.Value" @(Model.IdEquipo.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                    <input type="text" class="form-control bg-light fw-semibold text-slate-800" value="@Model.NombreEquipo" readonly />
+                    <input type="hidden" id="selectEquipoConsolidado" value="@Model.IdEquipo" />
+                </div>
+            }
         </div>
         <div class="col-md-5">
             <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
             <select id="selectTemporadaConsolidado" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosConsolidado()">
                 @foreach (var tmp in Model.ListaTemporadas)
                 {
-                    <option value="@tmp.Value" @(Model.TemporadaId.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
+                    <option value="@tmp.Value" @(Model.IdTemporada.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
                 }
             </select>
         </div>
         <div class="col-md-2 d-flex">
-            <a href="@Url.Action("ReporteConsolidado", "ErleFinanzas")" class="btn btn-sm btn-outline-secondary w-100 font-semibold">
+            <a href="@Url.Action("ReporteConsolidado", "Finanzas")" class="btn btn-sm btn-outline-secondary w-100 font-semibold">
                 <i class="bi bi-arrow-clockwise me-1"></i>Recargar
             </a>
         </div>
@@ -251,7 +280,7 @@
     function cambiarFiltrosConsolidado() {
         var eqId = document.getElementById("selectEquipoConsolidado").value;
         var tmpId = document.getElementById("selectTemporadaConsolidado").value;
-        var url = '@Url.Action("ReporteConsolidado", "ErleFinanzas")' + '?temporadaId=' + tmpId + '&equipoId=' + eqId;
+        var url = '@Url.Action("ReporteConsolidado", "Finanzas")' + '?idTemporada=' + tmpId + '&idEquipo=' + eqId;
         window.location.href = url;
     }
 </script>

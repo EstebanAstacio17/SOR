@@ -1,4 +1,4 @@
-@model SOR.Models.ERLE.ErleLibroMensualViewModel
+@model SOR.Models.LibroMensualViewModel
 @{
     ViewBag.Title = "Finanzas — " + Model.NombreEquipo;
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -16,7 +16,7 @@
         <p class="text-muted mb-0">Control de ingresos, gastos y conciliación de flujo financiero por equipo y temporada.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="@Url.Action("ReporteConsolidado", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId })" class="btn btn-outline-primary font-semibold px-3 shadow-sm">
+        <a href="@Url.Action("ReporteConsolidado", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo })" class="btn btn-outline-primary font-semibold px-3 shadow-sm">
             <i class="bi bi-grid-3x3 me-1"></i>Reporte Consolidado Anual
         </a>
         <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
@@ -37,19 +37,30 @@
         </div>
         <div class="col-md-3">
             <label class="form-label text-xs fw-semibold mb-1 text-muted">Equipo</label>
-            <select id="selectEquipoFiltro" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosFinanzas()">
-                @foreach (var eq in Model.ListaEquipos)
-                {
-                    <option value="@eq.Value" @(Model.EquipoId.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
-                }
-            </select>
+            @if (ViewBag.EsAdmin == true)
+            {
+                <select id="selectEquipoFiltro" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosFinanzas()">
+                    @foreach (var eq in Model.ListaEquipos)
+                    {
+                        <option value="@eq.Value" @(Model.IdEquipo.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                    <input type="text" class="form-control bg-light fw-semibold text-slate-800" value="@Model.NombreEquipo" readonly />
+                    <input type="hidden" id="selectEquipoFiltro" value="@Model.IdEquipo" />
+                </div>
+            }
         </div>
         <div class="col-md-2">
             <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
             <select id="selectTemporadaFiltro" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosFinanzas()">
                 @foreach (var tmp in Model.ListaTemporadas)
                 {
-                    <option value="@tmp.Value" @(Model.TemporadaId.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
+                    <option value="@tmp.Value" @(Model.IdTemporada.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
                 }
             </select>
         </div>
@@ -78,7 +89,7 @@
         <div class="btn-group btn-group-sm flex-wrap" role="group">
             @foreach (var m in new[] { "SEP", "OCT", "NOV", "DIC", "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO" })
             {
-                <a href="@Url.Action("Index", "ErleFinanzas", new { temporadaId = Model.TemporadaId, equipoId = Model.EquipoId, mes = m })"
+                <a href="@Url.Action("Index", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo, mes = m })"
                    class="btn @(Model.Mes == m ? "btn-primary active fw-bold px-3 shadow-sm" : "btn-light text-slate-700 px-3") border-0 rounded-2 me-1">
                     @m
                 </a>
@@ -271,7 +282,7 @@
     </div>
 </div>
 
-<!-- MODAL REGISTRAR MOVIMIENTO -->
+<!-- MODAL REGISTRAR / EDITAR MOVIMIENTO -->
 <div class="modal fade text-start" id="modalRegistrarTransaccion" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 rounded-4 shadow">
@@ -448,7 +459,7 @@
     function cambiarFiltrosFinanzas() {
         var eqId = document.getElementById("selectEquipoFiltro").value;
         var tmpId = document.getElementById("selectTemporadaFiltro").value;
-        var url = '@Url.Action("Index", "ErleFinanzas")' + '?temporadaId=' + tmpId + '&equipoId=' + eqId + '&mes=@Model.Mes';
+        var url = '@Url.Action("Index", "Finanzas")' + '?idTemporada=' + tmpId + '&idEquipo=' + eqId + '&mes=@Model.Mes';
         window.location.href = url;
     }
 
@@ -510,9 +521,7 @@
         }
     }
 
-    function onTipoMovRadioChange() {
-        // Opcional para interacción
-    }
+    function onTipoMovRadioChange() { }
 
     function abrirModalEditarTransaccion(id, fecha, doc, desc, cat, gastoDOP, ingresoDOP, tasa, notas) {
         document.getElementById("regTransaccionId").value = id;
@@ -553,8 +562,8 @@
 
         var dto = {
             TransaccionId: id,
-            TemporadaId: @Model.TemporadaId,
-            EquipoId: @Model.EquipoId,
+            IdTemporada: @Model.IdTemporada,
+            IdEquipo: @Model.IdEquipo,
             Mes: '@Model.Mes',
             Fecha: fecha,
             NumeroDocumento: doc,
@@ -567,7 +576,7 @@
         };
 
         $.ajax({
-            url: '@Url.Action("GuardarTransaccion", "ErleFinanzas")',
+            url: '@Url.Action("GuardarTransaccion", "Finanzas")',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(dto),
@@ -587,7 +596,7 @@
     function eliminarMovimiento(id) {
         if (confirm("¿Estás seguro de que deseas eliminar este movimiento financiero?")) {
             $.ajax({
-                url: '@Url.Action("EliminarTransaccion", "ErleFinanzas")',
+                url: '@Url.Action("EliminarTransaccion", "Finanzas")',
                 type: 'POST',
                 data: { transaccionId: id },
                 success: function (res) {
@@ -613,13 +622,13 @@
         });
 
         var payload = {
-            TemporadaId: @Model.TemporadaId,
-            EquipoId: @Model.EquipoId,
+            IdTemporada: @Model.IdTemporada,
+            IdEquipo: @Model.IdEquipo,
             Items: items
         };
 
         $.ajax({
-            url: '@Url.Action("GuardarPresupuesto", "ErleFinanzas")',
+            url: '@Url.Action("GuardarPresupuesto", "Finanzas")',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(payload),
