@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using SOR.Models;
 using SOR.Helpers;
 
@@ -149,11 +150,7 @@ namespace SOR.Repositories
                             string sqlTemp = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC;";
                             SqlCommand cmdTemp = new SqlCommand(sqlTemp, cn, tran);
                             object idTempObj = cmdTemp.ExecuteScalar();
-                            if (idTempObj == null)
-                            {
-                                throw new Exception("No hay temporadas configuradas en el sistema. Contacta a un Administrador.");
-                            }
-                            idTemporadaDestino = Convert.ToInt32(idTempObj);
+                            idTemporadaDestino = Convert.ToInt32(idTempObj ?? throw new Exception("No hay temporadas configuradas en el sistema. Contacta a un Administrador."));
                         }
 
                         string estatusReporte = (modelo.ParticipacionActual != null && !string.IsNullOrEmpty(modelo.ParticipacionActual.EstatusEvaluacionReporte)) 
@@ -1348,6 +1345,317 @@ namespace SOR.Repositories
                     cmd.Parameters.AddWithValue("@Rnc", rncCedula.Trim());
                     cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
                     return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                }
+            }
+        }
+
+        // ============================================================================
+        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & CAPACIDAD)
+        // ============================================================================
+
+        public ResumenDiscipuladoLGAModel ObtenerResumenDiscipuladoLGA(int idParticipacion, int idIglesia)
+        {
+            var resumen = new ResumenDiscipuladoLGAModel
+            {
+                IdParticipacion = idParticipacion,
+                IdIglesia = idIglesia
+            };
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+
+                // 1. Obtener datos de asignación y maestros para cálculo de capacidad
+                string sqlCap = @"
+                    SELECT ISNULL(ar.OportunidadesEvangelisticas, 0) AS Cajitas,
+                           (SELECT COUNT(1) FROM dbo.Maestros WHERE IdIglesia = @IdIglesia AND Activo = 1) AS MaestrosCap,
+                           ISNULL(p.TallerCantMaestrosAsist, 0) AS MaestrosAsist
+                    FROM dbo.ParticipacionesIglesia p
+                    LEFT JOIN dbo.AsignacionesRecursos ar ON p.IdParticipacion = ar.IdParticipacion
+                    WHERE p.IdParticipacion = @IdPart;";
+
+                using (SqlCommand cmdCap = new SqlCommand(sqlCap, cn))
+                {
+                    cmdCap.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdCap.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    using (var dr = cmdCap.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            resumen.CajitasAsignadas = Convert.ToInt32(dr["Cajitas"]);
+                            int mCap = Convert.ToInt32(dr["MaestrosCap"]);
+                            int mAsist = Convert.ToInt32(dr["MaestrosAsist"]);
+                            resumen.MaestrosCapacitados = Math.Max(mCap, mAsist);
+                        }
+                    }
+                }
+
+                // 2. Obtener o inicializar los 5 contactos estándar
+                string sqlContactos = @"
+                    SELECT s.IdSeguimiento, s.IdParticipacion, s.IdIglesia, s.NumeroContacto,
+                           s.FechaContacto, s.IdUsuarioContacto,
+                           ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(pco.PrimerNombre, ' ', pco.PrimerApellido))), ''), u.Correo) AS NombreUsuarioContacto,
+                           s.PreguntaClave, s.DatoMinimo1, s.DatoMinimo2, s.DatoMinimo3,
+                           s.DecisionTomada, s.ComentarioAccion, s.EstadoContacto, s.FechaRegistro, s.FechaModificacion
+                    FROM dbo.SeguimientoLGAContactos s
+                    LEFT JOIN dbo.Usuarios u ON s.IdUsuarioContacto = u.IdUsuario
+                    LEFT JOIN dbo.PerfilesCoordinador pco ON u.IdUsuario = pco.IdUsuario
+                    WHERE s.IdParticipacion = @IdPart
+                    ORDER BY s.NumeroContacto ASC;";
+
+                var listaDb = new List<ContactoLGAModel>();
+                using (SqlCommand cmdCon = new SqlCommand(sqlContactos, cn))
+                {
+                    cmdCon.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    using (var dr = cmdCon.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            listaDb.Add(new ContactoLGAModel
+                            {
+                                IdSeguimiento = Convert.ToInt32(dr["IdSeguimiento"]),
+                                IdParticipacion = Convert.ToInt32(dr["IdParticipacion"]),
+                                IdIglesia = Convert.ToInt32(dr["IdIglesia"]),
+                                NumeroContacto = Convert.ToInt32(dr["NumeroContacto"]),
+                                FechaContacto = dr["FechaContacto"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaContacto"]) : null,
+                                IdUsuarioContacto = dr["IdUsuarioContacto"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioContacto"]) : null,
+                                NombreUsuarioContacto = dr["NombreUsuarioContacto"] != DBNull.Value ? dr["NombreUsuarioContacto"].ToString() : null,
+                                PreguntaClave = dr["PreguntaClave"]?.ToString(),
+                                DatoMinimo1 = dr["DatoMinimo1"]?.ToString(),
+                                DatoMinimo2 = dr["DatoMinimo2"]?.ToString(),
+                                DatoMinimo3 = dr["DatoMinimo3"]?.ToString(),
+                                DecisionTomada = dr["DecisionTomada"]?.ToString(),
+                                ComentarioAccion = dr["ComentarioAccion"]?.ToString(),
+                                EstadoContacto = dr["EstadoContacto"]?.ToString() ?? "PENDIENTE",
+                                FechaRegistro = Convert.ToDateTime(dr["FechaRegistro"]),
+                                FechaModificacion = dr["FechaModificacion"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaModificacion"]) : null
+                            });
+                        }
+                    }
+                }
+
+                // Metadata estándar de los 5 contactos de la planilla LGA
+                var plantillaContactos = new[]
+                {
+                    new { Num = 1, Fase = "Preparación", Agenda = "Antes del Evento Evangelístico", Pregunta = "¿Está listo para iniciar?", Lbl1 = "Cajitas Recibidas", Lbl2 = "Maestros Listos", Lbl3 = "" },
+                    new { Num = 2, Fase = "Inscripción", Agenda = "Semanas 1 a 3", Pregunta = "¿Las cajitas ya se convirtieron en niños inscritos?", Lbl1 = "Cajitas Entregadas", Lbl2 = "Niños Inscritos", Lbl3 = "" },
+                    new { Num = 3, Fase = "Cuidado", Agenda = "Semanas 4 a 9", Pregunta = "¿Estamos perdiendo niños inscritos?", Lbl1 = "Niños Inscritos", Lbl2 = "Asistencia Promedio", Lbl3 = "" },
+                    new { Num = 4, Fase = "Graduación", Agenda = "Semanas 10 a 12", Pregunta = "¿Llegaremos a la meta?", Lbl1 = "Niños Inscritos", Lbl2 = "Graduados Esperados/Confirmados", Lbl3 = "" },
+                    new { Num = 5, Fase = "Aprendizaje", Agenda = "Celebración y Reporte", Pregunta = "¿Qué debemos mejorar?", Lbl1 = "1. Funcionó", Lbl2 = "2. Desafíos", Lbl3 = "3. Acción Siguiente" }
+                };
+
+                foreach (var p in plantillaContactos)
+                {
+                    var existente = listaDb.FirstOrDefault(x => x.NumeroContacto == p.Num);
+                    if (existente != null)
+                    {
+                        existente.NombreFase = p.Fase;
+                        existente.PeriodoAgenda = p.Agenda;
+                        existente.DatoMinimo1Label = p.Lbl1;
+                        existente.DatoMinimo2Label = p.Lbl2;
+                        existente.DatoMinimo3Label = p.Lbl3;
+                        if (string.IsNullOrEmpty(existente.PreguntaClave)) existente.PreguntaClave = p.Pregunta;
+                        resumen.Contactos.Add(existente);
+                    }
+                    else
+                    {
+                        resumen.Contactos.Add(new ContactoLGAModel
+                        {
+                            IdParticipacion = idParticipacion,
+                            IdIglesia = idIglesia,
+                            NumeroContacto = p.Num,
+                            NombreFase = p.Fase,
+                            PeriodoAgenda = p.Agenda,
+                            PreguntaClave = p.Pregunta,
+                            DatoMinimo1Label = p.Lbl1,
+                            DatoMinimo2Label = p.Lbl2,
+                            DatoMinimo3Label = p.Lbl3,
+                            EstadoContacto = "PENDIENTE"
+                        });
+                    }
+                }
+
+                // 3. Extraer métricas para el Embudo Real
+                var c2 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 2);
+                if (c2 != null && int.TryParse(c2.DatoMinimo2, out int nInsc)) resumen.NinosInscritos = nInsc;
+
+                var c3 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 3);
+                if (c3 != null && int.TryParse(c3.DatoMinimo2, out int nAsist)) resumen.NinosAsistenciaPromedio = nAsist;
+
+                var c4 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 4);
+                if (c4 != null && int.TryParse(c4.DatoMinimo2, out int nGrad)) resumen.NinosGraduados = nGrad;
+
+                // 4. Obtener bitácora de llamadas rápidas (5 minutos)
+                string sqlLlamadas = @"
+                    SELECT IdLlamada, IdParticipacion, IdIglesia, FechaHora,
+                           IdUsuarioCoordinador, NombreCoordinador, EtapaDiscipulado,
+                           ObstaculoReportado, ApoyoRequerido, AccionAcordada,
+                           SemaforoEstado, EnfoqueAplicado, DuracionMinutos
+                    FROM dbo.BitacoraLlamadasAcompanamiento
+                    WHERE IdParticipacion = @IdPart
+                    ORDER BY FechaHora DESC;";
+
+                using (SqlCommand cmdLl = new SqlCommand(sqlLlamadas, cn))
+                {
+                    cmdLl.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    using (var dr = cmdLl.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            resumen.BitacoraLlamadas.Add(new LlamadaAcompanamientoModel
+                            {
+                                IdLlamada = Convert.ToInt32(dr["IdLlamada"]),
+                                IdParticipacion = Convert.ToInt32(dr["IdParticipacion"]),
+                                IdIglesia = Convert.ToInt32(dr["IdIglesia"]),
+                                FechaHora = Convert.ToDateTime(dr["FechaHora"]),
+                                IdUsuarioCoordinador = dr["IdUsuarioCoordinador"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdUsuarioCoordinador"]) : null,
+                                NombreCoordinador = dr["NombreCoordinador"]?.ToString(),
+                                EtapaDiscipulado = dr["EtapaDiscipulado"]?.ToString(),
+                                ObstaculoReportado = dr["ObstaculoReportado"]?.ToString(),
+                                ApoyoRequerido = dr["ApoyoRequerido"]?.ToString(),
+                                AccionAcordada = dr["AccionAcordada"]?.ToString(),
+                                SemaforoEstado = dr["SemaforoEstado"]?.ToString() ?? "VERDE",
+                                EnfoqueAplicado = dr["EnfoqueAplicado"]?.ToString() ?? "EQUILIBRIO",
+                                DuracionMinutos = Convert.ToInt32(dr["DuracionMinutos"])
+                            });
+                        }
+                    }
+                }
+
+                // Determinar semáforo vigente de la iglesia
+                if (resumen.BitacoraLlamadas.Any())
+                {
+                    var ultima = resumen.BitacoraLlamadas.First();
+                    resumen.SemaforoVigente = ultima.SemaforoEstado;
+                    resumen.FechaUltimaLlamada = ultima.FechaHora;
+                    resumen.UltimaAccionAcordada = ultima.AccionAcordada;
+                }
+            }
+
+            return resumen;
+        }
+
+        public void GuardarContactoLGA(ContactoLGAModel c, int idUsuario)
+        {
+            if (c == null) throw new ArgumentNullException(nameof(c));
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            IF EXISTS (SELECT 1 FROM dbo.SeguimientoLGAContactos WHERE IdParticipacion = @IdPart AND NumeroContacto = @Num)
+                            BEGIN
+                                UPDATE dbo.SeguimientoLGAContactos
+                                SET FechaContacto = ISNULL(@Fecha, GETDATE()),
+                                    IdUsuarioContacto = @IdUser,
+                                    PreguntaClave = @Pregunta,
+                                    DatoMinimo1 = @Dato1,
+                                    DatoMinimo2 = @Dato2,
+                                    DatoMinimo3 = @Dato3,
+                                    DecisionTomada = @Decision,
+                                    ComentarioAccion = @Comentario,
+                                    EstadoContacto = @Estado,
+                                    FechaModificacion = GETDATE()
+                                WHERE IdParticipacion = @IdPart AND NumeroContacto = @Num;
+                            END
+                            ELSE
+                            BEGIN
+                                INSERT INTO dbo.SeguimientoLGAContactos (
+                                    IdParticipacion, IdIglesia, NumeroContacto, FechaContacto,
+                                    IdUsuarioContacto, PreguntaClave, DatoMinimo1, DatoMinimo2, DatoMinimo3,
+                                    DecisionTomada, ComentarioAccion, EstadoContacto, FechaRegistro
+                                ) VALUES (
+                                    @IdPart, @IdIglesia, @Num, ISNULL(@Fecha, GETDATE()),
+                                    @IdUser, @Pregunta, @Dato1, @Dato2, @Dato3,
+                                    @Decision, @Comentario, @Estado, GETDATE()
+                                );
+                            END;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdPart", c.IdParticipacion);
+                            cmd.Parameters.AddWithValue("@IdIglesia", c.IdIglesia);
+                            cmd.Parameters.AddWithValue("@Num", c.NumeroContacto);
+                            cmd.Parameters.AddWithValue("@Fecha", (object)c.FechaContacto ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmd.Parameters.AddWithValue("@Pregunta", (object)c.PreguntaClave ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Dato1", (object)c.DatoMinimo1 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Dato2", (object)c.DatoMinimo2 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Dato3", (object)c.DatoMinimo3 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Decision", (object)c.DecisionTomada ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Comentario", (object)c.ComentarioAccion ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Estado", string.IsNullOrEmpty(c.EstadoContacto) ? "COMPLETADO" : c.EstadoContacto);
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_CONTACTO_LGA", "DISCIPULADO_LGA",
+                            $"Part_{c.IdParticipacion}_C{c.NumeroContacto}", $"Contacto #{c.NumeroContacto} guardado. Decisión: {c.DecisionTomada}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void RegistrarLlamadaAcompanamiento(LlamadaAcompanamientoModel ll, int idUsuario, string nombreCoordinador)
+        {
+            if (ll == null) throw new ArgumentNullException(nameof(ll));
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (var tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            INSERT INTO dbo.BitacoraLlamadasAcompanamiento (
+                                IdParticipacion, IdIglesia, FechaHora, IdUsuarioCoordinador, NombreCoordinador,
+                                EtapaDiscipulado, ObstaculoReportado, ApoyoRequerido, AccionAcordada,
+                                SemaforoEstado, EnfoqueAplicado, DuracionMinutos, FechaRegistro
+                            ) VALUES (
+                                @IdPart, @IdIglesia, GETDATE(), @IdUser, @NombreCoord,
+                                @Etapa, @Obstaculo, @Apoyo, @Accion,
+                                @Semaforo, @Enfoque, @Duracion, GETDATE()
+                            );";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdPart", ll.IdParticipacion);
+                            cmd.Parameters.AddWithValue("@IdIglesia", ll.IdIglesia);
+                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmd.Parameters.AddWithValue("@NombreCoord", (object)nombreCoordinador ?? "Coordinador");
+                            cmd.Parameters.AddWithValue("@Etapa", (object)ll.EtapaDiscipulado ?? "General");
+                            cmd.Parameters.AddWithValue("@Obstaculo", (object)ll.ObstaculoReportado ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Apoyo", (object)ll.ApoyoRequerido ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Accion", (object)ll.AccionAcordada ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Semaforo", string.IsNullOrEmpty(ll.SemaforoEstado) ? "VERDE" : ll.SemaforoEstado);
+                            cmd.Parameters.AddWithValue("@Enfoque", string.IsNullOrEmpty(ll.EnfoqueAplicado) ? "EQUILIBRIO" : ll.EnfoqueAplicado);
+                            cmd.Parameters.AddWithValue("@Duracion", ll.DuracionMinutos > 0 ? ll.DuracionMinutos : 5);
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REGISTRAR_LLAMADA_LGA", "DISCIPULADO_LGA",
+                            $"Part_{ll.IdParticipacion}", $"Llamada de 5 min registrada. Semáforo: {ll.SemaforoEstado}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
                 }
             }
         }

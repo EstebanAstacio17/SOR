@@ -12,6 +12,7 @@ namespace SOR.Models
         // Rol de Seguridad (1: SuperAdmin, 2: Administrador, 3: Coordinador)
         public string PrimerNombre { get; set; }
         public string PrimerApellido { get; set; }
+        public string NombreCompleto => $"{PrimerNombre} {PrimerApellido}".Trim();
 
         public int IdRolSeguridad { get; set; }
         public string NombreRol { get; set; }

@@ -633,6 +633,66 @@ namespace SOR.Helpers
             {
                 cmd.ExecuteNonQuery();
             }
+
+            // 11. Tablas para Modelo de Crecimiento LGA y 5 Contactos
+            AsegurarTablasLGA(cn);
+        }
+
+        private static void AsegurarTablasLGA(SqlConnection cn)
+        {
+            string sqlLGA = @"
+                -- 1. Tabla de los 5 Contactos Estratégicos de LGA
+                IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.SeguimientoLGAContactos') AND type in (N'U'))
+                BEGIN
+                    CREATE TABLE dbo.SeguimientoLGAContactos (
+                        IdSeguimiento INT IDENTITY(1,1) PRIMARY KEY,
+                        IdParticipacion INT NOT NULL,
+                        IdIglesia INT NOT NULL,
+                        NumeroContacto INT NOT NULL,
+                        FechaContacto DATETIME NULL,
+                        IdUsuarioContacto INT NULL,
+                        PreguntaClave NVARCHAR(250) NULL,
+                        DatoMinimo1 NVARCHAR(150) NULL,
+                        DatoMinimo2 NVARCHAR(150) NULL,
+                        DatoMinimo3 NVARCHAR(150) NULL,
+                        DecisionTomada NVARCHAR(150) NULL,
+                        ComentarioAccion NVARCHAR(MAX) NULL,
+                        EstadoContacto NVARCHAR(50) NOT NULL DEFAULT 'PENDIENTE',
+                        FechaRegistro DATETIME NOT NULL DEFAULT GETDATE(),
+                        FechaModificacion DATETIME NULL,
+                        CONSTRAINT UQ_SeguimientoLGA_Part_Num UNIQUE(IdParticipacion, NumeroContacto)
+                    );
+                    CREATE INDEX IX_SeguimientoLGA_Iglesia ON dbo.SeguimientoLGAContactos(IdIglesia, NumeroContacto);
+                END;
+
+                -- 2. Tabla de Bitácora de Llamadas Rápidas de 5 Minutos y Semáforo
+                IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.BitacoraLlamadasAcompanamiento') AND type in (N'U'))
+                BEGIN
+                    CREATE TABLE dbo.BitacoraLlamadasAcompanamiento (
+                        IdLlamada INT IDENTITY(1,1) PRIMARY KEY,
+                        IdParticipacion INT NOT NULL,
+                        IdIglesia INT NOT NULL,
+                        FechaHora DATETIME NOT NULL DEFAULT GETDATE(),
+                        IdUsuarioCoordinador INT NULL,
+                        NombreCoordinador NVARCHAR(150) NULL,
+                        EtapaDiscipulado NVARCHAR(80) NULL,
+                        ObstaculoReportado NVARCHAR(MAX) NULL,
+                        ApoyoRequerido NVARCHAR(MAX) NULL,
+                        AccionAcordada NVARCHAR(MAX) NULL,
+                        SemaforoEstado NVARCHAR(30) NOT NULL DEFAULT 'VERDE',
+                        EnfoqueAplicado NVARCHAR(50) NULL DEFAULT 'EQUILIBRIO',
+                        DuracionMinutos INT NOT NULL DEFAULT 5,
+                        FechaRegistro DATETIME NOT NULL DEFAULT GETDATE()
+                    );
+                    CREATE INDEX IX_BitacoraLlamadas_Iglesia ON dbo.BitacoraLlamadasAcompanamiento(IdIglesia, FechaHora DESC);
+                    CREATE INDEX IX_BitacoraLlamadas_Part ON dbo.BitacoraLlamadasAcompanamiento(IdParticipacion, FechaHora DESC);
+                END;
+            ";
+
+            using (SqlCommand cmd = new SqlCommand(sqlLGA, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
         }
     }
 }

@@ -655,6 +655,19 @@
             <li class="nav-item">
                 <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2" id="excepciones-tab" data-bs-toggle="tab" data-bs-target="#panel-excepciones" type="button" role="tab"><i class="bi bi-shield-check me-1"></i>Excepciones 3 Años (@Model.HistorialExcepciones.Count)</button>
             </li>
+            <li class="nav-item">
+                <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2 position-relative" id="discipulado-tab" data-bs-toggle="tab" data-bs-target="#panel-discipulado" type="button" role="tab">
+                    <i class="bi bi-book me-1 text-primary"></i>Discipulado LGA (5 Contactos)
+                    @if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.SemaforoVigente == "ROJO")
+                    {
+                        <span class="badge bg-danger rounded-pill ms-1 text-xxs px-1.5 py-0.5">Riesgo</span>
+                    }
+                    else if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.SemaforoVigente == "AMARILLO")
+                    {
+                        <span class="badge bg-warning text-dark rounded-pill ms-1 text-xxs px-1.5 py-0.5">Atención</span>
+                    }
+                </button>
+            </li>
         </ul>
 
         <div class="tab-content" id="tabExpedienteContent">
@@ -987,6 +1000,325 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Panel Discipulado LGA (5 Contactos & Capacidad) -->
+            <div class="tab-pane fade" id="panel-discipulado" role="tabpanel">
+                <div class="d-flex flex-column gap-4">
+                    
+                    <!-- 1. WIDGET DE CAPACIDAD Y RELACIÓN 26 NIÑOS / MAESTRO -->
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
+                            <div>
+                                <h6 class="font-bold text-slate-800 m-0">
+                                    <i class="bi bi-calculator text-primary me-2"></i>Capacidad de Discipulado LGA — Regla de Oro (26 Niños / Maestro)
+                                </h6>
+                                <p class="text-xs text-muted mb-0">Cada maestro capacitado debe inscribir, cuidar y graduar aproximadamente 26 niños durante el ciclo de 12 semanas.</p>
+                            </div>
+                            <div>
+                                @if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.CapacidadSuficiente)
+                                {
+                                    <span class="badge bg-success-soft text-success px-3 py-2 rounded-pill font-semibold">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Capacidad Óptima Garantizada
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning-soft text-warning px-3 py-2 rounded-pill font-semibold">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Requiere Más Maestros Acreditados
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="row g-3 text-center mb-3">
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold text-uppercase mb-1">Cajitas Asignadas</div>
+                                    <div class="h4 font-bold text-slate-800 mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.CajitasAsignadas : 0)</div>
+                                    <small class="text-xxs text-muted">Solicitud de temporada</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold text-uppercase mb-1">Maestros Acreditados</div>
+                                    <div class="h4 font-bold text-primary mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.MaestrosCapacitados : 0)</div>
+                                    <small class="text-xxs text-muted">Capacitados en Taller</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold text-uppercase mb-1">Capacidad de Atención</div>
+                                    <div class="h4 font-bold text-info mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.CapacidadNinosAtencion : 0) <span class="text-xs font-normal">niños</span></div>
+                                    <small class="text-xxs text-muted">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.MaestrosCapacitados : 0) maestros × 26</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold text-uppercase mb-1">Maestros Mínimos</div>
+                                    <div class="h4 font-bold @(Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.MaestrosCapacitados >= Model.DiscipuladoLGA.MaestrosMinimosRequeridos ? "text-success" : "text-danger") mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.MaestrosMinimosRequeridos : 1)</div>
+                                    <small class="text-xxs text-muted">Cálculo: Math.Ceiling(Cajitas / 26)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (Model.DiscipuladoLGA != null && !Model.DiscipuladoLGA.CapacidadSuficiente)
+                        {
+                            <div class="alert alert-warning py-2 px-3 mb-0 d-flex align-items-center gap-2 rounded-3 text-xs">
+                                <i class="bi bi-info-circle-fill flex-shrink-0 text-warning"></i>
+                                <span><strong>Atención Ministerial:</strong> Se sugiere acreditar al menos <strong>@(Model.DiscipuladoLGA.MaestrosMinimosRequeridos - Model.DiscipuladoLGA.MaestrosCapacitados) maestro(s) adicional(es)</strong> para garantizar la atención personalizada de los niños durante el discipulado.</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- 2. SEMÁFORO Y TARJETA DE LLAMADA RÁPIDA (5 MINUTOS) -->
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
+                            <div>
+                                <h6 class="font-bold text-slate-800 m-0">
+                                    <i class="bi bi-telephone-inbound text-primary me-2"></i>Acompañamiento del CD / CE — Tarjeta de Llamada (5 Minutos)
+                                </h6>
+                                <p class="text-xs text-muted mb-0">Conversaciones cortas que generan decisiones y multiplican impacto en el Compañero de Ministerio (CM).</p>
+                            </div>
+                            @if (ViewBag.PuedeGestionarDiscipulado == true && Model.ParticipacionActual != null)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarLlamadaLGA">
+                                    <i class="bi bi-telephone-plus me-1"></i>Registrar Llamada (5 Min)
+                                </button>
+                            }
+                        </div>
+
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4 border-end-md text-center py-2">
+                                <div class="text-xs text-muted font-semibold text-uppercase mb-2">Semáforo de Acompañamiento</div>
+                                @if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.SemaforoVigente == "VERDE")
+                                {
+                                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-success-soft text-success border border-success border-opacity-25 font-bold">
+                                        <i class="bi bi-check-circle-fill fs-5"></i>
+                                        <span>TODO EN ORDEN (Sigan así)</span>
+                                    </div>
+                                }
+                                else if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.SemaforoVigente == "AMARILLO")
+                                {
+                                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-warning-soft text-warning border border-warning border-opacity-25 font-bold">
+                                        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                        <span>REQUIERE ATENCIÓN (Contactar pronto)</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-danger-soft text-danger border border-danger border-opacity-25 font-bold">
+                                        <i class="bi bi-x-octagon-fill fs-5"></i>
+                                        <span>ACCIÓN INMEDIATA (Riesgo alto)</span>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-8">
+                                <div class="p-3 bg-light rounded-3 text-xs">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-muted fw-semibold">Última Llamada Registrada:</span>
+                                        <strong>@(Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.FechaUltimaLlamada.HasValue ? Model.DiscipuladoLGA.FechaUltimaLlamada.Value.ToString("dd/MM/yyyy hh:mm tt") : "Sin llamadas registradas aún")</strong>
+                                    </div>
+                                    <div class="text-muted">
+                                        <strong>Última Acción Acordada:</strong> @(Model.DiscipuladoLGA != null && !string.IsNullOrEmpty(Model.DiscipuladoLGA.UltimaAccionAcordada) ? Model.DiscipuladoLGA.UltimaAccionAcordada : "No se ha registrado una acción acordada reciente.")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. EMBUDO REAL DE DISCIPULADO LGA (DE PORCENTAJES A NÚMEROS REALES) -->
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
+                            <div>
+                                <h6 class="font-bold text-slate-800 m-0">
+                                    <i class="bi bi-funnel text-primary me-2"></i>Embudo de Discipulado Real — De Números a Vidas Transformadas
+                                </h6>
+                                <p class="text-xs text-muted mb-0">Seguimiento intencional del recorrido de cada cajita entregada hasta su graduación.</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 text-center">
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold mb-1">1. Cajitas Despachadas</div>
+                                    <div class="h4 font-bold text-primary mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.CajitasAsignadas : 0)</div>
+                                    <div class="text-xxs text-muted">100% Base Inicial</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold mb-1">2. Niños Inscritos</div>
+                                    <div class="h4 font-bold text-info mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.NinosInscritos : 0)</div>
+                                    <div class="text-xxs text-muted">Semanas 1 a 3 (Contacto #2)</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold mb-1">3. Asistencia Promedio</div>
+                                    <div class="h4 font-bold text-warning mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.NinosAsistenciaPromedio : 0)</div>
+                                    <div class="text-xxs text-muted">Semanas 4 a 9 (Contacto #3)</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-xs text-muted font-semibold mb-1">4. Niños Graduados</div>
+                                    <div class="h4 font-bold text-success mb-0">@(Model.DiscipuladoLGA != null ? Model.DiscipuladoLGA.NinosGraduados : 0)</div>
+                                    <div class="text-xxs text-muted">Semanas 10 a 12 (Contacto #4)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. GUÍA SIMPLIFICADA: LOS 5 CONTACTOS CON EL COMPAÑERO DE MINISTERIO (CM) -->
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
+                            <div>
+                                <h6 class="font-bold text-slate-800 m-0">
+                                    <i class="bi bi-chat-square-dots text-primary me-2"></i>Guía Simplificada de los 5 Contactos con CMs
+                                </h6>
+                                <p class="text-xs text-muted mb-0">Principio: Cada llamada o mensaje debe terminar con una decisión, no con un checklist.</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            @if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.Contactos != null)
+                            {
+                                foreach (var c in Model.DiscipuladoLGA.Contactos.OrderBy(x => x.NumeroContacto))
+                                {
+                                    string cardBorder = c.EstadoContacto == "COMPLETADO" ? "border-success" : (c.EstadoContacto == "REQUIERE_ATENCION" ? "border-warning" : "border-slate-200");
+                                    string badgeColor = c.EstadoContacto == "COMPLETADO" ? "bg-success" : (c.EstadoContacto == "REQUIERE_ATENCION" ? "bg-warning text-dark" : "bg-secondary");
+
+                                    <div class="col-12">
+                                        <div class="card border @cardBorder rounded-3 shadow-sm p-3">
+                                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-primary rounded-circle p-2" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">@c.NumeroContacto</span>
+                                                    <div>
+                                                        <h6 class="font-bold text-slate-800 mb-0">Contacto @c.NumeroContacto: @c.NombreFase</h6>
+                                                        <span class="text-xxs text-muted"><i class="bi bi-calendar-event me-1"></i>@c.PeriodoAgenda</span>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge @badgeColor px-2.5 py-1 text-xxs font-semibold">@c.EstadoContacto</span>
+                                                    @if (ViewBag.PuedeGestionarDiscipulado == true && Model.ParticipacionActual != null)
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 text-xs font-semibold" onclick="abrirModalEditarContacto(@c.NumeroContacto, '@c.NombreFase', '@c.PeriodoAgenda', '@c.PreguntaClave', '@c.DatoMinimo1Label', '@c.DatoMinimo1', '@c.DatoMinimo2Label', '@c.DatoMinimo2', '@c.DatoMinimo3Label', '@c.DatoMinimo3', '@c.DecisionTomada', '@c.ComentarioAccion', '@c.EstadoContacto')">
+                                                            <i class="bi bi-pencil-square me-1"></i>Editar / Registrar
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div class="bg-light rounded p-2 mb-2 text-xs">
+                                                <div class="text-primary font-semibold mb-1"><i class="bi bi-question-circle me-1"></i>Pregunta Clave: <em>"@c.PreguntaClave"</em></div>
+                                                <div class="row g-2 text-slate-700">
+                                                    @if (!string.IsNullOrEmpty(c.DatoMinimo1Label))
+                                                    {
+                                                        <div class="col-md-4">
+                                                            <strong>@c.DatoMinimo1Label:</strong> @(string.IsNullOrEmpty(c.DatoMinimo1) ? "—" : c.DatoMinimo1)
+                                                        </div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(c.DatoMinimo2Label))
+                                                    {
+                                                        <div class="col-md-4">
+                                                            <strong>@c.DatoMinimo2Label:</strong> @(string.IsNullOrEmpty(c.DatoMinimo2) ? "—" : c.DatoMinimo2)
+                                                        </div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(c.DatoMinimo3Label))
+                                                    {
+                                                        <div class="col-md-4">
+                                                            <strong>@c.DatoMinimo3Label:</strong> @(string.IsNullOrEmpty(c.DatoMinimo3) ? "—" : c.DatoMinimo3)
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 text-xs pt-1 border-top">
+                                                <div>
+                                                    <strong>Decisión / Estado:</strong> <span class="badge bg-light text-dark border">@(string.IsNullOrEmpty(c.DecisionTomada) ? "Pendiente de contacto" : c.DecisionTomada)</span>
+                                                    @if (!string.IsNullOrEmpty(c.ComentarioAccion))
+                                                    {
+                                                        <span class="ms-2 text-muted fst-italic">"@c.ComentarioAccion"</span>
+                                                    }
+                                                </div>
+                                                <div class="text-muted text-xxs">
+                                                    @(c.FechaContacto.HasValue ? $"Registrado: {c.FechaContacto.Value.ToString("dd/MM/yyyy")} por {c.NombreUsuarioContacto ?? "Coordinador"}" : "Aún no ejecutado")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <!-- 5. HISTORIAL DE BITÁCORA DE LLAMADAS RÁPIDAS -->
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 border-bottom pb-2">
+                            <h6 class="font-bold text-slate-800 m-0"><i class="bi bi-clock-history text-primary me-2"></i>Historial de Llamadas de Acompañamiento (5 Minutos)</h6>
+                            <span class="badge bg-light text-dark border">@(Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.BitacoraLlamadas != null ? Model.DiscipuladoLGA.BitacoraLlamadas.Count : 0) registros</span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha / Hora</th>
+                                        <th>Coordinador</th>
+                                        <th>Etapa / Enfoque</th>
+                                        <th>Obstáculo y Apoyo</th>
+                                        <th>Acción Acordada</th>
+                                        <th class="text-center">Semáforo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.DiscipuladoLGA == null || !Model.DiscipuladoLGA.BitacoraLlamadas.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4 text-muted small">No hay llamadas registradas en la bitácora aún.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var ll in Model.DiscipuladoLGA.BitacoraLlamadas)
+                                        {
+                                            string badgeSem = ll.SemaforoEstado == "VERDE" ? "bg-success" : (ll.SemaforoEstado == "AMARILLO" ? "bg-warning text-dark" : "bg-danger");
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-semibold small">@ll.FechaHora.ToString("dd/MM/yyyy")</div>
+                                                    <small class="text-muted text-xxs">@ll.FechaHora.ToString("hh:mm tt") (@ll.DuracionMinutos min)</small>
+                                                </td>
+                                                <td><span class="small font-bold">@ll.NombreCoordinador</span></td>
+                                                <td>
+                                                    <div class="small fw-semibold">@ll.EtapaDiscipulado</div>
+                                                    <span class="badge bg-light text-muted border text-xxs">@ll.EnfoqueAplicado</span>
+                                                </td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(ll.ObstaculoReportado))
+                                                    {
+                                                        <div class="text-xs text-danger"><i class="bi bi-exclamation-circle me-1"></i>@ll.ObstaculoReportado</div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(ll.ApoyoRequerido))
+                                                    {
+                                                        <div class="text-xs text-primary"><i class="bi bi-life-preserver me-1"></i>Apoyo: @ll.ApoyoRequerido</div>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="text-xs text-dark fw-medium">@ll.AccionAcordada</div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge @badgeSem px-2.5 py-1 text-xxs font-bold">@ll.SemaforoEstado</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -1765,6 +2097,154 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL EDITAR / REGISTRAR CONTACTO LGA -->
+    <div class="modal fade" id="modalEditarContactoLGA" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("GuardarContactoLGA", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idParticipacion" value="@(Model.ParticipacionActual != null ? Model.ParticipacionActual.IdParticipacion : 0)" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                    <input type="hidden" name="NumeroContacto" id="modalContactoLgaNumero" value="1" />
+                    <input type="hidden" name="NombreFase" id="modalContactoLgaNombreFase" value="" />
+                    <input type="hidden" name="PreguntaClave" id="modalContactoLgaPregunta" value="" />
+
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold">
+                            <i class="bi bi-chat-square-text me-2 text-primary"></i><span id="modalContactoLgaTitulo">Registrar Contacto</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-primary py-2 px-3 mb-3 rounded-3 text-xs">
+                            <i class="bi bi-question-circle-fill me-1"></i><strong>Pregunta Clave:</strong> <span id="modalContactoLgaPreguntaTexto"></span>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6" id="grupoDatoMinimo1">
+                                <label class="form-label fw-semibold" id="lblDatoMinimo1">Dato Mínimo 1</label>
+                                <input type="text" name="DatoMinimo1" id="inputDatoMinimo1" class="form-control" placeholder="Ingrese dato..." />
+                            </div>
+                            <div class="col-md-6" id="grupoDatoMinimo2">
+                                <label class="form-label fw-semibold" id="lblDatoMinimo2">Dato Mínimo 2</label>
+                                <input type="text" name="DatoMinimo2" id="inputDatoMinimo2" class="form-control" placeholder="Ingrese dato..." />
+                            </div>
+                            <div class="col-12" id="grupoDatoMinimo3" style="display:none;">
+                                <label class="form-label fw-semibold" id="lblDatoMinimo3">Dato Mínimo 3</label>
+                                <input type="text" name="DatoMinimo3" id="inputDatoMinimo3" class="form-control" placeholder="Ingrese dato..." />
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Decisión / Conclusión de la Llamada <span class="text-danger">*</span></label>
+                                <input type="text" name="DecisionTomada" id="inputDecisionTomada" class="form-control" required placeholder="Ej: En meta, Listo, Necesita apoyo..." />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Estado del Contacto</label>
+                                <select name="EstadoContacto" id="selectEstadoContacto" class="form-select">
+                                    <option value="COMPLETADO">🟢 COMPLETADO (Decisión tomada)</option>
+                                    <option value="REQUIERE_ATENCION">🟡 REQUIERE ATENCIÓN (Apoyo pendiente)</option>
+                                    <option value="PENDIENTE">⚪ PENDIENTE (Aún no contactado)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Acuerdos, Desafíos o Comentario</label>
+                                <textarea name="ComentarioAccion" id="textareaComentarioAccion" class="form-control" rows="3" placeholder="Detalle la acción concreta acordada con el Compañero de Ministerio..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary font-semibold shadow-sm"><i class="bi bi-save me-1"></i>Guardar Registro de Contacto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR LLAMADA RÁPIDA (5 MINUTOS) & SEMÁFORO -->
+    <div class="modal fade" id="modalRegistrarLlamadaLGA" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("RegistrarLlamadaAcompanamiento", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idParticipacion" value="@(Model.ParticipacionActual != null ? Model.ParticipacionActual.IdParticipacion : 0)" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold">
+                            <i class="bi bi-telephone-plus me-2 text-primary"></i>Registrar Llamada Rápida de Acompañamiento (5 Minutos)
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-info py-2 px-3 mb-3 rounded-3 text-xs">
+                            <i class="bi bi-stopwatch me-1"></i><strong>Objetivo 5 minutos:</strong> Enfocados en 3 preguntas, 1 decisión y 1 acción rápida.
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Etapa del Discipulado <span class="text-danger">*</span></label>
+                                <select name="EtapaDiscipulado" class="form-select" required>
+                                    <option value="Preparación">1. Preparación (Previo al Evento)</option>
+                                    <option value="Inscripción">2. Inscripción (Semanas 1 a 3)</option>
+                                    <option value="Cuidado">3. Cuidado y Asistencia (Semanas 4 a 9)</option>
+                                    <option value="Graduación">4. Graduación (Semanas 10 a 12)</option>
+                                    <option value="Celebración">5. Celebración y Reporte Final</option>
+                                    <option value="General">Acompañamiento General</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Enfoque de Acompañamiento</label>
+                                <select name="EnfoqueAplicado" class="form-select">
+                                    <option value="EQUILIBRIO">⚖️ Enfoque por Equilibrio (Cobertura integral)</option>
+                                    <option value="IMPACTO">🎯 Enfoque por Impacto (Mayor número de niños)</option>
+                                    <option value="NECESIDAD">⚠️ Enfoque por Necesidad (Números bajos o alertas)</option>
+                                    <option value="POTENCIAL">🌱 Enfoque por Potencial (Oportunidad de crecimiento)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">1. ¿Qué obstáculo tienes hoy? (El que más te está deteniendo)</label>
+                            <textarea name="ObstaculoReportado" class="form-control" rows="2" placeholder="Ej: Faltan maestros para una clase, baja asistencia por lluvia, etc."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">2. ¿Qué apoyo necesitas de mí? (Materiales, formación, oración, etc.)</label>
+                            <input type="text" name="ApoyoRequerido" class="form-control" placeholder="Ej: Envío de guías de maestro, oración por familias, taller de refuerzo..." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">3. Acción Acordada (¿Qué haremos juntos?) <span class="text-danger">*</span></label>
+                            <textarea name="AccionAcordada" class="form-control" rows="2" required placeholder="Compromiso mutuo con fecha para resolver o dar seguimiento..."></textarea>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">Semáforo de Acompañamiento Resultante <span class="text-danger">*</span></label>
+                                <select name="SemaforoEstado" class="form-select" required>
+                                    <option value="VERDE">🟢 VERDE — Todo en orden (Sigan así, van bien)</option>
+                                    <option value="AMARILLO">🟡 AMARILLO — Requiere atención (Necesita apoyo, contactar pronto)</option>
+                                    <option value="ROJO">🔴 ROJO — Acción inmediata (Riesgo alto de deserción o bloqueo)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Duración (minutos)</label>
+                                <input type="number" name="DuracionMinutos" class="form-control" value="5" min="1" max="60" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary font-semibold shadow-sm"><i class="bi bi-check-circle me-1"></i>Guardar Llamada & Actualizar Semáforo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 }
 
 <style>
@@ -1846,4 +2326,59 @@
             });
         });
     });
+
+    // Función para abrir el modal de edición de contactos LGA
+    function abrirModalEditarContacto(num, fase, agenda, pregunta, lbl1, val1, lbl2, val2, lbl3, val3, decision, comentario, estado) {
+        document.getElementById('modalContactoLgaNumero').value = num;
+        document.getElementById('modalContactoLgaNombreFase').value = fase;
+        document.getElementById('modalContactoLgaPregunta').value = pregunta;
+        document.getElementById('modalContactoLgaTitulo').textContent = 'Contacto #' + num + ': ' + fase + ' (' + agenda + ')';
+        document.getElementById('modalContactoLgaPreguntaTexto').textContent = pregunta;
+
+        // Dato 1
+        var g1 = document.getElementById('grupoDatoMinimo1');
+        var l1 = document.getElementById('lblDatoMinimo1');
+        var i1 = document.getElementById('inputDatoMinimo1');
+        if (lbl1 && lbl1.trim().length > 0) {
+            g1.style.display = 'block';
+            l1.textContent = lbl1;
+            i1.value = val1 || '';
+        } else {
+            g1.style.display = 'none';
+        }
+
+        // Dato 2
+        var g2 = document.getElementById('grupoDatoMinimo2');
+        var l2 = document.getElementById('lblDatoMinimo2');
+        var i2 = document.getElementById('inputDatoMinimo2');
+        if (lbl2 && lbl2.trim().length > 0) {
+            g2.style.display = 'block';
+            l2.textContent = lbl2;
+            i2.value = val2 || '';
+        } else {
+            g2.style.display = 'none';
+        }
+
+        // Dato 3
+        var g3 = document.getElementById('grupoDatoMinimo3');
+        var l3 = document.getElementById('lblDatoMinimo3');
+        var i3 = document.getElementById('inputDatoMinimo3');
+        if (lbl3 && lbl3.trim().length > 0) {
+            g3.style.display = 'block';
+            l3.textContent = lbl3;
+            i3.value = val3 || '';
+        } else {
+            g3.style.display = 'none';
+        }
+
+        document.getElementById('inputDecisionTomada').value = decision || '';
+        document.getElementById('textareaComentarioAccion').value = comentario || '';
+        document.getElementById('selectEstadoContacto').value = estado || 'COMPLETADO';
+
+        var modalEl = document.getElementById('modalEditarContactoLGA');
+        if (modalEl) {
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
 </script>

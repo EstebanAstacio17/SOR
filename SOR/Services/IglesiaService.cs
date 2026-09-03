@@ -967,5 +967,33 @@ namespace SOR.Services
         {
             return _iglesiaRepository.TieneExcepcionAprobada(rncCedula, idTemporada);
         }
+
+        // ============================================================================
+        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & CAPACIDAD)
+        // ============================================================================
+
+        public ResumenDiscipuladoLGAModel ObtenerResumenDiscipuladoLGA(int idParticipacion, int idIglesia)
+        {
+            if (idParticipacion <= 0 || idIglesia <= 0) return new ResumenDiscipuladoLGAModel();
+            return _iglesiaRepository.ObtenerResumenDiscipuladoLGA(idParticipacion, idIglesia);
+        }
+
+        public void GuardarContactoLGA(ContactoLGAModel contacto, int idUsuario)
+        {
+            if (contacto == null || contacto.IdParticipacion <= 0)
+            {
+                throw new ArgumentException("Datos del contacto inválidos.");
+            }
+            _iglesiaRepository.GuardarContactoLGA(contacto, idUsuario);
+        }
+
+        public void RegistrarLlamadaAcompanamiento(LlamadaAcompanamientoModel llamada, int idUsuario, string nombreCoordinador)
+        {
+            if (llamada == null || llamada.IdParticipacion <= 0)
+            {
+                throw new ArgumentException("Datos de la llamada de acompañamiento inválidos.");
+            }
+            _iglesiaRepository.RegistrarLlamadaAcompanamiento(llamada, idUsuario, nombreCoordinador);
+        }
     }
 }

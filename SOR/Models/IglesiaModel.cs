@@ -61,6 +61,9 @@ namespace SOR.Models
         public int DiferenciaAniosAntiguedad { get; set; }
         public int IdTemporadaPrevia { get; set; }
         public string NombreTemporadaPrevia { get; set; }
+
+        // Discipulado y Acompañamiento LGA (5 Contactos & Capacidad 26 Niños/Maestro)
+        public ResumenDiscipuladoLGAModel DiscipuladoLGA { get; set; } = new ResumenDiscipuladoLGAModel();
     }
 
     public class PersonaIglesia
@@ -360,5 +363,75 @@ namespace SOR.Models
         public int TotalMaestrosCapacitados { get; set; }
         public int DiferenciaTemporadas { get; set; }
         public string ResumenTexto { get; set; }
+    }
+
+    public class ContactoLGAModel
+    {
+        public int IdSeguimiento { get; set; }
+        public int IdParticipacion { get; set; }
+        public int IdIglesia { get; set; }
+        public int NumeroContacto { get; set; } // 1 a 5
+        public string NombreFase { get; set; } // 1: Preparación, 2: Inscripción, 3: Cuidado, 4: Graduación, 5: Aprendizaje
+        public string PeriodoAgenda { get; set; } // ej: "Antes del Evento", "Semanas 1 a 3", "Semanas 4 a 9", "Semanas 10 a 12", "Celebración y Reporte"
+        public string PreguntaClave { get; set; }
+        public DateTime? FechaContacto { get; set; }
+        public int? IdUsuarioContacto { get; set; }
+        public string NombreUsuarioContacto { get; set; }
+
+        public string DatoMinimo1 { get; set; }
+        public string DatoMinimo1Label { get; set; }
+        public string DatoMinimo2 { get; set; }
+        public string DatoMinimo2Label { get; set; }
+        public string DatoMinimo3 { get; set; }
+        public string DatoMinimo3Label { get; set; }
+
+        public string DecisionTomada { get; set; } // 'Listo', 'En meta', 'Necesita apoyo', 'Mantener', 'Recuperar', 'En ruta', 'Apoyo final', 'Registrar mejora'
+        public string ComentarioAccion { get; set; }
+        public string EstadoContacto { get; set; } = "PENDIENTE"; // 'PENDIENTE', 'COMPLETADO', 'REQUIERE_ATENCION'
+        public DateTime FechaRegistro { get; set; }
+        public DateTime? FechaModificacion { get; set; }
+    }
+
+    public class LlamadaAcompanamientoModel
+    {
+        public int IdLlamada { get; set; }
+        public int IdParticipacion { get; set; }
+        public int IdIglesia { get; set; }
+        public DateTime FechaHora { get; set; } = DateTime.Now;
+        public int? IdUsuarioCoordinador { get; set; }
+        public string NombreCoordinador { get; set; }
+        public string EtapaDiscipulado { get; set; } // 'Inscripción', 'Cuidado', 'Graduación', 'General'
+        public string ObstaculoReportado { get; set; }
+        public string ApoyoRequerido { get; set; } // 'Materiales', 'Formación', 'Oración', 'Visita presencial', 'Otro'
+        public string AccionAcordada { get; set; }
+        public string SemaforoEstado { get; set; } = "VERDE"; // 'VERDE', 'AMARILLO', 'ROJO'
+        public string EnfoqueAplicado { get; set; } = "EQUILIBRIO"; // 'IMPACTO', 'NECESIDAD', 'POTENCIAL', 'EQUILIBRIO'
+        public int DuracionMinutos { get; set; } = 5;
+    }
+
+    public class ResumenDiscipuladoLGAModel
+    {
+        public int IdParticipacion { get; set; }
+        public int IdIglesia { get; set; }
+        public int CajitasAsignadas { get; set; }
+        public int MaestrosCapacitados { get; set; }
+
+        // Regla de Oro: 26 niños por maestro
+        public int MaestrosMinimosRequeridos => CajitasAsignadas > 0 ? (int)Math.Ceiling(CajitasAsignadas / 26.0) : 1;
+        public int CapacidadNinosAtencion => MaestrosCapacitados * 26;
+        public bool CapacidadSuficiente => CapacidadNinosAtencion >= CajitasAsignadas && MaestrosCapacitados >= MaestrosMinimosRequeridos;
+
+        // Embudo Real de Discipulado
+        public int NinosInscritos { get; set; }
+        public int NinosAsistenciaPromedio { get; set; }
+        public int NinosGraduados { get; set; }
+
+        // Semáforo Global de la Iglesia
+        public string SemaforoVigente { get; set; } = "VERDE"; // VERDE, AMARILLO, ROJO
+        public DateTime? FechaUltimaLlamada { get; set; }
+        public string UltimaAccionAcordada { get; set; }
+
+        public List<ContactoLGAModel> Contactos { get; set; } = new List<ContactoLGAModel>();
+        public List<LlamadaAcompanamientoModel> BitacoraLlamadas { get; set; } = new List<LlamadaAcompanamientoModel>();
     }
 }

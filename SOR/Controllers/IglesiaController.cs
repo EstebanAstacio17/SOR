@@ -400,12 +400,95 @@ namespace SOR.Controllers
             bool puedeAprobarCE = esAdmin || (u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo)));
             bool puedeAprobarCMI = esAdmin || (u.IdPosicion == 2 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo))) || puedeAprobarCE;
             bool puedeSolicitarExcepcion = esAdmin || PuedeEditarIglesia(u, iglesia.IdEquipo);
+            bool puedeGestionarDiscipulado = esAdmin || (u.IdPosicion == 3 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo))) || puedeAprobarCE;
 
             ViewBag.PuedeAprobarCE = puedeAprobarCE;
             ViewBag.PuedeAprobarCMI = puedeAprobarCMI;
             ViewBag.PuedeSolicitarExcepcion = puedeSolicitarExcepcion;
+            ViewBag.PuedeGestionarDiscipulado = puedeGestionarDiscipulado;
+
+            // Cargar datos de Discipulado y 5 Contactos LGA si hay participación activa
+            if (iglesia.ParticipacionActual != null)
+            {
+                iglesia.DiscipuladoLGA = _iglesiaService.ObtenerResumenDiscipuladoLGA(iglesia.ParticipacionActual.IdParticipacion, iglesia.IdIglesia);
+            }
 
             return View(iglesia);
+        }
+
+        // ============================================================================
+        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & LLAMADA 5 MIN)
+        // ============================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult GuardarContactoLGA(ContactoLGAModel vm, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            bool esCD = u.IdPosicion == 3 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo));
+            bool esCE = u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo));
+            bool puede = esAdmin || esCD || esCE || PuedeEditarIglesia(u, iglesia.IdEquipo);
+
+            if (!puede)
+            {
+                TempData["MensajeError"] = "Acceso denegado: No tiene permisos para registrar o modificar contactos de discipulado de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                vm.IdIglesia = idIglesia;
+                _iglesiaService.GuardarContactoLGA(vm, u.IdUsuario);
+                TempData["MensajeExito"] = $"Contacto #{vm.NumeroContacto} ({vm.NombreFase}) actualizado correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al guardar el contacto: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RegistrarLlamadaAcompanamiento(LlamadaAcompanamientoModel vm, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            bool esCD = u.IdPosicion == 3 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo));
+            bool esCE = u.IdPosicion == 1 && (u.IdEquipo == iglesia.IdEquipo || EsEquipoHijo(u.IdEquipo ?? 0, iglesia.IdEquipo));
+            bool puede = esAdmin || esCD || esCE || PuedeEditarIglesia(u, iglesia.IdEquipo);
+
+            if (!puede)
+            {
+                TempData["MensajeError"] = "Acceso denegado: No tiene permisos para registrar llamadas de acompañamiento para esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                vm.IdIglesia = idIglesia;
+                string nombreCoord = !string.IsNullOrEmpty(u.NombreCompleto) ? u.NombreCompleto : (u.Correo ?? "Coordinador");
+                _iglesiaService.RegistrarLlamadaAcompanamiento(vm, u.IdUsuario, nombreCoord);
+                TempData["MensajeExito"] = "Llamada de acompañamiento de 5 minutos registrada con éxito. Semáforo actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar la llamada: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
         // ============================================================================
