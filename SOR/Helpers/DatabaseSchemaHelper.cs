@@ -699,6 +699,9 @@ namespace SOR.Helpers
 
             // 13. Asegurar Constraints de Fecha y Defaults en Tablas Clave
             AsegurarConstraintsAuditoriaYCatalogos(cn);
+
+            // 14. Asegurar Procedimientos Almacenados de Usuario y Autenticación
+            AsegurarProcedimientosAlmacenados(cn);
         }
 
         private static void AsegurarConstraintsAuditoriaYCatalogos(SqlConnection cn)
@@ -946,6 +949,77 @@ namespace SOR.Helpers
             ";
 
             using (SqlCommand cmd = new SqlCommand(sqlAsistCoord, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        private static void AsegurarProcedimientosAlmacenados(SqlConnection cn)
+        {
+            string sqlProcedures = @"
+                IF OBJECT_ID('dbo.sp_RegistrarUsuario', 'P') IS NULL
+                BEGIN
+                    EXEC('
+                    CREATE PROCEDURE dbo.sp_RegistrarUsuario
+                        @Correo VARCHAR(100),
+                        @Clave VARCHAR(100),
+                        @Registrado BIT OUTPUT,
+                        @Mensaje VARCHAR(100) OUTPUT
+                    AS
+                    BEGIN
+                        SET NOCOUNT ON;
+                        
+                        IF EXISTS (SELECT 1 FROM dbo.Usuarios WHERE Correo = @Correo)
+                        BEGIN
+                            SET @Registrado = 0;
+                            SET @Mensaje = ''El correo ya se encuentra registrado.'';
+                            RETURN;
+                        END
+
+                        INSERT INTO dbo.Usuarios (Correo, Clave, IdRolSeguridad, IdEstado)
+                        VALUES (@Correo, @Clave, 3, 1); -- Coordinador, PendienteAprobacionCorreo
+
+                        SET @Registrado = 1;
+                        SET @Mensaje = ''Usuario registrado con éxito. Su cuenta está pendiente de aprobación por un administrador.'';
+                    END;');
+                END;
+
+                IF OBJECT_ID('dbo.sp_ValidarUsuario', 'P') IS NULL
+                BEGIN
+                    EXEC('
+                    CREATE PROCEDURE dbo.sp_ValidarUsuario
+                        @Correo VARCHAR(100),
+                        @Clave VARCHAR(100)
+                    AS
+                    BEGIN
+                        SET NOCOUNT ON;
+                        
+                        SELECT 
+                            u.IdUsuario,
+                            u.Correo,
+                            u.IdRolSeguridad,
+                            r.NombreRol,
+                            u.IdEstado,
+                            e.NombreEstado,
+                            a.IdEquipo,
+                            eq.NombreEquipo,
+                            neq.NombreNivel,
+                            neq.RangoJerarquico,
+                            a.IdPosicion,
+                            p.NombrePosicion
+                        FROM dbo.Usuarios u
+                        INNER JOIN dbo.RolesSeguridad r ON u.IdRolSeguridad = r.IdRolSeguridad
+                        INNER JOIN dbo.EstadosCuenta e ON u.IdEstado = e.IdEstado
+                        LEFT JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario AND a.Activo = 1
+                        LEFT JOIN dbo.Equipos eq ON a.IdEquipo = eq.IdEquipo
+                        LEFT JOIN dbo.NivelesEquipo neq ON eq.IdNivelEquipo = neq.IdNivelEquipo
+                        LEFT JOIN dbo.PosicionesOCC p ON a.IdPosicion = p.IdPosicion
+                        WHERE u.Correo = @Correo AND u.Clave = @Clave;
+                    END;');
+                END;
+            ";
+
+            using (SqlCommand cmd = new SqlCommand(sqlProcedures, cn))
             {
                 cmd.ExecuteNonQuery();
             }
