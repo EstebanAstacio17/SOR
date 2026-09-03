@@ -183,19 +183,21 @@ namespace SOR.DAL
                 using (var conn = new SqlConnection(ObtenerCadenaConexion()))
                 {
                     conn.Open();
-                    string sql = "SELECT IdIglesia, NombreIglesia, IdEquipo FROM dbo.Iglesias WHERE 1=1";
-                    if (equipoId.HasValue && equipoId.Value > 0)
-                    {
-                        sql += " AND IdEquipo = @IdEquipo";
-                    }
-                    sql += " ORDER BY NombreIglesia;";
+                    string sql = @"
+                    WITH JerarquiaEquipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE (@EquipoId IS NOT NULL AND IdEquipo = @EquipoId)
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e
+                        INNER JOIN JerarquiaEquipos j ON e.IdEquipoPadre = j.IdEquipo
+                    )
+                    SELECT i.IdIglesia, i.NombreIglesia, i.IdEquipo 
+                    FROM dbo.Iglesias i 
+                    WHERE (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
+                    ORDER BY i.NombreIglesia;";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     {
-                        if (equipoId.HasValue && equipoId.Value > 0)
-                        {
-                            cmd.Parameters.AddWithValue("@IdEquipo", equipoId.Value);
-                        }
+                        cmd.Parameters.AddWithValue("@EquipoId", (object)equipoId ?? DBNull.Value);
                         using (var dr = cmd.ExecuteReader())
                         {
                             while (dr.Read())
@@ -229,32 +231,40 @@ namespace SOR.DAL
                     conn.Open();
 
                     string sqlMetricas = @"
+                    WITH JerarquiaEquipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE (@EquipoId IS NOT NULL AND IdEquipo = @EquipoId)
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e
+                        INNER JOIN JerarquiaEquipos j ON e.IdEquipoPadre = j.IdEquipo
+                    )
                     SELECT 
-                        -- Presentaciones de la Visión
+                        -- Presentaciones de la Visión (Conteo de eventos y participantes)
                         ISNULL((SELECT COUNT(1) FROM dbo.Eventos e 
                                 WHERE e.IdTemporada = @TemporadaId 
-                                  AND (@EquipoId IS NULL OR e.IdEquipoCreador = @EquipoId)
-                                  AND (e.TipoEvento = 'PresentacionVision' OR e.NombreEvento LIKE '%Vision%')), 0) AS TotalPresentacionesVision,
+                                  AND (@EquipoId IS NULL OR EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo ae WHERE ae.IdUsuario = e.IdUsuarioCreacion AND ae.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)) OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia WHERE epi.IdEvento = e.IdEvento AND i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)))
+                                  AND (@IglesiaId IS NULL OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion WHERE epi.IdEvento = e.IdEvento AND pi.IdIglesia = @IglesiaId))
+                                  AND (e.TipoEvento IN ('PresentacionVision', 'Vision') OR e.NombreEvento LIKE '%Vision%')), 0) AS TotalPresentacionesVision,
 
                         ISNULL((SELECT SUM(ISNULL(e.CantidadAsistentes, 0)) FROM dbo.Eventos e 
                                 WHERE e.IdTemporada = @TemporadaId 
-                                  AND (@EquipoId IS NULL OR e.IdEquipoCreador = @EquipoId)
-                                  AND (e.TipoEvento = 'PresentacionVision' OR e.NombreEvento LIKE '%Vision%')), 0) AS TotalAsistentesVision,
+                                  AND (@EquipoId IS NULL OR EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo ae WHERE ae.IdUsuario = e.IdUsuarioCreacion AND ae.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)) OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia WHERE epi.IdEvento = e.IdEvento AND i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)))
+                                  AND (@IglesiaId IS NULL OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion WHERE epi.IdEvento = e.IdEvento AND pi.IdIglesia = @IglesiaId))
+                                  AND (e.TipoEvento IN ('PresentacionVision', 'Vision') OR e.NombreEvento LIKE '%Vision%')), 0) AS TotalAsistentesVision,
 
-                        -- Equipos Ministeriales capacitados
+                        -- Equipos Ministeriales / Iglesias capacitadas e involucradas en la temporada
                         ISNULL((SELECT COUNT(DISTINCT pi.IdIglesia) FROM dbo.ParticipacionesIglesia pi
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)
                                   AND pi.Participara = 1), 0) AS EquiposMinisterialesCapacitados,
 
-                        -- Cajitas entregadas a Compañeros de Ministerio
+                        -- Cajitas entregadas a Compañeros de Ministerio (Asignadas / Despachadas)
                         ISNULL((SELECT SUM(ISNULL(ar.OportunidadesEvangelisticas, 0)) FROM dbo.AsignacionesRecursos ar
                                 INNER JOIN dbo.ParticipacionesIglesia pi ON ar.IdParticipacion = pi.IdParticipacion
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS CajitasEntregadasCompaneros,
 
                         -- Eventos Evangelísticos y Niños asistentes
@@ -263,7 +273,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'Evangelistico'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS EventosEvangelisticos,
 
                         ISNULL((SELECT SUM(ISNULL(re.CantidadNinos, 0)) FROM dbo.ReportesEventos re
@@ -271,7 +281,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'Evangelistico'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS NinosAsistentesEvangelisticos;";
 
                     using (var cmd = new SqlCommand(sqlMetricas, conn))
@@ -296,6 +306,12 @@ namespace SOR.DAL
 
                     // 2. Iglesias Plantadas
                     string sqlIp = @"
+                    WITH JerarquiaEquipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE (@EquipoId IS NOT NULL AND IdEquipo = @EquipoId)
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e
+                        INNER JOIN JerarquiaEquipos j ON e.IdEquipoPadre = j.IdEquipo
+                    )
                     SELECT 
                         ip.IdIglesiaPlantada,
                         ip.IdTemporada,
@@ -311,7 +327,7 @@ namespace SOR.DAL
                     FROM dbo.EOS_IglesiasPlantadas ip
                     INNER JOIN dbo.Equipos eq ON ip.IdEquipo = eq.IdEquipo
                     WHERE ip.IdTemporada = @TemporadaId
-                      AND (@EquipoId IS NULL OR ip.IdEquipo = @EquipoId)
+                      AND (@EquipoId IS NULL OR ip.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                     ORDER BY ip.FechaPlantacion DESC, ip.IdIglesiaPlantada DESC;";
 
                     using (var cmd = new SqlCommand(sqlIp, conn))
@@ -343,6 +359,12 @@ namespace SOR.DAL
 
                     // 3. GNA
                     string sqlGna = @"
+                    WITH JerarquiaEquipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE (@EquipoId IS NOT NULL AND IdEquipo = @EquipoId)
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e
+                        INNER JOIN JerarquiaEquipos j ON e.IdEquipoPadre = j.IdEquipo
+                    )
                     SELECT 
                         g.IdGNA,
                         g.IdTemporada,
@@ -359,7 +381,7 @@ namespace SOR.DAL
                     FROM dbo.EOS_GruposNoAlcanzados g
                     INNER JOIN dbo.Equipos eq ON g.IdEquipo = eq.IdEquipo
                     WHERE g.IdTemporada = @TemporadaId
-                      AND (@EquipoId IS NULL OR g.IdEquipo = @EquipoId)
+                      AND (@EquipoId IS NULL OR g.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                     ORDER BY g.IdGNA DESC;";
 
                     using (var cmd = new SqlCommand(sqlGna, conn))
@@ -395,7 +417,7 @@ namespace SOR.DAL
             return dto;
         }
 
-        // 2. REPORTE DE DISCIPULADO
+        // 2. REPORTE DE DISCIPULADO (LGA)
         public DiscipuladoReporteDTO ObtenerReporteDiscipulado(int temporadaId, int? equipoId, int? iglesiaId)
         {
             var dto = new DiscipuladoReporteDTO();
@@ -405,25 +427,33 @@ namespace SOR.DAL
                 {
                     conn.Open();
                     string sql = @"
+                    WITH JerarquiaEquipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE (@EquipoId IS NOT NULL AND IdEquipo = @EquipoId)
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e
+                        INNER JOIN JerarquiaEquipos j ON e.IdEquipoPadre = j.IdEquipo
+                    )
                     SELECT 
                         -- Capacitaciones OCC
                         ISNULL((SELECT COUNT(1) FROM dbo.Eventos e 
                                 WHERE e.IdTemporada = @TemporadaId 
-                                  AND (@EquipoId IS NULL OR e.IdEquipoCreador = @EquipoId)
-                                  AND (e.TipoEvento = 'Capacitacion' OR e.NombreEvento LIKE '%Capacitacion%' OR e.NombreEvento LIKE '%Taller%')), 0) AS TotalCapacitacionesOCC,
+                                  AND (@EquipoId IS NULL OR EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo ae WHERE ae.IdUsuario = e.IdUsuarioCreacion AND ae.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)) OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia WHERE epi.IdEvento = e.IdEvento AND i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)))
+                                  AND (@IglesiaId IS NULL OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion WHERE epi.IdEvento = e.IdEvento AND pi.IdIglesia = @IglesiaId))
+                                  AND (e.TipoEvento IN ('Capacitacion', 'Taller', 'Discipulado', 'Maestros') OR e.NombreEvento LIKE '%Capacitacion%' OR e.NombreEvento LIKE '%Taller%')), 0) AS TotalCapacitacionesOCC,
 
                         ISNULL((SELECT SUM(ISNULL(e.CantidadAsistentes, 0)) FROM dbo.Eventos e 
                                 WHERE e.IdTemporada = @TemporadaId 
-                                  AND (@EquipoId IS NULL OR e.IdEquipoCreador = @EquipoId)
-                                  AND (e.TipoEvento = 'Capacitacion' OR e.NombreEvento LIKE '%Capacitacion%' OR e.NombreEvento LIKE '%Taller%')), 0) AS TotalAsistentesCapacitacion,
+                                  AND (@EquipoId IS NULL OR EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo ae WHERE ae.IdUsuario = e.IdUsuarioCreacion AND ae.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)) OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia WHERE epi.IdEvento = e.IdEvento AND i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)))
+                                  AND (@IglesiaId IS NULL OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion WHERE epi.IdEvento = e.IdEvento AND pi.IdIglesia = @IglesiaId))
+                                  AND (e.TipoEvento IN ('Capacitacion', 'Taller', 'Discipulado', 'Maestros') OR e.NombreEvento LIKE '%Capacitacion%' OR e.NombreEvento LIKE '%Taller%')), 0) AS TotalAsistentesCapacitacion,
 
                         -- La Gran Aventura (LGA)
-                        ISNULL((SELECT SUM(ISNULL(re.CantidadClases, 0)) FROM dbo.ReportesEventos re
+                        ISNULL((SELECT SUM(CASE WHEN ISNULL(re.CantidadClases, 0) > 0 THEN re.CantidadClases ELSE 1 END) FROM dbo.ReportesEventos re
                                 INNER JOIN dbo.ParticipacionesIglesia pi ON re.IdParticipacion = pi.IdParticipacion
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'GranAventura'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS LgaCursosImpartidos,
 
                         ISNULL((SELECT SUM(ISNULL(re.CantidadNinos, 0)) FROM dbo.ReportesEventos re
@@ -431,7 +461,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'GranAventura'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS LgaNinosAsistentes,
 
                         ISNULL((SELECT SUM(ISNULL(re.CuantosAceptaronSenor, 0)) FROM dbo.ReportesEventos re
@@ -439,7 +469,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'GranAventura'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS LgaDecisionesJesus,
 
                         ISNULL((SELECT SUM(ISNULL(re.CuantosComprometieron, 0)) FROM dbo.ReportesEventos re
@@ -447,7 +477,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'GranAventura'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS LgaComprometidosOrarCompartir,
 
                         ISNULL((SELECT SUM(ISNULL(re.CuantosGraduaron, 0)) FROM dbo.ReportesEventos re
@@ -455,7 +485,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND re.TipoReporte = 'GranAventura'
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS LgaGraduadosTotales,
 
                         -- Valores de Crecimiento (VDC / DET)
@@ -464,7 +494,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND (re.TipoReporte LIKE '%VDC%' OR re.TipoReporte = 'ValoresCrecimiento' OR re.Notas LIKE '%VDC%')
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS VdcAsistieronUnaClase,
 
                         ISNULL((SELECT SUM(ISNULL(re.CuantosGraduaron, 0)) FROM dbo.ReportesEventos re
@@ -472,7 +502,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND (re.TipoReporte LIKE '%VDC%' OR re.TipoReporte = 'ValoresCrecimiento' OR re.Notas LIKE '%VDC%')
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS VdcAsistieronSeisClases,
 
                         ISNULL((SELECT SUM(ISNULL(re.CuantosComprometieron, 0)) FROM dbo.ReportesEventos re
@@ -480,7 +510,7 @@ namespace SOR.DAL
                                 INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia
                                 WHERE pi.IdTemporada = @TemporadaId
                                   AND (re.TipoReporte LIKE '%VDC%' OR re.TipoReporte = 'ValoresCrecimiento' OR re.Notas LIKE '%VDC%')
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS VdcContinuaronLgaODet;";
 
                     using (var cmd = new SqlCommand(sql, conn))
@@ -522,28 +552,36 @@ namespace SOR.DAL
                 {
                     conn.Open();
                     string sql = @"
+                    WITH JerarquiaEquipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE (@EquipoId IS NOT NULL AND IdEquipo = @EquipoId)
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e
+                        INNER JOIN JerarquiaEquipos j ON e.IdEquipoPadre = j.IdEquipo
+                    )
                     SELECT 
                         ISNULL((SELECT COUNT(1) FROM dbo.Eventos e 
                                 WHERE e.IdTemporada = @TemporadaId 
-                                  AND (@EquipoId IS NULL OR e.IdEquipoCreador = @EquipoId)
-                                  AND (e.TipoEvento = 'Oracion' OR e.NombreEvento LIKE '%Oracion%')), 0) AS EventosOracionOrganizados,
+                                  AND (@EquipoId IS NULL OR EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo ae WHERE ae.IdUsuario = e.IdUsuarioCreacion AND ae.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)) OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia WHERE epi.IdEvento = e.IdEvento AND i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)))
+                                  AND (@IglesiaId IS NULL OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion WHERE epi.IdEvento = e.IdEvento AND pi.IdIglesia = @IglesiaId))
+                                  AND (e.TipoEvento IN ('Oracion', 'Clamor', 'Vigilia') OR e.NombreEvento LIKE '%Oracion%' OR e.NombreEvento LIKE '%Clamor%')), 0) AS EventosOracionOrganizados,
 
                         ISNULL((SELECT SUM(ISNULL(e.CantidadAsistentes, 0)) FROM dbo.Eventos e 
                                 WHERE e.IdTemporada = @TemporadaId 
-                                  AND (@EquipoId IS NULL OR e.IdEquipoCreador = @EquipoId)
-                                  AND (e.TipoEvento = 'Oracion' OR e.NombreEvento LIKE '%Oracion%')), 0) AS TotalAsistentesOracion,
+                                  AND (@EquipoId IS NULL OR EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo ae WHERE ae.IdUsuario = e.IdUsuarioCreacion AND ae.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)) OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion INNER JOIN dbo.Iglesias i ON pi.IdIglesia = i.IdIglesia WHERE epi.IdEvento = e.IdEvento AND i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos)))
+                                  AND (@IglesiaId IS NULL OR EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia epi INNER JOIN dbo.ParticipacionesIglesia pi ON epi.IdParticipacion = pi.IdParticipacion WHERE epi.IdEvento = e.IdEvento AND pi.IdIglesia = @IglesiaId))
+                                  AND (e.TipoEvento IN ('Oracion', 'Clamor', 'Vigilia') OR e.NombreEvento LIKE '%Oracion%' OR e.NombreEvento LIKE '%Clamor%')), 0) AS TotalAsistentesOracion,
 
                         ISNULL((SELECT COUNT(1) FROM dbo.CompanerosOracion co
                                 INNER JOIN dbo.Iglesias i ON co.IdIglesia = i.IdIglesia
                                 WHERE co.IdTemporada = @TemporadaId
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS CompanerosOracionReportados,
 
                         ISNULL((SELECT COUNT(1) FROM dbo.CompanerosOracion co
                                 INNER JOIN dbo.Iglesias i ON co.IdIglesia = i.IdIglesia
                                 WHERE co.IdTemporada = @TemporadaId
-                                  AND (co.Telefono IS NOT NULL AND LEN(co.Telefono) > 3)
-                                  AND (@EquipoId IS NULL OR i.IdEquipo = @EquipoId)
+                                  AND (co.ContactoWhatsApp IS NOT NULL AND LEN(LTRIM(RTRIM(co.ContactoWhatsApp))) >= 7)
+                                  AND (@EquipoId IS NULL OR i.IdEquipo IN (SELECT IdEquipo FROM JerarquiaEquipos))
                                   AND (@IglesiaId IS NULL OR i.IdIglesia = @IglesiaId)), 0) AS MiembrosRedOracionLocal;";
 
                     using (var cmd = new SqlCommand(sql, conn))
