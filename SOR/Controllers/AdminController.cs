@@ -273,33 +273,35 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-                SqlTransaction tran = cn.BeginTransaction();
-                try
+                using (SqlTransaction tran = cn.BeginTransaction())
                 {
-                    string sql = "UPDATE dbo.Usuarios SET IdEstado = 5 WHERE IdUsuario = @IdUsuario;";
-                    using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                    try
                     {
-                        cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                        cmd.ExecuteNonQuery();
-                    }
+                        string sql = "UPDATE dbo.Usuarios SET IdEstado = 5 WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmd.ExecuteNonQuery();
+                        }
 
-                    string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
-                    using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                        string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                        {
+                            cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdDis.ExecuteNonQuery();
+                        }
+
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                            "RECHAZAR_USUARIO", "ADMINISTRACION_USUARIOS", idUsuario.ToString(), $"Solicitud de usuario #{idUsuario} rechazada.");
+
+                        tran.Commit();
+                    }
+                    catch (Exception ex)
                     {
-                        cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                        cmdDis.ExecuteNonQuery();
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Error al rechazar usuario: " + ex.Message;
+                        return RedirectToAction("Usuarios");
                     }
-
-                    SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
-                        "RECHAZAR_USUARIO", "ADMINISTRACION_USUARIOS", idUsuario.ToString(), $"Solicitud de usuario #{idUsuario} rechazada.");
-
-                    tran.Commit();
-                }
-                catch (Exception ex)
-                {
-                    tran.Rollback();
-                    TempData["MensajeError"] = "Error al rechazar usuario: " + ex.Message;
-                    return RedirectToAction("Usuarios");
                 }
             }
 
@@ -326,97 +328,98 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-                SqlTransaction tran = cn.BeginTransaction();
-
-                try
+                using (SqlTransaction tran = cn.BeginTransaction())
                 {
-                    int? idEquipo = null;
-                    int? idPosicion = null;
-
-                    string sqlGetPerfil = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
-                    using (SqlCommand cmdGet = new SqlCommand(sqlGetPerfil, cn, tran))
+                    try
                     {
-                        cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                        using (SqlDataReader dr = cmdGet.ExecuteReader())
-                        {
-                            if (dr.Read())
-                            {
-                                idEquipo = dr["IdEquipo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipo"]) : null;
-                                idPosicion = dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null;
-                            }
-                        }
-                    }
+                        int? idEquipo = null;
+                        int? idPosicion = null;
 
-                    // Verificar unicidad de posición si fue seleccionada
-                    if (idEquipo.HasValue && idPosicion.HasValue)
-                    {
-                        string sqlCheck = @"
-                            SELECT COUNT(1) 
-                            FROM dbo.AsignacionesEquipo a
-                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
-                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
-                        using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
+                        string sqlGetPerfil = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmdGet = new SqlCommand(sqlGetPerfil, cn, tran))
                         {
-                            cmdCheck.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdCheck.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            int ocupado = Convert.ToInt32(cmdCheck.ExecuteScalar());
-
-                            if (ocupado > 0)
+                            cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            using (SqlDataReader dr = cmdGet.ExecuteReader())
                             {
-                                tran.Rollback();
-                                TempData["MensajeError"] = "La posición seleccionada ya está ocupada por otro usuario activo en ese equipo.";
-                                return RedirectToAction("Usuarios");
+                                if (dr.Read())
+                                {
+                                    idEquipo = dr["IdEquipo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipo"]) : null;
+                                    idPosicion = dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null;
+                                }
                             }
                         }
 
-                        // Desactivar asignaciones anteriores y asignar nueva
-                        string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
-                        using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                        // Verificar unicidad de posición si fue seleccionada
+                        if (idEquipo.HasValue && idPosicion.HasValue)
                         {
-                            cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            cmdDis.ExecuteNonQuery();
+                            string sqlCheck = @"
+                                SELECT COUNT(1) 
+                                FROM dbo.AsignacionesEquipo a
+                                INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                                WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
+                            using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
+                            {
+                                cmdCheck.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdCheck.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                int ocupado = Convert.ToInt32(cmdCheck.ExecuteScalar());
+
+                                if (ocupado > 0)
+                                {
+                                    tran.Rollback();
+                                    TempData["MensajeError"] = "La posición seleccionada ya está ocupada por otro usuario activo en ese equipo.";
+                                    return RedirectToAction("Usuarios");
+                                }
+                            }
+
+                            // Desactivar asignaciones anteriores y asignar nueva
+                            string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
+                            using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                            {
+                                cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdDis.ExecuteNonQuery();
+                            }
+
+                            // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
+                            string sqlDisableInactive = @"
+                                UPDATE a
+                                SET a.Activo = 0
+                                FROM dbo.AsignacionesEquipo a
+                                INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                                WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
+                            using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
+                            {
+                                cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdDisInactive.ExecuteNonQuery();
+                            }
+
+                            string sqlInsAsig = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
+                            using (SqlCommand cmdIns = new SqlCommand(sqlInsAsig, cn, tran))
+                            {
+                                cmdIns.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdIns.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdIns.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdIns.ExecuteNonQuery();
+                            }
                         }
 
-                        // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
-                        string sqlDisableInactive = @"
-                            UPDATE a
-                            SET a.Activo = 0
-                            FROM dbo.AsignacionesEquipo a
-                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
-                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
-                        using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
+                        // Actualizar estado a Activo (4)
+                        string sqlUpdateUser = "UPDATE dbo.Usuarios SET IdEstado = 4 WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmdUpd = new SqlCommand(sqlUpdateUser, cn, tran))
                         {
-                            cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdDisInactive.ExecuteNonQuery();
+                            cmdUpd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdUpd.ExecuteNonQuery();
                         }
 
-                        string sqlInsAsig = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
-                        using (SqlCommand cmdIns = new SqlCommand(sqlInsAsig, cn, tran))
-                        {
-                            cmdIns.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            cmdIns.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdIns.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdIns.ExecuteNonQuery();
-                        }
+                        tran.Commit();
+                        TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario está plenamente activo.";
                     }
-
-                    // Actualizar estado a Activo (4)
-                    string sqlUpdateUser = "UPDATE dbo.Usuarios SET IdEstado = 4 WHERE IdUsuario = @IdUsuario;";
-                    using (SqlCommand cmdUpd = new SqlCommand(sqlUpdateUser, cn, tran))
+                    catch (Exception ex)
                     {
-                        cmdUpd.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                        cmdUpd.ExecuteNonQuery();
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Error al aprobar perfil: " + ex.Message;
                     }
-
-                    tran.Commit();
-                    TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario está plenamente activo.";
-                }
-                catch (Exception ex)
-                {
-                    tran.Rollback();
-                    TempData["MensajeError"] = "Error al aprobar perfil: " + ex.Message;
                 }
             }
 
@@ -456,184 +459,185 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-                SqlTransaction tran = cn.BeginTransaction();
-
-                try
+                using (SqlTransaction tran = cn.BeginTransaction())
                 {
-                    // 0. Obtener estado actual del usuario objetivo en la base de datos
-                    int rolAnterior = 0;
-                    int estadoAnterior = 0;
-                    string correoUsuario = "";
-                    using (SqlCommand cmdGet = new SqlCommand("SELECT IdRolSeguridad, IdEstado, Correo FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;", cn, tran))
+                    try
                     {
-                        cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                        using (SqlDataReader dr = cmdGet.ExecuteReader())
+                        // 0. Obtener estado actual del usuario objetivo en la base de datos
+                        int rolAnterior = 0;
+                        int estadoAnterior = 0;
+                        string correoUsuario = "";
+                        using (SqlCommand cmdGet = new SqlCommand("SELECT IdRolSeguridad, IdEstado, Correo FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;", cn, tran))
                         {
-                            if (dr.Read())
+                            cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            using (SqlDataReader dr = cmdGet.ExecuteReader())
                             {
-                                rolAnterior = Convert.ToInt32(dr["IdRolSeguridad"]);
-                                estadoAnterior = Convert.ToInt32(dr["IdEstado"]);
-                                correoUsuario = dr["Correo"].ToString();
+                                if (dr.Read())
+                                {
+                                    rolAnterior = Convert.ToInt32(dr["IdRolSeguridad"]);
+                                    estadoAnterior = Convert.ToInt32(dr["IdEstado"]);
+                                    correoUsuario = dr["Correo"].ToString();
+                                }
+                                else
+                                {
+                                    tran.Rollback();
+                                    TempData["MensajeError"] = "El usuario seleccionado no existe.";
+                                    return RedirectToAction("Usuarios");
+                                }
                             }
-                            else
+                        }
+
+                        // Regla de Prevención de Orfandad: Si el usuario es el único Superadmin activo, no permitir quitarle el rol ni suspenderlo
+                        if (rolAnterior == 1 && estadoAnterior == 4 && (idRolSeguridad != 1 || idEstado != 4))
+                        {
+                            int otrosSuperadminsActivos = 0;
+                            using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
+                            {
+                                cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                otrosSuperadminsActivos = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                            }
+
+                            if (otrosSuperadminsActivos == 0)
                             {
                                 tran.Rollback();
-                                TempData["MensajeError"] = "El usuario seleccionado no existe.";
-                                return RedirectToAction("Usuarios");
-                            }
-                        }
-                    }
-
-                    // Regla de Prevención de Orfandad: Si el usuario es el único Superadmin activo, no permitir quitarle el rol ni suspenderlo
-                    if (rolAnterior == 1 && estadoAnterior == 4 && (idRolSeguridad != 1 || idEstado != 4))
-                    {
-                        int otrosSuperadminsActivos = 0;
-                        using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
-                        {
-                            cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            otrosSuperadminsActivos = Convert.ToInt32(cmdCheck.ExecuteScalar());
-                        }
-
-                        if (otrosSuperadminsActivos == 0)
-                        {
-                            tran.Rollback();
-                            TempData["MensajeError"] = "Operación denegada: No se puede revocar el rol ni suspender al único Superadmin activo del sistema. La plataforma requiere obligatoriamente un Superadmin activo. Para cambiar de titular, utilice la opción de Reemplazo / Transferencia de Superadmin.";
-                            return RedirectToAction("Usuarios");
-                        }
-                    }
-
-                    // Regla 2: Máximo 1 Superadmin activo simultáneamente
-                    // Si se intenta activar un Superadmin cuando ya existe uno activo diferente
-                    if (idRolSeguridad == 1 && idEstado == 4 && !(rolAnterior == 1 && estadoAnterior == 4))
-                    {
-                        int superadminsActivosActuales = 0;
-                        using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
-                        {
-                            cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            superadminsActivosActuales = Convert.ToInt32(cmdCheck.ExecuteScalar());
-                        }
-
-                        if (superadminsActivosActuales > 0)
-                        {
-                            tran.Rollback();
-                            TempData["MensajeError"] = "Operación denegada: Ya existe un Superadmin activo en la plataforma. Debe transferir o reemplazar al Superadmin actual antes de activar uno nuevo.";
-                            return RedirectToAction("Usuarios");
-                        }
-                    }
-
-                    // 1. Actualizar Rol y Estado de Usuario
-                    string sqlUser = "UPDATE dbo.Usuarios SET IdRolSeguridad = @IdRolSeguridad, IdEstado = @IdEstado WHERE IdUsuario = @IdUsuario;";
-                    using (SqlCommand cmdU = new SqlCommand(sqlUser, cn, tran))
-                    {
-                        cmdU.Parameters.AddWithValue("@IdRolSeguridad", idRolSeguridad);
-                        cmdU.Parameters.AddWithValue("@IdEstado", idEstado);
-                        cmdU.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                        cmdU.ExecuteNonQuery();
-                    }
-
-                    // Si el estado es Suspendido (6) o Rechazado (5), inactivar todas sus asignaciones en el equipo
-                    if (idEstado == 5 || idEstado == 6)
-                    {
-                        string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
-                        using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
-                        {
-                            cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            cmdDis.ExecuteNonQuery();
-                        }
-                    }
-
-                    // 2. Si se especificó equipo y posición, validar y actualizar
-                    if (idEquipo.HasValue && idPosicion.HasValue)
-                    {
-                        string sqlCheck = @"
-                            SELECT COUNT(1) 
-                            FROM dbo.AsignacionesEquipo a
-                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
-                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
-                        using (SqlCommand cmdC = new SqlCommand(sqlCheck, cn, tran))
-                        {
-                            cmdC.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdC.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdC.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            int cnt = Convert.ToInt32(cmdC.ExecuteScalar());
-
-                            if (cnt > 0)
-                            {
-                                tran.Rollback();
-                                TempData["MensajeError"] = "La posición seleccionada ya está ocupada en ese equipo.";
+                                TempData["MensajeError"] = "Operación denegada: No se puede revocar el rol ni suspender al único Superadmin activo del sistema. La plataforma requiere obligatoriamente un Superadmin activo. Para cambiar de titular, utilice la opción de Reemplazo / Transferencia de Superadmin.";
                                 return RedirectToAction("Usuarios");
                             }
                         }
 
-                        // Actualizar perfil
-                        string sqlPerf = "UPDATE dbo.PerfilesCoordinador SET IdEquipo = @IdEquipo, IdPosicion = @IdPosicion WHERE IdUsuario = @IdUsuario;";
-                        using (SqlCommand cmdP = new SqlCommand(sqlPerf, cn, tran))
+                        // Regla 2: Máximo 1 Superadmin activo simultáneamente
+                        // Si se intenta activar un Superadmin cuando ya existe uno activo diferente
+                        if (idRolSeguridad == 1 && idEstado == 4 && !(rolAnterior == 1 && estadoAnterior == 4))
                         {
-                            cmdP.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdP.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdP.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            cmdP.ExecuteNonQuery();
+                            int superadminsActivosActuales = 0;
+                            using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
+                            {
+                                cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                superadminsActivosActuales = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                            }
+
+                            if (superadminsActivosActuales > 0)
+                            {
+                                tran.Rollback();
+                                TempData["MensajeError"] = "Operación denegada: Ya existe un Superadmin activo en la plataforma. Debe transferir o reemplazar al Superadmin actual antes de activar uno nuevo.";
+                                return RedirectToAction("Usuarios");
+                            }
                         }
 
-                        // Actualizar asignación activa
-                        string sqlDis = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
-                        using (SqlCommand cmdD = new SqlCommand(sqlDis, cn, tran))
+                        // 1. Actualizar Rol y Estado de Usuario
+                        string sqlUser = "UPDATE dbo.Usuarios SET IdRolSeguridad = @IdRolSeguridad, IdEstado = @IdEstado WHERE IdUsuario = @IdUsuario;";
+                        using (SqlCommand cmdU = new SqlCommand(sqlUser, cn, tran))
                         {
-                            cmdD.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            cmdD.ExecuteNonQuery();
+                            cmdU.Parameters.AddWithValue("@IdRolSeguridad", idRolSeguridad);
+                            cmdU.Parameters.AddWithValue("@IdEstado", idEstado);
+                            cmdU.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdU.ExecuteNonQuery();
                         }
 
-                        // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
-                        string sqlDisableInactive = @"
-                            UPDATE a
-                            SET a.Activo = 0
-                            FROM dbo.AsignacionesEquipo a
-                            INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
-                            WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
-                        using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
+                        // Si el estado es Suspendido (6) o Rechazado (5), inactivar todas sus asignaciones en el equipo
+                        if (idEstado == 5 || idEstado == 6)
                         {
-                            cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdDisInactive.ExecuteNonQuery();
+                            string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
+                            using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
+                            {
+                                cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdDis.ExecuteNonQuery();
+                            }
                         }
 
-                        string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
-                        using (SqlCommand cmdI = new SqlCommand(sqlIns, cn, tran))
+                        // 2. Si se especificó equipo y posición, validar y actualizar
+                        if (idEquipo.HasValue && idPosicion.HasValue)
                         {
-                            cmdI.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                            cmdI.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                            cmdI.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                            cmdI.ExecuteNonQuery();
+                            string sqlCheck = @"
+                                SELECT COUNT(1) 
+                                FROM dbo.AsignacionesEquipo a
+                                INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                                WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
+                            using (SqlCommand cmdC = new SqlCommand(sqlCheck, cn, tran))
+                            {
+                                cmdC.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdC.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdC.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                int cnt = Convert.ToInt32(cmdC.ExecuteScalar());
+
+                                if (cnt > 0)
+                                {
+                                    tran.Rollback();
+                                    TempData["MensajeError"] = "La posición seleccionada ya está ocupada en ese equipo.";
+                                    return RedirectToAction("Usuarios");
+                                }
+                            }
+
+                            // Actualizar perfil
+                            string sqlPerf = "UPDATE dbo.PerfilesCoordinador SET IdEquipo = @IdEquipo, IdPosicion = @IdPosicion WHERE IdUsuario = @IdUsuario;";
+                            using (SqlCommand cmdP = new SqlCommand(sqlPerf, cn, tran))
+                            {
+                                cmdP.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdP.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdP.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdP.ExecuteNonQuery();
+                            }
+
+                            // Actualizar asignación activa
+                            string sqlDis = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
+                            using (SqlCommand cmdD = new SqlCommand(sqlDis, cn, tran))
+                            {
+                                cmdD.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdD.ExecuteNonQuery();
+                            }
+
+                            // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
+                            string sqlDisableInactive = @"
+                                UPDATE a
+                                SET a.Activo = 0
+                                FROM dbo.AsignacionesEquipo a
+                                INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
+                                WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
+                            using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
+                            {
+                                cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdDisInactive.ExecuteNonQuery();
+                            }
+
+                            string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
+                            using (SqlCommand cmdI = new SqlCommand(sqlIns, cn, tran))
+                            {
+                                cmdI.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdI.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
+                                cmdI.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdI.ExecuteNonQuery();
+                            }
                         }
+
+                        // 3. Registrar auditoría exhaustiva
+                        string operacionAuditoria = (rolAnterior == 1 || idRolSeguridad == 1) ? "EDITAR_SUPERADMIN" : "EDITAR_USUARIO";
+                        string detalleAuditoria = $"Edición de usuario #{idUsuario} ({correoUsuario}): Rol anterior: {rolAnterior} -> Rol nuevo: {idRolSeguridad}, Estado anterior: {estadoAnterior} -> Estado nuevo: {idEstado}.";
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
+                            operacionAuditoria, "ADMINISTRACION_USUARIOS", idUsuario.ToString(), detalleAuditoria);
+
+                        tran.Commit();
+
+                        // Si el usuario modificó su propia cuenta, refrescar la sesión
+                        if (usuarioActual.IdUsuario == idUsuario)
+                        {
+                            usuarioActual.IdRolSeguridad = idRolSeguridad;
+                            usuarioActual.IdEstado = idEstado;
+                            Session["usuario"] = usuarioActual;
+                        }
+
+                        TempData["MensajeExito"] = "Datos y permisos de usuario actualizados correctamente.";
                     }
-
-                    // 3. Registrar auditoría exhaustiva
-                    string operacionAuditoria = (rolAnterior == 1 || idRolSeguridad == 1) ? "EDITAR_SUPERADMIN" : "EDITAR_USUARIO";
-                    string detalleAuditoria = $"Edición de usuario #{idUsuario} ({correoUsuario}): Rol anterior: {rolAnterior} -> Rol nuevo: {idRolSeguridad}, Estado anterior: {estadoAnterior} -> Estado nuevo: {idEstado}.";
-                    SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
-                        operacionAuditoria, "ADMINISTRACION_USUARIOS", idUsuario.ToString(), detalleAuditoria);
-
-                    tran.Commit();
-
-                    // Si el usuario modificó su propia cuenta, refrescar la sesión
-                    if (usuarioActual.IdUsuario == idUsuario)
+                    catch (SqlException sqlEx) when (sqlEx.Number == 2601 || sqlEx.Number == 2627)
                     {
-                        usuarioActual.IdRolSeguridad = idRolSeguridad;
-                        usuarioActual.IdEstado = idEstado;
-                        Session["usuario"] = usuarioActual;
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
                     }
-
-                    TempData["MensajeExito"] = "Datos y permisos de usuario actualizados correctamente.";
-                }
-                catch (SqlException sqlEx) when (sqlEx.Number == 2601 || sqlEx.Number == 2627)
-                {
-                    tran.Rollback();
-                    TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
-                }
-                catch (Exception ex)
-                {
-                    tran.Rollback();
-                    TempData["MensajeError"] = "Error al actualizar usuario: " + ex.Message;
+                    catch (Exception ex)
+                    {
+                        tran.Rollback();
+                        TempData["MensajeError"] = "Error al actualizar usuario: " + ex.Message;
+                    }
                 }
             }
 
@@ -1029,6 +1033,19 @@ namespace SOR.Controllers
                                 END CATCH
                             END
                         END
+                    END
+
+                    IF OBJECT_ID('dbo.Materiales', 'U') IS NOT NULL
+                    BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM dbo.Materiales)
+                        BEGIN
+                            INSERT INTO dbo.Materiales (Codigo, NombreMaterial, UnidadEntrega, MomentoEntrega, Activo) VALUES 
+                            ('MAT-CJA', 'Cajas de Regalo (Shoeboxes)', 'Caja', 'Despacho', 1),
+                            ('MAT-FGV', 'Folletos El Gran Viaje (Discipulado)', 'Folleto', 'Taller', 1),
+                            ('MAT-GL', 'Guías del Líder / Maestro', 'Guía', 'Taller', 1),
+                            ('MAT-DIP', 'Diplomas de Graduación', 'Diploma', 'Taller', 1),
+                            ('MAT-EMV', 'El Mejor Viaje / Evangelismo', 'Folleto', 'Despacho', 1);
+                        END
                     END";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -1050,6 +1067,7 @@ namespace SOR.Controllers
             List<CatalogoItemViewModel> denominaciones = new List<CatalogoItemViewModel>();
             List<CatalogoItemViewModel> tiposOrg = new List<CatalogoItemViewModel>();
             List<CatalogoItemViewModel> rolesEvento = new List<CatalogoItemViewModel>();
+            List<CatalogoItemViewModel> materiales = new List<CatalogoItemViewModel>();
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -1099,11 +1117,30 @@ namespace SOR.Controllers
                         });
                     }
                 }
+
+                string sqlM = "SELECT IdMaterial AS Id, Codigo, NombreMaterial AS Nombre, UnidadEntrega, MomentoEntrega, Activo FROM dbo.Materiales ORDER BY IdMaterial ASC;";
+                using (SqlCommand cmdM = new SqlCommand(sqlM, cn))
+                using (SqlDataReader drM = cmdM.ExecuteReader())
+                {
+                    while (drM.Read())
+                    {
+                        materiales.Add(new CatalogoItemViewModel
+                        {
+                            Id = Convert.ToInt32(drM["Id"]),
+                            Codigo = drM["Codigo"].ToString(),
+                            Nombre = drM["Nombre"].ToString(),
+                            UnidadEntrega = drM["UnidadEntrega"] != DBNull.Value ? drM["UnidadEntrega"].ToString() : "Unidad",
+                            MomentoEntrega = drM["MomentoEntrega"] != DBNull.Value ? drM["MomentoEntrega"].ToString() : "Taller",
+                            Activo = Convert.ToBoolean(drM["Activo"])
+                        });
+                    }
+                }
             }
 
             ViewBag.Denominaciones = denominaciones;
             ViewBag.TiposOrg = tiposOrg;
             ViewBag.RolesEvento = rolesEvento;
+            ViewBag.Materiales = materiales;
             return View();
         }
 
@@ -1239,13 +1276,79 @@ namespace SOR.Controllers
             TempData["MensajeExito"] = "Estado de rol/función de evento actualizado.";
             return RedirectToAction("Catalogos");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CrearMaterial(string codigo, string nombre, string unidadEntrega, string momentoEntrega)
+        {
+            if (!string.IsNullOrWhiteSpace(nombre) && !string.IsNullOrWhiteSpace(codigo))
+            {
+                AsegurarTablasCatalogos();
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "INSERT INTO dbo.Materiales (Codigo, NombreMaterial, UnidadEntrega, MomentoEntrega, Activo) VALUES (@Codigo, @Nombre, @Unidad, @Momento, 1);";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Codigo", codigo.Trim().ToUpper());
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.AddWithValue("@Unidad", string.IsNullOrWhiteSpace(unidadEntrega) ? "Unidad" : unidadEntrega.Trim());
+                    cmd.Parameters.AddWithValue("@Momento", string.IsNullOrWhiteSpace(momentoEntrega) ? "Taller" : momentoEntrega.Trim());
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Material agregado correctamente al catálogo.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditarMaterial(int id, string codigo, string nombre, string unidadEntrega, string momentoEntrega)
+        {
+            if (id > 0 && !string.IsNullOrWhiteSpace(nombre) && !string.IsNullOrWhiteSpace(codigo))
+            {
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    string sql = "UPDATE dbo.Materiales SET Codigo = @Codigo, NombreMaterial = @Nombre, UnidadEntrega = @Unidad, MomentoEntrega = @Momento WHERE IdMaterial = @Id;";
+                    SqlCommand cmd = new SqlCommand(sql, cn);
+                    cmd.Parameters.AddWithValue("@Codigo", codigo.Trim().ToUpper());
+                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.AddWithValue("@Unidad", string.IsNullOrWhiteSpace(unidadEntrega) ? "Unidad" : unidadEntrega.Trim());
+                    cmd.Parameters.AddWithValue("@Momento", string.IsNullOrWhiteSpace(momentoEntrega) ? "Taller" : momentoEntrega.Trim());
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                TempData["MensajeExito"] = "Material modificado correctamente.";
+            }
+            return RedirectToAction("Catalogos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ToggleMaterial(int id, bool activo)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                string sql = "UPDATE dbo.Materiales SET Activo = @Activo WHERE IdMaterial = @Id;";
+                SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.AddWithValue("@Activo", activo);
+                cmd.Parameters.AddWithValue("@Id", id);
+                cn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            TempData["MensajeExito"] = "Estado del material actualizado.";
+            return RedirectToAction("Catalogos");
+        }
     }
 
     public class CatalogoItemViewModel
     {
         public int Id { get; set; }
+        public string Codigo { get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
+        public string UnidadEntrega { get; set; }
+        public string MomentoEntrega { get; set; }
         public bool Activo { get; set; }
     }
 }

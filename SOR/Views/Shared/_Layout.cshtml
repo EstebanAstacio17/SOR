@@ -738,6 +738,55 @@
                     }
                 }
             });
+
+            // 3. Configuración y Resiliencia Global para llamadas AJAX de jQuery
+            if (window.jQuery) {
+                var globalAjaxActiveCount = 0;
+
+                $(document).ajaxSend(function (event, jqXHR, settings) {
+                    globalAjaxActiveCount++;
+                    // Si la llamada AJAX fue disparada desde un botón con foco o clase btn
+                    var $activeEl = $(document.activeElement);
+                    if ($activeEl.is('button, a.btn, input[type="button"]') && !$activeEl.hasClass('no-ajax-spinner')) {
+                        $activeEl.data('prev-disabled', $activeEl.prop('disabled'));
+                        $activeEl.data('prev-html', $activeEl.html());
+                        $activeEl.prop('disabled', true);
+                        if ($activeEl.find('.spinner-border').length === 0) {
+                            $activeEl.prepend('<span class="spinner-border spinner-border-sm me-1 ajax-global-spin" role="status" aria-hidden="true"></span>');
+                        }
+                        jqXHR.always(function () {
+                            $activeEl.find('.ajax-global-spin').remove();
+                            $activeEl.prop('disabled', $activeEl.data('prev-disabled') || false);
+                        });
+                    }
+                });
+
+                $(document).ajaxComplete(function () {
+                    globalAjaxActiveCount = Math.max(0, globalAjaxActiveCount - 1);
+                });
+
+                $(document).ajaxError(function (event, jqXHR, settings, thrownError) {
+                    // Si el error ya fue manejado localmente y silenciado, no alertar
+                    if (settings && settings.suppressGlobalError) return;
+
+                    var mensaje = 'Ocurrió un inconveniente al procesar la solicitud en la nube.';
+                    if (jqXHR.status === 0) {
+                        mensaje = 'Sin conexión: Por favor verifique su conexión a Internet o red.';
+                    } else if (jqXHR.status === 401) {
+                        mensaje = 'Su sesión ha expirado. Por favor recargue la página e inicie sesión nuevamente.';
+                    } else if (jqXHR.status === 403) {
+                        mensaje = 'Acceso restringido: No cuenta con permisos suficientes para ejecutar esta acción.';
+                    } else if (jqXHR.status === 404) {
+                        mensaje = 'El recurso solicitado no fue encontrado en el servidor.';
+                    } else if (jqXHR.status === 500) {
+                        mensaje = 'Error interno en el servidor de Azure. La operación fue abortada de forma segura.';
+                    } else if (thrownError === 'timeout') {
+                        mensaje = 'Tiempo de espera agotado al comunicar con Azure SQL. Intente nuevamente.';
+                    }
+
+                    console.error('[AJAX Error Cloud]', settings.url, jqXHR.status, thrownError);
+                });
+            }
         })();
     </script>
 

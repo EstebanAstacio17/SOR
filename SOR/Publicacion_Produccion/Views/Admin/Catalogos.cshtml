@@ -4,12 +4,13 @@
     var denominaciones = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.Denominaciones ?? new List<SOR.Controllers.CatalogoItemViewModel>();
     var tiposOrg = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.TiposOrg ?? new List<SOR.Controllers.CatalogoItemViewModel>();
     var rolesEvento = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.RolesEvento ?? new List<SOR.Controllers.CatalogoItemViewModel>();
+    var materiales = (List<SOR.Controllers.CatalogoItemViewModel>)ViewBag.Materiales ?? new List<SOR.Controllers.CatalogoItemViewModel>();
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
     <div>
         <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-tags-fill text-primary me-2"></i>Mantenedor de Catálogos</h2>
-        <p class="text-muted mb-0">Administra las opciones de Denominaciones, Tipos de Organización y Roles/Funciones de Eventos utilizadas en la plataforma.</p>
+        <p class="text-muted mb-0">Administra las opciones de Denominaciones, Tipos de Organización, Roles de Eventos y Catálogo de Materiales del sistema.</p>
     </div>
 </div>
 
@@ -219,6 +220,94 @@
     </div>
 </div>
 
+<!-- PANEL 4: CATÁLOGO DE MATERIALES Y SUMINISTROS -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="card-header bg-dark text-white p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h5 class="card-title font-bold mb-0">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>Catálogo de Materiales y Suministros
+                    </h5>
+                    <small class="text-slate-300">Define los materiales base disponibles para recepción de contenedores, transferencias y presentaciones de empaque.</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
+                    <i class="bi bi-plus-circle me-1"></i>Agregar Material
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Código</th>
+                                <th>Nombre del Material</th>
+                                <th>Unidad de Entrega</th>
+                                <th>Momento de Entrega</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!materiales.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">No hay materiales registrados en el catálogo.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in materiales)
+                                {
+                                    <tr>
+                                        <td class="ps-4">
+                                            <span class="badge bg-light text-slate-700 border font-monospace px-2 py-1">@item.Codigo</span>
+                                        </td>
+                                        <td class="fw-bold text-slate-800">
+                                            @item.Nombre
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info-soft text-info">@item.UnidadEntrega</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary-soft text-secondary">@item.MomentoEntrega</span>
+                                        </td>
+                                        <td>
+                                            @if (item.Activo)
+                                            {
+                                                <span class="badge bg-success-soft text-success px-3 py-1.5 rounded-pill">Activo / Disponible</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-soft text-danger px-3 py-1.5 rounded-pill">Inhabilitado</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="d-flex align-items-center justify-content-end gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarMaterial(@item.Id, '@Html.Raw(item.Codigo.Replace("'", "\\'"))', '@Html.Raw(item.Nombre.Replace("'", "\\'"))', '@Html.Raw(item.UnidadEntrega.Replace("'", "\\'"))', '@Html.Raw(item.MomentoEntrega.Replace("'", "\\'"))')" title="Editar Material">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <form action="@Url.Action("ToggleMaterial", "Admin")" method="post" class="d-inline m-0">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <input type="hidden" name="activo" value="@(item.Activo ? "false" : "true")" />
+                                                    <button type="submit" class="btn btn-sm @(item.Activo ? "btn-outline-danger" : "btn-outline-success")">
+                                                        @(item.Activo ? "Inhabilitar" : "Habilitar")
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL CREAR DENOMINACION -->
 <div class="modal fade text-start" id="modalCrearDenominacion" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -324,12 +413,112 @@
     </div>
 </div>
 
+<!-- MODAL CREAR MATERIAL -->
+<div class="modal fade text-start" id="modalCrearMaterial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("CrearMaterial", "Admin")" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-box-seam me-2 text-primary"></i>Nuevo Material / Suministro</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
+                            <input type="text" name="codigo" class="form-control text-uppercase" placeholder="Ej: MAT-CJA" required />
+                        </div>
+                        <div class="col-sm-8">
+                            <label class="form-label fw-semibold">Nombre del Material <span class="text-danger">*</span></label>
+                            <input type="text" name="nombre" class="form-control" placeholder="Ej: Cajas de Regalo (Shoeboxes)" required />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Unidad de Entrega <span class="text-danger">*</span></label>
+                            <input type="text" name="unidadEntrega" class="form-control" placeholder="Ej: Caja, Folleto, Guía" value="Unidad" required />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Momento de Entrega <span class="text-danger">*</span></label>
+                            <select name="momentoEntrega" class="form-select" required>
+                                <option value="Taller">Taller (Capacitación)</option>
+                                <option value="Despacho">Despacho (Distribución)</option>
+                                <option value="Ambos">Ambos (Taller y Despacho)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Guardar Material</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR MATERIAL -->
+<div class="modal fade text-start" id="modalEditarMaterial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="@Url.Action("EditarMaterial", "Admin")" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="editarMaterialId" value="0" />
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                    <h5 class="modal-title font-bold text-white"><i class="bi bi-pencil-square me-2 text-primary"></i>Editar Material / Suministro</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold">Código <span class="text-danger">*</span></label>
+                            <input type="text" name="codigo" id="editarMaterialCodigo" class="form-control text-uppercase" required />
+                        </div>
+                        <div class="col-sm-8">
+                            <label class="form-label fw-semibold">Nombre del Material <span class="text-danger">*</span></label>
+                            <input type="text" name="nombre" id="editarMaterialNombre" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Unidad de Entrega <span class="text-danger">*</span></label>
+                            <input type="text" name="unidadEntrega" id="editarMaterialUnidad" class="form-control" required />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Momento de Entrega <span class="text-danger">*</span></label>
+                            <select name="momentoEntrega" id="editarMaterialMomento" class="form-select" required>
+                                <option value="Taller">Taller (Capacitación)</option>
+                                <option value="Despacho">Despacho (Distribución)</option>
+                                <option value="Ambos">Ambos (Taller y Despacho)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary font-semibold">Actualizar Material</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     function abrirModalEditarRolEvento(id, nombre, descripcion) {
         document.getElementById('editarRolEventoId').value = id;
         document.getElementById('editarRolEventoNombre').value = nombre;
         document.getElementById('editarRolEventoDescripcion').value = descripcion;
         new bootstrap.Modal(document.getElementById('modalEditarRolEvento')).show();
+    }
+
+    function abrirModalEditarMaterial(id, codigo, nombre, unidad, momento) {
+        document.getElementById('editarMaterialId').value = id;
+        document.getElementById('editarMaterialCodigo').value = codigo;
+        document.getElementById('editarMaterialNombre').value = nombre;
+        document.getElementById('editarMaterialUnidad').value = unidad;
+        document.getElementById('editarMaterialMomento').value = momento;
+        new bootstrap.Modal(document.getElementById('modalEditarMaterial')).show();
     }
 </script>
 

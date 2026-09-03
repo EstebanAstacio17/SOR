@@ -122,6 +122,7 @@
     <Compile Include="Controllers\MaestrosController.cs" />
     <Compile Include="Controllers\EventosController.cs" />
     <Compile Include="Controllers\CompanerosOracionController.cs" />
+    <Compile Include="Controllers\HealthCheckController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -129,6 +130,7 @@
     <Compile Include="Helpers\DatabaseSchemaHelper.cs" />
     <Compile Include="Helpers\AuditoriaHelper.cs" />
     <Compile Include="Helpers\DataReaderExtensions.cs" />
+    <Compile Include="Helpers\SqlRetryHelper.cs" />
     <Compile Include="Models\IglesiaModel.cs" />
     <Compile Include="Models\PerfilCoordinador.cs" />
     <Compile Include="Models\Usuario.cs" />
