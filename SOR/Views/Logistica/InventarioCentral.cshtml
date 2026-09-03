@@ -55,12 +55,12 @@
             </div>
 
             <!-- Filtros: Selector de Equipo y Buscador de Material -->
-            <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2.5 ms-auto">
                 <!-- Selector de Equipo -->
-                <div class="d-flex align-items-center gap-1.5">
-                    <label for="filtroEquipoInv" class="small text-muted fw-semibold mb-0 text-nowrap d-none d-sm-inline">Filtrar por:</label>
-                    <select id="filtroEquipoInv" class="form-select form-select-sm rounded-pill bg-light border shadow-sm px-3" style="min-width: 250px;">
-                        <option value="GLOBAL">🌐 Consolidado Global (Operación Total)</option>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="filtroEquipoInv" class="small text-muted fw-semibold mb-0 text-nowrap">Filtrar por:</label>
+                    <select id="filtroEquipoInv" class="form-select form-select-sm rounded-pill bg-light border shadow-sm ps-3 pe-4 fw-medium text-dark" style="min-width: 260px;">
+                        <option value="GLOBAL">🌐 Consolidado Global</option>
                         <optgroup label="Estatus Rápido por Equipo">
                             @foreach (var eq in Model.Equipos)
                             {
@@ -71,9 +71,9 @@
                 </div>
 
                 <!-- Buscador de texto -->
-                <div class="input-group input-group-sm" style="max-width: 220px;">
-                    <span class="input-group-text bg-light border-end-0 rounded-start-pill"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorMaterial" class="form-control bg-light border-start-0 rounded-end-pill" placeholder="Buscar material...">
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-2.5"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorMaterial" class="form-control bg-light border-start-0 rounded-end-pill pe-3" placeholder="Buscar material...">
                 </div>
             </div>
         </div>
@@ -95,10 +95,9 @@
             <table class="table table-hover align-middle mb-0" id="tablaInvCentralMateriales">
                 <thead class="table-light text-slate-700">
                     <tr class="text-xs text-uppercase">
-                        <th class="ps-4 text-center" style="width: 8%;">Código</th>
-                        <th style="width: 25%;">Material</th>
-                        <th class="text-center" style="width: 10%;">Unidad</th>
-                        <th class="text-center" style="width: 15%;">Por Caja / Empaque</th>
+                        <th class="ps-4 text-center" style="width: 10%;">Código</th>
+                        <th style="width: 30%;">Material</th>
+                        <th class="text-center" style="width: 18%;">Por Caja / Empaque</th>
                         <th class="text-center" style="width: 13%;">Recibido</th>
                         <th class="text-center" style="width: 13%;">Despachado</th>
                         <th class="text-center" style="width: 16%;">Existencia Disponible</th>
@@ -147,7 +146,7 @@
         }
 
         if (!materiales || materiales.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2 text-slate-300"></i>No hay registros de inventario disponibles para este contexto</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2 text-slate-300"></i>No hay registros de inventario disponibles para este contexto</td></tr>';
             return;
         }
 
@@ -227,7 +226,6 @@
                 <td>
                     <strong class="text-dark d-block">${mat.NombreMaterial || 'Material'}</strong>
                 </td>
-                <td class="text-center text-muted small">${unidad}</td>
                 <td class="text-center">${presentacionHtml}</td>
                 <td class="text-center">${recHtml}</td>
                 <td class="text-center">${despHtml}</td>
@@ -248,7 +246,7 @@
         var pctTotal = sumRec > 0 ? Math.min(100, Math.round((sumDesp * 100) / sumRec)) : 0;
         tfoot.innerHTML = `
             <tr class="bg-light">
-                <td colspan="4" class="ps-4 text-end text-uppercase text-xs fw-bold">TOTALES CONSOLIDADOS (UNIDADES):</td>
+                <td colspan="3" class="ps-4 text-end text-uppercase text-xs fw-bold">TOTALES CONSOLIDADOS (UNIDADES):</td>
                 <td class="text-center text-primary fw-bold fs-6">${sumRec.toLocaleString('es-DO')}</td>
                 <td class="text-center text-info fw-bold fs-6">${sumDesp.toLocaleString('es-DO')}</td>
                 <td class="text-center fs-6">${sumDisp > 0 ? '<span class="text-success fw-bold">' + sumDisp.toLocaleString('es-DO') + '</span>' : '<span class="text-muted">0</span>'}</td>
