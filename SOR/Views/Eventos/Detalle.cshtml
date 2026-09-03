@@ -9,7 +9,8 @@
     bool eventoPasado = evento != null && evento.Fecha.Date < DateTime.Today;
     var eventoDespacho = ViewBag.EventoDespacho as SOR.Models.EventoDespacho;
     var iglesiasDisponibles = ViewBag.IglesiasDisponibles as IEnumerable<SOR.Models.DespachoIglesiaItem> ?? new List<SOR.Models.DespachoIglesiaItem>();
-    bool esCL = ViewBag.EsCL == true || u.IdPosicion == 6 || u.IdPosicion == 1 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
+    bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+    bool esCL = ViewBag.EsCL == true || esAdmin || u.IdPosicion == 6 || u.IdPosicion == 1 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 }
 
 @Html.AntiForgeryToken()
