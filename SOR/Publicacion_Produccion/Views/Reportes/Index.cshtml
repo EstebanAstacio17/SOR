@@ -1,0 +1,399 @@
+@model SOR.Models.Reportes.EosDashboardViewModel
+@{
+    ViewBag.Title = "Reportería y Auditoría — Reportes de Temporada";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1">
+            <i class="bi bi-bar-chart-steps text-primary me-2"></i>Reportes de Temporada
+        </h2>
+        <p class="text-muted mb-0">Auditoría integral y consolidación multijerárquica de métricas de la temporada OCC Rep. Dom.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary font-semibold px-3 shadow-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Imprimir / PDF
+        </button>
+        <a href="@Url.Action("ExportarExcel", "Reportes", new { temporadaId = Model.IdTemporada, equipoId = Model.IdEquipo, iglesiaId = Model.IdIglesia })" id="btnExportarExcel" class="btn btn-success font-semibold px-3 shadow-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar a Excel
+        </a>
+    </div>
+</div>
+
+<!-- BARRA DE FILTROS JERÁRQUICOS -->
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
+            <select id="filtroTemporada" class="form-select form-select-sm bg-light" onchange="aplicarFiltrosEos()">
+                @foreach (var tmp in Model.ListaTemporadas)
+                {
+                    <option value="@tmp.Value" @(Model.IdTemporada.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Equipo / Región (Jerarquía)</label>
+            @if (ViewBag.PuedeCambiarEquipo == true)
+            {
+                <select id="filtroEquipo" class="form-select form-select-sm bg-light" onchange="onEquipoChangeEos()">
+                    @if (ViewBag.EsAdmin == true)
+                    {
+                        <option value="">— Nivel Nacional (Todos los Equipos) —</option>
+                    }
+                    @foreach (var eq in Model.ListaEquipos)
+                    {
+                        <option value="@eq.Value" @(Model.IdEquipo.HasValue && Model.IdEquipo.Value.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                    <input type="text" class="form-control bg-light fw-semibold text-slate-800" value="@Model.NombreEquipo" readonly />
+                    <input type="hidden" id="filtroEquipo" value="@(Model.IdEquipo?.ToString() ?? "")" />
+                </div>
+            }
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Iglesia / Compañero (Opcional)</label>
+            <select id="filtroIglesia" class="form-select form-select-sm bg-light" onchange="aplicarFiltrosEos()">
+                <option value="">— Todas las Iglesias —</option>
+                @foreach (var ig in Model.ListaIglesias)
+                {
+                    <option value="@ig.Value" @(Model.IdIglesia.HasValue && Model.IdIglesia.Value.ToString() == ig.Value ? "selected" : "")>@ig.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-sm btn-outline-secondary w-100 font-semibold" type="button" onclick="limpiarFiltrosEos()">
+                <i class="bi bi-eraser me-1"></i>Limpiar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TABS DE REPORTES ESENCIALES POR ROL -->
+<div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white pt-3 pb-0 px-4 border-bottom">
+        <ul class="nav nav-tabs border-0" id="tabsReportesEOS" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active font-semibold pb-3" id="tab-movilizacion-btn" data-bs-toggle="tab" data-bs-target="#tab-movilizacion" type="button" role="tab">
+                    <i class="bi bi-megaphone me-2 text-primary"></i>Movilización de Iglesias
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link font-semibold pb-3" id="tab-discipulado-btn" data-bs-toggle="tab" data-bs-target="#tab-discipulado" type="button" role="tab">
+                    <i class="bi bi-journal-bookmark-fill me-2 text-success"></i>Discipulado (LGA)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link font-semibold pb-3" id="tab-oracion-btn" data-bs-toggle="tab" data-bs-target="#tab-oracion" type="button" role="tab">
+                    <i class="bi bi-heart-pulse me-2 text-danger"></i>Oración
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-4 bg-light-subtle">
+        <div class="tab-content" id="tabsReportesContent">
+            <!-- TAB 1: MOVILIZACIÓN -->
+            <div class="tab-pane fade show active" id="tab-movilizacion" role="tabpanel">
+                @Html.Partial("_MovilizacionTab", Model.Movilizacion)
+            </div>
+
+            <!-- TAB 2: DISCIPULADO -->
+            <div class="tab-pane fade" id="tab-discipulado" role="tabpanel">
+                @Html.Partial("_DiscipuladoTab", Model.Discipulado)
+            </div>
+
+            <!-- TAB 3: ORACIÓN -->
+            <div class="tab-pane fade" id="tab-oracion" role="tabpanel">
+                @Html.Partial("_OracionTab", Model.Oracion)
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REGISTRAR IGLESIA PLANTADA -->
+<div class="modal fade text-start" id="modalNuevaIglesiaPlantada" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold"><i class="bi bi-building-add me-2 text-primary"></i>Registrar Iglesia Plantada</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formIglesiaPlantada">
+                    <input type="hidden" id="ipId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombre de la Iglesia <span class="text-danger">*</span></label>
+                            <input type="text" id="ipNombre" class="form-control" placeholder="Ej: Iglesia Bautista La Esperanza" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Pastor / Líder Principal <span class="text-danger">*</span></label>
+                            <input type="text" id="ipPastor" class="form-control" placeholder="Ej: Pr. Manuel Gómez" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Equipo Asignado <span class="text-danger">*</span></label>
+                            <select id="ipEquipo" class="form-select" required>
+                                @foreach (var eq in Model.ListaEquipos)
+                                {
+                                    <option value="@eq.Value" @(Model.IdEquipo.HasValue && Model.IdEquipo.Value.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Ubicación / Sector <span class="text-danger">*</span></label>
+                            <input type="text" id="ipUbicacion" class="form-control" placeholder="Ej: Los Alcarrizos, Santo Domingo" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Cajitas Entregadas</label>
+                            <input type="number" min="0" id="ipCajitas" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Inscritos en LGA</label>
+                            <input type="number" min="0" id="ipInscritosLGA" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha de Plantación</label>
+                            <input type="date" id="ipFecha" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notas / Observaciones</label>
+                            <input type="text" id="ipNotas" class="form-control" placeholder="Detalles de contacto, denominación..." />
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary font-semibold shadow-sm" onclick="guardarIglesiaPlantadaModal()">
+                    <i class="bi bi-check2-circle me-1"></i>Guardar Registro
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REGISTRAR GNA -->
+<div class="modal fade text-start" id="modalNuevoGNA" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold"><i class="bi bi-compass me-2 text-danger"></i>Registrar Grupo No Alcanzado (GNA)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formGNA">
+                    <input type="hidden" id="gnaId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombre del GNA <span class="text-danger">*</span></label>
+                            <input type="text" id="gnaNombre" class="form-control" placeholder="Ej: Batey Esperanza #2" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Compañero de Ministerio <span class="text-danger">*</span></label>
+                            <input type="text" id="gnaCompanero" class="form-control" placeholder="Ej: Ministerio Misionero Fronterizo" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Equipo Asignado <span class="text-danger">*</span></label>
+                            <select id="gnaEquipo" class="form-select" required>
+                                @foreach (var eq in Model.ListaEquipos)
+                                {
+                                    <option value="@eq.Value" @(Model.IdEquipo.HasValue && Model.IdEquipo.Value.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Cajitas Entregadas</label>
+                            <input type="number" min="0" id="gnaCajitas" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Inscritos LGA</label>
+                            <input type="number" min="0" id="gnaInscritos" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Creen en Jesús</label>
+                            <input type="number" min="0" id="gnaCreen" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Oran / Comparten</label>
+                            <input type="number" min="0" id="gnaOran" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Graduados</label>
+                            <input type="number" min="0" id="gnaGraduados" class="form-control font-monospace" value="0" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notas / Observaciones</label>
+                            <input type="text" id="gnaNotas" class="form-control" placeholder="Ubicación específica, etnia, idioma..." />
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger font-semibold shadow-sm" onclick="guardarGNAModal()">
+                    <i class="bi bi-check2-circle me-1"></i>Guardar Registro
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-sky-soft { background-color: rgba(2, 132, 199, 0.12) !important; }
+    .bg-indigo-soft { background-color: rgba(99, 102, 241, 0.12) !important; }
+    .bg-teal-soft { background-color: rgba(13, 148, 136, 0.12) !important; }
+    .bg-purple-soft { background-color: rgba(139, 92, 246, 0.12) !important; }
+    .bg-pink-soft { background-color: rgba(236, 72, 153, 0.12) !important; }
+    .bg-success-soft { background-color: rgba(22, 163, 74, 0.12) !important; }
+    .bg-warning-soft { background-color: rgba(217, 119, 6, 0.12) !important; }
+    
+    .nav-tabs .nav-link {
+        color: #64748b;
+        border: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0284c7;
+        font-weight: 700;
+        border-bottom: 3px solid #0284c7;
+        background: transparent;
+    }
+    .col-md-2dot4 {
+        flex: 0 0 auto;
+        width: 20%;
+    }
+    @@media (max-width: 768px) {
+        .col-md-2dot4 { width: 50%; }
+    }
+</style>
+
+@section scripts {
+<script>
+    function aplicarFiltrosEos() {
+        var tempId = document.getElementById("filtroTemporada").value;
+        var eqId = document.getElementById("filtroEquipo").value;
+        var igId = document.getElementById("filtroIglesia").value;
+
+        var url = '@Url.Action("Index", "Reportes")' + '?temporadaId=' + tempId + '&equipoId=' + eqId + '&iglesiaId=' + igId;
+        window.location.href = url;
+    }
+
+    function onEquipoChangeEos() {
+        var eqId = document.getElementById("filtroEquipo").value;
+        $.getJSON('@Url.Action("ObtenerIglesiasPorEquipo", "Reportes")', { equipoId: eqId }, function (data) {
+            var $sel = $('#filtroIglesia');
+            $sel.empty();
+            $sel.append('<option value="">— Todas las Iglesias —</option>');
+            $.each(data, function (i, item) {
+                $sel.append($('<option>', { value: item.Value, text: item.Text }));
+            });
+            aplicarFiltrosEos();
+        });
+    }
+
+    function limpiarFiltrosEos() {
+        var tempId = document.getElementById("filtroTemporada").value;
+        window.location.href = '@Url.Action("Index", "Reportes")' + '?temporadaId=' + tempId;
+    }
+
+    function guardarIglesiaPlantadaModal() {
+        var dto = {
+            IdIglesiaPlantada: parseInt($('#ipId').val()) || 0,
+            IdTemporada: parseInt($('#filtroTemporada').val()) || 1,
+            IdEquipo: parseInt($('#ipEquipo').val()) || 1,
+            NombreIglesia: $('#ipNombre').val().trim(),
+            PastorPrincipal: $('#ipPastor').val().trim(),
+            Ubicacion: $('#ipUbicacion').val().trim(),
+            CajitasEntregadas: parseInt($('#ipCajitas').val()) || 0,
+            InscritosLGA: parseInt($('#ipInscritosLGA').val()) || 0,
+            FechaPlantacion: $('#ipFecha').val(),
+            Notas: $('#ipNotas').val().trim()
+        };
+
+        if (!dto.NombreIglesia || !dto.PastorPrincipal || !dto.Ubicacion) {
+            alert("Por favor complete los campos obligatorios.");
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("GuardarIglesiaPlantada", "Reportes")',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dto),
+            success: function (res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function () {
+                alert("Error al comunicarse con el servidor.");
+            }
+        });
+    }
+
+    function eliminarIglesiaPlantada(id) {
+        if (confirm("¿Estás seguro de que deseas eliminar este registro de iglesia plantada?")) {
+            $.post('@Url.Action("EliminarIglesiaPlantada", "Reportes")', { id: id }, function (res) {
+                if (res.success) location.reload();
+                else alert(res.message);
+            });
+        }
+    }
+
+    function guardarGNAModal() {
+        var dto = {
+            IdGNA: parseInt($('#gnaId').val()) || 0,
+            IdTemporada: parseInt($('#filtroTemporada').val()) || 1,
+            IdEquipo: parseInt($('#gnaEquipo').val()) || 1,
+            NombreGNA: $('#gnaNombre').val().trim(),
+            CompaneroMinisterio: $('#gnaCompanero').val().trim(),
+            CajitasEntregadas: parseInt($('#gnaCajitas').val()) || 0,
+            InscritosLGA: parseInt($('#gnaInscritos').val()) || 0,
+            NinosCreenJesus: parseInt($('#gnaCreen').val()) || 0,
+            NinosOranComparten: parseInt($('#gnaOran').val()) || 0,
+            NinosGraduados: parseInt($('#gnaGraduados').val()) || 0,
+            Notas: $('#gnaNotas').val().trim()
+        };
+
+        if (!dto.NombreGNA || !dto.CompaneroMinisterio) {
+            alert("Por favor complete los campos obligatorios.");
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("GuardarGNA", "Reportes")',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dto),
+            success: function (res) {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function () {
+                alert("Error al comunicarse con el servidor.");
+            }
+        });
+    }
+
+    function eliminarGNA(id) {
+        if (confirm("¿Estás seguro de que deseas eliminar este Grupo No Alcanzado?")) {
+            $.post('@Url.Action("EliminarGNA", "Reportes")', { id: id }, function (res) {
+                if (res.success) location.reload();
+                else alert(res.message);
+            });
+        }
+    }
+</script>
+}

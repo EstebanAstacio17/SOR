@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Web.Mvc;
@@ -1080,7 +1081,9 @@ namespace SOR.Controllers
                 cmd.Parameters.AddWithValue("@Hora", modelo.Hora ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Cant", modelo.CantidadAsistentes);
                 cmd.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
-                cmd.Parameters.AddWithValue("@RowVersion", modelo.RowVersion ?? (object)DBNull.Value);
+                var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
+                pRowVer.Value = (modelo.RowVersion != null && modelo.RowVersion.Length > 0) ? (object)modelo.RowVersion : DBNull.Value;
+                cmd.Parameters.Add(pRowVer);
                 cmd.Parameters.AddWithValue("@IdEvento", modelo.IdEvento);
 
                 int rowsAffected = cmd.ExecuteNonQuery();

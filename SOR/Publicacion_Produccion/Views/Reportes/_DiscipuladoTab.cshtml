@@ -1,0 +1,109 @@
+@model SOR.Models.Reportes.DiscipuladoReporteDTO
+
+<!-- CAPACITACIONES GENERALES -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #6366f1 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Capacitaciones OCC Impartidas</div>
+                    <div class="h3 font-bold text-indigo mb-0 font-monospace">@Model.TotalCapacitacionesOCC</div>
+                    <small class="text-muted"><i class="bi bi-mortarboard me-1"></i>Talleres y entrenamientos a maestros</small>
+                </div>
+                <div class="rounded-circle p-3 bg-indigo-soft text-indigo">
+                    <i class="bi bi-easel2 fs-4 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #0d9488 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Asistentes a Capacitaciones</div>
+                    <div class="h3 font-bold text-teal mb-0 font-monospace">@Model.TotalAsistentesCapacitacion.ToString("N0")</div>
+                    <small class="text-muted"><i class="bi bi-people me-1"></i>Maestros y líderes capacitados</small>
+                </div>
+                <div class="rounded-circle p-3 bg-teal-soft text-teal">
+                    <i class="bi bi-person-check fs-4 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN: LA GRAN AVENTURA (LGA) -->
+<div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 px-4 border-bottom">
+        <h6 class="mb-0 fw-bold text-slate-800">
+            <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>La Gran Aventura (LGA) — Programa de 12 Lecciones
+        </h6>
+        <small class="text-muted">Consolidación de cursos, asistencia, decisiones de fe y graduaciones</small>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-3 text-center">
+            <div class="col-sm-6 col-md-2dot4 col-lg">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Cursos / Aulas</div>
+                    <div class="h4 font-bold text-primary mb-0 font-monospace">@Model.LgaCursosImpartidos</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-2dot4 col-lg">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Niños Asistentes</div>
+                    <div class="h4 font-bold text-dark mb-0 font-monospace">@Model.LgaNinosAsistentes.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-2dot4 col-lg">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Decisiones por Jesús</div>
+                    <div class="h4 font-bold text-success mb-0 font-monospace">@Model.LgaDecisionesJesus.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-2dot4 col-lg">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Oran y Comparten</div>
+                    <div class="h4 font-bold text-info mb-0 font-monospace">@Model.LgaComprometidosOrarCompartir.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-2dot4 col-lg">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Graduados Totales</div>
+                    <div class="h4 font-bold text-warning mb-0 font-monospace">@Model.LgaGraduadosTotales.ToString("N0")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN: VALORES DE CRECIMIENTO (VDC / DET) -->
+<div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 px-4 border-bottom">
+        <h6 class="mb-0 fw-bold text-slate-800">
+            <i class="bi bi-flower1 text-success me-2"></i>Valores de Crecimiento (VDC / DET)
+        </h6>
+        <small class="text-muted">Retención y seguimiento en el discipulado continuo</small>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-3 text-center">
+            <div class="col-md-4">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Asistieron a 1 Clase</div>
+                    <div class="h4 font-bold text-slate-700 mb-0 font-monospace">@Model.VdcAsistieronUnaClase.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Asistieron a las 6 Clases</div>
+                    <div class="h4 font-bold text-success mb-0 font-monospace">@Model.VdcAsistieronSeisClases.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Continuaron en LGA / DET</div>
+                    <div class="h4 font-bold text-primary mb-0 font-monospace">@Model.VdcContinuaronLgaODet.ToString("N0")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

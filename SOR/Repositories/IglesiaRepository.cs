@@ -315,40 +315,40 @@ namespace SOR.Repositories
                                 IdParticipacion = Convert.ToInt32(drPart["IdParticipacion"]),
                                 IdIglesia = Convert.ToInt32(drPart["IdIglesia"]),
                                 IdTemporada = Convert.ToInt32(drPart["IdTemporada"]),
-                                NombreTemporada = drPart["NombreTemporada"].ToString(),
+                                NombreTemporada = drPart["NombreTemporada"] != DBNull.Value ? drPart["NombreTemporada"].ToString() : "",
                                 TemporadaActiva = drPart["TemporadaActiva"] != DBNull.Value && Convert.ToBoolean(drPart["TemporadaActiva"]),
-                                Participara = Convert.ToBoolean(drPart["Participara"]),
+                                Participara = drPart["Participara"] != DBNull.Value && Convert.ToBoolean(drPart["Participara"]),
                                 JustificacionNoParticipacion = drPart["JustificacionNoParticipacion"] != DBNull.Value ? drPart["JustificacionNoParticipacion"].ToString() : "",
-                                EstadoEvaluacion = drPart["EstadoEvaluacion"].ToString(),
+                                EstadoEvaluacion = drPart["EstadoEvaluacion"] != DBNull.Value ? drPart["EstadoEvaluacion"].ToString() : "Aprobada",
                                 EstatusEvaluacionReporte = drPart["EstatusEvaluacionReporte"] != DBNull.Value ? drPart["EstatusEvaluacionReporte"].ToString() : "Pendiente",
 
-                                EtapaActual = Convert.ToInt32(drPart["EtapaActual"]),
-                                EvalInicialEstado = drPart["EvalInicialEstado"].ToString(),
+                                EtapaActual = drPart["EtapaActual"] != DBNull.Value ? Convert.ToInt32(drPart["EtapaActual"]) : 1,
+                                EvalInicialEstado = drPart["EvalInicialEstado"] != DBNull.Value ? drPart["EvalInicialEstado"].ToString() : "",
                                 EvalInicialMotivo = drPart["EvalInicialMotivo"] != DBNull.Value ? drPart["EvalInicialMotivo"].ToString() : "",
                                 EvalInicialIdUsuario = drPart["EvalInicialIdUsuario"] != DBNull.Value ? (int?)Convert.ToInt32(drPart["EvalInicialIdUsuario"]) : null,
                                 EvalInicialFecha = drPart["EvalInicialFecha"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["EvalInicialFecha"]) : null,
                                 EvalInicialComentario = drPart["EvalInicialComentario"] != DBNull.Value ? drPart["EvalInicialComentario"].ToString() : "",
 
-                                VisionInvitada = Convert.ToBoolean(drPart["VisionInvitada"]),
+                                VisionInvitada = drPart["VisionInvitada"] != DBNull.Value && Convert.ToBoolean(drPart["VisionInvitada"]),
                                 VisionFecha = drPart["VisionFecha"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["VisionFecha"]) : null,
                                 VisionLugar = drPart["VisionLugar"] != DBNull.Value ? drPart["VisionLugar"].ToString() : "",
-                                VisionAsistio = Convert.ToBoolean(drPart["VisionAsistio"]),
+                                VisionAsistio = drPart["VisionAsistio"] != DBNull.Value && Convert.ToBoolean(drPart["VisionAsistio"]),
                                 VisionResultado = drPart["VisionResultado"] != DBNull.Value ? drPart["VisionResultado"].ToString() : "",
 
-                                EvalTallerEstado = drPart["EvalTallerEstado"].ToString(),
+                                EvalTallerEstado = drPart["EvalTallerEstado"] != DBNull.Value ? drPart["EvalTallerEstado"].ToString() : "",
                                 EvalTallerMotivo = drPart["EvalTallerMotivo"] != DBNull.Value ? drPart["EvalTallerMotivo"].ToString() : "",
                                 EvalTallerIdUsuario = drPart["EvalTallerIdUsuario"] != DBNull.Value ? (int?)Convert.ToInt32(drPart["EvalTallerIdUsuario"]) : null,
                                 EvalTallerFecha = drPart["EvalTallerFecha"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["EvalTallerFecha"]) : null,
                                 EvalTallerComentario = drPart["EvalTallerComentario"] != DBNull.Value ? drPart["EvalTallerComentario"].ToString() : "",
 
-                                TallerParticipo = Convert.ToBoolean(drPart["TallerParticipo"]),
+                                TallerParticipo = drPart["TallerParticipo"] != DBNull.Value && Convert.ToBoolean(drPart["TallerParticipo"]),
                                 TallerNombre = drPart["TallerNombre"] != DBNull.Value ? drPart["TallerNombre"].ToString() : "",
                                 TallerFecha = drPart["TallerFecha"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["TallerFecha"]) : null,
                                 TallerLugar = drPart["TallerLugar"] != DBNull.Value ? drPart["TallerLugar"].ToString() : "",
-                                TallerCantNinos = Convert.ToInt32(drPart["TallerCantNinos"]),
-                                TallerCantMaestrosReg = Convert.ToInt32(drPart["TallerCantMaestrosReg"]),
-                                TallerCantMaestrosAsist = Convert.ToInt32(drPart["TallerCantMaestrosAsist"]),
-                                TallerCantMaestrosAus = Convert.ToInt32(drPart["TallerCantMaestrosAus"])
+                                TallerCantNinos = drPart["TallerCantNinos"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantNinos"]) : 0,
+                                TallerCantMaestrosReg = drPart["TallerCantMaestrosReg"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosReg"]) : 0,
+                                TallerCantMaestrosAsist = drPart["TallerCantMaestrosAsist"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosAsist"]) : 0,
+                                TallerCantMaestrosAus = drPart["TallerCantMaestrosAus"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosAus"]) : 0
                             };
 
                             ig.RecursosActuales = new AsignacionRecursos
@@ -386,7 +386,7 @@ namespace SOR.Repositories
                                     IdCompanero = Convert.ToInt32(drOr["IdCompanero"]),
                                     NombreCompleto = drOr["NombreCompleto"].ToString(),
                                     ContactoWhatsApp = drOr["ContactoWhatsApp"] != DBNull.Value ? drOr["ContactoWhatsApp"].ToString() : "",
-                                    EsMayorEdad = Convert.ToBoolean(drOr["EsMayorEdad"]),
+                                    EsMayorEdad = drOr["EsMayorEdad"] != DBNull.Value && Convert.ToBoolean(drOr["EsMayorEdad"]),
                                     IdIglesia = idIglesia,
                                     IdTemporada = ig.ParticipacionActual.IdTemporada,
                                     IdUsuarioRegistro = Convert.ToInt32(drOr["IdUsuarioRegistro"]),
@@ -714,7 +714,9 @@ namespace SOR.Repositories
                             cmdIg.Parameters.AddWithValue("@Ref2Nombre", modelo.Ref2Nombre ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@Ref2Contacto", modelo.Ref2Contacto ?? (object)DBNull.Value);
                             cmdIg.Parameters.AddWithValue("@IdUsuarioEdicion", idUsuarioEdicion);
-                            cmdIg.Parameters.AddWithValue("@RowVersion", modelo.RowVersion ?? (object)DBNull.Value);
+                            var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
+                            pRowVer.Value = (modelo.RowVersion != null && modelo.RowVersion.Length > 0) ? (object)modelo.RowVersion : DBNull.Value;
+                            cmdIg.Parameters.Add(pRowVer);
                             cmdIg.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
 
                             int filas = cmdIg.ExecuteNonQuery();
@@ -1184,7 +1186,9 @@ namespace SOR.Repositories
                             cmdUp.Parameters.AddWithValue("@Comentario", (object)comentario ?? DBNull.Value);
                             cmdUp.Parameters.AddWithValue("@NuevoEstado", nuevoEstado);
                             cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
-                            cmdUp.Parameters.AddWithValue("@RowVersion", rowVersion ?? (object)DBNull.Value);
+                            var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
+                            pRowVer.Value = (rowVersion != null && rowVersion.Length > 0) ? (object)rowVersion : DBNull.Value;
+                            cmdUp.Parameters.Add(pRowVer);
 
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
@@ -1249,7 +1253,9 @@ namespace SOR.Repositories
                             cmdUp.Parameters.AddWithValue("@Comentario", (object)comentario ?? DBNull.Value);
                             cmdUp.Parameters.AddWithValue("@NuevoEstado", nuevoEstado);
                             cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
-                            cmdUp.Parameters.AddWithValue("@RowVersion", rowVersion ?? (object)DBNull.Value);
+                            var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
+                            pRowVer.Value = (rowVersion != null && rowVersion.Length > 0) ? (object)rowVersion : DBNull.Value;
+                            cmdUp.Parameters.Add(pRowVer);
 
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
@@ -1300,7 +1306,9 @@ namespace SOR.Repositories
                             cmdUp.Parameters.AddWithValue("@IdUser", idUsuario);
                             cmdUp.Parameters.AddWithValue("@Motivo", motivo.Trim());
                             cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
-                            cmdUp.Parameters.AddWithValue("@RowVersion", rowVersion ?? (object)DBNull.Value);
+                            var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
+                            pRowVer.Value = (rowVersion != null && rowVersion.Length > 0) ? (object)rowVersion : DBNull.Value;
+                            cmdUp.Parameters.Add(pRowVer);
 
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)

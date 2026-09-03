@@ -1,0 +1,261 @@
+@model List<SOR.Models.Iglesia>
+
+@{
+    ViewBag.Title = "Previsualizar Importación de Iglesias";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 font-bold text-dark mb-1">Previsualizar Datos de Importación</h2>
+            <p class="text-muted mb-0">Revisa los datos de las iglesias. <span class="text-danger font-bold">Importante:</span> Debes rellenar todos los campos vacíos requeridos antes de guardar.</p>
+        </div>
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+
+
+    <form action="@Url.Action("ConfirmarImportacionMasiva")" method="post">
+        @Html.AntiForgeryToken()
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-bordered table-hover align-middle mb-0" style="min-width: 2500px;">
+                        <thead class="bg-dark text-white sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre Iglesia <span class="text-danger">*</span></th>
+                                <th>RNC / Cédula <span class="text-danger">*</span></th>
+                                <th>Teléfono <span class="text-danger">*</span></th>
+                                <th>Correo Institucional</th>
+                                <th>Provincia <span class="text-danger">*</span></th>
+                                <th>Ciudad <span class="text-danger">*</span></th>
+                                <th>Sector <span class="text-danger">*</span></th>
+                                <th>Calle <span class="text-danger">*</span></th>
+                                <th>Número</th>
+                                <th>Referencia</th>
+                                <th>Denominación</th>
+                                <th>Nombres Pastor <span class="text-danger">*</span></th>
+                                <th>Apellidos Pastor</th>
+                                <th>Documento Pastor</th>
+                                <th>Celular Pastor <span class="text-danger">*</span></th>
+                                <th>Nombres Líder <span class="text-danger">*</span></th>
+                                <th>Apellidos Líder</th>
+                                <th>Documento Líder</th>
+                                <th>Celular Líder <span class="text-danger">*</span></th>
+                                <th>Cant. Maestros</th>
+                                <th>Cant. Niños</th>
+                                <th>Reportó</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Count > 0)
+                            {
+                                for (int i = 0; i < Model.Count; i++)
+                                {
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="hidden" name="iglesias.Index" value="@i" />
+                                            <span class="row-number">@(i + 1)</span>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].NombreIglesia" value="@Model[i].NombreIglesia" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].NombreIglesia) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].RNC_Cedula" value="@Model[i].RNC_Cedula" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].RNC_Cedula) ? "is-invalid" : "")" required data-val-type="cedula" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Telefono" value="@Model[i].Telefono" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Telefono) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                        </td>
+                                        <td>
+                                            <input type="email" name="iglesias[@i].CorreoInstitucion" value="@Model[i].CorreoInstitucion" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Provincia" value="@Model[i].Provincia" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Provincia) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Ciudad" value="@Model[i].Ciudad" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Ciudad) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Sector" value="@Model[i].Sector" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Sector) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Calle" value="@Model[i].Calle" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Calle) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Numero" value="@Model[i].Numero" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Referencia" value="@Model[i].Referencia" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Denominacion" value="@Model[i].Denominacion" class="form-control form-control-sm" />
+                                        </td>
+
+                                        <!-- PASTOR -->
+                                        <td>
+                                            <input type="hidden" name="iglesias[@i].Pastor.TipoPersona" value="Pastor" />
+                                            <input type="text" name="iglesias[@i].Pastor.Nombres" value="@Model[i].Pastor.Nombres" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Pastor.Nombres) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Pastor.Apellidos" value="@Model[i].Pastor.Apellidos" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Pastor.DocumentoIdentidad" value="@Model[i].Pastor.DocumentoIdentidad" class="form-control form-control-sm" data-val-type="cedula" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].Pastor.Celular" value="@Model[i].Pastor.Celular" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Pastor.Celular) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                        </td>
+                                        <input type="hidden" name="iglesias[@i].Pastor.Correo" value="@Model[i].Pastor.Correo" />
+
+                                        <!-- LIDER -->
+                                        <td>
+                                            <input type="hidden" name="iglesias[@i].LiderMinisterial.TipoPersona" value="LiderMinisterial" />
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.Nombres" value="@Model[i].LiderMinisterial.Nombres" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].LiderMinisterial.Nombres) ? "is-invalid" : "")" required />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.Apellidos" value="@Model[i].LiderMinisterial.Apellidos" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.DocumentoIdentidad" value="@Model[i].LiderMinisterial.DocumentoIdentidad" class="form-control form-control-sm" data-val-type="cedula" />
+                                        </td>
+                                        <td>
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.Celular" value="@Model[i].LiderMinisterial.Celular" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].LiderMinisterial.Celular) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                        </td>
+                                        <input type="hidden" name="iglesias[@i].LiderMinisterial.Correo" value="@Model[i].LiderMinisterial.Correo" />
+
+                                        <!-- OTROS DATOS -->
+                                        <td>
+                                            <input type="number" name="iglesias[@i].CantidadMaestros" value="@Model[i].CantidadMaestros" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="iglesias[@i].CantidadNinos" value="@Model[i].CantidadNinos" class="form-control form-control-sm" />
+                                        </td>
+                                        <td>
+                                            <select name="iglesias[@i].ParticipacionActual.EstatusEvaluacionReporte" class="form-select form-select-sm">
+                                                <option value="Reportó" @(Model[i].ParticipacionActual != null && Model[i].ParticipacionActual.EstatusEvaluacionReporte == "Reportó" ? "selected" : "")>SÍ</option>
+                                                <option value="No Reportó" @(Model[i].ParticipacionActual == null || Model[i].ParticipacionActual.EstatusEvaluacionReporte != "Reportó" ? "selected" : "")>NO</option>
+                                            </select>
+                                        </td>
+                                        <input type="hidden" name="iglesias[@i].TipoOrganizacion" value="Iglesia" />
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row" title="Eliminar registro">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="24" class="text-center py-4">No se encontraron datos válidos para importar.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-end d-flex justify-content-end gap-2">
+            <button type="button" id="btnValidar" class="btn btn-outline-info px-4 py-2 font-bold" @(Model == null || Model.Count == 0 ? "disabled" : "")>
+                <i class="bi bi-check-circle me-1"></i> Validar Datos
+            </button>
+            <button type="submit" class="btn btn-primary px-5 py-2 font-bold" @(Model == null || Model.Count == 0 ? "disabled" : "")>
+                <i class="bi bi-save me-2"></i> Confirmar y Guardar
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Remover la clase is-invalid cuando el usuario escribe en un campo
+            const form = document.querySelector('form');
+            
+            form.addEventListener('input', function(e) {
+                if (e.target.classList.contains('is-invalid') && e.target.value.trim() !== '') {
+                    e.target.classList.remove('is-invalid');
+                }
+            });
+
+            // Lógica para eliminar fila
+            document.body.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn-remove-row');
+                if (btn) {
+                    if (confirm('¿Estás seguro de que deseas eliminar este registro de la importación?')) {
+                        btn.closest('tr').remove();
+                        // Re-numerar las filas para que sea visualmente coherente
+                        const rows = document.querySelectorAll('tbody tr:not(.empty-row)');
+                        rows.forEach((row, index) => {
+                            const numSpan = row.querySelector('.row-number');
+                            if (numSpan) numSpan.textContent = index + 1;
+                        });
+                    }
+                }
+            });
+
+            function isValidCedula(val) {
+                if(!val || val.trim() === '') return true;
+                const clean = val.replace(/[-\s]/g, '');
+                return /^\d{9}$|^\d{11}$/.test(clean);
+            }
+            function isValidTelefono(val) {
+                if(!val || val.trim() === '') return true;
+                const clean = val.replace(/[-\s()]/g, '');
+                return /^\d{10}$/.test(clean);
+            }
+            
+            function validateCustomFormats() {
+                let isValid = true;
+                document.querySelectorAll('input[data-val-type="cedula"]').forEach(input => {
+                    if (!isValidCedula(input.value)) {
+                        input.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                });
+                document.querySelectorAll('input[data-val-type="telefono"]').forEach(input => {
+                    if (!isValidTelefono(input.value)) {
+                        input.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                });
+                return isValid;
+            }
+
+            form.addEventListener('submit', function(e) {
+                if (!form.checkValidity() || !validateCustomFormats()) {
+                    e.preventDefault();
+                    alert("Por favor corrige los errores (campos requeridos vacíos o formatos incorrectos) marcados en rojo antes de guardar.");
+                }
+            });
+
+            // Lógica para el botón "Validar Datos"
+            const btnValidar = document.getElementById('btnValidar');
+            if (btnValidar && form) {
+                btnValidar.addEventListener('click', function() {
+                    const isFormValid = form.checkValidity();
+                    const isFormatValid = validateCustomFormats();
+                    
+                    if (!isFormValid || !isFormatValid) {
+                        form.reportValidity();
+                        // Resaltar campos requeridos que están vacíos
+                        form.querySelectorAll('input[required]').forEach(input => {
+                            if (input.value.trim() === '') {
+                                input.classList.add('is-invalid');
+                            }
+                        });
+                        if(!isFormatValid) {
+                             alert("Hay campos con formato incorrecto (Cédulas deben tener 9 u 11 dígitos, Teléfonos 10 dígitos).");
+                        }
+                    } else {
+                        alert('Todos los datos son válidos. Puedes proceder a Confirmar y Guardar.');
+                    }
+                });
+            }
+        });
+    </script>
+}

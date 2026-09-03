@@ -142,7 +142,9 @@ namespace SOR.Repositories
                 cmd.Parameters.AddWithValue("@IdNivelEquipo", equipo.IdNivelEquipo);
                 cmd.Parameters.AddWithValue("@IdEquipoPadre", equipo.IdEquipoPadre ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Activo", equipo.Activo);
-                cmd.Parameters.AddWithValue("@RowVersion", equipo.RowVersion ?? (object)DBNull.Value);
+                var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
+                pRowVer.Value = (equipo.RowVersion != null && equipo.RowVersion.Length > 0) ? (object)equipo.RowVersion : DBNull.Value;
+                cmd.Parameters.Add(pRowVer);
                 cmd.Parameters.AddWithValue("@IdEquipo", equipo.IdEquipo);
 
                 cn.Open();

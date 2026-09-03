@@ -252,6 +252,13 @@
     <Content Include="Views\Logistica\DetalleEventoDespacho.cshtml" />
     <Content Include="Views\Logistica\ComprobanteDespachoIglesia.cshtml" />
     <Content Include="Views\Logistica\Kardex.cshtml" />
+    <Content Include="Views\Admin\Catalogos.cshtml" />
+    <Content Include="Views\Finanzas\Index.cshtml" />
+    <Content Include="Views\Finanzas\ReporteConsolidado.cshtml" />
+    <Content Include="Views\Reportes\Index.cshtml" />
+    <Content Include="Views\Reportes\_DiscipuladoTab.cshtml" />
+    <Content Include="Views\Reportes\_MovilizacionTab.cshtml" />
+    <Content Include="Views\Reportes\_OracionTab.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\DB_SOR_Schema.sql" />
