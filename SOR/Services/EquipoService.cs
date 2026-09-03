@@ -67,15 +67,8 @@ namespace SOR.Services
                 throw new ArgumentException("ID de equipo inválido para eliminación.");
             }
 
-            int dependencias = _equipoRepository.ObtenerCantidadDependencias(idEquipo);
-            if (dependencias > 0)
-            {
-                _equipoRepository.DesactivarEquipo(idEquipo);
-                return "El equipo posee sub-equipos, iglesias o usuarios asignados. Ha sido inhabilitado (desactivado) para nuevos procesos de registro, preservando el historial de datos existentes.";
-            }
-
             _equipoRepository.EliminarEquipo(idEquipo);
-            return "El equipo ha sido eliminado físicamente ya que no poseía registros dependientes.";
+            return "El equipo ha sido eliminado exitosamente.";
         }
 
         private void ValidarDatosEquipo(EquipoConDetalles equipo)

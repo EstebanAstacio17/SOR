@@ -162,22 +162,144 @@ namespace SOR.Repositories
         {
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                string sql = "DELETE FROM dbo.Equipos WHERE IdEquipo = @IdEquipo;";
-                SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
-
                 cn.Open();
-                try
+                using (SqlTransaction tran = cn.BeginTransaction())
                 {
-                    return cmd.ExecuteNonQuery() > 0;
-                }
-                catch (SqlException ex)
-                {
-                    if (ex.Number == 547)
+                    try
                     {
-                        throw new InvalidOperationException("No se puede eliminar físicamente el equipo porque tiene datos asociados.");
+                        // 1. Obtener datos del equipo a eliminar
+                        int? idPadre = null;
+                        int idNivel = 0;
+                        string nombre = "";
+
+                        using (SqlCommand cmdGet = new SqlCommand("SELECT NombreEquipo, IdNivelEquipo, IdEquipoPadre FROM dbo.Equipos WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdGet.Parameters.AddWithValue("@Id", idEquipo);
+                            using (SqlDataReader dr = cmdGet.ExecuteReader())
+                            {
+                                if (!dr.Read()) throw new InvalidOperationException("El equipo especificado no existe.");
+                                nombre = dr["NombreEquipo"].ToString();
+                                idNivel = Convert.ToInt32(dr["IdNivelEquipo"]);
+                                idPadre = dr["IdEquipoPadre"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoPadre"]) : null;
+                            }
+                        }
+
+                        if (idNivel == 1)
+                        {
+                            throw new InvalidOperationException("No se puede eliminar el Equipo Nacional de Liderazgo.");
+                        }
+
+                        int idSustituto = (idPadre.HasValue && idPadre.Value > 0) ? idPadre.Value : 1;
+
+                        // 2. Reasignar sub-equipos dependientes al equipo superior
+                        using (SqlCommand cmdSub = new SqlCommand("UPDATE dbo.Equipos SET IdEquipoPadre = @IdSustituto WHERE IdEquipoPadre = @Id;", cn, tran))
+                        {
+                            cmdSub.Parameters.AddWithValue("@IdSustituto", (object)idPadre ?? DBNull.Value);
+                            cmdSub.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdSub.ExecuteNonQuery();
+                        }
+
+                        // 3. Reasignar Iglesias asociadas
+                        using (SqlCommand cmdIg = new SqlCommand("UPDATE dbo.Iglesias SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdIg.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdIg.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdIg.ExecuteNonQuery();
+                        }
+
+                        // 4. Reasignar Perfiles de Coordinador
+                        using (SqlCommand cmdPerf = new SqlCommand("UPDATE dbo.PerfilesCoordinador SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdPerf.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdPerf.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdPerf.ExecuteNonQuery();
+                        }
+
+                        // 5. Limpiar Asignaciones de Equipo
+                        using (SqlCommand cmdAsig = new SqlCommand("DELETE FROM dbo.AsignacionesEquipo WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdAsig.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdAsig.ExecuteNonQuery();
+                        }
+
+                        // 6. Reasignar módulos complementarios
+                        using (SqlCommand cmdEos1 = new SqlCommand("UPDATE dbo.EOS_IglesiasPlantadas SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdEos1.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdEos1.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdEos1.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdEos2 = new SqlCommand("UPDATE dbo.EOS_GruposNoAlcanzados SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdEos2.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdEos2.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdEos2.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdEos3 = new SqlCommand("UPDATE dbo.EOS_MentoreoViajes SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdEos3.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdEos3.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdEos3.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdEd = new SqlCommand("UPDATE dbo.EventosDespacho SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdEd.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdEd.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdEd.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdDi = new SqlCommand("UPDATE dbo.DespachosIglesia SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdDi.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdDi.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdDi.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdAlm = new SqlCommand("DELETE FROM dbo.AlmacenesEquipos WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdAlm.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdAlm.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdInv = new SqlCommand("DELETE FROM dbo.InventarioEquipo WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdInv.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdInv.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdFinP = new SqlCommand("UPDATE dbo.Finanzas_PresupuestosAprobados SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdFinP.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdFinP.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdFinP.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdFinT = new SqlCommand("UPDATE dbo.Finanzas_Transacciones SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdFinT.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdFinT.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdFinT.ExecuteNonQuery();
+                        }
+                        using (SqlCommand cmdFinR = new SqlCommand("UPDATE dbo.FinanzasReportes SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdFinR.Parameters.AddWithValue("@IdSustituto", idSustituto);
+                            cmdFinR.Parameters.AddWithValue("@Id", idEquipo);
+                            cmdFinR.ExecuteNonQuery();
+                        }
+
+                        // 7. Eliminar físicamente el equipo
+                        using (SqlCommand cmdDel = new SqlCommand("DELETE FROM dbo.Equipos WHERE IdEquipo = @Id;", cn, tran))
+                        {
+                            cmdDel.Parameters.AddWithValue("@Id", idEquipo);
+                            int del = cmdDel.ExecuteNonQuery();
+                            if (del == 0) throw new InvalidOperationException("No se pudo eliminar el equipo.");
+                        }
+
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, 1, "admin@occrd.org", "DELETE", "Equipo", idEquipo.ToString(), "Eliminación completa de equipo: " + nombre);
+
+                        tran.Commit();
+                        return true;
                     }
-                    throw;
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
                 }
             }
         }
