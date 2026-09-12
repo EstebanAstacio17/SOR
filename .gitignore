@@ -3,11 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-# Firebase Service Account Credentials
-*firebase-service-account.json
-*.serviceaccount.json
-.firebaserc.local
-
 # User-specific files
 *.rsuser
 *.suo
