@@ -120,6 +120,37 @@ namespace SOR.Controllers
             return View();
         }
 
+        // GET: Home/NotFound (Página 404 personalizada)
+        public ActionResult NotFound()
+        {
+            Response.StatusCode = 404;
+            Response.TrySkipIisCustomErrors = true;
+            ViewBag.Title = "Página no encontrada";
+            return View();
+        }
+
+        // GET: Home/Privacidad
+        public ActionResult Privacidad()
+        {
+            ViewBag.Title = "Política de Privacidad";
+            return View();
+        }
+
+        // GET: Home/Terminos
+        public ActionResult Terminos()
+        {
+            ViewBag.Title = "Términos y Condiciones";
+            return View();
+        }
+
+        // GET: Home/Gracias
+        public ActionResult Gracias(string tipo)
+        {
+            ViewBag.Title = "Operación Exitosa";
+            ViewBag.Tipo = tipo ?? "General";
+            return View();
+        }
+
         public ActionResult CerrarSesion()
         {
             Session.Clear();

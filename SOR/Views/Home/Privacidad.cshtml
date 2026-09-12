@@ -1,0 +1,66 @@
+@{
+    ViewBag.Title = "Política de Privacidad | SOR OCC";
+}
+
+<div class="container py-5 my-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-md-10">
+            <div class="card border-0 shadow-sm p-4 p-md-5" style="border-radius: 20px; background: #ffffff;">
+                <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle me-3" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <div>
+                        <h1 class="h3 fw-bold text-dark mb-0">Política de Privacidad y Tratamiento de Datos</h1>
+                        <small class="text-muted">Sistema de Operaciones y Recursos (SOR) - OCC República Dominicana</small>
+                    </div>
+                </div>
+
+                <div class="content-body text-secondary" style="line-height: 1.75; font-size: 0.95rem;">
+                    <h5 class="fw-bold text-dark mt-4 mb-2">1. Compromiso con la Privacidad</h5>
+                    <p>
+                        El Sistema de Operaciones y Recursos (SOR), operado para la coordinación de Operation Christmas Child (OCC) en República Dominicana, respeta y protege la confidencialidad de la información registrada por coordinadores, voluntarios, iglesias y administradores.
+                    </p>
+
+                    <h5 class="fw-bold text-dark mt-4 mb-2">2. Información Recopilada</h5>
+                    <p>
+                        Para el correcto funcionamiento operativo y logístico, la plataforma gestiona únicamente los siguientes datos esenciales:
+                    </p>
+                    <ul class="mb-3">
+                        <li>Datos de identificación y contacto de líderes pastorales y coordinadores (Nombre, Cédula, Teléfono, Correo).</li>
+                        <li>Información institucional y de ubicación geográfica de las congregaciones asociadas.</li>
+                        <li>Registros de eventos, capacitaciones, asistencia y reportes de discipulado (La Gran Aventura).</li>
+                        <li>Documentos acreditativos de respaldo (adjuntos en PDF e imágenes para validación institucional).</li>
+                    </ul>
+
+                    <h5 class="fw-bold text-dark mt-4 mb-2">3. Uso de la Información</h5>
+                    <p>
+                        La información recopilada se utiliza exclusivamente para:
+                    </p>
+                    <ul class="mb-3">
+                        <li>La planificación, distribución de materiales y auditoría del ministerio de discipulado infantil.</li>
+                        <li>La validación de identidad y control de acceso seguro mediante autenticación de usuarios y roles.</li>
+                        <li>La generación de métricas y reportes estadísticos internos para la mejora de la cobertura nacional.</li>
+                    </ul>
+
+                    <h5 class="fw-bold text-dark mt-4 mb-2">4. Seguridad y Retención de Datos</h5>
+                    <p>
+                        Implementamos estrictos controles de seguridad perimetral, incluyendo cifrado en tránsito (TLS/HTTPS), almacenamiento seguro de credenciales con hashing de derivación de claves, sesiones seguras con directivas HttpOnly y control de acceso basado en roles (RBAC).
+                    </p>
+
+                    <h5 class="fw-bold text-dark mt-4 mb-2">5. Derechos del Usuario y Contacto</h5>
+                    <p>
+                        Cualquier usuario o representante legal de una congregación puede solicitar la actualización o rectificación de su información registrada contactando al equipo de soporte tecnológico a través de la sección de contacto o al correo institucional de soporte.
+                    </p>
+                </div>
+
+                <div class="mt-5 pt-3 border-top d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">Última actualización: Septiembre 2026</span>
+                    <a href="@Url.Action("Landing", "Home")" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                        <i class="bi bi-arrow-left me-1"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

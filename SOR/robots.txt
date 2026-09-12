@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Allow: /Home/Landing
+Allow: /Home/About
+Allow: /Home/Contact
+Allow: /Home/Privacidad
+Allow: /Home/Terminos
+Allow: /Acceso/Login
+
+Disallow: /Admin/
+Disallow: /Coordinador/
+Disallow: /Iglesia/
+Disallow: /Logistica/
+Disallow: /Maestros/
+Disallow: /Finanzas/
+Disallow: /Eventos/
+Disallow: /Reportes/
+Disallow: /Reporte/
+Disallow: /Temporadas/
+Disallow: /Equipos/
+Disallow: /CompanerosOracion/
+
+Sitemap: https://sor.occrd.org/sitemap.xml

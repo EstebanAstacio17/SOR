@@ -131,6 +131,7 @@
     <Compile Include="Helpers\AuditoriaHelper.cs" />
     <Compile Include="Helpers\DataReaderExtensions.cs" />
     <Compile Include="Helpers\SqlRetryHelper.cs" />
+    <Compile Include="Helpers\ValidadorArchivosSeguros.cs" />
     <Compile Include="Models\IglesiaModel.cs" />
     <Compile Include="Models\PerfilCoordinador.cs" />
     <Compile Include="Models\Usuario.cs" />
@@ -189,6 +190,12 @@
     <Content Include="Content\css\Imgs\zoom logo.jpg" />
     <Content Include="Content\css\Login.css" />
     <Content Include="favicon.ico" />
+    <Content Include="robots.txt" />
+    <Content Include="sitemap.xml" />
+    <Content Include="Views\Home\NotFound.cshtml" />
+    <Content Include="Views\Home\Privacidad.cshtml" />
+    <Content Include="Views\Home\Terminos.cshtml" />
+    <Content Include="Views\Home\Gracias.cshtml" />
     <Content Include="Documentos Descargables\Solicitud de Voluntario para Descargar.pdf" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
