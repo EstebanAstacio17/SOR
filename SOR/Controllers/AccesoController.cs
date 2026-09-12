@@ -59,17 +59,47 @@ namespace SOR.Controllers
         // GET: Acceso/Registrar
         public ActionResult Registrar()
         {
+            ViewBag.FormTimeToken = DateTime.UtcNow.Ticks.ToString();
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Registrar(Usuario oUsuario)
+        public ActionResult Registrar(Usuario oUsuario, string website_trap, string form_time_token)
         {
-            if (oUsuario.Clave != oUsuario.ConfirmarClave)
+            // 1. Detección Anti-Bot: Campo Honeypot Trampa (debe llegar vacío)
+            if (!string.IsNullOrEmpty(website_trap))
             {
-                ViewData["Mensaje"] = "Las Contraseñas no coinciden";
+                // Silenciosamente simular éxito para no alertar al atacante
+                return RedirectToAction("Login", "Acceso", new { mensaje = "RegistroPendiente" });
+            }
+
+            // 2. Detección Anti-Bot: Envío instantáneo inhumano (< 1.2 segundos)
+            if (long.TryParse(form_time_token, out long ticksFormulario))
+            {
+                var tiempoTranscurrido = DateTime.UtcNow - new DateTime(ticksFormulario, DateTimeKind.Utc);
+                if (tiempoTranscurrido.TotalMilliseconds < 1200)
+                {
+                    // Solicitud enviada en menos de 1.2s (script automatizado)
+                    return RedirectToAction("Login", "Acceso", new { mensaje = "RegistroPendiente" });
+                }
+            }
+
+            // 3. Validación obligatoria de contraseñas en el servidor
+            if (string.IsNullOrWhiteSpace(oUsuario.Clave) || oUsuario.Clave != oUsuario.ConfirmarClave)
+            {
+                ViewData["Mensaje"] = "Las contraseñas no coinciden o están vacías.";
                 ViewData["TipoAlert"] = "alert-danger";
+                ViewBag.FormTimeToken = DateTime.UtcNow.Ticks.ToString();
+                return View();
+            }
+
+            // 4. Validación de longitud mínima de contraseña
+            if (oUsuario.Clave.Length < 6)
+            {
+                ViewData["Mensaje"] = "La contraseña debe contener al menos 6 caracteres.";
+                ViewData["TipoAlert"] = "alert-danger";
+                ViewBag.FormTimeToken = DateTime.UtcNow.Ticks.ToString();
                 return View();
             }
 
@@ -85,6 +115,7 @@ namespace SOR.Controllers
             }
             else
             {
+                ViewBag.FormTimeToken = DateTime.UtcNow.Ticks.ToString();
                 return View();
             }
         }
