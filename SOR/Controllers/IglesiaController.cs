@@ -21,11 +21,7 @@ namespace SOR.Controllers
 
         private static string ObtenerCadenaConexion()
         {
-            if (ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
-            {
-                return ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
-            }
-            return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
+            return SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
         }
 
         // GET: Iglesia/Index
@@ -2285,9 +2281,7 @@ namespace SOR.Controllers
             List<Notificacion> lista = new List<Notificacion>();
             try
             {
-                string connStr = @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
-                if (ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
-                    connStr = ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
+                string connStr = SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
 
                 using (SqlConnection cn = new SqlConnection(connStr))
                 {

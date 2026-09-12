@@ -8,11 +8,7 @@ namespace SOR.Repositories
     {
         protected string ObtenerCadenaConexion()
         {
-            if (ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
-            {
-                return ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
-            }
-            return @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
+            return ConnectionHelper.ObtenerCadenaConexion();
         }
 
         protected void EjecutarConReintento(Action operacion, int maxReintentos = 3)

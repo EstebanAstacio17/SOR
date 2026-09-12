@@ -28,7 +28,7 @@ namespace SOR.Controllers
             int totalIglesiasRegistradas = 0;
             int solicitudesPendientes = 0;
 
-            string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
+            string connectionString = SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
             using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(connectionString))
             {
                 conn.Open();

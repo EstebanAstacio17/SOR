@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -12,9 +12,7 @@ namespace SOR.Controllers
         public ActionResult Status()
         {
             var sw = Stopwatch.StartNew();
-            string connectionString = ConfigurationManager.ConnectionStrings["ConexionSOR"] != null
-                ? ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString
-                : null;
+            string connectionString = SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
 
             if (string.IsNullOrEmpty(connectionString))
             {

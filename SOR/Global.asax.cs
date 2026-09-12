@@ -25,8 +25,7 @@ namespace SOR
 
         private void InicializarColumnasBloqueo()
         {
-            string conexionStr = System.Configuration.ConfigurationManager.ConnectionStrings["ConexionSOR"]?.ConnectionString 
-                ?? @"Server=ASTACIO\SQLEXPRESS;Database=DB_SOR;Trusted_Connection=True;";
+            string conexionStr = SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
 
             using (System.Data.SqlClient.SqlConnection cn = new System.Data.SqlClient.SqlConnection(conexionStr))
             {

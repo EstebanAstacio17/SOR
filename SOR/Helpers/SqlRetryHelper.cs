@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -87,6 +87,56 @@ namespace SOR.Helpers
                     Thread.Sleep(backoffMs);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Proveedor centralizado y resiliente para la resolución y saneamiento de cadenas de conexión.
+    /// Resuelve variables de entorno de Azure App Service, ConfigurationManager y sanitiza comillas/caracteres inválidos.
+    /// </summary>
+    public static class ConnectionHelper
+    {
+        public const string DefaultAzureConnectionString = "Server=tcp:svrsor.database.windows.net,1433;Initial Catalog=DB_SOR;Persist Security Info=False;User ID=CloudSA94a05d65;Password=OCC_Sor2026!*;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;Pooling=True;Min Pool Size=5;Max Pool Size=150;ConnectRetryCount=3;ConnectRetryInterval=10;Application Name=SOR_Azure_Prod;";
+
+        public static string ObtenerCadenaConexion()
+        {
+            string connStr = null;
+
+            // 1. Verificar variables de entorno inyectadas por Azure App Service
+            connStr = Environment.GetEnvironmentVariable("SQLAZURECONNSTR_ConexionSOR");
+            if (string.IsNullOrWhiteSpace(connStr))
+                connStr = Environment.GetEnvironmentVariable("SQLCONNSTR_ConexionSOR");
+            if (string.IsNullOrWhiteSpace(connStr))
+                connStr = Environment.GetEnvironmentVariable("CUSTOMCONNSTR_ConexionSOR");
+            if (string.IsNullOrWhiteSpace(connStr))
+                connStr = Environment.GetEnvironmentVariable("ConexionSOR");
+
+            // 2. Verificar ConnectionStrings en Web.config / ConfigurationManager
+            if (string.IsNullOrWhiteSpace(connStr))
+            {
+                try
+                {
+                    if (System.Configuration.ConfigurationManager.ConnectionStrings["ConexionSOR"] != null)
+                    {
+                        connStr = System.Configuration.ConfigurationManager.ConnectionStrings["ConexionSOR"].ConnectionString;
+                    }
+                }
+                catch { }
+            }
+
+            // 3. Sanitizar comillas envolventes, backticks, comillas tipográficas y espacios en blanco
+            if (!string.IsNullOrWhiteSpace(connStr))
+            {
+                connStr = connStr.Trim().Trim('"', '\'', '`', ' ', '\t', '\r', '\n', '“', '”', '‘', '’');
+            }
+
+            // 4. Si la cadena está vacía o no contiene palabras clave válidas de conexión, usar la de Azure SQL
+            if (string.IsNullOrWhiteSpace(connStr) || (!connStr.ToLowerInvariant().Contains("server=") && !connStr.ToLowerInvariant().Contains("data source=")))
+            {
+                connStr = DefaultAzureConnectionString;
+            }
+
+            return connStr;
         }
     }
 }
