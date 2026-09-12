@@ -139,7 +139,7 @@
                                             <form action="@Url.Action("Eliminar", "Equipos")" method="post" class="d-inline form-delete-equipo m-0">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="idEquipo" value="@eq.IdEquipo" />
-                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Desactivar o Eliminar Equipo" onclick="return confirm('¿Está seguro de que desea eliminar/inhabilitar este equipo? Si posee dependencias asociadas, el sistema lo desactivará automáticamente para preservar los datos históricos.');">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar Equipo" onclick="return confirm('¿Está seguro de que desea eliminar este equipo?');">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>

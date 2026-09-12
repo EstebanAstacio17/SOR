@@ -28,10 +28,17 @@
         <form action="@Url.Action("Registrar", "Acceso")" method="post" onsubmit="sessionStorage.setItem('user_tab_session', 'active');">
             @Html.AntiForgeryToken()
 
+            <!-- CAMPO TRAMPA ANTI-BOT (HONEYPOT) - Invisible para humanos -->
+            <div style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none;" aria-hidden="true">
+                <label for="website_trap">Leave this field blank</label>
+                <input type="text" id="website_trap" name="website_trap" tabindex="-1" autocomplete="off" value="" />
+                <input type="hidden" name="form_time_token" value="@(ViewBag.FormTimeToken ?? DateTime.UtcNow.Ticks.ToString())" />
+            </div>
+
             <!-- LOGO -->
             <img src="~/Content/css/Imgs/OCC-logo.png"
                  class="logo-login"
-                 alt="Logo">
+                 alt="Logo Operation Christmas Child">
 
             <!-- TITULO -->
             <h1 class="h3 mb-3 fw-normal text-center">
