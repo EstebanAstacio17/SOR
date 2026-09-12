@@ -188,7 +188,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                ViewData["Mensaje"] = "No se pudo comunicar con el servidor de base de datos. Por favor verifique el firewall de Azure SQL o intente más tarde.";
+                ViewData["Mensaje"] = "Error de conexión BD: " + ex.Message + (ex.InnerException != null ? " | " + ex.InnerException.Message : "");
                 ViewData["TipoAlert"] = "alert-danger";
                 return View();
             }
