@@ -10,6 +10,7 @@ using SOR.Permisos;
 namespace SOR.Controllers
 {
     [ValidarSesion]
+    [SessionState(System.Web.SessionState.SessionStateBehavior.ReadOnly)]
     public class ReportesController : Controller
     {
         private readonly ReportesRepository _repo = new ReportesRepository();

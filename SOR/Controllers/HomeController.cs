@@ -103,12 +103,14 @@ namespace SOR.Controllers
             return View();
         }
 
+        [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult About()
         {
             ViewBag.Message = "Sistema de Gestión Interna OCC Rep Dom (SOR)";
             return View();
         }
 
+        [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Contact()
         {
             ViewBag.Message = "Contacto OCC República Dominicana";
@@ -130,6 +132,7 @@ namespace SOR.Controllers
         }
 
         // GET: Home/Privacidad
+        [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Privacidad()
         {
             ViewBag.Title = "Política de Privacidad";
@@ -137,6 +140,7 @@ namespace SOR.Controllers
         }
 
         // GET: Home/Terminos
+        [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Terminos()
         {
             ViewBag.Title = "Términos y Condiciones";
