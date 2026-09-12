@@ -22,11 +22,11 @@ jobs:
         uses: NuGet/setup-nuget@v2
 
       - name: Restore NuGet Packages
-        run: nuget restore SOR/SOR/packages.config -PackagesDirectory packages
+        run: nuget restore SOR/packages.config -PackagesDirectory packages
 
       - name: Build and Package ASP.NET MVC Project
         run: |
-          msbuild SOR/SOR/SOR.csproj /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="${{ runner.temp }}\package.zip"
+          msbuild SOR/SOR.csproj /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="${{ runner.temp }}\package.zip"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
