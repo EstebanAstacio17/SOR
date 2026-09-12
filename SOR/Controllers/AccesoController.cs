@@ -176,13 +176,22 @@ namespace SOR.Controllers
                 return View();
             }
 
-            int intentos;
-            DateTime? ultimoIntento;
-            DateTime? bloqueo;
-            string claveGuardada;
-            int? idEstado;
+            int intentos = 0;
+            DateTime? ultimoIntento = null;
+            DateTime? bloqueo = null;
+            string claveGuardada = null;
+            int? idEstado = null;
 
-            ObtenerDatosSeguridad(oUsuario.Correo, out intentos, out ultimoIntento, out bloqueo, out claveGuardada, out idEstado);
+            try
+            {
+                ObtenerDatosSeguridad(oUsuario.Correo, out intentos, out ultimoIntento, out bloqueo, out claveGuardada, out idEstado);
+            }
+            catch (Exception ex)
+            {
+                ViewData["Mensaje"] = "No se pudo comunicar con el servidor de base de datos. Por favor verifique el firewall de Azure SQL o intente más tarde.";
+                ViewData["TipoAlert"] = "alert-danger";
+                return View();
+            }
 
             // Si el usuario no existe en la base de datos
             if (claveGuardada == null)
