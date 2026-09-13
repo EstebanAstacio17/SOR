@@ -21,6 +21,18 @@ namespace SOR.Controllers
         public ActionResult Index()
         {
             Usuario usuario = (Usuario)Session["usuario"];
+            if (usuario != null)
+            {
+                var repoUsuario = new Repositories.UsuarioRepository();
+                Usuario usuarioActualizado = repoUsuario.ObtenerUsuarioPorId(usuario.IdUsuario) 
+                                             ?? repoUsuario.ObtenerUsuarioPorCorreo(usuario.Correo);
+                if (usuarioActualizado != null)
+                {
+                    usuarioActualizado.Clave = null;
+                    Session["usuario"] = usuarioActualizado;
+                    usuario = usuarioActualizado;
+                }
+            }
             ViewBag.Usuario = usuario;
 
             string temporadaActiva = "No Definida";

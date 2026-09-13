@@ -343,6 +343,21 @@ namespace SOR.Controllers
 
                     usuarioActual.IdEstado = 3;
                     usuarioActual.NombreEstado = "PerfilPendienteAprobacion";
+                }
+
+                // 5. Refrescar datos completos del usuario en la sesión para que todo el sistema y Dashboard queden sincronizados e intercomunicados
+                var repoUsuario = new Repositories.UsuarioRepository();
+                Usuario usuarioActualizado = repoUsuario.ObtenerUsuarioPorId(usuarioActual.IdUsuario) 
+                                             ?? repoUsuario.ObtenerUsuarioPorCorreo(usuarioActual.Correo);
+                if (usuarioActualizado != null)
+                {
+                    usuarioActualizado.Clave = null;
+                    Session["usuario"] = usuarioActualizado;
+                }
+                else
+                {
+                    usuarioActual.PrimerNombre = modelo.PrimerNombre;
+                    usuarioActual.PrimerApellido = modelo.PrimerApellido;
                     Session["usuario"] = usuarioActual;
                 }
             }

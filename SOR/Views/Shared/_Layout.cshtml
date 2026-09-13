@@ -342,10 +342,13 @@
                     @if (Session["usuario"] != null)
                     {
                         var usuarioSesion = (SOR.Models.Usuario)Session["usuario"];
+                        string nombreUsuarioNav = !string.IsNullOrWhiteSpace(usuarioSesion.PrimerNombre) 
+                            ? (usuarioSesion.PrimerNombre + (!string.IsNullOrWhiteSpace(usuarioSesion.PrimerApellido) ? (" " + usuarioSesion.PrimerApellido) : "")).Trim() 
+                            : usuarioSesion.Correo;
                         <li class="nav-item dropdown me-2">
                             <a class="nav-link dropdown-toggle d-flex align-items-center py-1" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="line-height: 1.2;">
                                 <div class="d-flex flex-column align-items-start me-2">
-                                    <span class="text-dark fw-semibold" style="font-size: 0.85rem;">@usuarioSesion.Correo</span>
+                                    <span class="text-dark fw-semibold" style="font-size: 0.85rem;" title="@usuarioSesion.Correo">@nombreUsuarioNav</span>
                                     <span class="badge bg-primary mt-1" style="font-size: 0.7rem; padding: 0.2em 0.6em;">@(usuarioSesion.NombreRol ?? "Coordinador")</span>
                                 </div>
                             </a>

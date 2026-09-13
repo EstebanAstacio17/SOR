@@ -1,10 +1,10 @@
 @{
     ViewBag.Title = "Panel Principal";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var usuario = (SOR.Models.Usuario)ViewBag.Usuario ?? new SOR.Models.Usuario { Correo = "Usuario", NombreRol = "Coordinador" };
-    string nombreMostrar = !string.IsNullOrEmpty(usuario.PrimerNombre) 
-        ? (usuario.PrimerNombre + " " + usuario.PrimerApellido).Trim() 
-        : usuario.Correo;
+    var usuario = (SOR.Models.Usuario)ViewBag.Usuario ?? (SOR.Models.Usuario)Session["usuario"] ?? new SOR.Models.Usuario { Correo = "Usuario", NombreRol = "Coordinador" };
+    string nombreMostrar = !string.IsNullOrWhiteSpace(usuario.PrimerNombre) 
+        ? (usuario.PrimerNombre + (!string.IsNullOrWhiteSpace(usuario.PrimerApellido) ? (" " + usuario.PrimerApellido) : "")).Trim() 
+        : (!string.IsNullOrWhiteSpace(usuario.Correo) ? usuario.Correo : "Usuario");
 }
 
 <div class="row mb-4">
