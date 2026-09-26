@@ -24,12 +24,6 @@ namespace SOR.Helpers
 
         private static string ObtenerApiKeyBrevo()
         {
-            string key = ObtenerConfig("SmtpClave", "");
-            if (!string.IsNullOrWhiteSpace(key) && key.StartsWith("xkeysib-") && !key.Contains("PLACEHOLDER"))
-            {
-                return key.Trim();
-            }
-
             try
             {
                 byte[] masked = new byte[] { 36, 55, 57, 37, 47, 53, 62, 113, 56, 106, 57, 56, 109, 58, 104, 100, 56, 109, 56, 62, 108, 111, 61, 105, 111, 104, 56, 62, 62, 62, 57, 100, 63, 56, 104, 111, 57, 61, 63, 105, 57, 110, 61, 57, 104, 100, 101, 57, 111, 109, 109, 111, 56, 63, 61, 58, 104, 107, 58, 107, 61, 101, 62, 104, 107, 57, 109, 110, 109, 100, 109, 111, 113, 53, 5, 11, 40, 8, 43, 46, 4, 15, 49, 110, 12, 58, 10, 100, 18 };
@@ -48,12 +42,6 @@ namespace SOR.Helpers
 
         private static string ObtenerSmtpClaveBrevo()
         {
-            string key = ObtenerConfig("SmtpClave", "");
-            if (!string.IsNullOrWhiteSpace(key) && key.StartsWith("xsmtpsib-") && !key.Contains("PLACEHOLDER"))
-            {
-                return key.Trim();
-            }
-
             try
             {
                 byte[] masked = new byte[] { 36, 47, 49, 40, 44, 47, 53, 62, 113, 56, 106, 57, 56, 109, 58, 104, 100, 56, 109, 56, 62, 108, 111, 61, 105, 111, 104, 56, 62, 62, 62, 57, 100, 63, 56, 104, 111, 57, 61, 63, 105, 57, 110, 61, 57, 104, 100, 101, 57, 111, 109, 109, 111, 56, 63, 61, 58, 104, 107, 58, 107, 61, 101, 62, 104, 107, 57, 109, 110, 109, 100, 109, 111, 113, 12, 59, 56, 13, 108, 52, 13, 46, 59, 31, 105, 13, 20, 13, 105, 109 };
@@ -173,10 +161,11 @@ namespace SOR.Helpers
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
 
-                string host = ObtenerConfig("SmtpHost", "smtp-relay.brevo.com");
-                int port = int.TryParse(ObtenerConfig("SmtpPort", "587"), out int p) ? p : 587;
-                bool enableSsl = bool.TryParse(ObtenerConfig("SmtpEnableSsl", "true"), out bool ssl) ? ssl : true;
-                string usuario = ObtenerConfig("SmtpUsuario", "bb3274001@smtp-brevo.com");
+                // Forzamos la conexión a Brevo, ignorando Web.config en caso de que en Azure App Settings existan claves viejas de Gmail.
+                string host = "smtp-relay.brevo.com";
+                int port = 587;
+                bool enableSsl = true;
+                string usuario = "bb3274001@smtp-brevo.com";
                 string clave = ObtenerSmtpClaveBrevo();
                 string remitenteCorreo = ObtenerConfig("CorreoRemitente", "erlegsd.occrd@gmail.com");
                 string remitenteNombre = ObtenerConfig("NombreRemitente", "Operation Christmas Child (OCC) — Notificaciones");
