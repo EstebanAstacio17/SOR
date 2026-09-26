@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Web.Mvc;
 
 namespace SOR.Models
@@ -31,6 +32,9 @@ namespace SOR.Models
         public decimal SaldoDOP { get; set; }
         public decimal SaldoUSD { get; set; }
         public string Notas { get; set; }
+
+        public string RutaComprobante { get; set; }
+        public string NombreComprobante { get; set; }
     }
 
     public class PresupuestoVsRealDTO
@@ -63,6 +67,29 @@ namespace SOR.Models
         public List<TransaccionFinancieraDTO> Transacciones { get; set; } = new List<TransaccionFinancieraDTO>();
         public List<OpcionCategoriaFinancieraDTO> Categorias { get; set; } = new List<OpcionCategoriaFinancieraDTO>();
         public List<PresupuestoVsRealDTO> ResumenPresupuestario { get; set; } = new List<PresupuestoVsRealDTO>();
+    }
+
+    public class AnexosFinanzasViewModel
+    {
+        public int IdTemporada { get; set; }
+        public string NombreTemporada { get; set; }
+        public int IdEquipo { get; set; }
+        public string NombreEquipo { get; set; }
+        public string Mes { get; set; }
+        public decimal TasaCambio { get; set; } = 58.63m;
+        public List<SelectListItem> ListaEquipos { get; set; } = new List<SelectListItem>();
+        public List<SelectListItem> ListaTemporadas { get; set; } = new List<SelectListItem>();
+        public List<TransaccionFinancieraDTO> Transacciones { get; set; } = new List<TransaccionFinancieraDTO>();
+
+        public int TotalTransacciones => Transacciones?.Count ?? 0;
+        public int TotalConSoporte => Transacciones?.Count(t => !string.IsNullOrEmpty(t.RutaComprobante)) ?? 0;
+        public int TotalSinSoporte => Transacciones?.Count(t => string.IsNullOrEmpty(t.RutaComprobante)) ?? 0;
+        public decimal PorcentajeRespaldo => TotalTransacciones > 0 
+            ? Math.Round(((decimal)TotalConSoporte / TotalTransacciones) * 100m, 1) 
+            : 0m;
+        public decimal TotalGastosConSoporteDOP => Transacciones?.Where(t => !string.IsNullOrEmpty(t.RutaComprobante)).Sum(t => t.GastoDOP) ?? 0m;
+        public decimal TotalGastosDOP => Transacciones?.Sum(t => t.GastoDOP) ?? 0m;
+        public decimal TotalIngresosDOP => Transacciones?.Sum(t => t.IngresoDOP) ?? 0m;
     }
 
     public class OpcionCategoriaFinancieraDTO

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Web;
 using System.Web.Mvc;
+using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using SOR.Repositories;
@@ -222,8 +225,142 @@ namespace SOR.Controllers
             return View(vm);
         }
 
+        [HttpGet]
+        public ActionResult Anexos(int? idTemporada, int? idEquipo, string mes = null)
+        {
+            Usuario u = ObtenerUsuarioActual();
+            if (u == null)
+                return RedirectToAction("Login", "Acceso");
+
+            if (!TieneAccesoFinanzas(u))
+            {
+                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al módulo de Finanzas.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            try
+            {
+                _repo.AsegurarEsquema();
+            }
+            catch { }
+
+            bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            bool puedeEditar = PuedeEditarFinanzas(u);
+            HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
+
+            var equipos = _repo.ObtenerListaEquipos(equiposPermitidos);
+            var temporadas = _repo.ObtenerListaTemporadas();
+
+            int tempId = idTemporada.HasValue && idTemporada.Value > 0 
+                ? idTemporada.Value 
+                : (temporadas.Any() ? Convert.ToInt32(temporadas.First().Value) : 1);
+
+            int eqId;
+            if (esAdmin)
+            {
+                int defaultEqId = (u.IdEquipo.HasValue && u.IdEquipo.Value > 0)
+                    ? u.IdEquipo.Value 
+                    : (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
+
+                eqId = (idEquipo.HasValue && idEquipo.Value > 0) ? idEquipo.Value : defaultEqId;
+            }
+            else
+            {
+                if (idEquipo.HasValue && equiposPermitidos != null && equiposPermitidos.Contains(idEquipo.Value))
+                {
+                    eqId = idEquipo.Value;
+                }
+                else
+                {
+                    eqId = u.IdEquipo ?? (equipos.Any() ? Convert.ToInt32(equipos.First().Value) : 1);
+                }
+            }
+
+            string mesFiltro = string.IsNullOrWhiteSpace(mes) || mes.Equals("TODOS", StringComparison.OrdinalIgnoreCase) 
+                ? null 
+                : mes.Trim().ToUpper();
+
+            bool puedeCambiarEquipo = esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1);
+            ViewBag.EsAdmin = esAdmin;
+            ViewBag.PuedeEditarFinanzas = puedeEditar;
+            ViewBag.PuedeCambiarEquipo = puedeCambiarEquipo;
+            ViewBag.UsuarioActual = u;
+
+            var transacciones = _repo.ObtenerAnexosYTransacciones(tempId, eqId, mesFiltro);
+
+            var vm = new AnexosFinanzasViewModel
+            {
+                IdTemporada = tempId,
+                NombreTemporada = _repo.ObtenerNombreTemporada(tempId),
+                IdEquipo = eqId,
+                NombreEquipo = _repo.ObtenerNombreEquipo(eqId),
+                Mes = mesFiltro ?? "TODOS",
+                TasaCambio = 58.63m,
+                ListaEquipos = equipos,
+                ListaTemporadas = temporadas,
+                Transacciones = transacciones
+            };
+
+            return View(vm);
+        }
+
+        [HttpGet]
+        public ActionResult VerComprobante(long id, bool descargar = false)
+        {
+            Usuario u = ObtenerUsuarioActual();
+            if (u == null)
+                return RedirectToAction("Login", "Acceso");
+
+            if (!TieneAccesoFinanzas(u))
+                return HttpNotFound("No tiene permisos para consultar este soporte.");
+
+            var t = _repo.ObtenerTransaccionPorId(id);
+            if (t == null || string.IsNullOrWhiteSpace(t.RutaComprobante))
+                return HttpNotFound("El comprobante o soporte solicitado no fue encontrado.");
+
+            string rutaRelativa = t.RutaComprobante;
+            if (rutaRelativa.StartsWith("~"))
+            {
+                rutaRelativa = rutaRelativa.Substring(1);
+            }
+            if (!rutaRelativa.StartsWith("/"))
+            {
+                rutaRelativa = "/" + rutaRelativa;
+            }
+
+            string rutaFisica = Server.MapPath("~" + rutaRelativa);
+            if (!System.IO.File.Exists(rutaFisica))
+            {
+                return HttpNotFound("El archivo físico del comprobante no existe en el servidor.");
+            }
+
+            string ext = Path.GetExtension(rutaFisica).ToLowerInvariant();
+            string contentType;
+            switch (ext)
+            {
+                case ".pdf": contentType = "application/pdf"; break;
+                case ".jpg":
+                case ".jpeg": contentType = "image/jpeg"; break;
+                case ".png": contentType = "image/png"; break;
+                case ".webp": contentType = "image/webp"; break;
+                default: contentType = "application/octet-stream"; break;
+            }
+
+            string nombreDescarga = !string.IsNullOrWhiteSpace(t.NombreComprobante) 
+                ? t.NombreComprobante 
+                : Path.GetFileName(rutaFisica);
+
+            if (descargar)
+            {
+                return File(rutaFisica, contentType, nombreDescarga);
+            }
+
+            Response.AppendHeader("Content-Disposition", $"inline; filename=\"{nombreDescarga}\"");
+            return File(rutaFisica, contentType);
+        }
+
         [HttpPost]
-        public JsonResult GuardarTransaccion(TransaccionFinancieraDTO model, string fecha = null)
+        public JsonResult GuardarTransaccion(TransaccionFinancieraDTO model, HttpPostedFileBase comprobante, string fecha = null)
         {
             try
             {
@@ -274,8 +411,30 @@ namespace SOR.Controllers
                 if (model.TasaCambio <= 0)
                     model.TasaCambio = 58.63m;
 
+                // Manejo de carga de comprobante
+                if (comprobante != null && comprobante.ContentLength > 0)
+                {
+                    if (!ValidadorArchivosSeguros.EsArchivoValido(comprobante, out string errValidacion, out string nombreSeguro))
+                    {
+                        return Json(new { success = false, message = "Error en comprobante adjunto: " + errValidacion });
+                    }
+
+                    string carpetaVirtual = $"~/Uploads/Finanzas/{model.IdTemporada}/{model.IdEquipo}/";
+                    string carpetaFisica = Server.MapPath(carpetaVirtual);
+                    if (!Directory.Exists(carpetaFisica))
+                    {
+                        Directory.CreateDirectory(carpetaFisica);
+                    }
+
+                    string rutaFisicaArchivo = Path.Combine(carpetaFisica, nombreSeguro);
+                    comprobante.SaveAs(rutaFisicaArchivo);
+
+                    model.RutaComprobante = $"/Uploads/Finanzas/{model.IdTemporada}/{model.IdEquipo}/{nombreSeguro}";
+                    model.NombreComprobante = Path.GetFileName(comprobante.FileName);
+                }
+
                 long nuevoId = _repo.GuardarTransaccion(model);
-                return Json(new { success = true, message = "Movimiento registrado y saldos recalculados exitosamente.", transaccionId = nuevoId });
+                return Json(new { success = true, message = "Movimiento registrado y comprobante guardado exitosamente.", transaccionId = nuevoId, rutaComprobante = model.RutaComprobante, nombreComprobante = model.NombreComprobante });
             }
             catch (Exception ex)
             {

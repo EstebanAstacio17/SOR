@@ -80,8 +80,22 @@ namespace SOR.Repositories
                         GastoUSD AS (CAST(ROUND(GastoDOP / NULLIF(TasaCambio, 0), 2) AS DECIMAL(18,2))),
                         IngresoUSD AS (CAST(ROUND(IngresoDOP / NULLIF(TasaCambio, 0), 2) AS DECIMAL(18,2))),
                         Notas NVARCHAR(255) NULL,
+                        RutaComprobante NVARCHAR(500) NULL,
+                        NombreComprobante NVARCHAR(255) NULL,
                         FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
                     );
+                END;
+                ELSE
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Finanzas_Transacciones') AND name = 'RutaComprobante')
+                    BEGIN
+                        ALTER TABLE dbo.Finanzas_Transacciones ADD RutaComprobante NVARCHAR(500) NULL;
+                    END;
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Finanzas_Transacciones') AND name = 'NombreComprobante')
+                    BEGIN
+                        ALTER TABLE dbo.Finanzas_Transacciones ADD NombreComprobante NVARCHAR(255) NULL;
+                    END;
                 END;";
 
                 using (var cmd = new SqlCommand(ddl, conn))
@@ -113,7 +127,9 @@ namespace SOR.Repositories
                         t.IngresoDOP,
                         t.IngresoUSD,
                         t.TasaCambio,
-                        t.Notas
+                        t.Notas,
+                        t.RutaComprobante,
+                        t.NombreComprobante
                     FROM dbo.Finanzas_Transacciones t
                     INNER JOIN dbo.Finanzas_Categorias c ON t.CategoriaId = c.CategoriaId
                     WHERE t.IdTemporada = @IdTemporada 
@@ -136,16 +152,18 @@ namespace SOR.Repositories
                     @GastoDOP DECIMAL(18,2),
                     @IngresoDOP DECIMAL(18,2),
                     @TasaCambio DECIMAL(10,4),
-                    @Notas NVARCHAR(255)
+                    @Notas NVARCHAR(255),
+                    @RutaComprobante NVARCHAR(500) = NULL,
+                    @NombreComprobante NVARCHAR(255) = NULL
                 AS
                 BEGIN
                     SET NOCOUNT ON;
                     IF @TransaccionId IS NULL OR @TransaccionId = 0
                     BEGIN
                         INSERT INTO dbo.Finanzas_Transacciones 
-                            (IdTemporada, IdEquipo, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas)
+                            (IdTemporada, IdEquipo, Mes, Fecha, NumeroDocumento, Descripcion, CategoriaId, GastoDOP, IngresoDOP, TasaCambio, Notas, RutaComprobante, NombreComprobante)
                         VALUES 
-                            (@IdTemporada, @IdEquipo, @Mes, @Fecha, @NumeroDocumento, @Descripcion, @CategoriaId, @GastoDOP, @IngresoDOP, @TasaCambio, @Notas);
+                            (@IdTemporada, @IdEquipo, @Mes, @Fecha, @NumeroDocumento, @Descripcion, @CategoriaId, @GastoDOP, @IngresoDOP, @TasaCambio, @Notas, @RutaComprobante, @NombreComprobante);
                         SET @TransaccionId = SCOPE_IDENTITY();
                     END
                     ELSE
@@ -158,11 +176,48 @@ namespace SOR.Repositories
                             GastoDOP = @GastoDOP,
                             IngresoDOP = @IngresoDOP,
                             TasaCambio = @TasaCambio,
-                            Notas = @Notas
+                            Notas = @Notas,
+                            RutaComprobante = ISNULL(@RutaComprobante, RutaComprobante),
+                            NombreComprobante = ISNULL(@NombreComprobante, NombreComprobante)
                         WHERE TransaccionId = @TransaccionId;
                     END
                 END;";
                 using (var cmd = new SqlCommand(sp2, conn)) { cmd.ExecuteNonQuery(); }
+
+                string spAnexos = @"
+                CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_ObtenerAnexosYTransacciones
+                    @IdTemporada INT,
+                    @IdEquipo INT,
+                    @Mes VARCHAR(3) = NULL
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    SELECT 
+                        t.TransaccionId,
+                        t.IdTemporada,
+                        t.IdEquipo,
+                        t.Mes,
+                        t.Fecha,
+                        t.NumeroDocumento,
+                        t.Descripcion,
+                        t.CategoriaId,
+                        c.Descripcion AS CategoriaDescripcion,
+                        t.GastoDOP,
+                        t.GastoUSD,
+                        t.IngresoDOP,
+                        t.IngresoUSD,
+                        t.TasaCambio,
+                        t.Notas,
+                        t.RutaComprobante,
+                        t.NombreComprobante
+                    FROM dbo.Finanzas_Transacciones t
+                    INNER JOIN dbo.Finanzas_Categorias c ON t.CategoriaId = c.CategoriaId
+                    WHERE t.IdTemporada = @IdTemporada 
+                      AND t.IdEquipo = @IdEquipo 
+                      AND (@Mes IS NULL OR @Mes = '' OR @Mes = 'TODOS' OR t.Mes = @Mes)
+                    ORDER BY t.Fecha DESC, t.TransaccionId DESC;
+                END;";
+                using (var cmd = new SqlCommand(spAnexos, conn)) { cmd.ExecuteNonQuery(); }
 
                 string sp3 = @"
                 CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_EliminarTransaccion
@@ -430,7 +485,9 @@ namespace SOR.Repositories
                             IngresoDOP = Convert.ToDecimal(r["IngresoDOP"]),
                             IngresoUSD = Convert.ToDecimal(r["IngresoUSD"]),
                             TasaCambio = Convert.ToDecimal(r["TasaCambio"]),
-                            Notas = r["Notas"] != DBNull.Value ? r["Notas"].ToString() : string.Empty
+                            Notas = r["Notas"] != DBNull.Value ? r["Notas"].ToString() : string.Empty,
+                            RutaComprobante = r["RutaComprobante"] != DBNull.Value ? r["RutaComprobante"].ToString() : null,
+                            NombreComprobante = r["NombreComprobante"] != DBNull.Value ? r["NombreComprobante"].ToString() : null
                         };
 
                         saldoAcum = saldoAcum + t.IngresoDOP - t.GastoDOP;
@@ -441,6 +498,108 @@ namespace SOR.Repositories
                 }
             }
             return lista;
+        }
+
+        public List<TransaccionFinancieraDTO> ObtenerAnexosYTransacciones(int idTemporada, int idEquipo, string mes = null)
+        {
+            var lista = new List<TransaccionFinancieraDTO>();
+
+            using (var conn = new SqlConnection(ObtenerCadenaConexion()))
+            using (var cmd = new SqlCommand("dbo.usp_Finanzas_ObtenerAnexosYTransacciones", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", SqlDbType.Int) { Value = idTemporada });
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", SqlDbType.Int) { Value = idEquipo });
+                cmd.Parameters.Add(new SqlParameter("@Mes", SqlDbType.VarChar, 3) { Value = (object)mes ?? DBNull.Value });
+
+                conn.Open();
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        var t = new TransaccionFinancieraDTO
+                        {
+                            TransaccionId = Convert.ToInt64(r["TransaccionId"]),
+                            IdTemporada = Convert.ToInt32(r["IdTemporada"]),
+                            IdEquipo = Convert.ToInt32(r["IdEquipo"]),
+                            Mes = r["Mes"].ToString(),
+                            Fecha = Convert.ToDateTime(r["Fecha"]),
+                            NumeroDocumento = r["NumeroDocumento"] != DBNull.Value ? r["NumeroDocumento"].ToString() : string.Empty,
+                            Descripcion = r["Descripcion"].ToString(),
+                            CategoriaId = r["CategoriaId"].ToString(),
+                            CategoriaDescripcion = r["CategoriaDescripcion"].ToString(),
+                            GastoDOP = Convert.ToDecimal(r["GastoDOP"]),
+                            GastoUSD = Convert.ToDecimal(r["GastoUSD"]),
+                            IngresoDOP = Convert.ToDecimal(r["IngresoDOP"]),
+                            IngresoUSD = Convert.ToDecimal(r["IngresoUSD"]),
+                            TasaCambio = Convert.ToDecimal(r["TasaCambio"]),
+                            Notas = r["Notas"] != DBNull.Value ? r["Notas"].ToString() : string.Empty,
+                            RutaComprobante = r["RutaComprobante"] != DBNull.Value ? r["RutaComprobante"].ToString() : null,
+                            NombreComprobante = r["NombreComprobante"] != DBNull.Value ? r["NombreComprobante"].ToString() : null
+                        };
+                        lista.Add(t);
+                    }
+                }
+            }
+            return lista;
+        }
+
+        public TransaccionFinancieraDTO ObtenerTransaccionPorId(long id)
+        {
+            using (var conn = new SqlConnection(ObtenerCadenaConexion()))
+            using (var cmd = new SqlCommand(@"
+                SELECT 
+                    t.TransaccionId,
+                    t.IdTemporada,
+                    t.IdEquipo,
+                    t.Mes,
+                    t.Fecha,
+                    t.NumeroDocumento,
+                    t.Descripcion,
+                    t.CategoriaId,
+                    c.Descripcion AS CategoriaDescripcion,
+                    t.GastoDOP,
+                    t.GastoUSD,
+                    t.IngresoDOP,
+                    t.IngresoUSD,
+                    t.TasaCambio,
+                    t.Notas,
+                    t.RutaComprobante,
+                    t.NombreComprobante
+                FROM dbo.Finanzas_Transacciones t
+                INNER JOIN dbo.Finanzas_Categorias c ON t.CategoriaId = c.CategoriaId
+                WHERE t.TransaccionId = @Id;", conn))
+            {
+                cmd.Parameters.Add(new SqlParameter("@Id", SqlDbType.BigInt) { Value = id });
+                conn.Open();
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (r.Read())
+                    {
+                        return new TransaccionFinancieraDTO
+                        {
+                            TransaccionId = Convert.ToInt64(r["TransaccionId"]),
+                            IdTemporada = Convert.ToInt32(r["IdTemporada"]),
+                            IdEquipo = Convert.ToInt32(r["IdEquipo"]),
+                            Mes = r["Mes"].ToString(),
+                            Fecha = Convert.ToDateTime(r["Fecha"]),
+                            NumeroDocumento = r["NumeroDocumento"] != DBNull.Value ? r["NumeroDocumento"].ToString() : string.Empty,
+                            Descripcion = r["Descripcion"].ToString(),
+                            CategoriaId = r["CategoriaId"].ToString(),
+                            CategoriaDescripcion = r["CategoriaDescripcion"].ToString(),
+                            GastoDOP = Convert.ToDecimal(r["GastoDOP"]),
+                            GastoUSD = Convert.ToDecimal(r["GastoUSD"]),
+                            IngresoDOP = Convert.ToDecimal(r["IngresoDOP"]),
+                            IngresoUSD = Convert.ToDecimal(r["IngresoUSD"]),
+                            TasaCambio = Convert.ToDecimal(r["TasaCambio"]),
+                            Notas = r["Notas"] != DBNull.Value ? r["Notas"].ToString() : string.Empty,
+                            RutaComprobante = r["RutaComprobante"] != DBNull.Value ? r["RutaComprobante"].ToString() : null,
+                            NombreComprobante = r["NombreComprobante"] != DBNull.Value ? r["NombreComprobante"].ToString() : null
+                        };
+                    }
+                }
+            }
+            return null;
         }
 
         public long GuardarTransaccion(TransaccionFinancieraDTO t)
@@ -466,6 +625,8 @@ namespace SOR.Repositories
                 cmd.Parameters.Add(new SqlParameter("@IngresoDOP", SqlDbType.Decimal) { Value = t.IngresoDOP, Precision = 18, Scale = 2 });
                 cmd.Parameters.Add(new SqlParameter("@TasaCambio", SqlDbType.Decimal) { Value = t.TasaCambio, Precision = 10, Scale = 4 });
                 cmd.Parameters.Add(new SqlParameter("@Notas", SqlDbType.NVarChar, 255) { Value = (object)t.Notas ?? DBNull.Value });
+                cmd.Parameters.Add(new SqlParameter("@RutaComprobante", SqlDbType.NVarChar, 500) { Value = (object)t.RutaComprobante ?? DBNull.Value });
+                cmd.Parameters.Add(new SqlParameter("@NombreComprobante", SqlDbType.NVarChar, 255) { Value = (object)t.NombreComprobante ?? DBNull.Value });
 
                 conn.Open();
                 cmd.ExecuteNonQuery();

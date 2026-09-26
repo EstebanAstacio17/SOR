@@ -15,9 +15,12 @@
         <h2 class="h3 font-bold text-slate-800 mb-1"><i class="bi bi-cash-stack text-success me-2"></i>Finanzas — Libro Diario Mensual</h2>
         <p class="text-muted mb-0">Control de ingresos, gastos y conciliación de flujo financiero por equipo y temporada.</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="@Url.Action("ReporteConsolidado", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo })" class="btn btn-outline-primary font-semibold px-3 shadow-sm">
             <i class="bi bi-grid-3x3 me-1"></i>Reporte Consolidado Anual
+        </a>
+        <a href="@Url.Action("Anexos", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo, mes = Model.Mes })" class="btn btn-outline-info font-semibold px-3 shadow-sm">
+            <i class="bi bi-paperclip me-1"></i>Anexos y Soportes
         </a>
         @if (ViewBag.PuedeEditarFinanzas == true)
         {
@@ -233,6 +236,14 @@
                                     {
                                         <span class="text-muted text-xs">—</span>
                                     }
+                                    @if (!string.IsNullOrEmpty(item.RutaComprobante))
+                                    {
+                                        <div class="mt-1">
+                                            <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })" target="_blank" class="badge bg-info-soft text-info border border-info text-decoration-none py-1 px-2 d-inline-flex align-items-center" title="Ver comprobante adjunto: @(item.NombreComprobante ?? "Comprobante")">
+                                                <i class="bi bi-paperclip me-1"></i>Soporte
+                                            </a>
+                                        </div>
+                                    }
                                 </td>
                                 <td>
                                     <div class="fw-bold text-dark">@item.Descripcion</div>
@@ -276,7 +287,7 @@
                                 {
                                     <td class="text-end pe-4">
                                         <div class="d-flex justify-content-end gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTransaccion(@item.TransaccionId, '@item.Fecha.ToString("yyyy-MM-dd")', '@Html.Raw(item.NumeroDocumento ?? "")', '@Html.Raw(item.Descripcion.Replace("'", "\\'"))', '@item.CategoriaId', @item.GastoDOP, @item.IngresoDOP, @item.TasaCambio, '@Html.Raw((item.Notas ?? "").Replace("'", "\\'"))')" title="Editar Movimiento">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTransaccion(@item.TransaccionId, '@item.Fecha.ToString("yyyy-MM-dd")', '@Html.Raw((item.NumeroDocumento ?? "").Replace("'", "\\'"))', '@Html.Raw((item.Descripcion ?? "").Replace("'", "\\'"))', '@item.CategoriaId', @item.GastoDOP, @item.IngresoDOP, @item.TasaCambio, '@Html.Raw((item.Notas ?? "").Replace("'", "\\'"))', '@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })', '@Html.Raw((item.NombreComprobante ?? "").Replace("'", "\\'"))')" title="Editar Movimiento">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMovimiento(@item.TransaccionId)" title="Eliminar Movimiento">
@@ -376,6 +387,25 @@
                         <div class="col-12">
                             <label class="form-label fw-semibold">Notas / Observaciones (Opcional)</label>
                             <input type="text" id="regNotas" class="form-control" placeholder="Detalles adicionales, número de cheque, lugar..." />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-paperclip me-1 text-primary"></i>Comprobante / Soporte Adjunto (Foto o PDF)
+                            </label>
+                            <input type="file" id="regComprobante" name="comprobante" class="form-control" accept=".pdf,image/png,image/jpeg,image/webp,image/jpg" />
+                            <div id="regComprobanteActualContainer" class="mt-2 d-none p-2.5 bg-light rounded-3 border d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-check fs-4 text-success"></i>
+                                    <div>
+                                        <div class="small fw-semibold text-slate-800" id="regNombreComprobanteActual">comprobante.pdf</div>
+                                        <small class="text-muted">Soporte adjunto actual</small>
+                                    </div>
+                                </div>
+                                <a href="#" id="regLinkComprobanteActual" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver Soporte
+                                </a>
+                            </div>
+                            <small class="text-muted text-xs">Formatos admitidos: PDF, JPG, PNG, WEBP (máx. 15MB).</small>
                         </div>
                     </div>
                 </form>
@@ -544,7 +574,7 @@
 
     function onTipoMovRadioChange() { }
 
-    function abrirModalEditarTransaccion(id, fecha, doc, desc, cat, gastoDOP, ingresoDOP, tasa, notas) {
+    function abrirModalEditarTransaccion(id, fecha, doc, desc, cat, gastoDOP, ingresoDOP, tasa, notas, rutaComp, nombreComp) {
         document.getElementById("regTransaccionId").value = id;
         document.getElementById("regFecha").value = fecha;
         document.getElementById("regDoc").value = doc;
@@ -559,6 +589,22 @@
         } else {
             document.getElementById("tipoMovGasto").checked = true;
             document.getElementById("regMontoDOP").value = gastoDOP;
+        }
+
+        var contActual = document.getElementById("regComprobanteActualContainer");
+        var fileInp = document.getElementById("regComprobante");
+        if (fileInp) fileInp.value = "";
+
+        if (rutaComp && rutaComp.trim() !== '') {
+            if (document.getElementById("regNombreComprobanteActual")) {
+                document.getElementById("regNombreComprobanteActual").innerText = nombreComp || "Soporte Adjunto";
+            }
+            if (document.getElementById("regLinkComprobanteActual")) {
+                document.getElementById("regLinkComprobanteActual").href = rutaComp;
+            }
+            if (contActual) contActual.classList.remove("d-none");
+        } else {
+            if (contActual) contActual.classList.add("d-none");
         }
 
         calcularEquivalenteModalReg();
@@ -581,26 +627,32 @@
             return;
         }
 
-        var dto = {
-            TransaccionId: id,
-            IdTemporada: @Model.IdTemporada,
-            IdEquipo: @Model.IdEquipo,
-            Mes: '@Model.Mes',
-            Fecha: fecha,
-            NumeroDocumento: doc,
-            Descripcion: desc,
-            CategoriaId: cat,
-            GastoDOP: esIngreso ? 0 : montoDOP,
-            IngresoDOP: esIngreso ? montoDOP : 0,
-            TasaCambio: tasa,
-            Notas: notas,
-            FechaTexto: fecha
-        };
+        var formData = new FormData();
+        formData.append("TransaccionId", id);
+        formData.append("IdTemporada", @Model.IdTemporada);
+        formData.append("IdEquipo", @Model.IdEquipo);
+        formData.append("Mes", '@Model.Mes');
+        formData.append("Fecha", fecha);
+        formData.append("NumeroDocumento", doc);
+        formData.append("Descripcion", desc);
+        formData.append("CategoriaId", cat);
+        formData.append("GastoDOP", esIngreso ? 0 : montoDOP);
+        formData.append("IngresoDOP", esIngreso ? montoDOP : 0);
+        formData.append("TasaCambio", tasa);
+        formData.append("Notas", notas);
+        formData.append("FechaTexto", fecha);
+
+        var fileInp = document.getElementById("regComprobante");
+        if (fileInp && fileInp.files && fileInp.files.length > 0) {
+            formData.append("comprobante", fileInp.files[0]);
+        }
 
         $.ajax({
             url: '@Url.Action("GuardarTransaccion", "Finanzas")',
             type: 'POST',
-            data: dto,
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function (res) {
                 if (res.success) {
                     location.reload();
@@ -682,6 +734,10 @@
                 document.getElementById("regMontoUSD").value = "0.00";
                 document.getElementById("regNotas").value = "";
                 document.getElementById("tipoMovGasto").checked = true;
+                var fileInp = document.getElementById("regComprobante");
+                if (fileInp) fileInp.value = "";
+                var contActual = document.getElementById("regComprobanteActualContainer");
+                if (contActual) contActual.classList.add("d-none");
             });
         }
     });
