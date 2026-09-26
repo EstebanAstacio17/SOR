@@ -279,34 +279,31 @@ namespace SOR.Helpers
         {
             if (destinatarios == null || destinatarios.Count == 0) return;
 
-            Task.Run(() =>
+            foreach (var dest in destinatarios)
             {
-                foreach (var dest in destinatarios)
+                if (string.IsNullOrWhiteSpace(dest) || !dest.Contains("@")) continue;
+
+                string errorSmtp = null;
+                string errorApi = null;
+
+                // 1. Intentar primero vía SMTP Relay de Brevo (Sin restricción de IP en puerto 587 con TLS)
+                bool enviado = EnviarViaSmtp(dest, asunto, cuerpoHtml, out errorSmtp);
+
+                // 2. Si falla SMTP, intentar vía API REST directa de Brevo
+                if (!enviado)
                 {
-                    if (string.IsNullOrWhiteSpace(dest) || !dest.Contains("@")) continue;
-
-                    string errorSmtp = null;
-                    string errorApi = null;
-
-                    // 1. Intentar primero vía SMTP Relay de Brevo (Sin restricción de IP en puerto 587 con TLS)
-                    bool enviado = EnviarViaSmtp(dest, asunto, cuerpoHtml, out errorSmtp);
-
-                    // 2. Si falla SMTP, intentar vía API REST directa de Brevo
-                    if (!enviado)
-                    {
-                        enviado = EnviarViaBrevoApi(dest, asunto, cuerpoHtml, out errorApi);
-                    }
-
-                    if (enviado)
-                    {
-                        RegistrarLog(dest, asunto, true, "OK (Entregado vía Brevo)");
-                    }
-                    else
-                    {
-                        RegistrarLog(dest, asunto, false, $"Fallo SMTP: {errorSmtp} | Fallo API: {errorApi}");
-                    }
+                    enviado = EnviarViaBrevoApi(dest, asunto, cuerpoHtml, out errorApi);
                 }
-            });
+
+                if (enviado)
+                {
+                    RegistrarLog(dest, asunto, true, "OK (Entregado vía Brevo)");
+                }
+                else
+                {
+                    RegistrarLog(dest, asunto, false, $"Fallo SMTP: {errorSmtp} | Fallo API: {errorApi}");
+                }
+            }
         }
 
         /// <summary>
