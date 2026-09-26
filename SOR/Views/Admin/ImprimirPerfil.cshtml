@@ -2,6 +2,8 @@
 @{
     Layout = null;
 }
+@try
+{
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -161,3 +163,11 @@
     </div>
 </body>
 </html>
+}
+catch (Exception ex)
+{
+    <text>
+    ERROR EN LA VISTA: @ex.Message
+    STACK: @ex.StackTrace
+    </text>
+}

@@ -689,6 +689,15 @@
                         alert("Por razones de seguridad o actualización del servidor, su sesión ha expirado. Refresque la página.");
                         return;
                     }
+                    if (html.indexOf('ERROR EN LA VISTA') > -1) {
+                        var errorPart = html.substring(html.indexOf('ERROR EN LA VISTA'), html.indexOf('ERROR EN LA VISTA') + 500);
+                        alert("Hubo un fallo en la generación de la vista.\nDetalles:\n" + errorPart);
+                        return;
+                    }
+                    if (html.indexOf('ERROR:') > -1 && html.indexOf('StackTrace:') > -1) {
+                        alert("Hubo un fallo en el servidor.\nDetalles:\n" + html);
+                        return;
+                    }
 
                     var iframe = document.getElementById('printFrame');
                     if (!iframe) {
