@@ -677,48 +677,46 @@
             btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Preparando...';
             btn.disabled = true;
 
-            fetch('/Admin/ImprimirPerfil/' + idUsuario)
-                .then(function(response) {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                        return null;
-                    }
-                    return response.text();
-                })
-                .then(function(html) {
+            $.ajax({
+                url: '/Admin/ImprimirPerfil/' + idUsuario,
+                type: 'GET',
+                success: function(html) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
-                    if (html) {
-                        var iframe = document.getElementById('printFrame');
-                        if (!iframe) {
-                            iframe = document.createElement('iframe');
-                            iframe.id = 'printFrame';
-                            iframe.style.position = 'absolute';
-                            iframe.style.width = '0';
-                            iframe.style.height = '0';
-                            iframe.style.border = 'none';
-                            document.body.appendChild(iframe);
-                        }
-                        
-                        var doc = iframe.contentWindow ? iframe.contentWindow.document : iframe.contentDocument;
-                        doc.open();
-                        doc.write(html);
-                        doc.close();
-                        
-                        // La vista HTML ya tiene window.print() en el onload, 
-                        // pero por si acaso llamamos a focus/print manual tras un breve delay.
-                        setTimeout(function() {
-                            iframe.contentWindow.focus();
-                            iframe.contentWindow.print();
-                        }, 500);
+                    
+                    // Si la sesión caducó por un despliegue y devuelve el HTML del login
+                    if (html.indexOf('Acceso/Login') > -1 || html.indexOf('name="Correo"') > -1) {
+                        alert("Por razones de seguridad o actualización del servidor, su sesión ha expirado. Refresque la página.");
+                        return;
                     }
-                })
-                .catch(function(error) {
-                    console.error('Error al imprimir:', error);
+
+                    var iframe = document.getElementById('printFrame');
+                    if (!iframe) {
+                        iframe = document.createElement('iframe');
+                        iframe.id = 'printFrame';
+                        iframe.style.position = 'absolute';
+                        iframe.style.width = '0';
+                        iframe.style.height = '0';
+                        iframe.style.border = 'none';
+                        document.body.appendChild(iframe);
+                    }
+                    
+                    var doc = iframe.contentWindow ? iframe.contentWindow.document : iframe.contentDocument;
+                    doc.open();
+                    doc.write(html);
+                    doc.close();
+                    
+                    setTimeout(function() {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    }, 500);
+                },
+                error: function() {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                     alert("Ocurrió un error al preparar el documento.");
-                });
+                }
+            });
         }
     </script>
 }
