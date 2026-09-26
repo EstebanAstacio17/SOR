@@ -16,9 +16,15 @@ namespace SOR.Helpers
         private static string ObtenerConfig(string clave, string valorPorDefecto)
         {
             string env = Environment.GetEnvironmentVariable(clave);
-            if (!string.IsNullOrWhiteSpace(env)) return env.Trim();
+            if (!string.IsNullOrWhiteSpace(env) && !env.Contains("PLACEHOLDER")) return env.Trim();
             string v = ConfigurationManager.AppSettings[clave];
-            return !string.IsNullOrWhiteSpace(v) ? v.Trim() : valorPorDefecto;
+            if (!string.IsNullOrWhiteSpace(v) && !v.Contains("PLACEHOLDER")) return v.Trim();
+            return valorPorDefecto;
+        }
+
+        private static string ObtenerApiKeyBrevo()
+        {
+            return ObtenerConfig("SmtpClave", "");
         }
 
         private static void RegistrarLog(string destinatario, string asunto, bool exito, string detalle = null)
@@ -45,7 +51,7 @@ namespace SOR.Helpers
         private static bool EnviarViaBrevoApi(string destinatario, string asunto, string cuerpoHtml, out string error)
         {
             error = null;
-            string apiKey = ObtenerConfig("SmtpClave", "");
+            string apiKey = ObtenerApiKeyBrevo();
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 error = "Clave API de Brevo no configurada.";
@@ -63,8 +69,8 @@ namespace SOR.Helpers
                 request.Headers.Add("api-key", apiKey.Trim());
                 request.Timeout = 15000;
 
-                string remitenteNombre = ObtenerConfig("NombreRemitente", "Operation Christmas Child (OCC)");
-                string remitenteCorreo = ObtenerConfig("CorreoRemitente", "itsoportecelo@gmail.com");
+                string remitenteNombre = ObtenerConfig("NombreRemitente", "Operation Christmas Child (OCC) — Notificaciones");
+                string remitenteCorreo = ObtenerConfig("CorreoRemitente", "erlegsd.occrd@gmail.com");
 
                 var payload = new
                 {
@@ -127,10 +133,10 @@ namespace SOR.Helpers
                 string host = ObtenerConfig("SmtpHost", "smtp-relay.brevo.com");
                 int port = int.TryParse(ObtenerConfig("SmtpPort", "587"), out int p) ? p : 587;
                 bool enableSsl = bool.TryParse(ObtenerConfig("SmtpEnableSsl", "true"), out bool ssl) ? ssl : true;
-                string usuario = ObtenerConfig("SmtpUsuario", "");
-                string clave = ObtenerConfig("SmtpClave", "");
-                string remitenteCorreo = ObtenerConfig("CorreoRemitente", "itsoportecelo@gmail.com");
-                string remitenteNombre = ObtenerConfig("NombreRemitente", "Operation Christmas Child (OCC)");
+                string usuario = ObtenerConfig("SmtpUsuario", "bb3274001@smtp-brevo.com");
+                string clave = ObtenerApiKeyBrevo();
+                string remitenteCorreo = ObtenerConfig("CorreoRemitente", "erlegsd.occrd@gmail.com");
+                string remitenteNombre = ObtenerConfig("NombreRemitente", "Operation Christmas Child (OCC) — Notificaciones");
 
                 using (var mail = new MailMessage())
                 {
