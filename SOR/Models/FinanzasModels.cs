@@ -12,8 +12,8 @@ namespace SOR.Models
         public int IdEquipo { get; set; }
         public string Mes { get; set; }
 
-        [Required(ErrorMessage = "La fecha es requerida")]
-        public DateTime Fecha { get; set; }
+        public DateTime Fecha { get; set; } = DateTime.Today;
+        public string FechaTexto { get; set; }
         public string NumeroDocumento { get; set; }
 
         [Required(ErrorMessage = "La descripción es requerida")]

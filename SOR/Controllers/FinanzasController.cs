@@ -33,8 +33,28 @@ namespace SOR.Controllers
             return false;
         }
 
+        private static string ObtenerMesActualCodigo()
+        {
+            switch (DateTime.Now.Month)
+            {
+                case 1: return "ENE";
+                case 2: return "FEB";
+                case 3: return "MAR";
+                case 4: return "ABR";
+                case 5: return "MAY";
+                case 6: return "JUN";
+                case 7: return "JUL";
+                case 8: return "AGO";
+                case 9: return "SEP";
+                case 10: return "OCT";
+                case 11: return "NOV";
+                case 12: return "DIC";
+                default: return "OCT";
+            }
+        }
+
         [HttpGet]
-        public ActionResult Index(int? idTemporada, int? idEquipo, string mes = "OCT")
+        public ActionResult Index(int? idTemporada, int? idEquipo, string mes = null)
         {
             Usuario u = ObtenerUsuarioActual();
             if (u == null)
@@ -87,7 +107,7 @@ namespace SOR.Controllers
                 }
             }
 
-            string mesNormalizado = string.IsNullOrWhiteSpace(mes) ? "OCT" : mes.Trim().ToUpper();
+            string mesNormalizado = string.IsNullOrWhiteSpace(mes) ? ObtenerMesActualCodigo() : mes.Trim().ToUpper();
             decimal saldoAnterior = _repo.CalcularSaldoInicialMes(tempId, eqId, mesNormalizado);
 
             bool puedeCambiarEquipo = esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1);
@@ -186,16 +206,39 @@ namespace SOR.Controllers
         }
 
         [HttpPost]
-        public JsonResult GuardarTransaccion(TransaccionFinancieraDTO model)
+        public JsonResult GuardarTransaccion(TransaccionFinancieraDTO model, string fecha = null)
         {
             try
             {
                 Usuario u = ObtenerUsuarioActual();
                 if (u == null)
-                    return Json(new { success = false, message = "Sesión expirada." });
+                    return Json(new { success = false, message = "Sesión expirada. Por favor inicie sesión nuevamente." });
 
                 if (!TieneAccesoFinanzas(u))
                     return Json(new { success = false, message = "No tienes permisos para registrar movimientos financieros." });
+
+                if (model == null)
+                    return Json(new { success = false, message = "No se recibieron datos de la transacción." });
+
+                try { _repo.AsegurarEsquema(); } catch { }
+
+                string fechaStr = !string.IsNullOrWhiteSpace(fecha) ? fecha : model.FechaTexto;
+                if (!string.IsNullOrWhiteSpace(fechaStr))
+                {
+                    if (DateTime.TryParse(fechaStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime fInv))
+                    {
+                        model.Fecha = fInv;
+                    }
+                    else if (DateTime.TryParse(fechaStr, out DateTime fLocal))
+                    {
+                        model.Fecha = fLocal;
+                    }
+                }
+
+                if (model.Fecha == default(DateTime))
+                {
+                    model.Fecha = DateTime.Today;
+                }
 
                 bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
                 HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
@@ -208,14 +251,14 @@ namespace SOR.Controllers
                     }
                 }
 
-                if (model == null || string.IsNullOrWhiteSpace(model.Descripcion) || string.IsNullOrWhiteSpace(model.CategoriaId))
+                if (string.IsNullOrWhiteSpace(model.Descripcion) || string.IsNullOrWhiteSpace(model.CategoriaId))
                     return Json(new { success = false, message = "Datos incompletos. La descripción y categoría son requeridas." });
 
                 if (model.TasaCambio <= 0)
                     model.TasaCambio = 58.63m;
 
                 long nuevoId = _repo.GuardarTransaccion(model);
-                return Json(new { success = true, message = "Movimiento registrado y saldos recalculados.", transaccionId = nuevoId });
+                return Json(new { success = true, message = "Movimiento registrado y saldos recalculados exitosamente.", transaccionId = nuevoId });
             }
             catch (Exception ex)
             {

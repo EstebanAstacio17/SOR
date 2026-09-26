@@ -572,14 +572,14 @@
             GastoDOP: esIngreso ? 0 : montoDOP,
             IngresoDOP: esIngreso ? montoDOP : 0,
             TasaCambio: tasa,
-            Notas: notas
+            Notas: notas,
+            FechaTexto: fecha
         };
 
         $.ajax({
             url: '@Url.Action("GuardarTransaccion", "Finanzas")',
             type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(dto),
+            data: dto,
             success: function (res) {
                 if (res.success) {
                     location.reload();
@@ -587,8 +587,12 @@
                     alert(res.message);
                 }
             },
-            error: function () {
-                alert("Error de comunicación con el servidor.");
+            error: function (xhr) {
+                var msg = "Error de comunicación con el servidor.";
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                alert(msg);
             }
         });
     }
