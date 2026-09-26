@@ -15,6 +15,8 @@ namespace SOR.Helpers
     {
         private static string ObtenerConfig(string clave, string valorPorDefecto)
         {
+            string env = Environment.GetEnvironmentVariable(clave);
+            if (!string.IsNullOrWhiteSpace(env)) return env.Trim();
             string v = ConfigurationManager.AppSettings[clave];
             return !string.IsNullOrWhiteSpace(v) ? v.Trim() : valorPorDefecto;
         }

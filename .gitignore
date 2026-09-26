@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Application Secrets & Runtime Logs
+*.Secrets.config
+Web.Secrets.config
+App_Data/logs_correo.txt
