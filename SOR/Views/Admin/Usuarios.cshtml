@@ -433,7 +433,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer bg-light rounded-bottom-4 justify-content-between">
-                                                    <a href="@Url.Action("ImprimirPerfil", "Admin", new { id = u.IdUsuario })" target="_blank" class="btn btn-primary"><i class="bi bi-printer"></i> Imprimir Perfil Completo</a>
+                                                    <button type="button" class="btn btn-primary" id="btnImprimirPerfil_@u.IdUsuario" onclick="imprimirPerfilCompletoSeguro(@u.IdUsuario)"><i class="bi bi-printer"></i> Imprimir Perfil Completo</button>
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                                                 </div>
                                             </div>
@@ -649,6 +649,41 @@
             win.onload = function() {
                 win.print();
             };
+        }
+
+        function imprimirPerfilCompletoSeguro(idUsuario) {
+            var btn = document.getElementById('btnImprimirPerfil_' + idUsuario);
+            var originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Cargando...';
+            btn.disabled = true;
+
+            fetch('/Admin/ImprimirPerfil/' + idUsuario)
+                .then(function(response) {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return null;
+                    }
+                    return response.text();
+                })
+                .then(function(html) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    if (html) {
+                        var printWin = window.open('', '_blank', 'width=900,height=650');
+                        printWin.document.open();
+                        printWin.document.write(html);
+                        printWin.document.close();
+                        setTimeout(function() {
+                            printWin.focus();
+                        }, 500);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error al imprimir:', error);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert("Ocurrió un error al cargar el perfil para imprimir.");
+                });
         }
     </script>
 }
