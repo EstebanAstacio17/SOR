@@ -26,9 +26,7 @@ namespace SOR
                       "~/Content/bootstrap.css",
                       "~/Content/site.css"));
 
-#if !DEBUG
             BundleTable.EnableOptimizations = true;
-#endif
         }
     }
 }
