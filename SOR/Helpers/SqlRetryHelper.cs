@@ -96,7 +96,7 @@ namespace SOR.Helpers
     /// </summary>
     public static class ConnectionHelper
     {
-        public const string DefaultAzureConnectionString = "Server=tcp:svrsor.database.windows.net,1433;Initial Catalog=DB_SOR;Persist Security Info=False;User ID=CloudSA94a05d65;Password=OCC_Sor2026!*;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;Pooling=True;Min Pool Size=5;Max Pool Size=150;ConnectRetryCount=3;ConnectRetryInterval=10;Application Name=SOR_Azure_Prod;";
+        public const string DefaultAzureConnectionString = "Server=tcp:svrsor.database.windows.net,1433;Initial Catalog=DB_SOR;Persist Security Info=False;User ID=CloudSA94a05d65;Password=OCC_Sor2026!*;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=True;Connection Timeout=60;Pooling=True;Min Pool Size=2;Max Pool Size=100;ConnectRetryCount=3;ConnectRetryInterval=10;Application Name=SOR_Azure_Prod;";
 
         public static string ObtenerCadenaConexion()
         {
