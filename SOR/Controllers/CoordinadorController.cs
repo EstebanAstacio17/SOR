@@ -200,8 +200,9 @@ namespace SOR.Controllers
                 SqlCommand cmd;
                 if (existe > 0)
                 {
-                    // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado o está en proceso de restablecimiento
-                    if (usuarioActual.IdEstado == 4 || usuarioActual.IdEstado == 7 || usuarioActual.IdEstado == 8)
+                    bool esAdmin = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
+                    // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado o está en proceso de restablecimiento y NO es administrador
+                    if (!esAdmin && (usuarioActual.IdEstado == 4 || usuarioActual.IdEstado == 7 || usuarioActual.IdEstado == 8))
                     {
                         string sqlGetPrev = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdPrev = new SqlCommand(sqlGetPrev, cn))
@@ -331,6 +332,24 @@ namespace SOR.Controllers
                 cmd.Parameters.AddWithValue("@FechaIngreso", modelo.FechaIngreso ?? (object)DBNull.Value);
 
                 cmd.ExecuteNonQuery();
+
+                bool esAdmin = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
+                if (esAdmin && modelo.IdEquipo.HasValue && modelo.IdPosicion.HasValue)
+                {
+                    string sqlAsig = @"
+                        IF EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo WHERE IdUsuario = @IdUsuario AND Activo = 1)
+                            UPDATE dbo.AsignacionesEquipo SET IdEquipo = @IdEquipo, IdPosicion = @IdPosicion WHERE IdUsuario = @IdUsuario AND Activo = 1;
+                        ELSE
+                            INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);
+                    ";
+                    using (SqlCommand cmdAsig = new SqlCommand(sqlAsig, cn))
+                    {
+                        cmdAsig.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                        cmdAsig.Parameters.AddWithValue("@IdEquipo", modelo.IdEquipo.Value);
+                        cmdAsig.Parameters.AddWithValue("@IdPosicion", modelo.IdPosicion.Value);
+                        cmdAsig.ExecuteNonQuery();
+                    }
+                }
 
                 // 4. Actualizar Estado de Usuario a PerfilPendienteAprobacion (3) si no está activo aún
                 // No cambiar el estado si está en proceso de restablecimiento de contraseña (7 u 8)
