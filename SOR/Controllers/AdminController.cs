@@ -253,7 +253,10 @@ namespace SOR.Controllers
 
                 SOR.Helpers.CorreoHelper.NotificarCorreoAprobado(correoFinal, nombreDestino, urlCompletar);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "El correo no se pudo enviar: " + ex.Message + " | Inner: " + ex.InnerException?.Message;
+            }
 
             TempData["MensajeExito"] = "Correo aprobado con éxito. Se notificó al usuario por correo y se habilitó el enlace para completar el Perfil de Coordinador.";
             return RedirectToAction("Usuarios");
@@ -446,7 +449,10 @@ namespace SOR.Controllers
                                 );
                             }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            TempData["MensajeError"] = "El perfil fue aprobado pero el correo no se pudo enviar: " + ex.Message + " | Inner: " + ex.InnerException?.Message;
+                        }
 
                         TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario fue notificado por correo y está plenamente activo.";
                     }

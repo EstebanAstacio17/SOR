@@ -122,6 +122,28 @@ namespace SOR.Controllers
             return View();
         }
 
+        public ActionResult VerLogs()
+        {
+            try
+            {
+                string rutaAppData = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data");
+                if (string.IsNullOrEmpty(rutaAppData))
+                {
+                    rutaAppData = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data");
+                }
+                string archivoLog = System.IO.Path.Combine(rutaAppData, "logs_correo.txt");
+                if (System.IO.File.Exists(archivoLog))
+                {
+                    return Content(System.IO.File.ReadAllText(archivoLog), "text/plain");
+                }
+                return Content("No hay logs en: " + archivoLog, "text/plain");
+            }
+            catch (Exception ex)
+            {
+                return Content("Error: " + ex.Message, "text/plain");
+            }
+        }
+
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Contact()
         {
