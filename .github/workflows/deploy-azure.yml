@@ -21,10 +21,19 @@ jobs:
         uses: NuGet/setup-nuget@v2
 
       - name: Restaurar paquetes NuGet
-        run: nuget restore SOR.sln
+        run: |
+          nuget restore SOR.sln -PackagesDirectory packages
 
-      - name: Compilar aplicacion en modo Release
-        run: msbuild SOR/SOR.csproj /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="${{ github.workspace }}\build_package\SOR.zip" /verbosity:minimal
+      - name: Preparar configuracion local de secretos
+        shell: powershell
+        run: |
+          if (-not (Test-Path "SOR\Web.Secrets.config")) {
+            "<appSettings><add key=`"SmtpClave`" value=`"`"/></appSettings>" | Set-Content "SOR\Web.Secrets.config" -Encoding UTF8
+          }
+
+      - name: Compilar aplicacion Web en modo Release
+        run: |
+          msbuild SOR\SOR.csproj /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="%GITHUB_WORKSPACE%\build_package\SOR.zip" /verbosity:minimal
 
       - name: Desplegar a Azure App Service
         uses: azure/webapps-deploy@v3
