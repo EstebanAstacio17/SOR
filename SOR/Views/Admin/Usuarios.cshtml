@@ -711,10 +711,15 @@
                         iframe.contentWindow.print();
                     }, 500);
                 },
-                error: function() {
+                error: function(xhr, status, error) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
-                    alert("Ocurrió un error al preparar el documento.");
+                    var errorMsg = "Ocurrió un error al preparar el documento. ";
+                    if (xhr.responseText) {
+                        console.error('Error al imprimir:', xhr.responseText);
+                        errorMsg += "\nDetalles: " + xhr.responseText.substring(0, 150) + "...";
+                    }
+                    alert(errorMsg);
                 }
             });
         }
