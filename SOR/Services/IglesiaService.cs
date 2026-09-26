@@ -991,5 +991,79 @@ namespace SOR.Services
             }
             _iglesiaRepository.RegistrarLlamadaAcompanamiento(llamada, idUsuario, nombreCoordinador);
         }
+
+        // ============================================================================
+        // MÉTODOS DE REPORTES: EVENTOS EVANGELÍSTICOS & GRADUACIÓN LGA
+        // ============================================================================
+
+        public ReporteEventosEvangelisticosModel ObtenerReporteEventosEvangelisticos(int idParticipacion, int idIglesia)
+        {
+            if (idParticipacion <= 0 || idIglesia <= 0) return new ReporteEventosEvangelisticosModel();
+            return _iglesiaRepository.ObtenerReporteEventosEvangelisticos(idParticipacion, idIglesia);
+        }
+
+        public void GuardarEventoEvangelistico(EventoEvangelisticoItem item, int idUsuario)
+        {
+            if (item == null || item.IdParticipacion <= 0)
+            {
+                throw new ArgumentException("Datos del evento evangelístico inválidos.");
+            }
+            _iglesiaRepository.GuardarEventoEvangelistico(item, idUsuario);
+        }
+
+        public void EliminarEventoEvangelistico(int idEventoDetalle, int idUsuario)
+        {
+            if (idEventoDetalle <= 0) throw new ArgumentException("Identificador de evento inválido.");
+            _iglesiaRepository.EliminarEventoEvangelistico(idEventoDetalle, idUsuario);
+        }
+
+        public void EliminarEventoEvangelistico(int idEventoDetalle, int idParticipacion, int idIglesia, int idUsuario)
+        {
+            if (idEventoDetalle <= 0) throw new ArgumentException("Identificador de evento inválido.");
+            _iglesiaRepository.EliminarEventoEvangelistico(idEventoDetalle, idUsuario);
+        }
+
+        public void GuardarAnotacionesEventosEvangelisticos(int idParticipacion, int idIglesia, string anotaciones, int idUsuario)
+        {
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
+            _iglesiaRepository.GuardarAnotacionesEventosEvangelisticos(idParticipacion, idIglesia, anotaciones, idUsuario);
+        }
+
+        public ReporteGraduacionLGAModel ObtenerReporteGraduacionLGA(int idParticipacion, int idIglesia)
+        {
+            if (idParticipacion <= 0 || idIglesia <= 0) return new ReporteGraduacionLGAModel();
+            return _iglesiaRepository.ObtenerReporteGraduacionLGA(idParticipacion, idIglesia);
+        }
+
+        public void GuardarReporteGraduacionLGA(ReporteGraduacionLGAModel rep, int idUsuario)
+        {
+            if (rep == null || rep.IdParticipacion <= 0)
+            {
+                throw new ArgumentException("Datos del reporte de graduación LGA inválidos.");
+            }
+            _iglesiaRepository.GuardarReporteGraduacionLGA(rep, idUsuario);
+        }
+
+        // ============================================================================
+        // MÉTODOS DE GESTIÓN DIRECTA DE ENTREGA / DESPACHO (ETAPA 7)
+        // ============================================================================
+
+        public void ConfirmarEntregaDirecta(int idParticipacion, int idIglesia, string tipoReceptor, string nombreReceptor, string cedula, string telefono, string observaciones, int idUsuario)
+        {
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
+            _iglesiaRepository.ConfirmarEntregaDirecta(idParticipacion, idIglesia, tipoReceptor, nombreReceptor, cedula, telefono, observaciones, idUsuario);
+        }
+
+        public void MarcarNoEntregaDirecta(int idParticipacion, int idIglesia, string motivo, string observaciones, int idUsuario)
+        {
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
+            _iglesiaRepository.MarcarNoEntregaDirecta(idParticipacion, idIglesia, motivo, observaciones, idUsuario);
+        }
+
+        public void ReprogramarEntregaDirecta(int idParticipacion, int idIglesia, int idUsuario)
+        {
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
+            _iglesiaRepository.ReprogramarEntregaDirecta(idParticipacion, idIglesia, idUsuario);
+        }
     }
 }

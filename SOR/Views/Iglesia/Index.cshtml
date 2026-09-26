@@ -207,7 +207,18 @@
                                                 }
                                                 else if (item.ParticipacionActual.EtapaActual >= 7)
                                                 {
-                                                    <span class="badge bg-success text-white rounded-pill"><i class="bi bi-patch-check-fill me-1"></i>Aprobación Final</span>
+                                                    if (item.ParticipacionActual.EstatusDespacho == "DESPACHADA")
+                                                    {
+                                                        <span class="badge bg-success text-white rounded-pill"><i class="bi bi-truck me-1"></i>Despachada / Entregada</span>
+                                                    }
+                                                    else if (item.ParticipacionActual.EstatusDespacho == "NO_DESPACHADA")
+                                                    {
+                                                        <span class="badge bg-danger text-white rounded-pill" title="@item.ParticipacionActual.MotivoNoEntrega"><i class="bi bi-x-circle-fill me-1"></i>No Entregada</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-primary-soft text-primary rounded-pill"><i class="bi bi-box-seam me-1"></i>Entrega / Despacho</span>
+                                                    }
                                                 }
                                             }
                                             else

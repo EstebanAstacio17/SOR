@@ -1760,7 +1760,7 @@ namespace SOR.Controllers
                 new SelectListItem { Value = "4", Text = "Etapa 4: Elegible Taller" },
                 new SelectListItem { Value = "5", Text = "Etapa 5: Taller OCC" },
                 new SelectListItem { Value = "6", Text = "Etapa 6: Asignación" },
-                new SelectListItem { Value = "7", Text = "Etapa 7: Aprobación Final" }
+                new SelectListItem { Value = "7", Text = "Etapa 7: Entrega / Despacho" }
             };
 
             ViewBag.FiltroEstados = new List<SelectListItem>
@@ -2343,6 +2343,274 @@ namespace SOR.Controllers
             }
 
             return Redirect(Request.UrlReferrer?.ToString() ?? Url.Action("Index", "Home"));
+        }
+
+        // ============================================================================
+        // ETAPA 7: ENTREGA / DESPACHO DE MATERIALES
+        // ============================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ConfirmarEntregaDespacho(int idParticipacion, int idIglesia, string tipoReceptor, string nombreReceptor, string cedula, string telefono, string observaciones)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para confirmar la entrega de materiales de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (string.IsNullOrWhiteSpace(nombreReceptor))
+            {
+                TempData["MensajeError"] = "Debe indicar el nombre de la persona o líder que recibe los materiales.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                _iglesiaService.ConfirmarEntregaDirecta(idParticipacion, idIglesia, tipoReceptor ?? "Pastor / Líder", nombreReceptor.Trim(), cedula?.Trim(), telefono?.Trim(), observaciones?.Trim(), u.IdUsuario);
+                TempData["MensajeExito"] = "¡Entrega de materiales confirmada exitosamente! La iglesia ahora figura como Despachada / Entregada y puede proceder con los reportes ministeriales.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al confirmar la entrega: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult MarcarNoEntregaDespacho(int idParticipacion, int idIglesia, string motivoNoEntrega, string observaciones)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para modificar el estado de entrega de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (string.IsNullOrWhiteSpace(motivoNoEntrega))
+            {
+                TempData["MensajeError"] = "Debe especificar el motivo por el cual no se realizó o no se realizará la entrega.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                _iglesiaService.MarcarNoEntregaDirecta(idParticipacion, idIglesia, motivoNoEntrega.Trim(), observaciones?.Trim(), u.IdUsuario);
+                TempData["MensajeExito"] = "Se ha registrado el estado de NO ENTREGA con el motivo especificado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar la no entrega: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ReprogramarEntregaDespacho(int idParticipacion, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para modificar la asignación de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                _iglesiaService.ReprogramarEntregaDirecta(idParticipacion, idIglesia, u.IdUsuario);
+                TempData["MensajeExito"] = "La asignación ha sido restablecida a 'Disponible / Pendiente de Despacho'.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al restablecer estado: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        // ============================================================================
+        // REPORTES MINISTERILES: EVENTOS EVANGELÍSTICOS
+        // ============================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult GuardarEventoEvangelistico(EventoEvangelisticoItem item, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para gestionar eventos de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (!item.FechaEvento.HasValue)
+            {
+                TempData["MensajeError"] = "Debe especificar la fecha de realización del evento evangelístico.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            if (item.CantidadNinosAsistieron < 0)
+            {
+                TempData["MensajeError"] = "La cantidad de niños asistentes no puede ser negativa.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                item.IdIglesia = idIglesia;
+                _iglesiaService.GuardarEventoEvangelistico(item, u.IdUsuario);
+                TempData["MensajeExito"] = "Evento evangelístico guardado correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al guardar el evento evangelístico: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EliminarEventoEvangelistico(int idEventoDetalle, int idParticipacion, int idIglesia)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para eliminar eventos de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                _iglesiaService.EliminarEventoEvangelistico(idEventoDetalle, idParticipacion, idIglesia, u.IdUsuario);
+                TempData["MensajeExito"] = "Evento evangelístico eliminado exitosamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al eliminar el evento: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult GuardarAnotacionesEvangelisticas(int idParticipacion, int idIglesia, string anotaciones)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para editar anotaciones de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            try
+            {
+                _iglesiaService.GuardarAnotacionesEventosEvangelisticos(idParticipacion, idIglesia, anotaciones?.Trim(), u.IdUsuario);
+                TempData["MensajeExito"] = "Anotaciones de eventos evangelísticos guardadas correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al guardar las anotaciones: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
+        }
+
+        // ============================================================================
+        // REPORTE OFICIAL DE DISCIPULADO / GRADUACIÓN LA GRAN AVENTURA (9 PREGUNTAS)
+        // ============================================================================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult GuardarReporteGraduacionLGA(ReporteGraduacionLGAModel vm, int idIglesia, HttpPostedFileBase adjuntoReporte)
+        {
+            Usuario u = (Usuario)Session["usuario"];
+            if (u == null) return RedirectToAction("Login", "Acceso");
+
+            var iglesia = _iglesiaService.ObtenerExpedienteIglesia(idIglesia);
+            if (iglesia == null) return HttpNotFound();
+
+            if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
+            {
+                TempData["MensajeError"] = "No tiene permisos para enviar el reporte de discipulado de esta iglesia.";
+                return RedirectToAction("Detalle", new { id = idIglesia });
+            }
+
+            // Manejo de archivo de evidencia opcional
+            if (adjuntoReporte != null && adjuntoReporte.ContentLength > 0)
+            {
+                if (ValidarArchivoSeguroIglesia(adjuntoReporte, out string errAdjunto))
+                {
+                    try
+                    {
+                        string uploadPath = Server.MapPath("~/Uploads/Reportes/");
+                        if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+                        string ext = Path.GetExtension(adjuntoReporte.FileName).ToLowerInvariant();
+                        string fileName = $"ReporteGrad_{idIglesia}_{Guid.NewGuid():N}{ext}";
+                        adjuntoReporte.SaveAs(Path.Combine(uploadPath, fileName));
+                        vm.ArchivoEvidenciaRuta = "/Uploads/Reportes/" + fileName;
+                    }
+                    catch (Exception exAdj)
+                    {
+                        TempData["MensajeError"] = "Error al guardar el archivo adjunto: " + exAdj.Message;
+                        return RedirectToAction("Detalle", new { id = idIglesia });
+                    }
+                }
+                else
+                {
+                    TempData["MensajeError"] = "Archivo de evidencia inválido: " + errAdjunto;
+                    return RedirectToAction("Detalle", new { id = idIglesia });
+                }
+            }
+
+            try
+            {
+                vm.IdIglesia = idIglesia;
+                _iglesiaService.GuardarReporteGraduacionLGA(vm, u.IdUsuario);
+                TempData["MensajeExito"] = "¡Reporte Oficial de Discipulado / Graduación de La Gran Aventura guardado con éxito! Estatus actualizado a 'Reportó'.";
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al registrar el reporte de discipulado: " + ex.Message;
+            }
+
+            return RedirectToAction("Detalle", new { id = idIglesia });
         }
     }
 }

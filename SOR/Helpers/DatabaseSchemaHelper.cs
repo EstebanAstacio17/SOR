@@ -632,6 +632,78 @@ namespace SOR.Helpers
 
             // 11. Tablas para Modelo de Crecimiento LGA y 5 Contactos
             AsegurarTablasLGA(cn);
+
+            // 11.1 Tablas de Reportes de Eventos Evangelísticos, Discipulado LGA y Entrega
+            AsegurarTablasReportesYEntrega(cn);
+        }
+
+        private static void AsegurarTablasReportesYEntrega(SqlConnection cn)
+        {
+            string sqlReportesEntrega = @"
+                -- 1. Detalle de Eventos Evangelísticos de la Iglesia
+                IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.ReportesEventosEvangelisticosDetalle') AND type in (N'U'))
+                BEGIN
+                    CREATE TABLE dbo.ReportesEventosEvangelisticosDetalle (
+                        IdEventoDetalle INT IDENTITY(1,1) PRIMARY KEY,
+                        IdParticipacion INT NOT NULL,
+                        IdIglesia INT NOT NULL,
+                        NumeroEvento INT NOT NULL DEFAULT 1,
+                        FechaEvento DATETIME NOT NULL DEFAULT GETDATE(),
+                        AsistenciaNinos INT NOT NULL DEFAULT 0,
+                        Lugar NVARCHAR(200) NULL,
+                        Notas NVARCHAR(MAX) NULL,
+                        FechaRegistro DATETIME NOT NULL DEFAULT GETDATE()
+                    );
+                    CREATE INDEX IX_ReportesEvangDetalle_Part ON dbo.ReportesEventosEvangelisticosDetalle(IdParticipacion);
+                    CREATE INDEX IX_ReportesEvangDetalle_Iglesia ON dbo.ReportesEventosEvangelisticosDetalle(IdIglesia);
+                END;
+
+                -- 2. Asegurar campos en ReportesEventos para el Reporte Oficial de Discipulado LGA (9 preguntas)
+                IF OBJECT_ID(N'dbo.ReportesEventos', 'U') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('dbo.ReportesEventos', 'CajitasRecibidas') IS NULL
+                        ALTER TABLE dbo.ReportesEventos ADD CajitasRecibidas INT NULL DEFAULT 0;
+
+                    IF COL_LENGTH('dbo.ReportesEventos', 'TotalEventosEvangelisticos') IS NULL
+                        ALTER TABLE dbo.ReportesEventos ADD TotalEventosEvangelisticos INT NULL DEFAULT 0;
+
+                    IF COL_LENGTH('dbo.ReportesEventos', 'TotalNinosEvangelisticos') IS NULL
+                        ALTER TABLE dbo.ReportesEventos ADD TotalNinosEvangelisticos INT NULL DEFAULT 0;
+
+                    IF COL_LENGTH('dbo.ReportesEventos', 'CompanerosOracion') IS NULL
+                        ALTER TABLE dbo.ReportesEventos ADD CompanerosOracion INT NULL DEFAULT 0;
+                END;
+
+                -- 3. Asegurar campos en AsignacionesRecursos para trazabilidad de Entrega / Despacho
+                IF OBJECT_ID(N'dbo.AsignacionesRecursos', 'U') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'MotivoNoEntrega') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD MotivoNoEntrega NVARCHAR(MAX) NULL;
+
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'FechaEntrega') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD FechaEntrega DATETIME NULL;
+
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'TipoReceptor') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD TipoReceptor NVARCHAR(50) NULL;
+
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'NombreReceptor') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD NombreReceptor NVARCHAR(150) NULL;
+
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'DocumentoIdentidadReceptor') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD DocumentoIdentidadReceptor NVARCHAR(50) NULL;
+
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'TelefonoReceptor') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD TelefonoReceptor NVARCHAR(50) NULL;
+
+                    IF COL_LENGTH('dbo.AsignacionesRecursos', 'ObservacionesEntrega') IS NULL
+                        ALTER TABLE dbo.AsignacionesRecursos ADD ObservacionesEntrega NVARCHAR(MAX) NULL;
+                END;
+            ";
+
+            using (SqlCommand cmd = new SqlCommand(sqlReportesEntrega, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
         }
 
         private static void AsegurarTablasLGA(SqlConnection cn)

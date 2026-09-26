@@ -413,13 +413,33 @@
                             <div class="text-xxs text-muted">@(part.EtapaActual > 6 ? "Completada" : (part.EtapaActual == 6 ? "En curso" : "Pendiente"))</div>
                         </div>
 
-                        <!-- Step 7: Aprobación Final -->
+                        <!-- Step 7: Entrega / Despacho -->
                         <div class="col text-center position-relative" style="z-index: 2;">
-                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual >= 7 ? "bg-success text-white" : "bg-white text-muted border")" style="width: 38px; height: 38px; font-size: 0.875rem;">
-                                @(part.EtapaActual >= 7 ? Html.Raw("<i class=\"bi bi-check-lg text-white\"></i>") : Html.Raw("7"))
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-sm @(part.EtapaActual >= 7 ? (part.EstatusDespacho == "NO_DESPACHADA" ? "bg-danger text-white" : "bg-success text-white") : "bg-white text-muted border")" style="width: 38px; height: 38px; font-size: 0.875rem;">
+                                @(part.EtapaActual >= 7 ? (part.EstatusDespacho == "NO_DESPACHADA" ? Html.Raw("<i class=\"bi bi-x-lg text-white\"></i>") : Html.Raw("<i class=\"bi bi-check-lg text-white\"></i>")) : Html.Raw("7"))
                             </div>
-                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual >= 7 ? "text-success fw-bold" : "text-muted")">Aprobación Final</div>
-                            <div class="text-xxs text-muted">@(part.FechaEvaluacion.HasValue ? part.FechaEvaluacion.Value.ToString("dd/MM/yyyy") : (part.EtapaActual >= 7 ? "Completada" : "Pendiente"))</div>
+                            <div class="mt-2 font-semibold text-xs @(part.EtapaActual >= 7 ? (part.EstatusDespacho == "NO_DESPACHADA" ? "text-danger fw-bold" : "text-success fw-bold") : "text-muted")">Entrega / Despacho</div>
+                            <div class="text-xxs text-muted">
+                                @if (part.EtapaActual >= 7)
+                                {
+                                    if (part.EstatusDespacho == "DESPACHADA")
+                                    {
+                                        <span class="text-success fw-semibold">Entregado</span>
+                                    }
+                                    else if (part.EstatusDespacho == "NO_DESPACHADA")
+                                    {
+                                        <span class="text-danger fw-semibold">No Entregado</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Pendiente</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span>Pendiente</span>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -566,47 +586,102 @@
                                 <span class="badge bg-warning-soft px-3 py-2"><i class="bi bi-lock me-1"></i>Requiere rol de CD, CE o Admin para finalizar recursos</span>
                             }
                         }
-                        else if (part.EtapaActual >= 7) // APROBACIÓN FINAL & LOGÍSTICA
+                        else if (part.EtapaActual >= 7) // ETAPA 7: ENTREGA / DESPACHO DE MATERIALES
                         {
-                            <div class="alert alert-success mb-3 py-3 shadow-sm rounded-3">
-                                <h6 class="font-bold mb-1"><i class="bi bi-patch-check-fill me-2 text-success"></i>¡Proceso Completado y Aprobado!</h6>
-                                <p class="small mb-0 mt-1">Esta iglesia ha completado satisfactoriamente todas las etapas de la temporada. Se han asignado los recursos y está habilitada para el retiro de materiales en el Evento de Despacho.</p>
-                            </div>
-                            
-                            <div class="card border-0 bg-white shadow-sm rounded-3 p-3 mb-0 border-start border-4 border-primary">
+                            bool esDespachada = (Model.RecursosActuales != null && Model.RecursosActuales.EstadoAsignacion == "DESPACHADA") || part.EstatusDespacho == "DESPACHADA";
+                            bool esNoDespachada = (Model.RecursosActuales != null && Model.RecursosActuales.EstadoAsignacion == "NO_DESPACHADA") || part.EstatusDespacho == "NO_DESPACHADA";
+
+                            if (esDespachada)
+                            {
+                                <div class="alert alert-success mb-3 py-3 shadow-sm rounded-3">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <h6 class="font-bold mb-1"><i class="bi bi-check-circle-fill me-2 text-success"></i>¡Materiales Entregados / Despachados!</h6>
+                                            <p class="small mb-0">La iglesia ha completado el retiro oficial de materiales. Ahora puede proceder a registrar los <strong>Eventos Evangelísticos</strong> y el <strong>Reporte de Discipulado LGA</strong>.</p>
+                                        </div>
+                                        <span class="badge bg-success fs-6 px-3 py-2 rounded-pill"><i class="bi bi-patch-check-fill me-1"></i>DESPACHADO</span>
+                                    </div>
+                                </div>
+                            }
+                            else if (esNoDespachada)
+                            {
+                                <div class="alert alert-danger mb-3 py-3 shadow-sm rounded-3">
+                                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                        <div>
+                                            <h6 class="font-bold mb-1"><i class="bi bi-x-octagon-fill me-2 text-danger"></i>Materiales No Entregados / Cancelado</h6>
+                                            <p class="small mb-1">
+                                                <strong>Motivo de No Entrega:</strong> @(Model.RecursosActuales != null && !string.IsNullOrEmpty(Model.RecursosActuales.MotivoNoEntrega) ? Model.RecursosActuales.MotivoNoEntrega : (string.IsNullOrEmpty(part.MotivoNoEntrega) ? "No acudió a retirar según normas establecidas" : part.MotivoNoEntrega))
+                                            </p>
+                                            @if (Model.RecursosActuales != null && !string.IsNullOrEmpty(Model.RecursosActuales.ObservacionesEntrega))
+                                            {
+                                                <p class="text-xs text-muted mb-0"><strong>Observaciones:</strong> @Model.RecursosActuales.ObservacionesEntrega</p>
+                                            }
+                                        </div>
+                                        <span class="badge bg-danger fs-6 px-3 py-2 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i>NO ENTREGADO</span>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-primary mb-3 py-3 shadow-sm rounded-3">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <h6 class="font-bold mb-1"><i class="bi bi-box-seam me-2 text-primary"></i>Asignación Realizada — Pendiente de Entrega</h6>
+                                            <p class="small mb-0">Los materiales están asignados. Confirme la entrega presencial o marque como no entregado si la iglesia no cumplió con las normas de retiro.</p>
+                                        </div>
+                                        <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill"><i class="bi bi-clock-history me-1"></i>PENDIENTE DE ENTREGA</span>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="card border-0 bg-white shadow-sm rounded-3 p-3 mb-0 border-start border-4 @(esDespachada ? "border-success" : (esNoDespachada ? "border-danger" : "border-primary"))">
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
-                                        <h6 class="font-bold text-dark mb-1"><i class="bi bi-truck-front text-primary me-2"></i>Estado de Despacho Presencial</h6>
+                                        <h6 class="font-bold text-dark mb-1"><i class="bi bi-truck text-primary me-2"></i>Control de Entrega y Despacho</h6>
                                         <div class="small text-muted">
-                                            @if (Model.RecursosActuales != null && Model.RecursosActuales.EstadoAsignacion == "DESPACHADA")
+                                            @if (esDespachada)
                                             {
-                                                <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Materiales Despachados</span>
-                                                <span> (Retirados por el Pastor o Líder Ministerial)</span>
+                                                <span>Entregado el: <strong>@(Model.RecursosActuales != null && Model.RecursosActuales.FechaEntrega.HasValue ? Model.RecursosActuales.FechaEntrega.Value.ToString("dd/MM/yyyy hh:mm tt") : (part.FechaEvaluacion.HasValue ? part.FechaEvaluacion.Value.ToString("dd/MM/yyyy") : "Confirmado"))</strong></span>
+                                                if (Model.RecursosActuales != null && !string.IsNullOrEmpty(Model.RecursosActuales.NombreReceptor))
+                                                {
+                                                    <span class="d-block text-xs mt-1">Receptor: <strong>@Model.RecursosActuales.NombreReceptor</strong> (@Model.RecursosActuales.TipoReceptor) - Cédula: @(Model.RecursosActuales.DocumentoIdentidadReceptor ?? "N/D")</span>
+                                                }
                                             }
-                                            else if (Model.RecursosActuales != null && Model.RecursosActuales.EstadoAsignacion == "PROGRAMADA_DESPACHO")
+                                            else if (esNoDespachada)
                                             {
-                                                <span class="text-primary fw-bold"><i class="bi bi-calendar-check me-1"></i>Programada en Evento de Despacho</span>
-                                                <span> — Pendiente de entrega presencial con cédula en mano.</span>
+                                                <span class="text-danger">Entrega cancelada o no retirada. Para reactivar, use la opción de reprogramar.</span>
                                             }
                                             else
                                             {
-                                                <span class="text-info fw-bold"><i class="bi bi-box-seam me-1"></i>Disponible para Despacho</span>
-                                                <span> — Lista para ser agregada a un Evento de Despacho de su equipo.</span>
+                                                <span class="text-primary">Listo para registrar despacho directo o gestionar en evento de distribución.</span>
                                             }
                                         </div>
                                     </div>
-                                    <div class="d-flex gap-2">
-                                        @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 3)
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3 || u.IdPosicion == 4)
                                         {
+                                            if (!esDespachada && !esNoDespachada)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-success font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalConfirmarEntregaDirecta">
+                                                    <i class="bi bi-check-circle me-1"></i>Confirmar Entrega / Despacho
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger font-semibold" data-bs-toggle="modal" data-bs-target="#modalMarcarNoEntregaDirecta">
+                                                    <i class="bi bi-x-circle me-1"></i>Marcar como No Entregado
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-warning font-semibold" data-bs-toggle="modal" data-bs-target="#modalReprogramarEntregaDirecta">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Cambiar Estado de Entrega
+                                                </button>
+                                            }
+
                                             <button type="button" class="btn btn-sm btn-outline-secondary font-semibold" data-bs-toggle="modal" data-bs-target="#modalCompletarTaller">
                                                 <i class="bi bi-pencil-square me-1"></i>Editar Asignación
                                             </button>
                                         }
                                         <a href="@Url.Action("Index", "Eventos")" class="btn btn-sm btn-primary font-semibold shadow-sm">
                                             <i class="bi bi-send-check me-1"></i>Ir a Eventos de Despacho
-                                        </a>
-                                        <a href="@Url.Action("Index", "Logistica")" class="btn btn-sm btn-outline-secondary font-semibold">
-                                            <i class="bi bi-boxes me-1"></i>Logística OCC
                                         </a>
                                     </div>
                                 </div>
@@ -665,6 +740,25 @@
                     else if (Model.DiscipuladoLGA != null && Model.DiscipuladoLGA.SemaforoVigente == "AMARILLO")
                     {
                         <span class="badge bg-warning text-dark rounded-pill ms-1 text-xxs px-1.5 py-0.5">Atención</span>
+                    }
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2 position-relative" id="eventos-evang-tab" data-bs-toggle="tab" data-bs-target="#panel-eventos-evang" type="button" role="tab">
+                    <i class="bi bi-megaphone me-1 text-primary"></i>Eventos Evangelísticos
+                    <span class="badge bg-primary rounded-pill ms-1 text-xxs px-1.5 py-0.5">@(Model.ReporteEvangelistico != null && Model.ReporteEvangelistico.Eventos != null ? Model.ReporteEvangelistico.Eventos.Count : 0)</span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link font-semibold border-0 rounded-top-4 shadow-sm px-4 ms-2 position-relative" id="reporte-lga-tab" data-bs-toggle="tab" data-bs-target="#panel-reporte-lga" type="button" role="tab">
+                    <i class="bi bi-award me-1 text-success"></i>Reporte Graduación LGA
+                    @if (Model.ParticipacionActual != null && Model.ParticipacionActual.EstatusEvaluacionReporte == "Reportó")
+                    {
+                        <span class="badge bg-success rounded-pill ms-1 text-xxs px-1.5 py-0.5">Reportó</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary rounded-pill ms-1 text-xxs px-1.5 py-0.5">Pendiente</span>
                     }
                 </button>
             </li>
@@ -1319,6 +1413,335 @@
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <!-- ============================================================================
+                 PANEL: REPORTE DE EVENTOS EVANGELÍSTICOS
+                 ============================================================================ -->
+            <div class="tab-pane fade" id="panel-eventos-evang" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 border-bottom pb-3">
+                        <div>
+                            <h5 class="h6 font-bold text-slate-800 mb-1">
+                                <i class="bi bi-megaphone text-primary me-2"></i>Reporte de Eventos Evangelísticos
+                            </h5>
+                            <p class="text-xs text-muted mb-0">Registre individualmente cada evento de entrega de cajitas, su fecha, asistencia de niños y notas ministeriales.</p>
+                        </div>
+                        @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3 || u.IdPosicion == 4)
+                        {
+                            <button type="button" class="btn btn-primary btn-sm font-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAgregarEventoEvangelistico">
+                                <i class="bi bi-plus-circle me-1"></i>Agregar Evento Evangelístico
+                            </button>
+                        }
+                    </div>
+
+                    <!-- Métricas Resumen de Eventos Evangelísticos -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6 col-md-4">
+                            <div class="card border-0 bg-light rounded-3 p-3 text-center border">
+                                <span class="text-xs text-muted font-semibold text-uppercase">Total de Eventos</span>
+                                <div class="h3 font-bold text-primary mb-0 mt-1">
+                                    @(Model.ReporteEvangelistico != null ? Model.ReporteEvangelistico.TotalEventosCalculado : 0)
+                                </div>
+                                <small class="text-xxs text-muted">Celebraciones realizadas</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="card border-0 bg-light rounded-3 p-3 text-center border">
+                                <span class="text-xs text-muted font-semibold text-uppercase">Total Niños Participantes</span>
+                                <div class="h3 font-bold text-success mb-0 mt-1">
+                                    @(Model.ReporteEvangelistico != null ? Model.ReporteEvangelistico.TotalNinosAsistentesCalculado : 0)
+                                </div>
+                                <small class="text-xxs text-muted">Asistencia total acumulada</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-4">
+                            <div class="card border-0 bg-light rounded-3 p-3 text-center border">
+                                <span class="text-xs text-muted font-semibold text-uppercase">Cajitas Asignadas</span>
+                                <div class="h3 font-bold text-info mb-0 mt-1">
+                                    @(Model.RecursosActuales != null ? Model.RecursosActuales.OportunidadesEvangelisticas : 0)
+                                </div>
+                                <small class="text-xxs text-muted">Recursos entregados para evangelismo</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Eventos Registrados -->
+                    <div class="table-responsive mb-4">
+                        <table class="table table-hover align-middle mb-0 text-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 70px;">#</th>
+                                    <th>Fecha del Evento</th>
+                                    <th>Lugar / Ubicación</th>
+                                    <th class="text-center">Asistencia de Niños</th>
+                                    <th>Observaciones</th>
+                                    @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3)
+                                    {
+                                        <th class="text-end" style="width: 100px;">Acciones</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.ReporteEvangelistico == null || Model.ReporteEvangelistico.Eventos == null || !Model.ReporteEvangelistico.Eventos.Any())
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted small">
+                                            <i class="bi bi-calendar-x fs-4 d-block mb-1 text-slate-400"></i>
+                                            No se han registrado eventos evangelísticos para esta iglesia aún. Haga clic en "Agregar Evento Evangelístico" para comenzar.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    int numEv = 1;
+                                    foreach (var ev in Model.ReporteEvangelistico.Eventos)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-slate-500">Evento @numEv</td>
+                                            <td>
+                                                <div class="fw-semibold text-slate-800">@(ev.FechaEvento.HasValue ? ev.FechaEvento.Value.ToString("dd/MM/yyyy") : "N/D")</div>
+                                            </td>
+                                            <td>@(string.IsNullOrEmpty(ev.LugarEvento) ? (Model.NombreIglesia ?? "Local de la iglesia") : ev.LugarEvento)</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-success-soft text-success fs-6 px-2.5 py-1 fw-bold">@ev.CantidadNinosAsistieron niños</span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">@(string.IsNullOrEmpty(ev.Observaciones) ? "Sin anotaciones específicas." : ev.Observaciones)</small>
+                                            </td>
+                                            @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3)
+                                            {
+                                                <td class="text-end">
+                                                    <form action="@Url.Action("EliminarEventoEvangelistico", "Iglesia")" method="post" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar este evento evangelístico?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="idEventoDetalle" value="@ev.IdEventoDetalle" />
+                                                        <input type="hidden" name="idParticipacion" value="@ev.IdParticipacion" />
+                                                        <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Eliminar Evento">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            }
+                                        </tr>
+                                        numEv++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Anotaciones Generales de Eventos Evangelísticos -->
+                    <div class="card border-0 bg-light rounded-3 p-3 border">
+                        <h6 class="font-bold text-slate-800 mb-2">
+                            <i class="bi bi-journal-text text-primary me-2"></i>Anotaciones Generales de los Eventos Evangelísticos
+                        </h6>
+                        @if (Model.ParticipacionActual != null)
+                        {
+                            <form action="@Url.Action("GuardarAnotacionesEvangelisticas", "Iglesia")" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="idParticipacion" value="@Model.ParticipacionActual.IdParticipacion" />
+                                <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+                                <div class="mb-2">
+                                    <textarea name="anotaciones" class="form-control" rows="3" placeholder="Escriba aquí notas, testimonios generales o incidencias sobre los eventos evangelísticos de la iglesia...">@(Model.ReporteEvangelistico != null ? Model.ReporteEvangelistico.AnotacionesGenerales : "")</textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary font-semibold">
+                                        <i class="bi bi-save me-1"></i>Guardar Anotaciones
+                                    </button>
+                                </div>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================================
+                 PANEL: REPORTE DE DISCIPULADO / GRADUACIÓN LA GRAN AVENTURA (9 PREGUNTAS)
+                 ============================================================================ -->
+            <div class="tab-pane fade" id="panel-reporte-lga" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 border-bottom pb-3">
+                        <div>
+                            <h5 class="h6 font-bold text-slate-800 mb-1">
+                                <i class="bi bi-award text-success me-2"></i>Reporte de Discipulado / Graduación de La Gran Aventura
+                            </h5>
+                            <p class="text-xs text-muted mb-0">Formulario oficial de finalización y graduación de La Gran Aventura (OCC).</p>
+                        </div>
+                        <div>
+                            @if (Model.ParticipacionActual != null && Model.ParticipacionActual.EstatusEvaluacionReporte == "Reportó")
+                            {
+                                <span class="badge bg-success px-3 py-2 rounded-pill fs-7"><i class="bi bi-check-circle-fill me-1"></i>Reporte Registrado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fs-7"><i class="bi bi-clock-history me-1"></i>Reporte Pendiente</span>
+                            }
+                        </div>
+                    </div>
+
+                    @if (Model.ParticipacionActual != null)
+                    {
+                        var repLga = Model.ReporteGraduacionLGA ?? new SOR.Models.ReporteGraduacionLGAModel();
+                        int cajitasSugeridas = (repLga.CajitasRecibidas > 0) ? repLga.CajitasRecibidas : (Model.RecursosActuales != null ? Model.RecursosActuales.OportunidadesEvangelisticas : 0);
+                        int totalEventosSugeridos = (repLga.TotalEventosEvangelisticos > 0) ? repLga.TotalEventosEvangelisticos : (Model.ReporteEvangelistico != null ? Model.ReporteEvangelistico.TotalEventosCalculado : 0);
+                        int totalNinosEvangSugeridos = (repLga.TotalNinosEvangelisticos > 0) ? repLga.TotalNinosEvangelisticos : (Model.ReporteEvangelistico != null ? Model.ReporteEvangelistico.TotalNinosAsistentesCalculado : 0);
+
+                        <form action="@Url.Action("GuardarReporteGraduacionLGA", "Iglesia")" method="post" enctype="multipart/form-data">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="IdParticipacion" value="@Model.ParticipacionActual.IdParticipacion" />
+                            <input type="hidden" name="IdIglesia" value="@Model.IdIglesia" />
+
+                            <div class="row g-4 mb-4">
+                                <!-- Pregunta 1 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            1. ¿Cuántas cajitas recibieron del Equipo Regional de Liderazgo de OCC? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-box-seam text-primary"></i></span>
+                                            <input type="number" name="CajitasRecibidas" class="form-control" min="0" value="@cajitasSugeridas" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 2 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            2. ¿Cuántos Eventos Evangelísticos tuvieron? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-calendar-event text-primary"></i></span>
+                                            <input type="number" name="TotalEventosEvangelisticos" class="form-control" min="0" value="@totalEventosSugeridos" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 3 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            3. ¿Cuántos niños asistieron a sus Eventos Evangelísticos? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-people text-success"></i></span>
+                                            <input type="number" name="TotalNinosEvangelisticos" class="form-control" min="0" value="@totalNinosEvangSugeridos" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 4 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            4. ¿Cuántas clases de LGA enseñaron? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-journal-check text-info"></i></span>
+                                            <input type="number" name="ClasesLGAEnsenadas" class="form-control" min="0" value="@repLga.ClasesLGAEnsenadas" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 5 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            5. ¿Cuántos niños asistieron al curso de La Gran Aventura? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-person-check text-warning"></i></span>
+                                            <input type="number" name="NinosAsistieronLGA" class="form-control" min="0" value="@repLga.NinosAsistieronLGA" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 6 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            6. ¿Cuántos niños decidieron creer en Jesús por primera vez? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-heart-fill text-danger"></i></span>
+                                            <input type="number" name="NinosCreyeronJesus" class="form-control" min="0" value="@repLga.NinosCreyeronJesus" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 7 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            7. ¿Cuántos niños se comprometieron en orar y compartir? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-share-fill text-primary"></i></span>
+                                            <input type="number" name="NinosComprometieronOrar" class="form-control" min="0" value="@repLga.NinosComprometieronOrar" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 8 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            8. ¿Cuántos niños se graduaron? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-mortarboard-fill text-success"></i></span>
+                                            <input type="number" name="NinosGraduadosLGA" class="form-control" min="0" value="@repLga.NinosGraduadosLGA" required />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta 9 -->
+                                <div class="col-md-12">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <label class="form-label fw-bold text-slate-800 text-sm">
+                                            9. ¿Cuántos compañeros de oración en su ministerio están orando por OCC? <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-hands-clapping text-info"></i></span>
+                                            <input type="number" name="CompanerosOracion" class="form-control" min="0" value="@(repLga.CompanerosOracion > 0 ? repLga.CompanerosOracion : Model.CompanerosOracion.Count)" required />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Observaciones y Adjunto de Evidencia -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">Observaciones Generales / Testimonios Destacados</label>
+                                    <textarea name="Observaciones" class="form-control" rows="3" placeholder="Testimonios de niños impactados, agradecimientos o notas del discipulado...">@repLga.Observaciones</textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Evidencia / Foto / Acta de Graduación (Opcional)</label>
+                                    <input type="file" name="adjuntoReporte" class="form-control" accept=".pdf,.png,.jpg,.jpeg" />
+                                    @if (!string.IsNullOrEmpty(repLga.ArchivoEvidenciaRuta))
+                                    {
+                                        <div class="mt-2">
+                                            <a href="@repLga.ArchivoEvidenciaRuta" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-file-earmark-arrow-down me-1"></i>Ver Evidencia Adjunta
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2 || u.IdPosicion == 1 || u.IdPosicion == 2 || u.IdPosicion == 3)
+                            {
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-success px-4 py-2 font-semibold shadow-sm" onclick="return confirm('¿Desea guardar y registrar este reporte oficial de graduación LGA?');">
+                                        <i class="bi bi-check2-circle me-1"></i>Guardar y Registrar Reporte Oficial
+                                    </button>
+                                </div>
+                            }
+                        </form>
+                    }
                 </div>
             </div>
         </div>
@@ -2097,6 +2520,7 @@
             </div>
         </div>
     </div>
+}
 
     <!-- MODAL EDITAR / REGISTRAR CONTACTO LGA -->
     <div class="modal fade" id="modalEditarContactoLGA" tabindex="-1" aria-hidden="true">
@@ -2240,6 +2664,195 @@
                     <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary font-semibold shadow-sm"><i class="bi bi-check-circle me-1"></i>Guardar Llamada & Actualizar Semáforo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRMAR ENTREGA / DESPACHO DIRECTO DE MATERIALES -->
+    <div class="modal fade" id="modalConfirmarEntregaDirecta" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("ConfirmarEntregaDespacho", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idParticipacion" value="@(Model.ParticipacionActual != null ? Model.ParticipacionActual.IdParticipacion : 0)" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-success text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold">
+                            <i class="bi bi-truck me-2"></i>Confirmar Entrega de Materiales
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-success-soft py-2 px-3 mb-3 rounded-3 text-xs">
+                            <i class="bi bi-info-circle me-1"></i>Indique los datos de la persona o líder acreditado que retira o recibe los materiales de la iglesia.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-sm">Rol o Tipo de Receptor <span class="text-danger">*</span></label>
+                            <select name="tipoReceptor" class="form-select" required>
+                                <option value="Pastor Titular">Pastor Titular (@(Model.Pastor != null ? Model.Pastor.Nombres + " " + Model.Pastor.Apellidos : "Pastor"))</option>
+                                <option value="Líder Ministerial">Líder Ministerial / Discipulado (@(Model.LiderMinisterial != null ? Model.LiderMinisterial.Nombres + " " + Model.LiderMinisterial.Apellidos : "Líder"))</option>
+                                <option value="Representante Autorizado">Representante Autorizado por la Iglesia</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-sm">Nombre Completo de quien recibe <span class="text-danger">*</span></label>
+                            <input type="text" name="nombreReceptor" class="form-control" required value="@(Model.Pastor != null ? Model.Pastor.Nombres + " " + Model.Pastor.Apellidos : "")" placeholder="Nombre completo..." />
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-sm">Cédula / Documento</label>
+                                <input type="text" name="cedula" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.DocumentoIdentidad : "")" placeholder="000-0000000-0" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-sm">Teléfono de Contacto</label>
+                                <input type="text" name="telefono" class="form-control" value="@(Model.Pastor != null ? Model.Pastor.Celular : "")" placeholder="809-000-0000" />
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold text-sm">Observaciones de la Entrega (Opcional)</label>
+                            <textarea name="observaciones" class="form-control" rows="2" placeholder="Notas sobre el estado de la entrega, acuerdos, lugar de retiro..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success font-semibold shadow-sm">
+                            <i class="bi bi-check-circle me-1"></i>Confirmar Despacho / Entrega
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: MARCAR COMO NO ENTREGADO / CANCELADO CON MOTIVO -->
+    <div class="modal fade" id="modalMarcarNoEntregaDirecta" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("MarcarNoEntregaDespacho", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idParticipacion" value="@(Model.ParticipacionActual != null ? Model.ParticipacionActual.IdParticipacion : 0)" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold">
+                            <i class="bi bi-x-octagon me-2"></i>Registrar No Entrega de Materiales
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-danger-soft py-2 px-3 mb-3 rounded-3 text-xs">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Especifique la causa por la cual no se procedió a entregar los recursos a la iglesia.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-sm">Motivo Principal <span class="text-danger">*</span></label>
+                            <select name="motivoNoEntrega" class="form-select" required>
+                                <option value="No fueron a retirar con las normas ya establecidas">No fueron a retirar con las normas ya establecidas</option>
+                                <option value="No asistieron al evento de despacho en la fecha convocada">No asistieron al evento de despacho en la fecha convocada</option>
+                                <option value="Falta de maestros capacitados o acreditación incompleta">Falta de maestros capacitados o acreditación incompleta</option>
+                                <option value="Desistimiento voluntario de la iglesia">Desistimiento voluntario de la iglesia</option>
+                                <option value="Fuerza mayor / Circunstancia especial">Fuerza mayor / Circunstancia especial</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold text-sm">Detalles Adicionales / Observaciones</label>
+                            <textarea name="observaciones" class="form-control" rows="3" placeholder="Explique detalles relevantes sobre la no entrega..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger font-semibold shadow-sm">
+                            <i class="bi bi-x-circle me-1"></i>Marcar como No Entregado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REPROGRAMAR / CAMBIAR ESTADO DE ENTREGA -->
+    <div class="modal fade" id="modalReprogramarEntregaDirecta" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("ReprogramarEntregaDespacho", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idParticipacion" value="@(Model.ParticipacionActual != null ? Model.ParticipacionActual.IdParticipacion : 0)" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-warning text-dark rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Restablecer Estado de Entrega
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="small text-slate-700 mb-0">
+                            ¿Desea restablecer el estado de asignación a <strong>"Disponible / Pendiente de Entrega"</strong>? Esto permitirá volver a confirmar el despacho o registrar un nuevo estado de entrega.
+                        </p>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning font-semibold shadow-sm">
+                            <i class="bi bi-check2-circle me-1"></i>Restablecer Estado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: AGREGAR EVENTO EVANGELÍSTICO -->
+    <div class="modal fade" id="modalAgregarEventoEvangelistico" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <form action="@Url.Action("GuardarEventoEvangelistico", "Iglesia")" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="IdParticipacion" value="@(Model.ParticipacionActual != null ? Model.ParticipacionActual.IdParticipacion : 0)" />
+                    <input type="hidden" name="idIglesia" value="@Model.IdIglesia" />
+
+                    <div class="modal-header bg-primary text-white rounded-top-4 py-3">
+                        <h5 class="modal-title font-bold">
+                            <i class="bi bi-megaphone me-2"></i>Registrar Evento Evangelístico
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-sm">Fecha del Evento <span class="text-danger">*</span></label>
+                            <input type="date" name="FechaEvento" class="form-control" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-sm">Cantidad de Niños Asistentes <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-people text-primary"></i></span>
+                                <input type="number" name="CantidadNinosAsistieron" class="form-control" min="0" required placeholder="0" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-sm">Lugar o Sector de Realización</label>
+                            <input type="text" name="LugarEvento" class="form-control" value="@Model.NombreIglesia" placeholder="Ej: Cancha comunitaria, templo principal, escuela..." />
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold text-sm">Anotaciones / Testimonios del Evento</label>
+                            <textarea name="Observaciones" class="form-control" rows="2" placeholder="Notas sobre el desarrollo del evento, conversiones, apoyo de voluntarios..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary font-semibold shadow-sm">
+                            <i class="bi bi-plus-circle me-1"></i>Guardar Evento
+                        </button>
                     </div>
                 </form>
             </div>

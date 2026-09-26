@@ -18,12 +18,14 @@ namespace SOR.Repositories
             {
                 string sql = @"
                     SELECT i.*, e.NombreEquipo,
-                           p.IdParticipacion, p.EstadoEvaluacion, p.EstatusEvaluacionReporte, p.EtapaActual, t.NombreTemporada
+                           p.IdParticipacion, p.EstadoEvaluacion, p.EstatusEvaluacionReporte, p.EtapaActual, t.NombreTemporada,
+                           ar.EstadoAsignacion, ar.MotivoNoEntrega
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
                     LEFT JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
                         AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC)
                     LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
+                    LEFT JOIN dbo.AsignacionesRecursos ar ON p.IdParticipacion = ar.IdParticipacion
                     ORDER BY i.NombreIglesia;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -70,7 +72,9 @@ namespace SOR.Repositories
                                 EstadoEvaluacion = dr["EstadoEvaluacion"].ToString(),
                                 EstatusEvaluacionReporte = dr["EstatusEvaluacionReporte"] != DBNull.Value ? dr["EstatusEvaluacionReporte"].ToString() : "Pendiente",
                                 EtapaActual = Convert.ToInt32(dr["EtapaActual"]),
-                                NombreTemporada = dr["NombreTemporada"].ToString()
+                                NombreTemporada = dr["NombreTemporada"].ToString(),
+                                EstatusDespacho = (dr["EstadoAsignacion"] != DBNull.Value ? dr["EstadoAsignacion"].ToString() : "PENDIENTE"),
+                                MotivoNoEntrega = (dr["MotivoNoEntrega"] != DBNull.Value ? dr["MotivoNoEntrega"].ToString() : "")
                             };
                         }
 
@@ -348,7 +352,9 @@ namespace SOR.Repositories
                                 TallerCantNinos = drPart["TallerCantNinos"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantNinos"]) : 0,
                                 TallerCantMaestrosReg = drPart["TallerCantMaestrosReg"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosReg"]) : 0,
                                 TallerCantMaestrosAsist = drPart["TallerCantMaestrosAsist"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosAsist"]) : 0,
-                                TallerCantMaestrosAus = drPart["TallerCantMaestrosAus"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosAus"]) : 0
+                                TallerCantMaestrosAus = drPart["TallerCantMaestrosAus"] != DBNull.Value ? Convert.ToInt32(drPart["TallerCantMaestrosAus"]) : 0,
+                                EstatusDespacho = drPart["EstadoAsignacion"] != DBNull.Value ? drPart["EstadoAsignacion"].ToString() : "PENDIENTE",
+                                MotivoNoEntrega = drPart.TableHasColumn("MotivoNoEntrega") && drPart["MotivoNoEntrega"] != DBNull.Value ? drPart["MotivoNoEntrega"].ToString() : ""
                             };
 
                             ig.RecursosActuales = new AsignacionRecursos
@@ -363,7 +369,15 @@ namespace SOR.Repositories
                                 NuevosTestamentos = drPart["NuevosTestamentos"] != DBNull.Value ? Convert.ToInt32(drPart["NuevosTestamentos"]) : 0,
                                 EstadoAsignacion = drPart["EstadoAsignacion"] != DBNull.Value ? drPart["EstadoAsignacion"].ToString() : "ASIGNADO",
                                 FechaDisponibleDespacho = drPart["FechaDisponibleDespacho"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["FechaDisponibleDespacho"]) : null,
-                                IdEventoDespachoActual = drPart["IdEventoDespachoActual"] != DBNull.Value ? (int?)Convert.ToInt32(drPart["IdEventoDespachoActual"]) : null
+                                IdEventoDespachoActual = drPart["IdEventoDespachoActual"] != DBNull.Value ? (int?)Convert.ToInt32(drPart["IdEventoDespachoActual"]) : null,
+
+                                MotivoNoEntrega = drPart.TableHasColumn("MotivoNoEntrega") && drPart["MotivoNoEntrega"] != DBNull.Value ? drPart["MotivoNoEntrega"].ToString() : null,
+                                FechaEntrega = drPart.TableHasColumn("FechaEntrega") && drPart["FechaEntrega"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(drPart["FechaEntrega"]) : null,
+                                TipoReceptor = drPart.TableHasColumn("TipoReceptor") && drPart["TipoReceptor"] != DBNull.Value ? drPart["TipoReceptor"].ToString() : null,
+                                NombreReceptor = drPart.TableHasColumn("NombreReceptor") && drPart["NombreReceptor"] != DBNull.Value ? drPart["NombreReceptor"].ToString() : null,
+                                DocumentoIdentidadReceptor = drPart.TableHasColumn("DocumentoIdentidadReceptor") && drPart["DocumentoIdentidadReceptor"] != DBNull.Value ? drPart["DocumentoIdentidadReceptor"].ToString() : null,
+                                TelefonoReceptor = drPart.TableHasColumn("TelefonoReceptor") && drPart["TelefonoReceptor"] != DBNull.Value ? drPart["TelefonoReceptor"].ToString() : null,
+                                ObservacionesEntrega = drPart.TableHasColumn("ObservacionesEntrega") && drPart["ObservacionesEntrega"] != DBNull.Value ? drPart["ObservacionesEntrega"].ToString() : null
                             };
                         }
                     }
@@ -533,11 +547,14 @@ namespace SOR.Repositories
                     // Cargar Historial completo de Excepciones
                     ig.HistorialExcepciones = ObtenerHistorialExcepcionesInterno(cn, idIglesia);
 
-                    // Si requiere excepción o tiene historial, calculamos el snapshot de desempeño histórico
-                    if (ig.RequiereExcepcion3Anios && ig.IdTemporadaPrevia > 0)
-                    {
-                        ig.DesempenoHistorico = CalcularDesempenoHistoricoInterno(cn, idIglesia, ig.IdTemporadaPrevia, idTemporadaActiva);
-                    }
+                    // Cargar Discipulado LGA y Acompañamiento
+                    ig.DiscipuladoLGA = ObtenerResumenDiscipuladoLGA(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
+
+                    // Cargar Reporte de Eventos Evangelísticos
+                    ig.ReporteEvangelistico = ObtenerReporteEventosEvangelisticos(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
+
+                    // Cargar Reporte de Discipulado / Graduación LGA
+                    ig.ReporteGraduacionLGA = ObtenerReporteGraduacionLGA(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
                 }
             }
 
@@ -1656,6 +1673,650 @@ namespace SOR.Repositories
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REGISTRAR_LLAMADA_LGA", "DISCIPULADO_LGA",
                             $"Part_{ll.IdParticipacion}", $"Llamada de 5 min registrada. Semáforo: {ll.SemaforoEstado}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        // ============================================================================
+        // REPORTE DE EVENTOS EVANGELÍSTICOS (DETALLE Y TOTALES)
+        // ============================================================================
+
+        public ReporteEventosEvangelisticosModel ObtenerReporteEventosEvangelisticos(int idParticipacion, int idIglesia)
+        {
+            var modelo = new ReporteEventosEvangelisticosModel
+            {
+                IdParticipacion = idParticipacion,
+                IdIglesia = idIglesia
+            };
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+
+                // 1. Obtener anotaciones generales de la tabla ReportesEventos
+                string sqlEnc = @"
+                    SELECT TOP 1 Notas, FechaCreacion 
+                    FROM dbo.ReportesEventos 
+                    WHERE IdParticipacion = @IdPart AND TipoReporte = 'Evangelistico' 
+                    ORDER BY FechaCreacion DESC;";
+                using (SqlCommand cmdEnc = new SqlCommand(sqlEnc, cn))
+                {
+                    cmdEnc.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    using (SqlDataReader drEnc = cmdEnc.ExecuteReader())
+                    {
+                        if (drEnc.Read())
+                        {
+                            modelo.AnotacionesGenerales = drEnc["Notas"] != DBNull.Value ? drEnc["Notas"].ToString() : "";
+                            modelo.EstaGuardado = true;
+                        }
+                    }
+                }
+
+                // 2. Obtener lista de eventos individuales
+                string sqlDet = @"
+                    SELECT IdEventoDetalle, IdParticipacion, IdIglesia, NumeroEvento, FechaEvento, AsistenciaNinos, Lugar, Notas, FechaRegistro
+                    FROM dbo.ReportesEventosEvangelisticosDetalle
+                    WHERE IdParticipacion = @IdPart
+                    ORDER BY NumeroEvento ASC, FechaEvento ASC;";
+                using (SqlCommand cmdDet = new SqlCommand(sqlDet, cn))
+                {
+                    cmdDet.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    using (SqlDataReader drDet = cmdDet.ExecuteReader())
+                    {
+                        while (drDet.Read())
+                        {
+                            modelo.Eventos.Add(new EventoEvangelisticoItem
+                            {
+                                IdEventoDetalle = Convert.ToInt32(drDet["IdEventoDetalle"]),
+                                IdParticipacion = Convert.ToInt32(drDet["IdParticipacion"]),
+                                IdIglesia = Convert.ToInt32(drDet["IdIglesia"]),
+                                NumeroEvento = Convert.ToInt32(drDet["NumeroEvento"]),
+                                FechaEvento = Convert.ToDateTime(drDet["FechaEvento"]),
+                                AsistenciaNinos = Convert.ToInt32(drDet["AsistenciaNinos"]),
+                                Lugar = drDet["Lugar"] != DBNull.Value ? drDet["Lugar"].ToString() : "",
+                                Notas = drDet["Notas"] != DBNull.Value ? drDet["Notas"].ToString() : "",
+                                FechaRegistro = Convert.ToDateTime(drDet["FechaRegistro"])
+                            });
+                        }
+                    }
+                }
+
+                if (modelo.Eventos.Any())
+                {
+                    modelo.EstaGuardado = true;
+                }
+            }
+
+            return modelo;
+        }
+
+        public void GuardarEventoEvangelistico(EventoEvangelisticoItem item, int idUsuario)
+        {
+            if (item == null) throw new ArgumentNullException(nameof(item));
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        if (item.IdEventoDetalle > 0)
+                        {
+                            string sqlUpd = @"
+                                UPDATE dbo.ReportesEventosEvangelisticosDetalle
+                                SET FechaEvento = @Fecha,
+                                    AsistenciaNinos = @Asistencia,
+                                    Lugar = @Lugar,
+                                    Notas = @Notas
+                                WHERE IdEventoDetalle = @IdDet;";
+                            using (SqlCommand cmd = new SqlCommand(sqlUpd, cn, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@Fecha", item.FechaEvento);
+                                cmd.Parameters.AddWithValue("@Asistencia", item.AsistenciaNinos);
+                                cmd.Parameters.AddWithValue("@Lugar", (object)item.Lugar ?? DBNull.Value);
+                                cmd.Parameters.AddWithValue("@Notas", (object)item.Notas ?? DBNull.Value);
+                                cmd.Parameters.AddWithValue("@IdDet", item.IdEventoDetalle);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        else
+                        {
+                            // Calcular siguiente número de evento
+                            string sqlNum = "SELECT ISNULL(MAX(NumeroEvento), 0) + 1 FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdParticipacion = @IdPart;";
+                            int proxNum = 1;
+                            using (SqlCommand cmdNum = new SqlCommand(sqlNum, cn, tran))
+                            {
+                                cmdNum.Parameters.AddWithValue("@IdPart", item.IdParticipacion);
+                                proxNum = Convert.ToInt32(cmdNum.ExecuteScalar());
+                            }
+
+                            string sqlIns = @"
+                                INSERT INTO dbo.ReportesEventosEvangelisticosDetalle (
+                                    IdParticipacion, IdIglesia, NumeroEvento, FechaEvento, AsistenciaNinos, Lugar, Notas, FechaRegistro
+                                ) VALUES (
+                                    @IdPart, @IdIglesia, @Num, @Fecha, @Asistencia, @Lugar, @Notas, GETDATE()
+                                );";
+                            using (SqlCommand cmd = new SqlCommand(sqlIns, cn, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@IdPart", item.IdParticipacion);
+                                cmd.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
+                                cmd.Parameters.AddWithValue("@Num", proxNum);
+                                cmd.Parameters.AddWithValue("@Fecha", item.FechaEvento);
+                                cmd.Parameters.AddWithValue("@Asistencia", item.AsistenciaNinos);
+                                cmd.Parameters.AddWithValue("@Lugar", (object)item.Lugar ?? DBNull.Value);
+                                cmd.Parameters.AddWithValue("@Notas", (object)item.Notas ?? DBNull.Value);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // Sincronizar totales en ReportesEventos (TipoReporte = 'Evangelistico')
+                        SincronizarTotalesEventosEvangelisticos(cn, tran, item.IdParticipacion, item.IdIglesia);
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_EVENTO_EVANGELISTICO", "REPORTES",
+                            $"Part_{item.IdParticipacion}", $"Evento evangelístico registrado/actualizado. Asistencia: {item.AsistenciaNinos}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void EliminarEventoEvangelistico(int idEventoDetalle, int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        int idPart = 0, idIglesia = 0;
+                        string sqlGet = "SELECT IdParticipacion, IdIglesia FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdEventoDetalle = @Id;";
+                        using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn, tran))
+                        {
+                            cmdGet.Parameters.AddWithValue("@Id", idEventoDetalle);
+                            using (SqlDataReader dr = cmdGet.ExecuteReader())
+                            {
+                                if (dr.Read())
+                                {
+                                    idPart = Convert.ToInt32(dr["IdParticipacion"]);
+                                    idIglesia = Convert.ToInt32(dr["IdIglesia"]);
+                                }
+                            }
+                        }
+
+                        if (idPart > 0)
+                        {
+                            string sqlDel = "DELETE FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdEventoDetalle = @Id;";
+                            using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
+                            {
+                                cmdDel.Parameters.AddWithValue("@Id", idEventoDetalle);
+                                cmdDel.ExecuteNonQuery();
+                            }
+
+                            // Reenumerar eventos restantes
+                            string sqlReenum = @"
+                                WITH CTE AS (
+                                    SELECT NumeroEvento, ROW_NUMBER() OVER(ORDER BY FechaEvento ASC, IdEventoDetalle ASC) AS NuevoNum
+                                    FROM dbo.ReportesEventosEvangelisticosDetalle
+                                    WHERE IdParticipacion = @IdPart
+                                )
+                                UPDATE CTE SET NumeroEvento = NuevoNum;";
+                            using (SqlCommand cmdReenum = new SqlCommand(sqlReenum, cn, tran))
+                            {
+                                cmdReenum.Parameters.AddWithValue("@IdPart", idPart);
+                                cmdReenum.ExecuteNonQuery();
+                            }
+
+                            SincronizarTotalesEventosEvangelisticos(cn, tran, idPart, idIglesia);
+
+                            AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "ELIMINAR_EVENTO_EVANGELISTICO", "REPORTES",
+                                $"Det_{idEventoDetalle}", $"Evento evangelístico eliminado de la participación {idPart}");
+                        }
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void GuardarAnotacionesEventosEvangelisticos(int idParticipacion, int idIglesia, string anotaciones, int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            IF EXISTS (SELECT 1 FROM dbo.ReportesEventos WHERE IdParticipacion = @IdPart AND TipoReporte = 'Evangelistico')
+                            BEGIN
+                                UPDATE dbo.ReportesEventos 
+                                SET Notas = @Notas 
+                                WHERE IdParticipacion = @IdPart AND TipoReporte = 'Evangelistico';
+                            END
+                            ELSE
+                            BEGIN
+                                INSERT INTO dbo.ReportesEventos (
+                                    IdParticipacion, TipoReporte, Fecha, CantidadNinos, CantidadClases, Notas, FechaCreacion
+                                ) VALUES (
+                                    @IdPart, 'Evangelistico', GETDATE(), 0, 0, @Notas, GETDATE()
+                                );
+                            END;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.Parameters.AddWithValue("@Notas", (object)anotaciones ?? DBNull.Value);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_ANOTACIONES_EVANGELISTICAS", "REPORTES",
+                            $"Part_{idParticipacion}", "Anotaciones de eventos evangelísticos actualizadas.");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        private static void SincronizarTotalesEventosEvangelisticos(SqlConnection cn, SqlTransaction tran, int idParticipacion, int idIglesia)
+        {
+            string sqlTot = @"
+                SELECT COUNT(1) AS TotalEv, ISNULL(SUM(AsistenciaNinos), 0) AS TotalNinos, MAX(FechaEvento) AS MaxFecha
+                FROM dbo.ReportesEventosEvangelisticosDetalle
+                WHERE IdParticipacion = @IdPart;";
+
+            int totEv = 0, totNinos = 0;
+            DateTime? maxFecha = null;
+
+            using (SqlCommand cmdTot = new SqlCommand(sqlTot, cn, tran))
+            {
+                cmdTot.Parameters.AddWithValue("@IdPart", idParticipacion);
+                using (SqlDataReader dr = cmdTot.ExecuteReader())
+                {
+                    if (dr.Read())
+                    {
+                        totEv = Convert.ToInt32(dr["TotalEv"]);
+                        totNinos = Convert.ToInt32(dr["TotalNinos"]);
+                        maxFecha = dr["MaxFecha"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["MaxFecha"]) : null;
+                    }
+                }
+            }
+
+            string sqlSync = @"
+                IF EXISTS (SELECT 1 FROM dbo.ReportesEventos WHERE IdParticipacion = @IdPart AND TipoReporte = 'Evangelistico')
+                BEGIN
+                    UPDATE dbo.ReportesEventos
+                    SET CantidadNinos = @TotalNinos,
+                        CantidadClases = @TotalEv,
+                        Fecha = ISNULL(@MaxFecha, Fecha),
+                        TotalEventosEvangelisticos = @TotalEv,
+                        TotalNinosEvangelisticos = @TotalNinos
+                    WHERE IdParticipacion = @IdPart AND TipoReporte = 'Evangelistico';
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO dbo.ReportesEventos (
+                        IdParticipacion, TipoReporte, Fecha, CantidadNinos, CantidadClases, 
+                        TotalEventosEvangelisticos, TotalNinosEvangelisticos, FechaCreacion
+                    ) VALUES (
+                        @IdPart, 'Evangelistico', ISNULL(@MaxFecha, GETDATE()), @TotalNinos, @TotalEv, 
+                        @TotalEv, @TotalNinos, GETDATE()
+                    );
+                END;";
+
+            using (SqlCommand cmdSync = new SqlCommand(sqlSync, cn, tran))
+            {
+                cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
+                cmdSync.Parameters.AddWithValue("@TotalNinos", totNinos);
+                cmdSync.Parameters.AddWithValue("@TotalEv", totEv);
+                cmdSync.Parameters.AddWithValue("@MaxFecha", (object)maxFecha ?? DBNull.Value);
+                cmdSync.ExecuteNonQuery();
+            }
+        }
+
+        // ============================================================================
+        // REPORTE OFICIAL DE DISCIPULADO Y GRADUACIÓN LGA (9 PREGUNTAS)
+        // ============================================================================
+
+        public ReporteGraduacionLGAModel ObtenerReporteGraduacionLGA(int idParticipacion, int idIglesia)
+        {
+            var modelo = new ReporteGraduacionLGAModel
+            {
+                IdParticipacion = idParticipacion,
+                IdIglesia = idIglesia
+            };
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+
+                // 1. Cargar valores existentes del reporte oficial si ya fue guardado
+                string sqlRep = @"
+                    SELECT TOP 1 *
+                    FROM dbo.ReportesEventos
+                    WHERE IdParticipacion = @IdPart AND TipoReporte = 'GranAventura'
+                    ORDER BY FechaCreacion DESC;";
+
+                using (SqlCommand cmd = new SqlCommand(sqlRep, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            modelo.IdReporteEvento = Convert.ToInt32(dr["IdReporteEvento"]);
+                            modelo.CajitasRecibidas = dr.TableHasColumn("CajitasRecibidas") && dr["CajitasRecibidas"] != DBNull.Value ? Convert.ToInt32(dr["CajitasRecibidas"]) : 0;
+                            modelo.TotalEventosEvangelisticos = dr.TableHasColumn("TotalEventosEvangelisticos") && dr["TotalEventosEvangelisticos"] != DBNull.Value ? Convert.ToInt32(dr["TotalEventosEvangelisticos"]) : 0;
+                            modelo.TotalNinosEvangelisticos = dr.TableHasColumn("TotalNinosEvangelisticos") && dr["TotalNinosEvangelisticos"] != DBNull.Value ? Convert.ToInt32(dr["TotalNinosEvangelisticos"]) : 0;
+                            modelo.ClasesLGAEnsenadas = Convert.ToInt32(dr["CantidadClases"]);
+                            modelo.NinosAsistieronLGA = Convert.ToInt32(dr["CantidadNinos"]);
+                            modelo.NinosCreyeronJesus = Convert.ToInt32(dr["CuantosAceptaronSenor"]);
+                            modelo.NinosComprometieronOrar = Convert.ToInt32(dr["CuantosComprometieron"]);
+                            modelo.NinosGraduadosLGA = Convert.ToInt32(dr["CuantosGraduaron"]);
+                            modelo.CompanerosOracion = dr.TableHasColumn("CompanerosOracion") && dr["CompanerosOracion"] != DBNull.Value ? Convert.ToInt32(dr["CompanerosOracion"]) : 0;
+                            modelo.Notas = dr["Notas"] != DBNull.Value ? dr["Notas"].ToString() : "";
+                            modelo.ReporteAdjuntoRuta = dr["ReporteAdjuntoRuta"] != DBNull.Value ? dr["ReporteAdjuntoRuta"].ToString() : "";
+                            modelo.FechaReporte = dr["Fecha"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["Fecha"]) : DateTime.Today;
+                            modelo.FechaCreacion = Convert.ToDateTime(dr["FechaCreacion"]);
+                            modelo.EstaGuardado = true;
+                        }
+                    }
+                }
+
+                // 2. Si no ha sido guardado o tiene valores en cero, precargar inteligentemente con datos de la temporada
+                if (!modelo.EstaGuardado || modelo.CajitasRecibidas == 0)
+                {
+                    // Precargar Cajitas Asignadas
+                    string sqlCaj = "SELECT ISNULL(OportunidadesEvangelisticas, 0) FROM dbo.AsignacionesRecursos WHERE IdParticipacion = @IdPart;";
+                    using (SqlCommand cmdCaj = new SqlCommand(sqlCaj, cn))
+                    {
+                        cmdCaj.Parameters.AddWithValue("@IdPart", idParticipacion);
+                        object val = cmdCaj.ExecuteScalar();
+                        if (val != null && val != DBNull.Value) modelo.CajitasRecibidas = Convert.ToInt32(val);
+                    }
+
+                    // Precargar Eventos Evangelísticos y Niños Asistentes de los eventos registrados
+                    string sqlEv = @"
+                        SELECT COUNT(1) AS CantEv, ISNULL(SUM(AsistenciaNinos), 0) AS CantNinos 
+                        FROM dbo.ReportesEventosEvangelisticosDetalle 
+                        WHERE IdParticipacion = @IdPart;";
+                    using (SqlCommand cmdEv = new SqlCommand(sqlEv, cn))
+                    {
+                        cmdEv.Parameters.AddWithValue("@IdPart", idParticipacion);
+                        using (SqlDataReader drEv = cmdEv.ExecuteReader())
+                        {
+                            if (drEv.Read())
+                            {
+                                if (modelo.TotalEventosEvangelisticos == 0) modelo.TotalEventosEvangelisticos = Convert.ToInt32(drEv["CantEv"]);
+                                if (modelo.TotalNinosEvangelisticos == 0) modelo.TotalNinosEvangelisticos = Convert.ToInt32(drEv["CantNinos"]);
+                            }
+                        }
+                    }
+
+                    // Precargar Compañeros de Oración registrados
+                    string sqlOr = "SELECT COUNT(1) FROM dbo.CompanerosOracion WHERE IdIglesia = @IdIglesia;";
+                    using (SqlCommand cmdOr = new SqlCommand(sqlOr, cn))
+                    {
+                        cmdOr.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                        object valOr = cmdOr.ExecuteScalar();
+                        if (valOr != null && valOr != DBNull.Value && modelo.CompanerosOracion == 0)
+                        {
+                            modelo.CompanerosOracion = Convert.ToInt32(valOr);
+                        }
+                    }
+                }
+            }
+
+            return modelo;
+        }
+
+        public void GuardarReporteGraduacionLGA(ReporteGraduacionLGAModel rep, int idUsuario)
+        {
+            if (rep == null) throw new ArgumentNullException(nameof(rep));
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            IF EXISTS (SELECT 1 FROM dbo.ReportesEventos WHERE IdParticipacion = @IdPart AND TipoReporte = 'GranAventura')
+                            BEGIN
+                                UPDATE dbo.ReportesEventos SET
+                                    Fecha = ISNULL(@Fecha, GETDATE()),
+                                    CantidadNinos = @NinosLGA,
+                                    CantidadClases = @ClasesLGA,
+                                    CuantosAceptaronSenor = @Aceptaron,
+                                    CuantosComprometieron = @Comprometieron,
+                                    CuantosGraduaron = @Graduaron,
+                                    CajitasRecibidas = @Cajitas,
+                                    TotalEventosEvangelisticos = @EventosEv,
+                                    TotalNinosEvangelisticos = @NinosEv,
+                                    CompanerosOracion = @CompanerosOr,
+                                    ReporteAdjuntoRuta = COALESCE(@RutaAdjunto, ReporteAdjuntoRuta),
+                                    Notas = @Notas
+                                WHERE IdParticipacion = @IdPart AND TipoReporte = 'GranAventura';
+                            END
+                            ELSE
+                            BEGIN
+                                INSERT INTO dbo.ReportesEventos (
+                                    IdParticipacion, TipoReporte, Fecha, CantidadNinos, CantidadClases,
+                                    CuantosAceptaronSenor, CuantosComprometieron, CuantosGraduaron,
+                                    CajitasRecibidas, TotalEventosEvangelisticos, TotalNinosEvangelisticos,
+                                    CompanerosOracion, ReporteAdjuntoRuta, Notas, FechaCreacion
+                                ) VALUES (
+                                    @IdPart, 'GranAventura', ISNULL(@Fecha, GETDATE()), @NinosLGA, @ClasesLGA,
+                                    @Aceptaron, @Comprometieron, @Graduaron,
+                                    @Cajitas, @EventosEv, @NinosEv,
+                                    @CompanerosOr, @RutaAdjunto, @Notas, GETDATE()
+                                );
+                            END;
+
+                            -- Actualizar estatus de reporte de la participación
+                            UPDATE dbo.ParticipacionesIglesia
+                            SET EstatusEvaluacionReporte = 'Reportó'
+                            WHERE IdParticipacion = @IdPart;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdPart", rep.IdParticipacion);
+                            cmd.Parameters.AddWithValue("@Fecha", (object)rep.FechaReporte ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@NinosLGA", rep.NinosAsistieronLGA);
+                            cmd.Parameters.AddWithValue("@ClasesLGA", rep.ClasesLGAEnsenadas);
+                            cmd.Parameters.AddWithValue("@Aceptaron", rep.NinosCreyeronJesus);
+                            cmd.Parameters.AddWithValue("@Comprometieron", rep.NinosComprometieronOrar);
+                            cmd.Parameters.AddWithValue("@Graduaron", rep.NinosGraduadosLGA);
+                            cmd.Parameters.AddWithValue("@Cajitas", rep.CajitasRecibidas);
+                            cmd.Parameters.AddWithValue("@EventosEv", rep.TotalEventosEvangelisticos);
+                            cmd.Parameters.AddWithValue("@NinosEv", rep.TotalNinosEvangelisticos);
+                            cmd.Parameters.AddWithValue("@CompanerosOr", rep.CompanerosOracion);
+                            cmd.Parameters.AddWithValue("@RutaAdjunto", string.IsNullOrEmpty(rep.ReporteAdjuntoRuta) ? (object)DBNull.Value : rep.ReporteAdjuntoRuta);
+                            cmd.Parameters.AddWithValue("@Notas", (object)rep.Notas ?? DBNull.Value);
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Registrar en Historial de la Iglesia
+                        RegistrarLogHistorial(cn, tran, rep.IdParticipacion, "Reporte de Discipulado / Graduación LGA Ingresado",
+                            "Reportes Pendientes", "Reportó", idUsuario,
+                            $"Reporte Oficial LGA completado. Graduados: {rep.NinosGraduadosLGA}, Creyeron en Jesús: {rep.NinosCreyeronJesus}, Niños LGA: {rep.NinosAsistieronLGA}.");
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_REPORTE_GRADUACION_LGA", "REPORTES",
+                            $"Part_{rep.IdParticipacion}", $"Reporte Oficial de Graduación LGA guardado. Graduados: {rep.NinosGraduadosLGA}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        // ============================================================================
+        // GESTIÓN DIRECTA DE ENTREGA / DESPACHO DE MATERIALES (ETAPA 7)
+        // ============================================================================
+
+        public void ConfirmarEntregaDirecta(int idParticipacion, int idIglesia, string tipoReceptor, string nombreReceptor, string cedula, string telefono, string observaciones, int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            UPDATE dbo.AsignacionesRecursos SET
+                                EstadoAsignacion = 'DESPACHADA',
+                                FechaEntrega = GETDATE(),
+                                FechaDespacho = GETDATE(),
+                                TipoReceptor = @TipoR,
+                                NombreReceptor = @NomR,
+                                DocumentoIdentidadReceptor = @CedR,
+                                TelefonoReceptor = @TelR,
+                                ObservacionesEntrega = @Obs,
+                                IdUsuarioDespacho = @IdUser,
+                                MotivoNoEntrega = NULL
+                            WHERE IdParticipacion = @IdPart;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@TipoR", (object)tipoReceptor ?? "PASTOR");
+                            cmd.Parameters.AddWithValue("@NomR", (object)nombreReceptor ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@CedR", (object)cedula ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@TelR", (object)telefono ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Obs", (object)observaciones ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        RegistrarLogHistorial(cn, tran, idParticipacion, "Entrega de Materiales Confirmada",
+                            "Pendiente de Entrega", "Entregado / Despachado", idUsuario,
+                            $"Materiales retirados y confirmados satisfactoriamente. Receptor: {nombreReceptor} ({tipoReceptor}). Cédula: {cedula}.");
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "CONFIRMAR_ENTREGA_DIRECTA", "LOGISTICA",
+                            $"Part_{idParticipacion}", $"Entrega confirmada a {nombreReceptor} ({tipoReceptor})");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void MarcarNoEntregaDirecta(int idParticipacion, int idIglesia, string motivo, string observaciones, int idUsuario)
+        {
+            if (string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe especificar el motivo por el cual no se le entregó el material.");
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            UPDATE dbo.AsignacionesRecursos SET
+                                EstadoAsignacion = 'NO_DESPACHADA',
+                                MotivoNoEntrega = @Motivo,
+                                ObservacionesEntrega = @Obs,
+                                FechaEntrega = GETDATE(),
+                                IdUsuarioDespacho = @IdUser
+                            WHERE IdParticipacion = @IdPart;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@Motivo", motivo);
+                            cmd.Parameters.AddWithValue("@Obs", (object)observaciones ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        RegistrarLogHistorial(cn, tran, idParticipacion, "Materiales No Entregados / Cancelado",
+                            "Pendiente de Entrega", "No Entregado", idUsuario,
+                            $"No se realizó la entrega de materiales. Motivo: {motivo}. Observaciones: {observaciones}", motivo);
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "MARCAR_NO_ENTREGA_DIRECTA", "LOGISTICA",
+                            $"Part_{idParticipacion}", $"Marcado como NO ENTREGADO. Motivo: {motivo}");
+
+                        tran.Commit();
+                    }
+                    catch
+                    {
+                        tran.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void ReprogramarEntregaDirecta(int idParticipacion, int idIglesia, int idUsuario)
+        {
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                using (SqlTransaction tran = cn.BeginTransaction())
+                {
+                    try
+                    {
+                        string sql = @"
+                            UPDATE dbo.AsignacionesRecursos SET
+                                EstadoAsignacion = 'DISPONIBLE_PARA_DESPACHO',
+                                MotivoNoEntrega = NULL,
+                                ObservacionesEntrega = NULL,
+                                FechaDisponibleDespacho = GETDATE()
+                            WHERE IdParticipacion = @IdPart;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        RegistrarLogHistorial(cn, tran, idParticipacion, "Reprogramación de Entrega",
+                            "No Entregado", "Pendiente de Entrega", idUsuario,
+                            "La entrega de materiales ha sido restablecida como Disponible para Despacho / Programación.");
+
+                        AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REPROGRAMAR_ENTREGA_DIRECTA", "LOGISTICA",
+                            $"Part_{idParticipacion}", "Entrega restablecida a Disponible para Despacho.");
 
                         tran.Commit();
                     }

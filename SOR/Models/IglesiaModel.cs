@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SOR.Models
 {
@@ -64,6 +65,10 @@ namespace SOR.Models
 
         // Discipulado y Acompañamiento LGA (5 Contactos & Capacidad 26 Niños/Maestro)
         public ResumenDiscipuladoLGAModel DiscipuladoLGA { get; set; } = new ResumenDiscipuladoLGAModel();
+
+        // Reportes Ministeriales Post-Entrega
+        public ReporteEventosEvangelisticosModel ReporteEvangelistico { get; set; } = new ReporteEventosEvangelisticosModel();
+        public ReporteGraduacionLGAModel ReporteGraduacionLGA { get; set; } = new ReporteGraduacionLGAModel();
     }
 
     public class PersonaIglesia
@@ -142,6 +147,10 @@ namespace SOR.Models
         public int TallerCantMaestrosReg { get; set; }
         public int TallerCantMaestrosAsist { get; set; }
         public int TallerCantMaestrosAus { get; set; }
+
+        // Etapa 7: Entrega / Despacho de Materiales
+        public string EstatusDespacho { get; set; } = "PENDIENTE"; // PENDIENTE, DESPACHADA, NO_DESPACHADA, PROGRAMADA_DESPACHO, DISPONIBLE_PARA_DESPACHO
+        public string MotivoNoEntrega { get; set; }
     }
 
     public class Maestro
@@ -252,6 +261,15 @@ namespace SOR.Models
         public string EstadoAsignacion { get; set; }
         public DateTime? FechaDisponibleDespacho { get; set; }
         public int? IdEventoDespachoActual { get; set; }
+
+        // Trazabilidad y entrega presencial directa
+        public string MotivoNoEntrega { get; set; }
+        public DateTime? FechaEntrega { get; set; }
+        public string TipoReceptor { get; set; }
+        public string NombreReceptor { get; set; }
+        public string DocumentoIdentidadReceptor { get; set; }
+        public string TelefonoReceptor { get; set; }
+        public string ObservacionesEntrega { get; set; }
     }
 
     public class ComentarioIglesia
@@ -280,9 +298,106 @@ namespace SOR.Models
         public int CuantosAceptaronSenor { get; set; }
         public int CuantosComprometieron { get; set; }
         public int CuantosGraduaron { get; set; }
+        public int? CajitasRecibidas { get; set; }
+        public int? TotalEventosEvangelisticos { get; set; }
+        public int? TotalNinosEvangelisticos { get; set; }
+        public int? CompanerosOracion { get; set; }
         public string ReporteAdjuntoRuta { get; set; }
         public string Notas { get; set; }
         public DateTime? FechaCreacion { get; set; }
+    }
+
+    public class EventoEvangelisticoItem
+    {
+        public int IdEventoDetalle { get; set; }
+        public int IdParticipacion { get; set; }
+        public int IdIglesia { get; set; }
+        public int NumeroEvento { get; set; }
+        public DateTime? FechaEvento { get; set; } = DateTime.Today;
+        public int AsistenciaNinos { get; set; }
+        public int CantidadNinosAsistieron
+        {
+            get => AsistenciaNinos;
+            set => AsistenciaNinos = value;
+        }
+        public string Lugar { get; set; }
+        public string LugarEvento
+        {
+            get => Lugar;
+            set => Lugar = value;
+        }
+        public string Notas { get; set; }
+        public string Observaciones
+        {
+            get => Notas;
+            set => Notas = value;
+        }
+        public DateTime FechaRegistro { get; set; } = DateTime.Now;
+    }
+
+    public class ReporteEventosEvangelisticosModel
+    {
+        public int IdParticipacion { get; set; }
+        public int IdIglesia { get; set; }
+        public int TotalEventos => Eventos != null ? Eventos.Count : 0;
+        public int TotalEventosCalculado => TotalEventos;
+        public int TotalNinos => Eventos != null ? Eventos.Sum(x => x.AsistenciaNinos) : 0;
+        public int TotalNinosAsistentesCalculado => TotalNinos;
+        public string AnotacionesGenerales { get; set; }
+        public DateTime? UltimaFechaEvento => Eventos != null && Eventos.Any() ? Eventos.Max(x => x.FechaEvento) : null;
+        public List<EventoEvangelisticoItem> Eventos { get; set; } = new List<EventoEvangelisticoItem>();
+        public bool EstaGuardado { get; set; }
+    }
+
+    public class ReporteGraduacionLGAModel
+    {
+        public int IdReporteEvento { get; set; }
+        public int IdParticipacion { get; set; }
+        public int IdIglesia { get; set; }
+
+        // Las 9 Preguntas Oficiales del Reporte de Discipulado / Graduación
+        // 1. ¿Cuántas cajitas recibieron del Equipo Regional de Liderazgo de OCC?
+        public int CajitasRecibidas { get; set; }
+
+        // 2. ¿Cuántos Eventos Evangelísticos tuvieron?
+        public int TotalEventosEvangelisticos { get; set; }
+
+        // 3. ¿Cuántos niños asistieron a sus Eventos Evangelísticos?
+        public int TotalNinosEvangelisticos { get; set; }
+
+        // 4. ¿Cuántas clases de LGA enseñaron?
+        public int ClasesLGAEnsenadas { get; set; }
+
+        // 5. ¿Cuántos niños asistieron al curso de La Gran Aventura?
+        public int NinosAsistieronLGA { get; set; }
+
+        // 6. ¿Cuántos niños decidieron creer en Jesús por primera vez?
+        public int NinosCreyeronJesus { get; set; }
+
+        // 7. ¿Cuántos niños se comprometieron en orar y compartir?
+        public int NinosComprometieronOrar { get; set; }
+
+        // 8. ¿Cuántos niños se graduaron?
+        public int NinosGraduadosLGA { get; set; }
+
+        // 9. ¿Cuántos compañeros de oración en su ministerio están orando por OCC?
+        public int CompanerosOracion { get; set; }
+
+        public string Notas { get; set; }
+        public string Observaciones
+        {
+            get => Notas;
+            set => Notas = value;
+        }
+        public string ReporteAdjuntoRuta { get; set; }
+        public string ArchivoEvidenciaRuta
+        {
+            get => ReporteAdjuntoRuta;
+            set => ReporteAdjuntoRuta = value;
+        }
+        public DateTime? FechaReporte { get; set; } = DateTime.Today;
+        public DateTime? FechaCreacion { get; set; }
+        public bool EstaGuardado { get; set; }
     }
 
     public class Notificacion
