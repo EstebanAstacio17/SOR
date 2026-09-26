@@ -24,6 +24,13 @@ jobs:
       - name: Restore NuGet Packages
         run: nuget restore SOR/packages.config -PackagesDirectory packages
 
+      - name: Ensure Local Secrets Config
+        shell: powershell
+        run: |
+          if (-not (Test-Path "SOR\Web.Secrets.config")) {
+            "<appSettings><add key=`"SmtpClave`" value=`"`"/></appSettings>" | Set-Content "SOR\Web.Secrets.config" -Encoding UTF8
+          }
+
       - name: Build ASP.NET MVC Web Application
         run: |
           msbuild SOR/SOR.csproj /p:Configuration=Release /p:DeployOnBuild=true /p:SkipInvalidConfigurations=true
