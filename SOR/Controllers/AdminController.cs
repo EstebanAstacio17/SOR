@@ -133,6 +133,108 @@ namespace SOR.Controllers
             return View(listaUsuarios);
         }
 
+        // GET: Admin/ImprimirPerfil/{id}
+        public ActionResult ImprimirPerfil(int id)
+        {
+            Usuario usuarioActual = (Usuario)Session["usuario"];
+            if (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            SolicitudUsuarioViewModel userVm = null;
+
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                string sql = @"
+                    SELECT 
+                        u.IdUsuario, u.Correo, u.IdRolSeguridad, r.NombreRol, 
+                        u.IdEstado, e.NombreEstado, u.FechaRegistro,
+                        p.*, eq.NombreEquipo, pos.NombrePosicion
+                    FROM dbo.Usuarios u
+                    INNER JOIN dbo.RolesSeguridad r ON u.IdRolSeguridad = r.IdRolSeguridad
+                    INNER JOIN dbo.EstadosCuenta e ON u.IdEstado = e.IdEstado
+                    LEFT JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
+                    LEFT JOIN dbo.Equipos eq ON p.IdEquipo = eq.IdEquipo
+                    LEFT JOIN dbo.PosicionesOCC pos ON p.IdPosicion = pos.IdPosicion
+                    WHERE u.IdUsuario = @IdUsuario;";
+
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdUsuario", id);
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            userVm = new SolicitudUsuarioViewModel
+                            {
+                                IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
+                                Correo = dr["Correo"].ToString(),
+                                IdRolSeguridad = Convert.ToInt32(dr["IdRolSeguridad"]),
+                                NombreRol = dr["NombreRol"].ToString(),
+                                IdEstado = Convert.ToInt32(dr["IdEstado"]),
+                                NombreEstado = dr["NombreEstado"].ToString(),
+                                FechaRegistro = dr["FechaRegistro"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaRegistro"]) : null,
+
+                                Perfil = new PerfilCoordinador
+                                {
+                                    IdPerfil = dr["IdPerfil"] != DBNull.Value ? Convert.ToInt32(dr["IdPerfil"]) : 0,
+                                    IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
+                                    PrimerNombre = dr["PrimerNombre"] != DBNull.Value ? dr["PrimerNombre"].ToString() : "",
+                                    OtrosNombres = dr["OtrosNombres"] != DBNull.Value ? dr["OtrosNombres"].ToString() : "",
+                                    PrimerApellido = dr["PrimerApellido"] != DBNull.Value ? dr["PrimerApellido"].ToString() : "",
+                                    OtrosApellidos = dr["OtrosApellidos"] != DBNull.Value ? dr["OtrosApellidos"].ToString() : "",
+                                    FechaNacimiento = dr["FechaNacimiento"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaNacimiento"]) : null,
+                                    Calle = dr["Calle"] != DBNull.Value ? dr["Calle"].ToString() : "",
+                                    Numero = dr["Numero"] != DBNull.Value ? dr["Numero"].ToString() : "",
+                                    Sector = dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
+                                    Ciudad = dr["Ciudad"] != DBNull.Value ? dr["Ciudad"].ToString() : "",
+                                    Provincia = dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
+                                    Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
+                                    Nacionalidad = dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
+                                    Talla = dr["Talla"] != DBNull.Value ? dr["Talla"].ToString() : "",
+                                    NumeroDocumento = dr["NumeroDocumento"] != DBNull.Value ? dr["NumeroDocumento"].ToString() : "",
+                                    DocumentoAdjuntoRuta = dr["DocumentoAdjuntoRuta"] != DBNull.Value ? dr["DocumentoAdjuntoRuta"].ToString() : "",
+                                    NumeroPasaporte = dr["NumeroPasaporte"] != DBNull.Value ? dr["NumeroPasaporte"].ToString() : "",
+                                    PasaporteAdjuntoRuta = dr["PasaporteAdjuntoRuta"] != DBNull.Value ? dr["PasaporteAdjuntoRuta"].ToString() : "",
+                                    TelefonoFijo = dr["TelefonoFijo"] != DBNull.Value ? dr["TelefonoFijo"].ToString() : "",
+                                    TelefonoCelularWhatsApp = dr["TelefonoCelularWhatsApp"] != DBNull.Value ? dr["TelefonoCelularWhatsApp"].ToString() : "",
+                                    Correo = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "",
+                                    FotoRuta = dr["FotoRuta"] != DBNull.Value ? dr["FotoRuta"].ToString() : "",
+                                    DatosConyugue = dr["DatosConyugue"] != DBNull.Value ? dr["DatosConyugue"].ToString() : "",
+                                    ContactoEmergencia = dr["ContactoEmergencia"] != DBNull.Value ? dr["ContactoEmergencia"].ToString() : "",
+                                    IglesiaLocal = dr["IglesiaLocal"] != DBNull.Value ? dr["IglesiaLocal"].ToString() : "",
+                                    PastorIglesiaLocal = dr["PastorIglesiaLocal"] != DBNull.Value ? dr["PastorIglesiaLocal"].ToString() : "",
+                                    CargoIglesiaLocal = dr["CargoIglesiaLocal"] != DBNull.Value ? dr["CargoIglesiaLocal"].ToString() : "",
+                                    AniosServicioMinisterial = dr["AniosServicioMinisterial"] != DBNull.Value ? (int?)Convert.ToInt32(dr["AniosServicioMinisterial"]) : null,
+                                    InfoMinisterial = dr["InfoMinisterial"] != DBNull.Value ? dr["InfoMinisterial"].ToString() : "",
+                                    NivelEducativo = dr["NivelEducativo"] != DBNull.Value ? dr["NivelEducativo"].ToString() : "",
+                                    ProfesionCarrera = dr["ProfesionCarrera"] != DBNull.Value ? dr["ProfesionCarrera"].ToString() : "",
+                                    InfoEducativa = dr["InfoEducativa"] != DBNull.Value ? dr["InfoEducativa"].ToString() : "",
+                                    OcupacionEmpresaLaboral = dr["OcupacionEmpresaLaboral"] != DBNull.Value ? dr["OcupacionEmpresaLaboral"].ToString() : "",
+                                    TelefonoTrabajo = dr["TelefonoTrabajo"] != DBNull.Value ? dr["TelefonoTrabajo"].ToString() : "",
+                                    InfoLaboral = dr["InfoLaboral"] != DBNull.Value ? dr["InfoLaboral"].ToString() : "",
+                                    CapacitacionesOCC = dr["CapacitacionesOCC"] != DBNull.Value ? dr["CapacitacionesOCC"].ToString() : "",
+                                    Ministerio = dr["Ministerio"] != DBNull.Value ? dr["Ministerio"].ToString() : "",
+                                    IdEquipo = dr["IdEquipo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipo"]) : null,
+                                    NombreEquipo = dr["NombreEquipo"] != DBNull.Value ? dr["NombreEquipo"].ToString() : "",
+                                    IdPosicion = dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null,
+                                    NombrePosicion = dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString() : "",
+                                    FechaIngreso = dr["FechaIngreso"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaIngreso"]) : null
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            if (userVm == null) return HttpNotFound();
+
+            ViewBag.HideLayout = true; 
+            return View(userVm);
+        }
+
         // ============================================================================
         // MÉTODOS AUXILIARES DE SEGURIDAD Y PROTECCIÓN DE SUPERADMIN
         // ============================================================================

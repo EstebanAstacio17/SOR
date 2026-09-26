@@ -1,0 +1,163 @@
+@model SOR.Models.SolicitudUsuarioViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imprimir Perfil - @Model.Perfil.PrimerNombre @Model.Perfil.PrimerApellido</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; background-color: #fff; color: #333; }
+        .print-header { border-bottom: 2px solid #0d6efd; padding-bottom: 10px; margin-bottom: 20px; }
+        .section-title { font-size: 1.2rem; color: #0d6efd; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; margin-bottom: 15px; margin-top: 30px; font-weight: bold; }
+        .data-row { margin-bottom: 10px; }
+        .data-label { font-weight: 600; color: #555; }
+        .document-preview img { max-width: 100%; height: auto; margin-top: 10px; border: 1px solid #ccc; }
+        @media print {
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="container my-4">
+        <div class="text-end mb-3 no-print">
+            <button class="btn btn-primary" onclick="window.print()">Imprimir Ahora</button>
+            <button class="btn btn-secondary" onclick="window.close()">Cerrar Pestaña</button>
+        </div>
+
+        <div class="print-header text-center">
+            <h2 class="mb-1">Perfil de Coordinador - OCC República Dominicana</h2>
+            <p class="text-muted mb-0">Generado el @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
+        </div>
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-2 text-center">
+                @if (!string.IsNullOrEmpty(Model.Perfil.FotoRuta))
+                {
+                    <img src="@Model.Perfil.FotoRuta" alt="Foto" class="img-thumbnail" style="max-height: 150px;">
+                }
+                else
+                {
+                    <div class="bg-light border text-muted d-flex align-items-center justify-content-center" style="height: 150px; width: 150px; margin: 0 auto;">Sin Foto</div>
+                }
+            </div>
+            <div class="col-md-10">
+                <h3 class="font-weight-bold">@Model.Perfil.PrimerNombre @Model.Perfil.OtrosNombres @Model.Perfil.PrimerApellido @Model.Perfil.OtrosApellidos</h3>
+                <p class="mb-1"><strong>Equipo Asignado:</strong> @(string.IsNullOrEmpty(Model.Perfil.NombreEquipo) ? "N/A" : Model.Perfil.NombreEquipo)</p>
+                <p class="mb-1"><strong>Posición / Rol:</strong> @(string.IsNullOrEmpty(Model.Perfil.NombrePosicion) ? "N/A" : Model.Perfil.NombrePosicion)</p>
+                <p class="mb-0"><strong>Correo:</strong> @Model.Correo</p>
+            </div>
+        </div>
+
+        <h4 class="section-title">1. Datos Personales e Identidad</h4>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Fecha de Nacimiento:</span> @(Model.Perfil.FechaNacimiento?.ToString("dd/MM/yyyy") ?? "N/D")</div>
+            <div class="col-6"><span class="data-label">Sexo:</span> @(string.IsNullOrEmpty(Model.Perfil.Sexo) ? "N/D" : Model.Perfil.Sexo)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Estado Civil:</span> @(string.IsNullOrEmpty(Model.Perfil.EstadoCivil) ? "N/D" : Model.Perfil.EstadoCivil)</div>
+            <div class="col-6"><span class="data-label">Nacionalidad:</span> @(string.IsNullOrEmpty(Model.Perfil.Nacionalidad) ? "N/D" : Model.Perfil.Nacionalidad)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Número de Documento (Cédula):</span> @(string.IsNullOrEmpty(Model.Perfil.NumeroDocumento) ? "N/D" : Model.Perfil.NumeroDocumento)</div>
+            <div class="col-6"><span class="data-label">Número de Pasaporte:</span> @(string.IsNullOrEmpty(Model.Perfil.NumeroPasaporte) ? (Model.Perfil.NoPoseePasaporte ? "No posee" : "N/D") : Model.Perfil.NumeroPasaporte)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Talla de Camisa:</span> @(string.IsNullOrEmpty(Model.Perfil.Talla) ? "N/D" : Model.Perfil.Talla)</div>
+        </div>
+
+        <h4 class="section-title">2. Información de Contacto y Dirección</h4>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Teléfono Fijo:</span> @(string.IsNullOrEmpty(Model.Perfil.TelefonoFijo) ? "N/D" : Model.Perfil.TelefonoFijo)</div>
+            <div class="col-6"><span class="data-label">Celular / WhatsApp:</span> @(string.IsNullOrEmpty(Model.Perfil.TelefonoCelularWhatsApp) ? "N/D" : Model.Perfil.TelefonoCelularWhatsApp)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-12"><span class="data-label">Dirección:</span> @Model.Perfil.Calle #@Model.Perfil.Numero, @Model.Perfil.Sector, @Model.Perfil.Ciudad, @Model.Perfil.Provincia, @Model.Perfil.Pais</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Datos del Cónyuge:</span> @(string.IsNullOrEmpty(Model.Perfil.DatosConyugue) ? "N/D" : Model.Perfil.DatosConyugue)</div>
+            <div class="col-6"><span class="data-label">Contacto de Emergencia:</span> @(string.IsNullOrEmpty(Model.Perfil.ContactoEmergencia) ? "N/D" : Model.Perfil.ContactoEmergencia)</div>
+        </div>
+
+        <h4 class="section-title">3. Información Ministerial</h4>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Iglesia Local:</span> @(string.IsNullOrEmpty(Model.Perfil.IglesiaLocal) ? "N/D" : Model.Perfil.IglesiaLocal)</div>
+            <div class="col-6"><span class="data-label">Pastor:</span> @(string.IsNullOrEmpty(Model.Perfil.PastorIglesiaLocal) ? "N/D" : Model.Perfil.PastorIglesiaLocal)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Cargo en la Iglesia:</span> @(string.IsNullOrEmpty(Model.Perfil.CargoIglesiaLocal) ? "N/D" : Model.Perfil.CargoIglesiaLocal)</div>
+            <div class="col-6"><span class="data-label">Años de Servicio:</span> @(Model.Perfil.AniosServicioMinisterial.HasValue ? Model.Perfil.AniosServicioMinisterial.Value.ToString() : "N/D")</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-12"><span class="data-label">Detalles Ministeriales:</span> @(string.IsNullOrEmpty(Model.Perfil.InfoMinisterial) ? "N/D" : Model.Perfil.InfoMinisterial)</div>
+        </div>
+
+        <h4 class="section-title">4. Educación, Trabajo y Capacitaciones OCC</h4>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Nivel Educativo:</span> @(string.IsNullOrEmpty(Model.Perfil.NivelEducativo) ? "N/D" : Model.Perfil.NivelEducativo)</div>
+            <div class="col-6"><span class="data-label">Profesión / Carrera:</span> @(string.IsNullOrEmpty(Model.Perfil.ProfesionCarrera) ? "N/D" : Model.Perfil.ProfesionCarrera)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-12"><span class="data-label">Información Educativa Adicional:</span> @(string.IsNullOrEmpty(Model.Perfil.InfoEducativa) ? "N/D" : Model.Perfil.InfoEducativa)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-6"><span class="data-label">Ocupación / Empresa:</span> @(string.IsNullOrEmpty(Model.Perfil.OcupacionEmpresaLaboral) ? "N/D" : Model.Perfil.OcupacionEmpresaLaboral)</div>
+            <div class="col-6"><span class="data-label">Teléfono de Trabajo:</span> @(string.IsNullOrEmpty(Model.Perfil.TelefonoTrabajo) ? "N/D" : Model.Perfil.TelefonoTrabajo)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-12"><span class="data-label">Información Laboral Adicional:</span> @(string.IsNullOrEmpty(Model.Perfil.InfoLaboral) ? "N/D" : Model.Perfil.InfoLaboral)</div>
+        </div>
+        <div class="row data-row">
+            <div class="col-12"><span class="data-label">Capacitaciones OCC Anteriores:</span> @(string.IsNullOrEmpty(Model.Perfil.CapacitacionesOCC) ? "N/D" : Model.Perfil.CapacitacionesOCC)</div>
+        </div>
+
+        <!-- Se imprimen los documentos si es necesario -->
+        <div class="page-break"></div>
+        <h4 class="section-title">Anexos: Documentos Adjuntos</h4>
+        
+        <div class="row">
+            <div class="col-12 mb-4 document-preview">
+                <h5>Documento de Identidad (Cédula)</h5>
+                @if (!string.IsNullOrEmpty(Model.Perfil.DocumentoAdjuntoRuta))
+                {
+                    if (Model.Perfil.DocumentoAdjuntoRuta.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <p>El documento es un PDF. <a href="@Model.Perfil.DocumentoAdjuntoRuta" target="_blank" class="no-print">Abrir PDF para imprimir</a></p>
+                    }
+                    else
+                    {
+                        <img src="@Model.Perfil.DocumentoAdjuntoRuta" alt="Cédula">
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">No se adjuntó Cédula.</p>
+                }
+            </div>
+
+            <div class="col-12 mb-4 document-preview">
+                <h5>Pasaporte</h5>
+                @if (!string.IsNullOrEmpty(Model.Perfil.PasaporteAdjuntoRuta))
+                {
+                    if (Model.Perfil.PasaporteAdjuntoRuta.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <p>El documento es un PDF. <a href="@Model.Perfil.PasaporteAdjuntoRuta" target="_blank" class="no-print">Abrir PDF para imprimir</a></p>
+                    }
+                    else
+                    {
+                        <img src="@Model.Perfil.PasaporteAdjuntoRuta" alt="Pasaporte">
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">No se adjuntó Pasaporte.</p>
+                }
+            </div>
+        </div>
+    </div>
+</body>
+</html>
