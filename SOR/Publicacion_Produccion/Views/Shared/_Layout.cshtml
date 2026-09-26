@@ -209,9 +209,10 @@
                             bool esCoordinadorEquipoSesion = uSesion.IdPosicion == 1 || (!string.IsNullOrEmpty(uSesion.NombrePosicion) && uSesion.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0);
                             bool esCoordinadorLogisticaSesion = uSesion.IdPosicion == 6 || (!string.IsNullOrEmpty(uSesion.NombrePosicion) && (uSesion.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || uSesion.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
                             bool esCoordinadorRecursosSesion = uSesion.IdPosicion == 4 || (!string.IsNullOrEmpty(uSesion.NombrePosicion) && (uSesion.NombrePosicion.IndexOf("Recursos", StringComparison.OrdinalIgnoreCase) >= 0 || uSesion.NombrePosicion.IndexOf("Finanzas", StringComparison.OrdinalIgnoreCase) >= 0));
+                            bool esCualquierCoordinadorSesion = (uSesion.IdPosicion.HasValue && uSesion.IdPosicion.Value > 0) || uSesion.IdRolSeguridad == 3;
 
                             bool puedeVerLogistica = esAdminSesion || esCoordinadorEquipoSesion || esCoordinadorLogisticaSesion;
-                            bool puedeVerFinanzas = esAdminSesion || esCoordinadorEquipoSesion || esCoordinadorRecursosSesion;
+                            bool puedeVerFinanzas = esAdminSesion || esCualquierCoordinadorSesion;
 
                             if (puedeVerLogistica)
                             {
@@ -287,6 +288,12 @@
                                                 <i class="bi bi-grid-3x3 me-2 text-primary"></i>Reporte Consolidado Anual
                                             </a>
                                         </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item fw-medium" href="@Url.Action("Anexos", "Finanzas")">
+                                                <i class="bi bi-paperclip me-2 text-info"></i>Anexos y Soportes
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                             }
@@ -342,10 +349,13 @@
                     @if (Session["usuario"] != null)
                     {
                         var usuarioSesion = (SOR.Models.Usuario)Session["usuario"];
+                        string nombreUsuarioNav = !string.IsNullOrWhiteSpace(usuarioSesion.PrimerNombre) 
+                            ? (usuarioSesion.PrimerNombre + (!string.IsNullOrWhiteSpace(usuarioSesion.PrimerApellido) ? (" " + usuarioSesion.PrimerApellido) : "")).Trim() 
+                            : usuarioSesion.Correo;
                         <li class="nav-item dropdown me-2">
                             <a class="nav-link dropdown-toggle d-flex align-items-center py-1" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="line-height: 1.2;">
                                 <div class="d-flex flex-column align-items-start me-2">
-                                    <span class="text-dark fw-semibold" style="font-size: 0.85rem;">@usuarioSesion.Correo</span>
+                                    <span class="text-dark fw-semibold" style="font-size: 0.85rem;" title="@usuarioSesion.Correo">@nombreUsuarioNav</span>
                                     <span class="badge bg-primary mt-1" style="font-size: 0.7rem; padding: 0.2em 0.6em;">@(usuarioSesion.NombreRol ?? "Coordinador")</span>
                                 </div>
                             </a>

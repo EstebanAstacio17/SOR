@@ -222,6 +222,9 @@ namespace SOR.Helpers
 
                     // 8. Módulo Logístico y de Despacho de Materiales OCC
                     AsegurarModuloLogistica(cn);
+
+                    // 9. Procedimientos Almacenados del Sistema
+                    AsegurarProcedimientosAlmacenados(cn);
                 }
             }
             catch (Exception ex)

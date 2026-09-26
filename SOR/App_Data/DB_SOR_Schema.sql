@@ -352,6 +352,10 @@ GO
 -- Procedure: sp_RegistrarUsuario
 IF OBJECT_ID('dbo.sp_RegistrarUsuario', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_RegistrarUsuario;
 GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
 CREATE PROCEDURE dbo.sp_RegistrarUsuario
     @Correo VARCHAR(100),
     @Clave VARCHAR(100),
@@ -360,6 +364,8 @@ CREATE PROCEDURE dbo.sp_RegistrarUsuario
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET ANSI_NULLS ON;
+    SET QUOTED_IDENTIFIER ON;
     
     IF EXISTS (SELECT 1 FROM dbo.Usuarios WHERE Correo = @Correo)
     BEGIN
@@ -378,6 +384,10 @@ GO
 
 -- Procedure: sp_ValidarUsuario (Con JOIN a NivelesEquipo para obtener Nivel y RangoJerarquico exactos)
 IF OBJECT_ID('dbo.sp_ValidarUsuario', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_ValidarUsuario;
+GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
 GO
 CREATE PROCEDURE dbo.sp_ValidarUsuario
     @Correo VARCHAR(100),

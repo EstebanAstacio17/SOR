@@ -1,0 +1,547 @@
+@model SOR.Models.AnexosFinanzasViewModel
+@{
+    ViewBag.Title = "Finanzas — Anexos y Soportes — " + Model.NombreEquipo;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var conSoporte = Model.Transacciones.Where(t => !string.IsNullOrEmpty(t.RutaComprobante)).ToList();
+    var sinSoporte = Model.Transacciones.Where(t => string.IsNullOrEmpty(t.RutaComprobante)).ToList();
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="h3 font-bold text-slate-800 mb-1">
+            <i class="bi bi-paperclip text-info me-2"></i>Finanzas — Anexos y Soportes Documentales
+        </h2>
+        <p class="text-muted mb-0">Compendio de facturas, fotos y comprobantes en PDF/imagen para auditoría y respaldo de movimientos.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="@Url.Action("Index", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo, mes = (Model.Mes == "TODOS" ? null : Model.Mes) })" class="btn btn-outline-secondary font-semibold px-3 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Libro Diario
+        </a>
+        <button type="button" class="btn btn-outline-primary font-semibold px-3 shadow-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Imprimir Compendio / PDF
+        </button>
+        <a href="@Url.Action("ReporteConsolidado", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo })" class="btn btn-outline-primary font-semibold px-3 shadow-sm">
+            <i class="bi bi-grid-3x3 me-1"></i>Reporte Consolidado
+        </a>
+    </div>
+</div>
+
+<!-- FILTROS DE AUDITORÍA -->
+<div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4 d-print-none">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Búsqueda Rápida</label>
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filtroTextoAnexos" class="form-control bg-light border-start-0" placeholder="Buscar por concepto, # comprobante..." onkeyup="filtrarGaleriaAnexos()" autocomplete="off">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Equipo</label>
+            @if (ViewBag.PuedeCambiarEquipo == true)
+            {
+                <select id="selectEquipoAnexos" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosAnexos()">
+                    @foreach (var eq in Model.ListaEquipos)
+                    {
+                        <option value="@eq.Value" @(Model.IdEquipo.ToString() == eq.Value ? "selected" : "")>@eq.Text</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                    <input type="text" class="form-control bg-light fw-semibold text-slate-800" value="@Model.NombreEquipo" readonly />
+                    <input type="hidden" id="selectEquipoAnexos" value="@Model.IdEquipo" />
+                </div>
+            }
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Temporada</label>
+            <select id="selectTemporadaAnexos" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosAnexos()">
+                @foreach (var tmp in Model.ListaTemporadas)
+                {
+                    <option value="@tmp.Value" @(Model.IdTemporada.ToString() == tmp.Value ? "selected" : "")>@tmp.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Mes</label>
+            <select id="selectMesAnexos" class="form-select form-select-sm bg-light" onchange="cambiarFiltrosAnexos()">
+                <option value="TODOS" @(Model.Mes == "TODOS" ? "selected" : "")>Todos los Meses</option>
+                @foreach (var m in new[] { "SEP", "OCT", "NOV", "DIC", "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO" })
+                {
+                    <option value="@m" @(Model.Mes == m ? "selected" : "")>@m</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label text-xs fw-semibold mb-1 text-muted">Estado del Soporte</label>
+            <select id="filtroEstadoSoporte" class="form-select form-select-sm bg-light" onchange="filtrarGaleriaAnexos()">
+                <option value="TODOS">Todos</option>
+                <option value="CON_SOPORTE" selected>Solo con Soporte Adjunto</option>
+                <option value="SIN_SOPORTE">Pendientes de Soporte</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- TARJETAS KPI RESUMEN DE RESPALDO DOCUMENTAL -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Total Movimientos</div>
+                    <div class="h4 font-bold text-dark mb-0 font-monospace">@Model.TotalTransacciones</div>
+                    <small class="text-muted">En el período seleccionado</small>
+                </div>
+                <div class="rounded-circle p-3 bg-info-soft text-info">
+                    <i class="bi bi-receipt-cutoff fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Con Soporte Adjunto</div>
+                    <div class="h4 font-bold text-success mb-0 font-monospace">@Model.TotalConSoporte <span class="fs-6 fw-normal text-muted">(@Model.PorcentajeRespaldo%)</span></div>
+                    <small class="text-success fw-semibold"><i class="bi bi-shield-check me-1"></i>Verificados y Respaldados</small>
+                </div>
+                <div class="rounded-circle p-3 bg-success-soft text-success">
+                    <i class="bi bi-check2-circle fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #0d6efd !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Monto de Gastos Respaldado</div>
+                    <div class="h4 font-bold text-primary mb-0 font-monospace">RD$ @Model.TotalGastosConSoporteDOP.ToString("N2")</div>
+                    <small class="text-muted font-monospace">$@((Model.TasaCambio > 0 ? Math.Round(Model.TotalGastosConSoporteDOP / Model.TasaCambio, 2) : 0).ToString("N2")) USD</small>
+                </div>
+                <div class="rounded-circle p-3 bg-primary-soft text-primary">
+                    <i class="bi bi-cash-coin fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid @(Model.TotalSinSoporte > 0 ? "#ffc107" : "#6c757d") !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted text-xs fw-bold text-uppercase mb-1">Sin Comprobante</div>
+                    <div class="h4 font-bold @(Model.TotalSinSoporte > 0 ? "text-warning" : "text-muted") mb-0 font-monospace">@Model.TotalSinSoporte</div>
+                    <small class="text-muted">Movimientos pendientes</small>
+                </div>
+                <div class="rounded-circle p-3 @(Model.TotalSinSoporte > 0 ? "bg-warning-soft text-warning" : "bg-secondary-soft text-muted")">
+                    <i class="bi bi-exclamation-triangle fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VISTAS: GALERÍA DE COMPROBANTES Y TABLA DE AUDITORÍA -->
+<div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom">
+        <div>
+            <h6 class="mb-0 fw-bold text-slate-800">
+                <i class="bi bi-images me-2 text-info"></i>Galería y Respaldo de Comprobantes — @Model.NombreEquipo (@Model.NombreTemporada)
+            </h6>
+            <small class="text-muted">Período: @(Model.Mes == "TODOS" ? "Toda la Temporada" : "Mes " + Model.Mes)</small>
+        </div>
+        <div class="d-flex gap-2 d-print-none">
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-primary active" id="btnVistaGaleria" onclick="cambiarModoVista('galeria')">
+                    <i class="bi bi-grid-fill me-1"></i>Galería
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="btnVistaTabla" onclick="cambiarModoVista('tabla')">
+                    <i class="bi bi-list-task me-1"></i>Listado
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <!-- VISTA GALERÍA (TARJETAS VISUALES) -->
+        <div id="contenedorVistaGaleria" class="row g-4">
+            @if (!Model.Transacciones.Any())
+            {
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="bi bi-folder-x fs-1 text-slate-300 d-block mb-2"></i>
+                    No se encontraron movimientos registrados en este período.
+                </div>
+            }
+            else
+            {
+                foreach (var item in Model.Transacciones)
+                {
+                    bool tieneAdjunto = !string.IsNullOrEmpty(item.RutaComprobante);
+                    string ext = tieneAdjunto ? System.IO.Path.GetExtension(item.RutaComprobante).ToLowerInvariant() : "";
+                    bool esPdf = ext == ".pdf";
+                    bool esImg = ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp";
+
+                    <div class="col-md-6 col-xl-4 item-card-anexo" data-soporte="@(tieneAdjunto ? "CON_SOPORTE" : "SIN_SOPORTE")" data-busqueda="@((item.Descripcion + " " + item.NumeroDocumento + " " + item.CategoriaDescripcion + " " + item.Mes).ToLower())">
+                        <div class="card h-100 border rounded-4 shadow-sm overflow-hidden transition-hover" style="border-top: 4px solid @(tieneAdjunto ? (item.IngresoDOP > 0 ? "#198754" : "#0d6efd") : "#ffc107") !important;">
+                            <!-- PREVIEW / ENCABEZADO VISUAL -->
+                            <div class="p-3 bg-light border-bottom text-center position-relative" style="min-height: 180px; display: flex; align-items: center; justify-content: center; background-color: #f8fafc;">
+                                @if (tieneAdjunto && esImg)
+                                {
+                                    <img src="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })" alt="@item.Descripcion" class="img-fluid rounded-3 shadow-sm cursor-pointer" style="max-height: 170px; object-fit: contain; width: auto;" onclick="verComprobanteModal('@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })', '@Html.Raw((item.Descripcion ?? "").Replace("'", "\\'"))', false)" title="Click para ampliar imagen" />
+                                }
+                                else if (tieneAdjunto && esPdf)
+                                {
+                                    <div class="text-center py-3 cursor-pointer" onclick="verComprobanteModal('@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })', '@Html.Raw((item.Descripcion ?? "").Replace("'", "\\'"))', true)">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size: 4rem;"></i>
+                                        <div class="small fw-semibold text-slate-800 mt-2 text-truncate" style="max-width: 250px;">@(item.NombreComprobante ?? "Comprobante.pdf")</div>
+                                        <span class="badge bg-danger-soft text-danger mt-1"><i class="bi bi-eye me-1"></i>Ver Documento PDF</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4 text-muted">
+                                        <i class="bi bi-file-earmark-x text-warning opacity-75" style="font-size: 3.5rem;"></i>
+                                        <div class="small fw-semibold text-muted mt-2">Sin comprobante adjunto</div>
+                                    </div>
+                                }
+                                <span class="position-absolute top-0 end-0 m-2 badge @(item.IngresoDOP > 0 ? "bg-success" : "bg-primary") shadow-sm">
+                                    @item.Mes
+                                </span>
+                            </div>
+
+                            <!-- CUERPO DE LA TARJETA -->
+                            <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-xs text-muted fw-semibold"><i class="bi bi-calendar-event me-1"></i>@item.Fecha.ToString("dd/MM/yyyy")</span>
+                                        @if (!string.IsNullOrEmpty(item.NumeroDocumento))
+                                        {
+                                            <span class="badge bg-light text-slate-700 border font-monospace"># @item.NumeroDocumento</span>
+                                        }
+                                    </div>
+                                    <h6 class="fw-bold text-slate-800 mb-2" style="font-size: 0.95rem; line-height: 1.3;">@item.Descripcion</h6>
+                                    <div class="mb-2">
+                                        <span class="badge @(item.IngresoDOP > 0 ? "bg-success-soft text-success" : "bg-primary-soft text-primary") px-2 py-1 text-xs">
+                                            @item.CategoriaId — @item.CategoriaDescripcion
+                                        </span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(item.Notas))
+                                    {
+                                        <p class="text-xs text-muted mb-2"><i class="bi bi-chat-left-text me-1"></i>@item.Notas</p>
+                                    }
+                                </div>
+
+                                <div class="pt-3 border-top mt-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="text-xs text-muted text-uppercase fw-semibold">Monto del Movimiento</div>
+                                            <div class="fw-bold font-monospace @(item.IngresoDOP > 0 ? "text-success" : "text-danger")" style="font-size: 1.1rem;">
+                                                @(item.IngresoDOP > 0 ? "+" : "-") RD$ @((item.IngresoDOP > 0 ? item.IngresoDOP : item.GastoDOP).ToString("N2"))
+                                            </div>
+                                            <small class="text-muted font-monospace">$@((item.IngresoDOP > 0 ? item.IngresoUSD : item.GastoUSD).ToString("N2")) USD</small>
+                                        </div>
+                                        <div class="d-flex gap-1 d-print-none">
+                                            @if (tieneAdjunto)
+                                            {
+                                                <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId, descargar = true })" class="btn btn-sm btn-outline-secondary" title="Descargar archivo">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                                <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })" target="_blank" class="btn btn-sm btn-outline-primary" title="Abrir en pestaña nueva">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                            }
+                                            @if (ViewBag.PuedeEditarFinanzas == true)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMovimientoAnexo(@item.TransaccionId)" title="Eliminar Movimiento">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- VISTA TABLA (LISTADO DETALLADO) -->
+        <div id="contenedorVistaTabla" class="table-responsive d-none">
+            <table class="table table-hover align-middle mb-0" id="tablaListadoAnexos">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Mes / Fecha</th>
+                        <th># Comprobante</th>
+                        <th>Concepto / Descripción</th>
+                        <th>Categoría</th>
+                        <th class="text-end">Monto (DOP)</th>
+                        <th class="text-center">Estado del Soporte</th>
+                        <th class="text-end pe-3 d-print-none">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Transacciones)
+                    {
+                        bool tieneAdjunto = !string.IsNullOrEmpty(item.RutaComprobante);
+                        <tr class="item-fila-anexo" data-id="@item.TransaccionId" data-soporte="@(tieneAdjunto ? "CON_SOPORTE" : "SIN_SOPORTE")" data-busqueda="@((item.Descripcion + " " + item.NumeroDocumento + " " + item.CategoriaDescripcion + " " + item.Mes).ToLower())">
+                            <td class="ps-3 fw-semibold">
+                                <span class="badge bg-dark me-1">@item.Mes</span>
+                                <small class="text-muted">@item.Fecha.ToString("dd/MM/yyyy")</small>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.NumeroDocumento))
+                                {
+                                    <span class="badge bg-light text-slate-700 border font-monospace">@item.NumeroDocumento</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted text-xs">—</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">@item.Descripcion</div>
+                                @if (!string.IsNullOrEmpty(item.Notas))
+                                {
+                                    <small class="text-muted"><i class="bi bi-chat-left-text me-1"></i>@item.Notas</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @(item.IngresoDOP > 0 ? "bg-success-soft text-success" : "bg-primary-soft text-primary")">
+                                    @item.CategoriaId — @item.CategoriaDescripcion
+                                </span>
+                            </td>
+                            <td class="text-end font-monospace fw-bold @(item.IngresoDOP > 0 ? "text-success" : "text-danger")">
+                                RD$ @((item.IngresoDOP > 0 ? item.IngresoDOP : item.GastoDOP).ToString("N2"))
+                            </td>
+                            <td class="text-center">
+                                @if (tieneAdjunto)
+                                {
+                                    <span class="badge bg-success-soft text-success border border-success px-2.5 py-1.5">
+                                        <i class="bi bi-file-earmark-check me-1"></i>Adjunto
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning-soft text-warning border border-warning px-2.5 py-1.5">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Sin Comprobante
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end pe-3 d-print-none">
+                                <div class="btn-group btn-group-sm">
+                                    @if (tieneAdjunto)
+                                    {
+                                        <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })" target="_blank" class="btn btn-outline-primary" title="Ver archivo">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId, descargar = true })" class="btn btn-outline-secondary" title="Descargar">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    }
+                                    @if (ViewBag.PuedeEditarFinanzas == true)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger" onclick="eliminarMovimientoAnexo(@item.TransaccionId)" title="Eliminar Movimiento">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VISOR DE COMPROBANTE -->
+<div class="modal fade" id="modalVisorComprobante" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+                <h5 class="modal-title font-bold" id="tituloVisorComprobante">
+                    <i class="bi bi-file-earmark-text me-2 text-info"></i>Visualizador de Comprobante
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-black bg-opacity-75" style="min-height: 500px; display: flex; align-items: center; justify-content: center;">
+                <img id="imgVisorModal" src="" alt="Comprobante" class="img-fluid p-2 d-none" style="max-height: 80vh; object-fit: contain;" />
+                <iframe id="iframeVisorModal" src="" class="w-100 d-none" style="height: 80vh; border: none;"></iframe>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4 py-2 d-flex justify-content-between">
+                <small class="text-muted" id="pieVisorModal"></small>
+                <div class="d-flex gap-2">
+                    <a href="#" id="btnDescargarVisorModal" class="btn btn-sm btn-primary" download target="_blank">
+                        <i class="bi bi-download me-1"></i>Descargar
+                    </a>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .transition-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .transition-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important; }
+    .bg-info-soft { background-color: rgba(13, 202, 240, 0.12) !important; color: #0dcaf0 !important; }
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.12) !important; color: #198754 !important; }
+    .bg-primary-soft { background-color: rgba(13, 110, 253, 0.12) !important; color: #0d6efd !important; }
+    .bg-warning-soft { background-color: rgba(255, 193, 7, 0.18) !important; color: #d39e00 !important; }
+    .bg-secondary-soft { background-color: rgba(108, 117, 125, 0.12) !important; color: #6c757d !important; }
+
+    @@media print {
+        .d-print-none, .navbar, footer, .btn, .card-header button {
+            display: none !important;
+        }
+        body {
+            background: #fff !important;
+            padding: 0 !important;
+        }
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+            break-inside: avoid;
+        }
+        .item-card-anexo {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            margin-bottom: 20px;
+        }
+    }
+</style>
+
+@section Scripts {
+<script>
+    function cambiarFiltrosAnexos() {
+        var temp = document.getElementById("selectTemporadaAnexos").value;
+        var eq = document.getElementById("selectEquipoAnexos").value;
+        var mes = document.getElementById("selectMesAnexos").value;
+        var url = '@Url.Action("Anexos", "Finanzas")' + '?idTemporada=' + temp + '&idEquipo=' + eq + '&mes=' + mes;
+        window.location.href = url;
+    }
+
+    function filtrarGaleriaAnexos() {
+        var texto = (document.getElementById("filtroTextoAnexos").value || "").toLowerCase().trim();
+        var estado = document.getElementById("filtroEstadoSoporte").value;
+
+        // Filtrar tarjetas
+        var cards = document.querySelectorAll(".item-card-anexo");
+        cards.forEach(function (card) {
+            var busqueda = card.getAttribute("data-busqueda") || "";
+            var soporte = card.getAttribute("data-soporte") || "";
+
+            var matchTexto = texto === "" || busqueda.indexOf(texto) >= 0;
+            var matchEstado = estado === "TODOS" || soporte === estado;
+
+            if (matchTexto && matchEstado) {
+                card.style.display = "";
+            } else {
+                card.style.display = "none";
+            }
+        });
+
+        // Filtrar filas de tabla
+        var rows = document.querySelectorAll(".item-fila-anexo");
+        rows.forEach(function (row) {
+            var busqueda = row.getAttribute("data-busqueda") || "";
+            var soporte = row.getAttribute("data-soporte") || "";
+
+            var matchTexto = texto === "" || busqueda.indexOf(texto) >= 0;
+            var matchEstado = estado === "TODOS" || soporte === estado;
+
+            if (matchTexto && matchEstado) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    function cambiarModoVista(modo) {
+        var contGaleria = document.getElementById("contenedorVistaGaleria");
+        var contTabla = document.getElementById("contenedorVistaTabla");
+        var btnGal = document.getElementById("btnVistaGaleria");
+        var btnTab = document.getElementById("btnVistaTabla");
+
+        if (modo === 'galeria') {
+            contGaleria.classList.remove("d-none");
+            contTabla.classList.add("d-none");
+            btnGal.classList.add("active");
+            btnTab.classList.remove("active");
+        } else {
+            contGaleria.classList.add("d-none");
+            contTabla.classList.remove("d-none");
+            btnTab.classList.add("active");
+            btnGal.classList.remove("active");
+        }
+    }
+
+    function verComprobanteModal(url, titulo, esPdf) {
+        var img = document.getElementById("imgVisorModal");
+        var iframe = document.getElementById("iframeVisorModal");
+        var tit = document.getElementById("tituloVisorComprobante");
+        var btnDesc = document.getElementById("btnDescargarVisorModal");
+        var pie = document.getElementById("pieVisorModal");
+
+        tit.innerText = titulo || "Soporte Documental";
+        btnDesc.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'descargar=true';
+        pie.innerText = titulo ? ("Comprobante: " + titulo) : "Comprobante digital verificado";
+
+        if (esPdf) {
+            img.classList.add("d-none");
+            iframe.classList.remove("d-none");
+            iframe.src = url;
+        } else {
+            iframe.classList.add("d-none");
+            img.classList.remove("d-none");
+            img.src = url;
+        }
+
+        new bootstrap.Modal(document.getElementById("modalVisorComprobante")).show();
+    }
+
+    function eliminarMovimientoAnexo(id) {
+        if (confirm("¿Estás seguro de que deseas eliminar este movimiento y su soporte adjunto?")) {
+            var $card = $('button[onclick*="eliminarMovimientoAnexo(' + id + ')"]').closest('.item-card-anexo');
+            var $row = $('tr[data-id="' + id + '"]');
+            $card.css('opacity', '0.4');
+            $row.css('opacity', '0.4');
+
+            $.ajax({
+                url: '@Url.Action("EliminarTransaccion", "Finanzas")',
+                type: 'POST',
+                data: { transaccionId: id },
+                success: function (res) {
+                    if (res.success) {
+                        $card.fadeOut(300);
+                        $row.fadeOut(300, function () {
+                            window.location.reload();
+                        });
+                    } else {
+                        $card.css('opacity', '1');
+                        $row.css('opacity', '1');
+                        alert(res.message || "No se pudo eliminar el movimiento.");
+                    }
+                },
+                error: function (xhr) {
+                    $card.css('opacity', '1');
+                    $row.css('opacity', '1');
+                    var msg = "Error al intentar eliminar el movimiento.";
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                }
+            });
+        }
+    }
+</script>
+}
