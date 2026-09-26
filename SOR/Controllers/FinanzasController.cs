@@ -457,6 +457,23 @@ namespace SOR.Controllers
                 if (transaccionId <= 0)
                     return Json(new { success = false, message = "Identificador de transacción inválido." });
 
+                var trans = _repo.ObtenerTransaccionPorId(transaccionId);
+                if (trans != null && !string.IsNullOrWhiteSpace(trans.RutaComprobante))
+                {
+                    try
+                    {
+                        string rutaRel = trans.RutaComprobante;
+                        if (rutaRel.StartsWith("~")) rutaRel = rutaRel.Substring(1);
+                        if (!rutaRel.StartsWith("/")) rutaRel = "/" + rutaRel;
+                        string rutaFisica = Server.MapPath("~" + rutaRel);
+                        if (System.IO.File.Exists(rutaFisica))
+                        {
+                            System.IO.File.Delete(rutaFisica);
+                        }
+                    }
+                    catch { }
+                }
+
                 bool ok = _repo.EliminarTransaccion(transaccionId);
                 return Json(new { success = ok, message = ok ? "Transacción eliminada con éxito." : "Registro no encontrado." });
             }

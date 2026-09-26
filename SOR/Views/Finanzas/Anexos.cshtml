@@ -245,17 +245,23 @@
                                             </div>
                                             <small class="text-muted font-monospace">$@((item.IngresoDOP > 0 ? item.IngresoUSD : item.GastoUSD).ToString("N2")) USD</small>
                                         </div>
-                                        @if (tieneAdjunto)
-                                        {
-                                            <div class="d-flex gap-1 d-print-none">
+                                        <div class="d-flex gap-1 d-print-none">
+                                            @if (tieneAdjunto)
+                                            {
                                                 <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId, descargar = true })" class="btn btn-sm btn-outline-secondary" title="Descargar archivo">
                                                     <i class="bi bi-download"></i>
                                                 </a>
                                                 <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })" target="_blank" class="btn btn-sm btn-outline-primary" title="Abrir en pestaña nueva">
                                                     <i class="bi bi-box-arrow-up-right"></i>
                                                 </a>
-                                            </div>
-                                        }
+                                            }
+                                            @if (ViewBag.PuedeEditarFinanzas == true)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMovimientoAnexo(@item.TransaccionId)" title="Eliminar Movimiento">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -283,7 +289,7 @@
                     @foreach (var item in Model.Transacciones)
                     {
                         bool tieneAdjunto = !string.IsNullOrEmpty(item.RutaComprobante);
-                        <tr class="item-fila-anexo" data-soporte="@(tieneAdjunto ? "CON_SOPORTE" : "SIN_SOPORTE")" data-busqueda="@((item.Descripcion + " " + item.NumeroDocumento + " " + item.CategoriaDescripcion + " " + item.Mes).ToLower())">
+                        <tr class="item-fila-anexo" data-id="@item.TransaccionId" data-soporte="@(tieneAdjunto ? "CON_SOPORTE" : "SIN_SOPORTE")" data-busqueda="@((item.Descripcion + " " + item.NumeroDocumento + " " + item.CategoriaDescripcion + " " + item.Mes).ToLower())">
                             <td class="ps-3 fw-semibold">
                                 <span class="badge bg-dark me-1">@item.Mes</span>
                                 <small class="text-muted">@item.Fecha.ToString("dd/MM/yyyy")</small>
@@ -328,21 +334,23 @@
                                 }
                             </td>
                             <td class="text-end pe-3 d-print-none">
-                                @if (tieneAdjunto)
-                                {
-                                    <div class="btn-group btn-group-sm">
+                                <div class="btn-group btn-group-sm">
+                                    @if (tieneAdjunto)
+                                    {
                                         <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId })" target="_blank" class="btn btn-outline-primary" title="Ver archivo">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <a href="@Url.Action("VerComprobante", "Finanzas", new { id = item.TransaccionId, descargar = true })" class="btn btn-outline-secondary" title="Descargar">
                                             <i class="bi bi-download"></i>
                                         </a>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <span class="text-muted text-xs">—</span>
-                                }
+                                    }
+                                    @if (ViewBag.PuedeEditarFinanzas == true)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger" onclick="eliminarMovimientoAnexo(@item.TransaccionId)" title="Eliminar Movimiento">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -498,6 +506,42 @@
         }
 
         new bootstrap.Modal(document.getElementById("modalVisorComprobante")).show();
+    }
+
+    function eliminarMovimientoAnexo(id) {
+        if (confirm("¿Estás seguro de que deseas eliminar este movimiento y su soporte adjunto?")) {
+            var $card = $('button[onclick*="eliminarMovimientoAnexo(' + id + ')"]').closest('.item-card-anexo');
+            var $row = $('tr[data-id="' + id + '"]');
+            $card.css('opacity', '0.4');
+            $row.css('opacity', '0.4');
+
+            $.ajax({
+                url: '@Url.Action("EliminarTransaccion", "Finanzas")',
+                type: 'POST',
+                data: { transaccionId: id },
+                success: function (res) {
+                    if (res.success) {
+                        $card.fadeOut(300);
+                        $row.fadeOut(300, function () {
+                            window.location.reload();
+                        });
+                    } else {
+                        $card.css('opacity', '1');
+                        $row.css('opacity', '1');
+                        alert(res.message || "No se pudo eliminar el movimiento.");
+                    }
+                },
+                error: function (xhr) {
+                    $card.css('opacity', '1');
+                    $row.css('opacity', '1');
+                    var msg = "Error al intentar eliminar el movimiento.";
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                }
+            });
+        }
     }
 </script>
 }

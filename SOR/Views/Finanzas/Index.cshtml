@@ -672,19 +672,30 @@
 
     function eliminarMovimiento(id) {
         if (confirm("¿Estás seguro de que deseas eliminar este movimiento financiero?")) {
+            var $fila = $('button[onclick*="eliminarMovimiento(' + id + ')"]').closest('tr');
+            $fila.css('opacity', '0.4');
+
             $.ajax({
                 url: '@Url.Action("EliminarTransaccion", "Finanzas")',
                 type: 'POST',
                 data: { transaccionId: id },
                 success: function (res) {
                     if (res.success) {
-                        location.reload();
+                        $fila.fadeOut(300, function () {
+                            window.location.reload();
+                        });
                     } else {
-                        alert(res.message);
+                        $fila.css('opacity', '1');
+                        alert(res.message || "No se pudo eliminar el movimiento.");
                     }
                 },
-                error: function () {
-                    alert("Error al intentar eliminar.");
+                error: function (xhr) {
+                    $fila.css('opacity', '1');
+                    var msg = "Error al intentar eliminar el movimiento.";
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
                 }
             });
         }
