@@ -383,6 +383,7 @@ namespace SOR.Controllers
                             );
                         }
                     }
+                }
                 catch (Exception ex)
                 {
                     TempData["MensajeError"] = "Tus datos se guardaron, pero no se pudo notificar a la coordinación: " + ex.Message;
