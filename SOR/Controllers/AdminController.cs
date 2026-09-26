@@ -151,7 +151,7 @@ namespace SOR.Controllers
                     cn.Open();
                     string sql = @"
                         SELECT 
-                            u.IdUsuario, u.IdRolSeguridad, r.NombreRol, 
+                            u.IdUsuario, u.Correo AS CorreoUsuario, u.IdRolSeguridad, r.NombreRol, 
                             u.IdEstado, e.NombreEstado, u.FechaRegistro,
                             p.*, eq.NombreEquipo, pos.NombrePosicion
                         FROM dbo.Usuarios u
@@ -169,17 +169,21 @@ namespace SOR.Controllers
                         {
                             if (dr.Read())
                             {
-                                bool hasSexo = false, hasEstadoCivil = false, hasNoPosee = false;
+                                bool hasSexo = false, hasEstadoCivil = false, hasNoPosee = false, hasPerfil = dr["IdPerfil"] != DBNull.Value;
                                 for (int i = 0; i < dr.FieldCount; i++)
                                 {
                                     if (dr.GetName(i).Equals("Sexo", StringComparison.OrdinalIgnoreCase)) hasSexo = true;
                                     if (dr.GetName(i).Equals("EstadoCivil", StringComparison.OrdinalIgnoreCase)) hasEstadoCivil = true;
                                     if (dr.GetName(i).Equals("NoPoseePasaporte", StringComparison.OrdinalIgnoreCase)) hasNoPosee = true;
                                 }
+
+                                string correoUser = dr["CorreoUsuario"] != DBNull.Value ? dr["CorreoUsuario"].ToString() : "";
+                                string correoPerfil = hasPerfil && dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "";
+
                                 userVm = new SolicitudUsuarioViewModel
                                 {
                                     IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
-                                    Correo = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "", // Use the one from PerfilesCoordinador if multiple exist
+                                    Correo = !string.IsNullOrWhiteSpace(correoPerfil) ? correoPerfil : correoUser,
                                     IdRolSeguridad = Convert.ToInt32(dr["IdRolSeguridad"]),
                                     NombreRol = dr["NombreRol"].ToString(),
                                     IdEstado = Convert.ToInt32(dr["IdEstado"]),
@@ -188,49 +192,49 @@ namespace SOR.Controllers
 
                                     Perfil = new PerfilCoordinador
                                     {
-                                        IdPerfil = dr["IdPerfil"] != DBNull.Value ? Convert.ToInt32(dr["IdPerfil"]) : 0,
+                                        IdPerfil = hasPerfil ? Convert.ToInt32(dr["IdPerfil"]) : 0,
                                         IdUsuario = Convert.ToInt32(dr["IdUsuario"]),
-                                        PrimerNombre = dr["PrimerNombre"] != DBNull.Value ? dr["PrimerNombre"].ToString() : "",
-                                        OtrosNombres = dr["OtrosNombres"] != DBNull.Value ? dr["OtrosNombres"].ToString() : "",
-                                        PrimerApellido = dr["PrimerApellido"] != DBNull.Value ? dr["PrimerApellido"].ToString() : "",
-                                        OtrosApellidos = dr["OtrosApellidos"] != DBNull.Value ? dr["OtrosApellidos"].ToString() : "",
-                                        FechaNacimiento = dr["FechaNacimiento"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaNacimiento"]) : null,
-                                        Calle = dr["Calle"] != DBNull.Value ? dr["Calle"].ToString() : "",
-                                        Numero = dr["Numero"] != DBNull.Value ? dr["Numero"].ToString() : "",
-                                        Sector = dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
-                                        Ciudad = dr["Ciudad"] != DBNull.Value ? dr["Ciudad"].ToString() : "",
-                                        Provincia = dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
-                                        Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
-                                        Nacionalidad = dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
-                                        Talla = dr["Talla"] != DBNull.Value ? dr["Talla"].ToString() : "",
-                                        NumeroDocumento = dr["NumeroDocumento"] != DBNull.Value ? dr["NumeroDocumento"].ToString() : "",
-                                        DocumentoAdjuntoRuta = dr["DocumentoAdjuntoRuta"] != DBNull.Value ? dr["DocumentoAdjuntoRuta"].ToString() : "",
-                                        NumeroPasaporte = dr["NumeroPasaporte"] != DBNull.Value ? dr["NumeroPasaporte"].ToString() : "",
-                                        PasaporteAdjuntoRuta = dr["PasaporteAdjuntoRuta"] != DBNull.Value ? dr["PasaporteAdjuntoRuta"].ToString() : "",
-                                        TelefonoFijo = dr["TelefonoFijo"] != DBNull.Value ? dr["TelefonoFijo"].ToString() : "",
-                                        TelefonoCelularWhatsApp = dr["TelefonoCelularWhatsApp"] != DBNull.Value ? dr["TelefonoCelularWhatsApp"].ToString() : "",
-                                        Correo = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "",
-                                        FotoRuta = dr["FotoRuta"] != DBNull.Value ? dr["FotoRuta"].ToString() : "",
-                                        DatosConyugue = dr["DatosConyugue"] != DBNull.Value ? dr["DatosConyugue"].ToString() : "",
-                                        ContactoEmergencia = dr["ContactoEmergencia"] != DBNull.Value ? dr["ContactoEmergencia"].ToString() : "",
-                                        IglesiaLocal = dr["IglesiaLocal"] != DBNull.Value ? dr["IglesiaLocal"].ToString() : "",
-                                        PastorIglesiaLocal = dr["PastorIglesiaLocal"] != DBNull.Value ? dr["PastorIglesiaLocal"].ToString() : "",
-                                        CargoIglesiaLocal = dr["CargoIglesiaLocal"] != DBNull.Value ? dr["CargoIglesiaLocal"].ToString() : "",
-                                        AniosServicioMinisterial = dr["AniosServicioMinisterial"] != DBNull.Value ? (int?)Convert.ToInt32(dr["AniosServicioMinisterial"]) : null,
-                                        InfoMinisterial = dr["InfoMinisterial"] != DBNull.Value ? dr["InfoMinisterial"].ToString() : "",
-                                        NivelEducativo = dr["NivelEducativo"] != DBNull.Value ? dr["NivelEducativo"].ToString() : "",
-                                        ProfesionCarrera = dr["ProfesionCarrera"] != DBNull.Value ? dr["ProfesionCarrera"].ToString() : "",
-                                        InfoEducativa = dr["InfoEducativa"] != DBNull.Value ? dr["InfoEducativa"].ToString() : "",
-                                        OcupacionEmpresaLaboral = dr["OcupacionEmpresaLaboral"] != DBNull.Value ? dr["OcupacionEmpresaLaboral"].ToString() : "",
-                                        TelefonoTrabajo = dr["TelefonoTrabajo"] != DBNull.Value ? dr["TelefonoTrabajo"].ToString() : "",
-                                        InfoLaboral = dr["InfoLaboral"] != DBNull.Value ? dr["InfoLaboral"].ToString() : "",
-                                        CapacitacionesOCC = dr["CapacitacionesOCC"] != DBNull.Value ? dr["CapacitacionesOCC"].ToString() : "",
-                                        Ministerio = dr["Ministerio"] != DBNull.Value ? dr["Ministerio"].ToString() : "",
-                                        IdEquipo = dr["IdEquipo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipo"]) : null,
+                                        PrimerNombre = hasPerfil && dr["PrimerNombre"] != DBNull.Value ? dr["PrimerNombre"].ToString() : "",
+                                        OtrosNombres = hasPerfil && dr["OtrosNombres"] != DBNull.Value ? dr["OtrosNombres"].ToString() : "",
+                                        PrimerApellido = hasPerfil && dr["PrimerApellido"] != DBNull.Value ? dr["PrimerApellido"].ToString() : "",
+                                        OtrosApellidos = hasPerfil && dr["OtrosApellidos"] != DBNull.Value ? dr["OtrosApellidos"].ToString() : "",
+                                        FechaNacimiento = hasPerfil && dr["FechaNacimiento"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaNacimiento"]) : null,
+                                        Calle = hasPerfil && dr["Calle"] != DBNull.Value ? dr["Calle"].ToString() : "",
+                                        Numero = hasPerfil && dr["Numero"] != DBNull.Value ? dr["Numero"].ToString() : "",
+                                        Sector = hasPerfil && dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
+                                        Ciudad = hasPerfil && dr["Ciudad"] != DBNull.Value ? dr["Ciudad"].ToString() : "",
+                                        Provincia = hasPerfil && dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
+                                        Pais = hasPerfil && dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
+                                        Nacionalidad = hasPerfil && dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
+                                        Talla = hasPerfil && dr["Talla"] != DBNull.Value ? dr["Talla"].ToString() : "",
+                                        NumeroDocumento = hasPerfil && dr["NumeroDocumento"] != DBNull.Value ? dr["NumeroDocumento"].ToString() : "",
+                                        DocumentoAdjuntoRuta = hasPerfil && dr["DocumentoAdjuntoRuta"] != DBNull.Value ? dr["DocumentoAdjuntoRuta"].ToString() : "",
+                                        NumeroPasaporte = hasPerfil && dr["NumeroPasaporte"] != DBNull.Value ? dr["NumeroPasaporte"].ToString() : "",
+                                        PasaporteAdjuntoRuta = hasPerfil && dr["PasaporteAdjuntoRuta"] != DBNull.Value ? dr["PasaporteAdjuntoRuta"].ToString() : "",
+                                        TelefonoFijo = hasPerfil && dr["TelefonoFijo"] != DBNull.Value ? dr["TelefonoFijo"].ToString() : "",
+                                        TelefonoCelularWhatsApp = hasPerfil && dr["TelefonoCelularWhatsApp"] != DBNull.Value ? dr["TelefonoCelularWhatsApp"].ToString() : "",
+                                        Correo = !string.IsNullOrWhiteSpace(correoPerfil) ? correoPerfil : correoUser,
+                                        FotoRuta = hasPerfil && dr["FotoRuta"] != DBNull.Value ? dr["FotoRuta"].ToString() : "",
+                                        DatosConyugue = hasPerfil && dr["DatosConyugue"] != DBNull.Value ? dr["DatosConyugue"].ToString() : "",
+                                        ContactoEmergencia = hasPerfil && dr["ContactoEmergencia"] != DBNull.Value ? dr["ContactoEmergencia"].ToString() : "",
+                                        IglesiaLocal = hasPerfil && dr["IglesiaLocal"] != DBNull.Value ? dr["IglesiaLocal"].ToString() : "",
+                                        PastorIglesiaLocal = hasPerfil && dr["PastorIglesiaLocal"] != DBNull.Value ? dr["PastorIglesiaLocal"].ToString() : "",
+                                        CargoIglesiaLocal = hasPerfil && dr["CargoIglesiaLocal"] != DBNull.Value ? dr["CargoIglesiaLocal"].ToString() : "",
+                                        AniosServicioMinisterial = hasPerfil && dr["AniosServicioMinisterial"] != DBNull.Value ? (int?)Convert.ToInt32(dr["AniosServicioMinisterial"]) : null,
+                                        InfoMinisterial = hasPerfil && dr["InfoMinisterial"] != DBNull.Value ? dr["InfoMinisterial"].ToString() : "",
+                                        NivelEducativo = hasPerfil && dr["NivelEducativo"] != DBNull.Value ? dr["NivelEducativo"].ToString() : "",
+                                        ProfesionCarrera = hasPerfil && dr["ProfesionCarrera"] != DBNull.Value ? dr["ProfesionCarrera"].ToString() : "",
+                                        InfoEducativa = hasPerfil && dr["InfoEducativa"] != DBNull.Value ? dr["InfoEducativa"].ToString() : "",
+                                        OcupacionEmpresaLaboral = hasPerfil && dr["OcupacionEmpresaLaboral"] != DBNull.Value ? dr["OcupacionEmpresaLaboral"].ToString() : "",
+                                        TelefonoTrabajo = hasPerfil && dr["TelefonoTrabajo"] != DBNull.Value ? dr["TelefonoTrabajo"].ToString() : "",
+                                        InfoLaboral = hasPerfil && dr["InfoLaboral"] != DBNull.Value ? dr["InfoLaboral"].ToString() : "",
+                                        CapacitacionesOCC = hasPerfil && dr["CapacitacionesOCC"] != DBNull.Value ? dr["CapacitacionesOCC"].ToString() : "",
+                                        Ministerio = hasPerfil && dr["Ministerio"] != DBNull.Value ? dr["Ministerio"].ToString() : "",
+                                        IdEquipo = hasPerfil && dr["IdEquipo"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipo"]) : null,
                                         NombreEquipo = dr["NombreEquipo"] != DBNull.Value ? dr["NombreEquipo"].ToString() : "",
-                                        IdPosicion = dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null,
+                                        IdPosicion = hasPerfil && dr["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdPosicion"]) : null,
                                         NombrePosicion = dr["NombrePosicion"] != DBNull.Value ? dr["NombrePosicion"].ToString() : "",
-                                        FechaIngreso = dr["FechaIngreso"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaIngreso"]) : null,
+                                        FechaIngreso = hasPerfil && dr["FechaIngreso"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(dr["FechaIngreso"]) : null,
                                         Sexo = hasSexo && dr["Sexo"] != DBNull.Value ? dr["Sexo"].ToString() : "",
                                         EstadoCivil = hasEstadoCivil && dr["EstadoCivil"] != DBNull.Value ? dr["EstadoCivil"].ToString() : "",
                                         NoPoseePasaporte = hasNoPosee && dr["NoPoseePasaporte"] != DBNull.Value && Convert.ToBoolean(dr["NoPoseePasaporte"])
@@ -242,19 +246,88 @@ namespace SOR.Controllers
                 }
 
                 if (userVm == null) return HttpNotFound("Usuario no encontrado.");
+                if (userVm.Perfil == null) userVm.Perfil = new PerfilCoordinador();
 
-                // Validate properties that might throw NullReferenceException in the view
-                if (userVm.Perfil == null)
-                    throw new Exception("Perfil is null");
-                
-                string debugInfo = $"Perfil: {userVm.Perfil.PrimerNombre} {userVm.Perfil.PrimerApellido} | Equip: {userVm.Perfil.NombreEquipo}";
-
-                ViewBag.HideLayout = true; 
                 return View(userVm);
             }
             catch (Exception ex)
             {
-                return Content($"ERROR: {ex.Message} | StackTrace: {ex.StackTrace}");
+                return Content($"<div style='font-family:sans-serif;padding:20px;color:#721c24;background-color:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;'><h4>Error al generar el perfil de impresión</h4><p>{ex.Message}</p></div>", "text/html");
+            }
+        }
+
+        // GET: Admin/VerAdjunto?id=12&tipo=cedula
+        public ActionResult VerAdjunto(int id, string tipo)
+        {
+            try
+            {
+                Usuario usuarioActual = (Usuario)Session["usuario"];
+                if (usuarioActual == null || (usuarioActual.IdRolSeguridad != 1 && usuarioActual.IdRolSeguridad != 2 && usuarioActual.IdUsuario != id))
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+
+                string rutaRelativa = null;
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+                {
+                    cn.Open();
+                    string sql = "SELECT DocumentoAdjuntoRuta, PasaporteAdjuntoRuta, FotoRuta FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
+                    using (SqlCommand cmd = new SqlCommand(sql, cn))
+                    {
+                        cmd.Parameters.AddWithValue("@IdUsuario", id);
+                        using (SqlDataReader dr = cmd.ExecuteReader())
+                        {
+                            if (dr.Read())
+                            {
+                                if (string.Equals(tipo, "cedula", StringComparison.OrdinalIgnoreCase))
+                                    rutaRelativa = dr["DocumentoAdjuntoRuta"] != DBNull.Value ? dr["DocumentoAdjuntoRuta"].ToString() : null;
+                                else if (string.Equals(tipo, "pasaporte", StringComparison.OrdinalIgnoreCase))
+                                    rutaRelativa = dr["PasaporteAdjuntoRuta"] != DBNull.Value ? dr["PasaporteAdjuntoRuta"].ToString() : null;
+                                else if (string.Equals(tipo, "foto", StringComparison.OrdinalIgnoreCase))
+                                    rutaRelativa = dr["FotoRuta"] != DBNull.Value ? dr["FotoRuta"].ToString() : null;
+                            }
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(rutaRelativa))
+                {
+                    return Content("<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;'><h3>Documento no registrado</h3><p style='color:#666;'>El usuario no tiene ningún archivo adjunto registrado en esta casilla.</p></div>", "text/html");
+                }
+
+                string rutaFisica = null;
+                try
+                {
+                    if (rutaRelativa.StartsWith("~"))
+                        rutaFisica = Server.MapPath(rutaRelativa);
+                    else if (rutaRelativa.StartsWith("/"))
+                        rutaFisica = Server.MapPath("~" + rutaRelativa);
+                    else
+                        rutaFisica = Server.MapPath("~/" + rutaRelativa);
+                }
+                catch
+                {
+                    rutaFisica = null;
+                }
+
+                if (string.IsNullOrEmpty(rutaFisica) || !System.IO.File.Exists(rutaFisica))
+                {
+                    string nombreArchivo = System.IO.Path.GetFileName(rutaRelativa);
+                    return Content($"<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;max-width:600px;margin:40px auto;border:1px solid #dee2e6;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);background:#fff;'>" +
+                                   $"<div style='font-size:48px;margin-bottom:12px;'>📄⚠️</div>" +
+                                   $"<h3 style='color:#c0392b;margin-bottom:8px;'>Documento no disponible físicamente</h3>" +
+                                   $"<p style='color:#444;font-size:14px;line-height:1.5;'>El registro del archivo (<strong>{nombreArchivo}</strong>) existe en la base de datos, pero el archivo no está presente en el almacenamiento temporal del servidor.</p>" +
+                                   $"<p style='color:#777;font-size:13px;background:#f8f9fa;padding:12px;border-radius:8px;'><strong>Nota operativa:</strong> Durante actualizaciones o despliegues en la nube, el almacenamiento local temporal se renueva. Por favor solicite al coordinador volver a adjuntar su documento desde su portal.</p>" +
+                                   $"<button onclick='window.close()' style='padding:10px 24px;background:#0d6efd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;margin-top:10px;'>Cerrar Ventana</button>" +
+                                   $"</div>", "text/html");
+                }
+
+                string mimeType = System.Web.MimeMapping.GetMimeMapping(rutaFisica);
+                return File(rutaFisica, mimeType);
+            }
+            catch (Exception ex)
+            {
+                return Content($"<div style='font-family:Segoe UI,sans-serif;padding:30px;color:#721c24;'><h4>Error al acceder al documento</h4><p>{ex.Message}</p></div>", "text/html");
             }
         }
 

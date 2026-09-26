@@ -410,8 +410,9 @@
                                                             <strong>Documento Cédula:</strong> 
                                                             @if (!string.IsNullOrEmpty(u.Perfil.DocumentoAdjuntoRuta))
                                                             {
-                                                                <a href="@u.Perfil.DocumentoAdjuntoRuta" target="_blank" class="btn btn-xs btn-outline-primary ms-1"><i class="bi bi-download"></i> Ver Cédula</a>
-                                                                <button type="button" class="btn btn-xs btn-outline-secondary ms-1" onclick="imprimirDocumentoExterno('@u.Perfil.DocumentoAdjuntoRuta')"><i class="bi bi-printer"></i> Imprimir</button>
+                                                                bool esPdfCedula = u.Perfil.DocumentoAdjuntoRuta.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+                                                                <a href="@Url.Action("VerAdjunto", "Admin", new { id = u.IdUsuario, tipo = "cedula" })" target="_blank" class="btn btn-xs btn-outline-primary ms-1"><i class="bi bi-eye"></i> Ver Cédula</a>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary ms-1" onclick="imprimirDocumentoExterno('@Url.Action("VerAdjunto", "Admin", new { id = u.IdUsuario, tipo = "cedula" })', @(esPdfCedula ? "true" : "false"))"><i class="bi bi-printer"></i> Imprimir</button>
                                                             }
                                                             else
                                                             {
@@ -422,12 +423,13 @@
                                                             <strong>Pasaporte:</strong> 
                                                             @if (!string.IsNullOrEmpty(u.Perfil.PasaporteAdjuntoRuta))
                                                             {
-                                                                <a href="@u.Perfil.PasaporteAdjuntoRuta" target="_blank" class="btn btn-xs btn-outline-primary ms-1"><i class="bi bi-download"></i> Ver Pasaporte</a>
-                                                                <button type="button" class="btn btn-xs btn-outline-secondary ms-1" onclick="imprimirDocumentoExterno('@u.Perfil.PasaporteAdjuntoRuta')"><i class="bi bi-printer"></i> Imprimir</button>
+                                                                bool esPdfPas = u.Perfil.PasaporteAdjuntoRuta.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+                                                                <a href="@Url.Action("VerAdjunto", "Admin", new { id = u.IdUsuario, tipo = "pasaporte" })" target="_blank" class="btn btn-xs btn-outline-primary ms-1"><i class="bi bi-eye"></i> Ver Pasaporte</a>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary ms-1" onclick="imprimirDocumentoExterno('@Url.Action("VerAdjunto", "Admin", new { id = u.IdUsuario, tipo = "pasaporte" })', @(esPdfPas ? "true" : "false"))"><i class="bi bi-printer"></i> Imprimir</button>
                                                             }
                                                             else
                                                             {
-                                                                <span class="text-muted">Sin adjunto</span>
+                                                                <span class="text-muted">@(u.Perfil.NoPoseePasaporte ? "No posee pasaporte" : "Sin adjunto")</span>
                                                             }
                                                         </div>
                                                     </div>
@@ -643,7 +645,7 @@
             });
         }
 
-        function imprimirDocumentoExterno(url) {
+        function imprimirDocumentoExterno(url, isPdf) {
             var iframe = document.getElementById('printFrame');
             if (!iframe) {
                 iframe = document.createElement('iframe');
@@ -655,18 +657,22 @@
                 document.body.appendChild(iframe);
             }
             
-            if (url.toLowerCase().endsWith('.pdf')) {
+            if (isPdf || url.toLowerCase().indexOf('.pdf') > -1) {
                 iframe.src = url;
                 iframe.onload = function() {
                     setTimeout(function() {
-                        iframe.contentWindow.focus();
-                        iframe.contentWindow.print();
-                    }, 500);
+                        try {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        } catch(e) {
+                            console.log('No se pudo imprimir automáticamente el PDF desde iframe:', e);
+                        }
+                    }, 800);
                 };
             } else {
                 var doc = iframe.contentWindow ? iframe.contentWindow.document : iframe.contentDocument;
                 doc.open();
-                doc.write('<html><body style="margin:0;padding:0;text-align:center;"><img src="' + url + '" style="max-width:100%;" onload="window.focus(); window.print();" /></body></html>');
+                doc.write('<html><head><title>Imprimir Adjunto</title></head><body style="margin:0;padding:20px;text-align:center;"><img src="' + url + '" style="max-width:100%;height:auto;" onload="window.focus(); window.print();" onerror="alert(\'El archivo no está disponible físicamente en el servidor.\');" /></body></html>');
                 doc.close();
             }
         }
@@ -690,13 +696,8 @@
                         alert("Por razones de seguridad o actualización del servidor, su sesión ha expirado. Refresque la página.");
                         return;
                     }
-                    if (html.indexOf('ERROR EN LA VISTA') > -1) {
-                        var errorPart = html.substring(html.indexOf('ERROR EN LA VISTA'), html.indexOf('ERROR EN LA VISTA') + 500);
-                        alert("Hubo un fallo en la generación de la vista.\nDetalles:\n" + errorPart);
-                        return;
-                    }
-                    if (html.indexOf('ERROR:') > -1 && html.indexOf('StackTrace:') > -1) {
-                        alert("Hubo un fallo en el servidor.\nDetalles:\n" + html);
+                    if (html.indexOf('Error al generar el perfil') > -1) {
+                        alert("Hubo un fallo en el servidor al generar el perfil.\nDetalles:\n" + html.replace(/<[^>]*>/g, ' ').trim());
                         return;
                     }
 
@@ -727,7 +728,8 @@
                     var errorMsg = "Ocurrió un error al preparar el documento. (Status: " + xhr.status + " " + error + ")\n";
                     if (xhr.responseText) {
                         console.error('Error al imprimir:', xhr.responseText);
-                        errorMsg += "Detalles:\n" + xhr.responseText.substring(0, 150) + "...";
+                        var cleanText = xhr.responseText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                        errorMsg += "Detalles:\n" + cleanText.substring(0, 150) + "...";
                     }
                     alert(errorMsg);
                 }
