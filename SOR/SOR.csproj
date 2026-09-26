@@ -132,6 +132,7 @@
     <Compile Include="Helpers\DataReaderExtensions.cs" />
     <Compile Include="Helpers\SqlRetryHelper.cs" />
     <Compile Include="Helpers\ValidadorArchivosSeguros.cs" />
+    <Compile Include="Helpers\CorreoHelper.cs" />
     <Compile Include="Models\IglesiaModel.cs" />
     <Compile Include="Models\PerfilCoordinador.cs" />
     <Compile Include="Models\Usuario.cs" />

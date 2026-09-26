@@ -143,21 +143,123 @@ namespace SOR.Repositories
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                SqlCommand cmd = new SqlCommand("sp_RegistrarUsuario", cn);
-                cmd.Parameters.AddWithValue("Correo", correo);
-                cmd.Parameters.AddWithValue("Clave", claveHash);
-                cmd.Parameters.Add("Registrado", SqlDbType.Bit).Direction = ParameterDirection.Output;
-                cmd.Parameters.Add("Mensaje", SqlDbType.VarChar, 100).Direction = ParameterDirection.Output;
-                cmd.CommandType = CommandType.StoredProcedure;
-
                 cn.Open();
-                cmd.ExecuteNonQuery();
 
-                registrado = Convert.ToBoolean(cmd.Parameters["Registrado"].Value);
-                mensaje = cmd.Parameters["Mensaje"].Value.ToString();
+                // 1. Asegurar SET QUOTED_IDENTIFIER y ANSI_NULLS activos para la sesión SQL
+                using (var setCmd = new SqlCommand("SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;", cn))
+                {
+                    setCmd.ExecuteNonQuery();
+                }
+
+                // 2. Recrear/actualizar sp_RegistrarUsuario con QUOTED_IDENTIFIER ON explícito si fuese necesario
+                string sqlFixSp = @"
+                    CREATE OR ALTER PROCEDURE dbo.sp_RegistrarUsuario
+                        @Correo VARCHAR(100),
+                        @Clave VARCHAR(100),
+                        @Registrado BIT OUTPUT,
+                        @Mensaje VARCHAR(100) OUTPUT
+                    AS
+                    BEGIN
+                        SET NOCOUNT ON;
+                        SET ANSI_NULLS ON;
+                        SET QUOTED_IDENTIFIER ON;
+                        
+                        IF EXISTS (SELECT 1 FROM dbo.Usuarios WHERE Correo = @Correo)
+                        BEGIN
+                            SET @Registrado = 0;
+                            SET @Mensaje = 'El correo ya se encuentra registrado.';
+                            RETURN;
+                        END
+
+                        INSERT INTO dbo.Usuarios (Correo, Clave, IdRolSeguridad, IdEstado)
+                        VALUES (@Correo, @Clave, 3, 1); -- Coordinador, PendienteAprobacionCorreo
+
+                        SET @Registrado = 1;
+                        SET @Mensaje = 'Usuario registrado con éxito. Su cuenta está pendiente de aprobación por un administrador.';
+                    END;";
+
+                using (var cmdFix = new SqlCommand(sqlFixSp, cn))
+                {
+                    try { cmdFix.ExecuteNonQuery(); } catch { }
+                }
+
+                // 3. Ejecutar sp_RegistrarUsuario
+                using (SqlCommand cmd = new SqlCommand("dbo.sp_RegistrarUsuario", cn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Correo", correo);
+                    cmd.Parameters.AddWithValue("@Clave", claveHash);
+                    cmd.Parameters.Add("@Registrado", SqlDbType.Bit).Direction = ParameterDirection.Output;
+                    cmd.Parameters.Add("@Mensaje", SqlDbType.VarChar, 100).Direction = ParameterDirection.Output;
+
+                    cmd.ExecuteNonQuery();
+
+                    registrado = Convert.ToBoolean(cmd.Parameters["@Registrado"].Value);
+                    mensaje = cmd.Parameters["@Mensaje"].Value?.ToString() ?? string.Empty;
+                }
             }
 
             return registrado;
+        }
+
+        public System.Collections.Generic.List<string> ObtenerCorreosCoordinadoresEquipo(int idEquipo)
+        {
+            var correos = new System.Collections.Generic.List<string>();
+            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            {
+                cn.Open();
+                // 1. Buscar Coordinadores de Equipo (IdPosicion = 1) activos en este equipo
+                string sql = @"
+                    SELECT DISTINCT u.Correo 
+                    FROM dbo.Usuarios u
+                    INNER JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario
+                    WHERE a.IdEquipo = @IdEquipo 
+                      AND a.IdPosicion = 1 
+                      AND a.Activo = 1 
+                      AND u.IdEstado = 4
+                      AND u.Correo IS NOT NULL AND u.Correo <> '';";
+
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            string email = dr["Correo"]?.ToString()?.Trim();
+                            if (!string.IsNullOrEmpty(email) && !correos.Contains(email))
+                            {
+                                correos.Add(email);
+                            }
+                        }
+                    }
+                }
+
+                // 2. Si no hay Coordinador de Equipo específico activo, notificar a los Superadmins y Administradores
+                if (correos.Count == 0)
+                {
+                    string sqlAdmins = @"
+                        SELECT DISTINCT Correo 
+                        FROM dbo.Usuarios 
+                        WHERE IdRolSeguridad IN (1, 2) 
+                          AND IdEstado = 4 
+                          AND Correo IS NOT NULL AND Correo <> '';";
+
+                    using (SqlCommand cmdAdm = new SqlCommand(sqlAdmins, cn))
+                    using (SqlDataReader drAdm = cmdAdm.ExecuteReader())
+                    {
+                        while (drAdm.Read())
+                        {
+                            string email = drAdm["Correo"]?.ToString()?.Trim();
+                            if (!string.IsNullOrEmpty(email) && !correos.Contains(email))
+                            {
+                                correos.Add(email);
+                            }
+                        }
+                    }
+                }
+            }
+            return correos;
         }
     }
 }

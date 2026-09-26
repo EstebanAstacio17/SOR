@@ -240,7 +240,22 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Correo aprobado con éxito. Se habilitó el enlace para completar el Perfil de Coordinador.";
+            // Notificación por correo al usuario informándole la aprobación y botón para completar perfil
+            try
+            {
+                var repoU = new Repositories.UsuarioRepository();
+                var uDestino = repoU.ObtenerUsuarioPorId(idUsuario);
+                string correoFinal = !string.IsNullOrWhiteSpace(correoCorregido) ? correoCorregido.Trim() : uDestino?.Correo;
+                string nombreDestino = !string.IsNullOrWhiteSpace(uDestino?.PrimerNombre)
+                    ? $"{uDestino.PrimerNombre} {uDestino.PrimerApellido}".Trim()
+                    : correoFinal;
+                string urlCompletar = Url.Action("Login", "Acceso", null, Request.Url?.Scheme ?? "http");
+
+                SOR.Helpers.CorreoHelper.NotificarCorreoAprobado(correoFinal, nombreDestino, urlCompletar);
+            }
+            catch { }
+
+            TempData["MensajeExito"] = "Correo aprobado con éxito. Se notificó al usuario por correo y se habilitó el enlace para completar el Perfil de Coordinador.";
             return RedirectToAction("Usuarios");
         }
 
@@ -409,7 +424,31 @@ namespace SOR.Controllers
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario está plenamente activo.";
+
+                        // Notificar por correo al usuario que su perfil fue aprobado y autorizado
+                        try
+                        {
+                            var repoU = new Repositories.UsuarioRepository();
+                            var uAprobado = repoU.ObtenerUsuarioPorId(idUsuario);
+                            if (uAprobado != null && !string.IsNullOrWhiteSpace(uAprobado.Correo))
+                            {
+                                string nombreDestino = !string.IsNullOrWhiteSpace(uAprobado.PrimerNombre)
+                                    ? $"{uAprobado.PrimerNombre} {uAprobado.PrimerApellido}".Trim()
+                                    : uAprobado.Correo;
+                                string urlLogin = Url.Action("Login", "Acceso", null, Request.Url?.Scheme ?? "http");
+
+                                SOR.Helpers.CorreoHelper.NotificarPerfilAutorizado(
+                                    uAprobado.Correo,
+                                    nombreDestino,
+                                    uAprobado.NombreEquipo,
+                                    uAprobado.NombrePosicion,
+                                    urlLogin
+                                );
+                            }
+                        }
+                        catch { }
+
+                        TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario fue notificado por correo y está plenamente activo.";
                     }
                     catch (Exception ex)
                     {

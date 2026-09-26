@@ -360,9 +360,34 @@ namespace SOR.Controllers
                     usuarioActual.PrimerApellido = modelo.PrimerApellido;
                     Session["usuario"] = usuarioActual;
                 }
+
+                // 6. Notificar por correo al Coordinador de Equipo correspondiente (o administradores)
+                try
+                {
+                    if (modelo.IdEquipo.HasValue && modelo.IdEquipo.Value > 0)
+                    {
+                        var correosCoordinadores = repoUsuario.ObtenerCorreosCoordinadoresEquipo(modelo.IdEquipo.Value);
+                        if (correosCoordinadores != null && correosCoordinadores.Count > 0)
+                        {
+                            string nombreEquipo = usuarioActualizado?.NombreEquipo ?? "Equipo Asignado";
+                            string nombrePosicion = usuarioActualizado?.NombrePosicion ?? "Coordinador";
+                            string nombreCompleto = $"{modelo.PrimerNombre} {modelo.PrimerApellido}".Trim();
+                            string urlAdmin = Url.Action("Login", "Acceso", null, Request.Url?.Scheme ?? "http");
+
+                            SOR.Helpers.CorreoHelper.NotificarPerfilCompletadoACoordinadorEquipo(
+                                correosCoordinadores,
+                                nombreCompleto,
+                                nombreEquipo,
+                                nombrePosicion,
+                                urlAdmin
+                            );
+                        }
+                    }
+                }
+                catch { }
             }
 
-            TempData["MensajeExito"] = "Tus datos han sido guardados exitosamente en el sistema.";
+            TempData["MensajeExito"] = "Tus datos han sido guardados exitosamente en el sistema. Se ha notificado a la coordinación de tu equipo.";
             return RedirectToAction("RegistroPerfil");
         }
 
