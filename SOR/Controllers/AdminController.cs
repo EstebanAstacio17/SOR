@@ -1,3 +1,4 @@
+using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -267,6 +268,12 @@ namespace SOR.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
+                string tipoEntidad = "UsuarioCedula";
+                if (string.Equals(tipo, "pasaporte", StringComparison.OrdinalIgnoreCase))
+                    tipoEntidad = "UsuarioPasaporte";
+                else if (string.Equals(tipo, "foto", StringComparison.OrdinalIgnoreCase))
+                    tipoEntidad = "UsuarioFoto";
+
                 string rutaRelativa = null;
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
@@ -279,15 +286,22 @@ namespace SOR.Controllers
                         {
                             if (dr.Read())
                             {
-                                if (string.Equals(tipo, "cedula", StringComparison.OrdinalIgnoreCase))
+                                if (tipoEntidad == "UsuarioCedula")
                                     rutaRelativa = dr["DocumentoAdjuntoRuta"] != DBNull.Value ? dr["DocumentoAdjuntoRuta"].ToString() : null;
-                                else if (string.Equals(tipo, "pasaporte", StringComparison.OrdinalIgnoreCase))
+                                else if (tipoEntidad == "UsuarioPasaporte")
                                     rutaRelativa = dr["PasaporteAdjuntoRuta"] != DBNull.Value ? dr["PasaporteAdjuntoRuta"].ToString() : null;
-                                else if (string.Equals(tipo, "foto", StringComparison.OrdinalIgnoreCase))
+                                else if (tipoEntidad == "UsuarioFoto")
                                     rutaRelativa = dr["FotoRuta"] != DBNull.Value ? dr["FotoRuta"].ToString() : null;
                             }
                         }
                     }
+                }
+
+                // 1. Obtener directamente de la base de datos SQL (o auto-migrar desde disco si existe)
+                var archivo = ArchivoStorageHelper.ObtenerArchivo(tipoEntidad, id, rutaRelativa);
+                if (archivo != null && archivo.Contenido != null && archivo.Contenido.Length > 0)
+                {
+                    return File(archivo.Contenido, archivo.MimeType);
                 }
 
                 if (string.IsNullOrWhiteSpace(rutaRelativa))
@@ -295,35 +309,14 @@ namespace SOR.Controllers
                     return Content("<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;'><h3>Documento no registrado</h3><p style='color:#666;'>El usuario no tiene ningún archivo adjunto registrado en esta casilla.</p></div>", "text/html");
                 }
 
-                string rutaFisica = null;
-                try
-                {
-                    if (rutaRelativa.StartsWith("~"))
-                        rutaFisica = Server.MapPath(rutaRelativa);
-                    else if (rutaRelativa.StartsWith("/"))
-                        rutaFisica = Server.MapPath("~" + rutaRelativa);
-                    else
-                        rutaFisica = Server.MapPath("~/" + rutaRelativa);
-                }
-                catch
-                {
-                    rutaFisica = null;
-                }
-
-                if (string.IsNullOrEmpty(rutaFisica) || !System.IO.File.Exists(rutaFisica))
-                {
-                    string nombreArchivo = System.IO.Path.GetFileName(rutaRelativa);
-                    return Content($"<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;max-width:600px;margin:40px auto;border:1px solid #dee2e6;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);background:#fff;'>" +
-                                   $"<div style='font-size:48px;margin-bottom:12px;'>📄⚠️</div>" +
-                                   $"<h3 style='color:#c0392b;margin-bottom:8px;'>Documento no disponible físicamente</h3>" +
-                                   $"<p style='color:#444;font-size:14px;line-height:1.5;'>El registro del archivo (<strong>{nombreArchivo}</strong>) existe en la base de datos, pero el archivo no está presente en el almacenamiento temporal del servidor.</p>" +
-                                   $"<p style='color:#777;font-size:13px;background:#f8f9fa;padding:12px;border-radius:8px;'><strong>Nota operativa:</strong> Durante actualizaciones o despliegues en la nube, el almacenamiento local temporal se renueva. Por favor solicite al coordinador volver a adjuntar su documento desde su portal.</p>" +
-                                   $"<button onclick='window.close()' style='padding:10px 24px;background:#0d6efd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;margin-top:10px;'>Cerrar Ventana</button>" +
-                                   $"</div>", "text/html");
-                }
-
-                string mimeType = System.Web.MimeMapping.GetMimeMapping(rutaFisica);
-                return File(rutaFisica, mimeType);
+                string nombreArchivo = System.IO.Path.GetFileName(rutaRelativa);
+                return Content($"<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;max-width:600px;margin:40px auto;border:1px solid #dee2e6;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);background:#fff;'>" +
+                               $"<div style='font-size:48px;margin-bottom:12px;'>📄⚠️</div>" +
+                               $"<h3 style='color:#c0392b;margin-bottom:8px;'>Documento no disponible</h3>" +
+                               $"<p style='color:#444;font-size:14px;line-height:1.5;'>Este documento (<strong>{nombreArchivo}</strong>) fue registrado con el esquema anterior antes de la activación del almacenamiento persistente en la base de datos.</p>" +
+                               $"<p style='color:#2c3e50;font-size:13px;background:#eef6ff;padding:12px;border-radius:8px;border-left:4px solid #0d6efd;'><strong>Almacenamiento permanente activado:</strong> A partir de este momento, todos los documentos subidos se almacenan de forma permanente e indestructible dentro de la base de datos Azure SQL. Por favor solicite al coordinador volver a adjuntar su archivo en su perfil una única vez para que quede almacenado de por vida.</p>" +
+                               $"<button onclick='window.close()' style='padding:10px 24px;background:#0d6efd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;margin-top:10px;'>Cerrar Ventana</button>" +
+                               $"</div>", "text/html");
             }
             catch (Exception ex)
             {

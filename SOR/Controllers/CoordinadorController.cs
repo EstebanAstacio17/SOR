@@ -1,3 +1,4 @@
+using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -157,38 +158,23 @@ namespace SOR.Controllers
                 }
             }
 
-            // 3. Procesar Carga Segura de Archivos Adjuntos (Uploads)
-            string uploadPath = Server.MapPath("~/Uploads/Usuarios/");
-            if (!Directory.Exists(uploadPath))
-            {
-                Directory.CreateDirectory(uploadPath);
-            }
-
+            // 3. Procesar Carga Segura y Persistente de Archivos Adjuntos (en Azure SQL y disco)
             if (docAdjunto != null && docAdjunto.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docAdjunto.FileName).ToLowerInvariant();
-                string fileName = $"Doc_{usuarioActual.IdUsuario}_{Guid.NewGuid():N}{ext}";
-                docAdjunto.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.DocumentoAdjuntoRuta = "/Uploads/Usuarios/" + fileName;
+                modelo.DocumentoAdjuntoRuta = ArchivoStorageHelper.GuardarArchivo("UsuarioCedula", usuarioActual.IdUsuario, docAdjunto, "Usuarios");
             }
 
             if (pasaporteAdjunto != null && pasaporteAdjunto.ContentLength > 0)
             {
-                string ext = Path.GetExtension(pasaporteAdjunto.FileName).ToLowerInvariant();
-                string fileName = $"Pas_{usuarioActual.IdUsuario}_{Guid.NewGuid():N}{ext}";
-                pasaporteAdjunto.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.PasaporteAdjuntoRuta = "/Uploads/Usuarios/" + fileName;
+                modelo.PasaporteAdjuntoRuta = ArchivoStorageHelper.GuardarArchivo("UsuarioPasaporte", usuarioActual.IdUsuario, pasaporteAdjunto, "Usuarios");
             }
 
             if (fotoPerfil != null && fotoPerfil.ContentLength > 0)
             {
-                string ext = Path.GetExtension(fotoPerfil.FileName).ToLowerInvariant();
-                string fileName = $"Foto_{usuarioActual.IdUsuario}_{Guid.NewGuid():N}{ext}";
-                fotoPerfil.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.FotoRuta = "/Uploads/Usuarios/" + fileName;
+                modelo.FotoRuta = ArchivoStorageHelper.GuardarArchivo("UsuarioFoto", usuarioActual.IdUsuario, fotoPerfil, "Usuarios");
             }
 
-            // 3. Guardar o Actualizar Perfil en SQL Server
+            // 4. Guardar o Actualizar Perfil en SQL Server
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();

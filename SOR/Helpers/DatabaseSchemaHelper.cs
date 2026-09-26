@@ -238,7 +238,10 @@ namespace SOR.Helpers
                     // 8. Módulo Logístico y de Despacho de Materiales OCC
                     AsegurarModuloLogistica(cn);
 
-                    // 9. Procedimientos Almacenados del Sistema
+                    // 9. Módulo de Almacenamiento Persistente de Archivos y Documentos
+                    AsegurarModuloArchivos(cn);
+
+                    // 10. Procedimientos Almacenados del Sistema
                     AsegurarProcedimientosAlmacenados(cn);
                 }
             }
@@ -246,6 +249,32 @@ namespace SOR.Helpers
             {
                 // Registramos o ignoramos si ya existe para no detener el arranque
                 System.Diagnostics.Debug.WriteLine("Error al asegurar esquema: " + ex.Message);
+            }
+        }
+
+        private static void AsegurarModuloArchivos(SqlConnection cn)
+        {
+            string sql = @"
+                IF OBJECT_ID('dbo.ArchivosAdjuntos', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.ArchivosAdjuntos (
+                        IdArchivo INT IDENTITY(1,1) PRIMARY KEY,
+                        TipoEntidad VARCHAR(50) NOT NULL,
+                        IdEntidad INT NOT NULL,
+                        NombreArchivo NVARCHAR(255) NOT NULL,
+                        Extension VARCHAR(20) NOT NULL,
+                        MimeType VARCHAR(100) NOT NULL,
+                        TamanoBytes BIGINT NOT NULL,
+                        Contenido VARBINARY(MAX) NOT NULL,
+                        FechaCarga DATETIME2 NOT NULL DEFAULT GETDATE()
+                    );
+
+                    CREATE NONCLUSTERED INDEX IX_ArchivosAdjuntos_Entidad 
+                    ON dbo.ArchivosAdjuntos (TipoEntidad, IdEntidad);
+                END";
+            using (SqlCommand cmd = new SqlCommand(sql, cn))
+            {
+                cmd.ExecuteNonQuery();
             }
         }
 

@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 
@@ -221,26 +222,15 @@ namespace SOR.Controllers
                 return View(modelo);
             }
 
-            string uploadPath = Server.MapPath("~/Uploads/Iglesias/");
-            if (!Directory.Exists(uploadPath))
-            {
-                Directory.CreateDirectory(uploadPath);
-            }
-
+            // Manejo seguro y permanente de archivos adjuntos en SQL
             if (docPastor != null && docPastor.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docPastor.FileName).ToLowerInvariant();
-                string fileName = $"Pastor_{Guid.NewGuid():N}{ext}";
-                docPastor.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.Pastor.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
+                modelo.Pastor.DocumentoAdjuntoRuta = ArchivoStorageHelper.GuardarArchivo("IglesiaPastor", 0, docPastor, "Iglesias");
             }
 
             if (docLider != null && docLider.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docLider.FileName).ToLowerInvariant();
-                string fileName = $"Lider_{Guid.NewGuid():N}{ext}";
-                docLider.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.LiderMinisterial.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
+                modelo.LiderMinisterial.DocumentoAdjuntoRuta = ArchivoStorageHelper.GuardarArchivo("IglesiaLider", 0, docLider, "Iglesias");
             }
 
             try
@@ -2087,16 +2077,10 @@ namespace SOR.Controllers
                 return View(modelo);
             }
 
-            string uploadPath = Server.MapPath("~/Uploads/Iglesias/");
-            if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
-
-            // Manejo seguro de archivos adjuntos
+            // Manejo seguro y permanente de archivos adjuntos en SQL
             if (docPastor != null && docPastor.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docPastor.FileName).ToLowerInvariant();
-                string fileName = $"Pastor_{Guid.NewGuid():N}{ext}";
-                docPastor.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.Pastor.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
+                modelo.Pastor.DocumentoAdjuntoRuta = ArchivoStorageHelper.GuardarArchivo("IglesiaPastor", modelo.IdIglesia, docPastor, "Iglesias");
             }
             else
             {
@@ -2105,10 +2089,7 @@ namespace SOR.Controllers
 
             if (docLider != null && docLider.ContentLength > 0)
             {
-                string ext = Path.GetExtension(docLider.FileName).ToLowerInvariant();
-                string fileName = $"Lider_{Guid.NewGuid():N}{ext}";
-                docLider.SaveAs(Path.Combine(uploadPath, fileName));
-                modelo.LiderMinisterial.DocumentoAdjuntoRuta = "/Uploads/Iglesias/" + fileName;
+                modelo.LiderMinisterial.DocumentoAdjuntoRuta = ArchivoStorageHelper.GuardarArchivo("IglesiaLider", modelo.IdIglesia, docLider, "Iglesias");
             }
             else
             {
