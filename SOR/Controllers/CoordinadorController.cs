@@ -200,9 +200,9 @@ namespace SOR.Controllers
                 SqlCommand cmd;
                 if (existe > 0)
                 {
-                    bool esAdmin = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
+                    bool esSuperAdmin = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
                     // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado o está en proceso de restablecimiento y NO es administrador
-                    if (!esAdmin && (usuarioActual.IdEstado == 4 || usuarioActual.IdEstado == 7 || usuarioActual.IdEstado == 8))
+                    if (!esSuperAdmin && (usuarioActual.IdEstado == 4 || usuarioActual.IdEstado == 7 || usuarioActual.IdEstado == 8))
                     {
                         string sqlGetPrev = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdPrev = new SqlCommand(sqlGetPrev, cn))
@@ -333,8 +333,8 @@ namespace SOR.Controllers
 
                 cmd.ExecuteNonQuery();
 
-                bool esAdmin = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
-                if (esAdmin && modelo.IdEquipo.HasValue && modelo.IdPosicion.HasValue)
+                bool esSuperAdminVal = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
+                if (esSuperAdminVal && modelo.IdEquipo.HasValue && modelo.IdPosicion.HasValue)
                 {
                     string sqlAsig = @"
                         IF EXISTS (SELECT 1 FROM dbo.AsignacionesEquipo WHERE IdUsuario = @IdUsuario AND Activo = 1)
