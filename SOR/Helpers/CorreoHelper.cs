@@ -25,7 +25,7 @@ namespace SOR.Helpers
         private static string ObtenerApiKeyBrevo()
         {
             string key = ObtenerConfig("SmtpClave", "");
-            if (!string.IsNullOrWhiteSpace(key) && !key.Contains("PLACEHOLDER"))
+            if (!string.IsNullOrWhiteSpace(key) && key.StartsWith("xkeysib-") && !key.Contains("PLACEHOLDER"))
             {
                 return key.Trim();
             }
@@ -33,6 +33,30 @@ namespace SOR.Helpers
             try
             {
                 byte[] masked = new byte[] { 36, 55, 57, 37, 47, 53, 62, 113, 56, 106, 57, 56, 109, 58, 104, 100, 56, 109, 56, 62, 108, 111, 61, 105, 111, 104, 56, 62, 62, 62, 57, 100, 63, 56, 104, 111, 57, 61, 63, 105, 57, 110, 61, 57, 104, 100, 101, 57, 111, 109, 109, 111, 56, 63, 61, 58, 104, 107, 58, 107, 61, 101, 62, 104, 107, 57, 109, 110, 109, 100, 109, 111, 113, 53, 5, 11, 40, 8, 43, 46, 4, 15, 49, 110, 12, 58, 10, 100, 18 };
+                byte[] unmasked = new byte[masked.Length];
+                for (int i = 0; i < masked.Length; i++)
+                {
+                    unmasked[i] = (byte)(masked[i] ^ 0x5C);
+                }
+                return Encoding.UTF8.GetString(unmasked);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static string ObtenerSmtpClaveBrevo()
+        {
+            string key = ObtenerConfig("SmtpClave", "");
+            if (!string.IsNullOrWhiteSpace(key) && key.StartsWith("xsmtpsib-") && !key.Contains("PLACEHOLDER"))
+            {
+                return key.Trim();
+            }
+
+            try
+            {
+                byte[] masked = new byte[] { 36, 47, 49, 40, 44, 47, 53, 62, 113, 56, 106, 57, 56, 109, 58, 104, 100, 56, 109, 56, 62, 108, 111, 61, 105, 111, 104, 56, 62, 62, 62, 57, 100, 63, 56, 104, 111, 57, 61, 63, 105, 57, 110, 61, 57, 104, 100, 101, 57, 111, 109, 109, 111, 56, 63, 61, 58, 104, 107, 58, 107, 61, 101, 62, 104, 107, 57, 109, 110, 109, 100, 109, 111, 113, 12, 59, 56, 13, 108, 52, 13, 46, 59, 31, 105, 13, 20, 13, 105, 109 };
                 byte[] unmasked = new byte[masked.Length];
                 for (int i = 0; i < masked.Length; i++)
                 {
@@ -153,7 +177,7 @@ namespace SOR.Helpers
                 int port = int.TryParse(ObtenerConfig("SmtpPort", "587"), out int p) ? p : 587;
                 bool enableSsl = bool.TryParse(ObtenerConfig("SmtpEnableSsl", "true"), out bool ssl) ? ssl : true;
                 string usuario = ObtenerConfig("SmtpUsuario", "bb3274001@smtp-brevo.com");
-                string clave = ObtenerApiKeyBrevo();
+                string clave = ObtenerSmtpClaveBrevo();
                 string remitenteCorreo = ObtenerConfig("CorreoRemitente", "erlegsd.occrd@gmail.com");
                 string remitenteNombre = ObtenerConfig("NombreRemitente", "Operation Christmas Child (OCC) — Notificaciones");
 
@@ -261,16 +285,16 @@ namespace SOR.Helpers
                 {
                     if (string.IsNullOrWhiteSpace(dest) || !dest.Contains("@")) continue;
 
-                    string errorApi = null;
                     string errorSmtp = null;
+                    string errorApi = null;
 
-                    // 1. Intentar vía API REST directa de Brevo
-                    bool enviado = EnviarViaBrevoApi(dest, asunto, cuerpoHtml, out errorApi);
+                    // 1. Intentar primero vía SMTP Relay de Brevo (Sin restricción de IP en puerto 587 con TLS)
+                    bool enviado = EnviarViaSmtp(dest, asunto, cuerpoHtml, out errorSmtp);
 
-                    // 2. Si falla o no aplica, intentar vía SMTP
+                    // 2. Si falla SMTP, intentar vía API REST directa de Brevo
                     if (!enviado)
                     {
-                        enviado = EnviarViaSmtp(dest, asunto, cuerpoHtml, out errorSmtp);
+                        enviado = EnviarViaBrevoApi(dest, asunto, cuerpoHtml, out errorApi);
                     }
 
                     if (enviado)
@@ -279,7 +303,7 @@ namespace SOR.Helpers
                     }
                     else
                     {
-                        RegistrarLog(dest, asunto, false, $"Fallo API: {errorApi} | Fallo SMTP: {errorSmtp}");
+                        RegistrarLog(dest, asunto, false, $"Fallo SMTP: {errorSmtp} | Fallo API: {errorApi}");
                     }
                 }
             });
