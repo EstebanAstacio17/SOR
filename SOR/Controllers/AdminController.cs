@@ -243,6 +243,12 @@ namespace SOR.Controllers
 
                 if (userVm == null) return HttpNotFound("Usuario no encontrado.");
 
+                // Validate properties that might throw NullReferenceException in the view
+                if (userVm.Perfil == null)
+                    throw new Exception("Perfil is null");
+                
+                string debugInfo = $"Perfil: {userVm.Perfil.PrimerNombre} {userVm.Perfil.PrimerApellido} | Equip: {userVm.Perfil.NombreEquipo}";
+
                 ViewBag.HideLayout = true; 
                 return View(userVm);
             }

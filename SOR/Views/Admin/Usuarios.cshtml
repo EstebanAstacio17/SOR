@@ -680,6 +680,7 @@
             $.ajax({
                 url: '/Admin/ImprimirPerfil/' + idUsuario,
                 type: 'GET',
+                dataType: 'html',
                 success: function(html) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
@@ -723,10 +724,10 @@
                 error: function(xhr, status, error) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
-                    var errorMsg = "Ocurrió un error al preparar el documento. ";
+                    var errorMsg = "Ocurrió un error al preparar el documento. (Status: " + xhr.status + " " + error + ")\n";
                     if (xhr.responseText) {
                         console.error('Error al imprimir:', xhr.responseText);
-                        errorMsg += "\nDetalles: " + xhr.responseText.substring(0, 150) + "...";
+                        errorMsg += "Detalles:\n" + xhr.responseText.substring(0, 150) + "...";
                     }
                     alert(errorMsg);
                 }
