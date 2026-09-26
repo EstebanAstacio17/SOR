@@ -24,6 +24,19 @@ namespace SOR.Controllers
             // 1. SuperAdmin y Administrador
             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true;
             
+            // 2. Todos los coordinadores tienen acceso (al menos de lectura / consulta)
+            if (u.IdPosicion.HasValue && u.IdPosicion.Value > 0) return true;
+            if (u.IdRolSeguridad == 3) return true;
+
+            return false;
+        }
+
+        private bool PuedeEditarFinanzas(Usuario u)
+        {
+            if (u == null) return false;
+            // 1. SuperAdmin y Administrador
+            if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true;
+
             // 2. Coordinador de Equipo (IdPosicion = 1)
             if (u.IdPosicion == 1 || (!string.IsNullOrEmpty(u.NombrePosicion) && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)) return true;
 
@@ -62,7 +75,7 @@ namespace SOR.Controllers
 
             if (!TieneAccesoFinanzas(u))
             {
-                TempData["MensajeError"] = "Acceso restringido: El módulo de Finanzas solo está disponible para el Coordinador de Recursos, Coordinador de Equipo o Administrador.";
+                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al módulo de Finanzas.";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -76,6 +89,7 @@ namespace SOR.Controllers
             }
 
             bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            bool puedeEditar = PuedeEditarFinanzas(u);
             HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
 
             var equipos = _repo.ObtenerListaEquipos(equiposPermitidos);
@@ -112,6 +126,7 @@ namespace SOR.Controllers
 
             bool puedeCambiarEquipo = esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1);
             ViewBag.EsAdmin = esAdmin;
+            ViewBag.PuedeEditarFinanzas = puedeEditar;
             ViewBag.PuedeCambiarEquipo = puedeCambiarEquipo;
             ViewBag.UsuarioActual = u;
 
@@ -143,7 +158,7 @@ namespace SOR.Controllers
 
             if (!TieneAccesoFinanzas(u))
             {
-                TempData["MensajeError"] = "Acceso restringido: El módulo de Finanzas solo está disponible para el Coordinador de Recursos, Coordinador de Equipo o Administrador.";
+                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al módulo de Finanzas.";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -154,6 +169,7 @@ namespace SOR.Controllers
             catch { }
 
             bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
+            bool puedeEditar = PuedeEditarFinanzas(u);
             HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);
 
             var equipos = _repo.ObtenerListaEquipos(equiposPermitidos);
@@ -186,6 +202,7 @@ namespace SOR.Controllers
 
             bool puedeCambiarEquipo = esAdmin || (equiposPermitidos != null && equiposPermitidos.Count > 1);
             ViewBag.EsAdmin = esAdmin;
+            ViewBag.PuedeEditarFinanzas = puedeEditar;
             ViewBag.PuedeCambiarEquipo = puedeCambiarEquipo;
             ViewBag.UsuarioActual = u;
 
@@ -214,8 +231,8 @@ namespace SOR.Controllers
                 if (u == null)
                     return Json(new { success = false, message = "Sesión expirada. Por favor inicie sesión nuevamente." });
 
-                if (!TieneAccesoFinanzas(u))
-                    return Json(new { success = false, message = "No tienes permisos para registrar movimientos financieros." });
+                if (!PuedeEditarFinanzas(u))
+                    return Json(new { success = false, message = "Acceso denegado: Solo el Coordinador de Recursos y el Coordinador de Equipo tienen permisos para registrar o modificar movimientos financieros." });
 
                 if (model == null)
                     return Json(new { success = false, message = "No se recibieron datos de la transacción." });
@@ -275,8 +292,8 @@ namespace SOR.Controllers
                 if (u == null)
                     return Json(new { success = false, message = "Sesión expirada." });
 
-                if (!TieneAccesoFinanzas(u))
-                    return Json(new { success = false, message = "No tienes permisos para eliminar movimientos financieros." });
+                if (!PuedeEditarFinanzas(u))
+                    return Json(new { success = false, message = "Acceso denegado: Solo el Coordinador de Recursos y el Coordinador de Equipo tienen permisos para eliminar movimientos financieros." });
 
                 if (transaccionId <= 0)
                     return Json(new { success = false, message = "Identificador de transacción inválido." });
@@ -299,8 +316,8 @@ namespace SOR.Controllers
                 if (u == null)
                     return Json(new { success = false, message = "Sesión expirada." });
 
-                if (!TieneAccesoFinanzas(u))
-                    return Json(new { success = false, message = "No tienes permisos para configurar presupuestos." });
+                if (!PuedeEditarFinanzas(u))
+                    return Json(new { success = false, message = "Acceso denegado: Solo el Coordinador de Recursos y el Coordinador de Equipo tienen permisos para configurar techos presupuestarios." });
 
                 bool esAdmin = u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2;
                 HashSet<int> equiposPermitidos = _repo.ObtenerEquiposPermitidosJerarquico(u);

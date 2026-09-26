@@ -19,9 +19,18 @@
         <a href="@Url.Action("ReporteConsolidado", "Finanzas", new { idTemporada = Model.IdTemporada, idEquipo = Model.IdEquipo })" class="btn btn-outline-primary font-semibold px-3 shadow-sm">
             <i class="bi bi-grid-3x3 me-1"></i>Reporte Consolidado Anual
         </a>
-        <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
-            <i class="bi bi-plus-circle me-2"></i>Registrar Movimiento
-        </button>
+        @if (ViewBag.PuedeEditarFinanzas == true)
+        {
+            <button type="button" class="btn btn-primary font-semibold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
+                <i class="bi bi-plus-circle me-2"></i>Registrar Movimiento
+            </button>
+        }
+        else
+        {
+            <span class="badge bg-secondary-soft text-muted d-flex align-items-center px-3 py-2 border rounded-3" title="Solo lectura para este rol">
+                <i class="bi bi-eye me-1"></i>Modo Consulta
+            </span>
+        }
     </div>
 </div>
 
@@ -169,7 +178,7 @@
         </div>
         <div>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalConfigPresupuesto">
-                <i class="bi bi-sliders me-1"></i>Ver / Configurar Techos Presupuestarios
+                <i class="bi bi-sliders me-1"></i>@(ViewBag.PuedeEditarFinanzas == true ? "Ver / Configurar Techos Presupuestarios" : "Ver Techos Presupuestarios")
             </button>
         </div>
     </div>
@@ -185,19 +194,25 @@
                         <th class="text-end">Gasto (DOP)</th>
                         <th class="text-end">Ingreso (DOP)</th>
                         <th class="text-end">Saldo Resultante</th>
-                        <th class="text-end pe-4" style="width: 130px;">Acciones</th>
+                        @if (ViewBag.PuedeEditarFinanzas == true)
+                        {
+                            <th class="text-end pe-4" style="width: 130px;">Acciones</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Transacciones.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
+                            <td colspan="@(ViewBag.PuedeEditarFinanzas == true ? 8 : 7)" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-300"></i>
                                 No hay movimientos financieros registrados en el mes de <strong>@Model.Mes</strong> para <strong>@Model.NombreEquipo</strong>.<br />
-                                <button type="button" class="btn btn-sm btn-primary font-semibold mt-2" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
-                                    <i class="bi bi-plus-circle me-1"></i>Registrar Primer Movimiento
-                                </button>
+                                @if (ViewBag.PuedeEditarFinanzas == true)
+                                {
+                                    <button type="button" class="btn btn-sm btn-primary font-semibold mt-2" data-bs-toggle="modal" data-bs-target="#modalRegistrarTransaccion">
+                                        <i class="bi bi-plus-circle me-1"></i>Registrar Primer Movimiento
+                                    </button>
+                                }
                             </td>
                         </tr>
                     }
@@ -257,21 +272,24 @@
                                     <div class="fw-bold @(item.SaldoDOP < 0 ? "text-danger" : "text-dark")">RD$ @item.SaldoDOP.ToString("N2")</div>
                                     <small class="text-muted">$@item.SaldoUSD.ToString("N2") USD</small>
                                 </td>
-                                <td class="text-end pe-4">
-                                    <div class="d-flex justify-content-end gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTransaccion(@item.TransaccionId, '@item.Fecha.ToString("yyyy-MM-dd")', '@Html.Raw(item.NumeroDocumento ?? "")', '@Html.Raw(item.Descripcion.Replace("'", "\\'"))', '@item.CategoriaId', @item.GastoDOP, @item.IngresoDOP, @item.TasaCambio, '@Html.Raw((item.Notas ?? "").Replace("'", "\\'"))')" title="Editar Movimiento">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMovimiento(@item.TransaccionId)" title="Eliminar Movimiento">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
+                                @if (ViewBag.PuedeEditarFinanzas == true)
+                                {
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTransaccion(@item.TransaccionId, '@item.Fecha.ToString("yyyy-MM-dd")', '@Html.Raw(item.NumeroDocumento ?? "")', '@Html.Raw(item.Descripcion.Replace("'", "\\'"))', '@item.CategoriaId', @item.GastoDOP, @item.IngresoDOP, @item.TasaCambio, '@Html.Raw((item.Notas ?? "").Replace("'", "\\'"))')" title="Editar Movimiento">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMovimiento(@item.TransaccionId)" title="Eliminar Movimiento">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                }
                             </tr>
                         }
                     }
                     <tr id="rowSinResultadosFiltro" class="d-none">
-                        <td colspan="8" class="text-center py-4 text-muted">
+                        <td colspan="@(ViewBag.PuedeEditarFinanzas == true ? 8 : 7)" class="text-center py-4 text-muted">
                             <i class="bi bi-search fs-2 d-block mb-2 text-slate-300"></i>
                             No se encontraron movimientos que coincidan con los filtros aplicados.
                         </td>
@@ -378,13 +396,13 @@
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header bg-dark text-white rounded-top-4 py-3">
                 <h5 class="modal-title font-bold">
-                    <i class="bi bi-sliders me-2 text-primary"></i>Configurar Techos Presupuestarios Aprobados
+                    <i class="bi bi-sliders me-2 text-primary"></i>@(ViewBag.PuedeEditarFinanzas == true ? "Configurar Techos Presupuestarios Aprobados" : "Techos Presupuestarios Aprobados")
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 <p class="small text-muted mb-3">
-                    Establece el monto aprobado en <strong>Dólares (USD)</strong> para cada categoría en <strong>@Model.NombreEquipo</strong> (@Model.NombreTemporada).
+                    @(ViewBag.PuedeEditarFinanzas == true ? "Establece el monto aprobado en Dólares (USD) para cada categoría en" : "Monto presupuestario aprobado en Dólares (USD) para cada categoría en") <strong>@Model.NombreEquipo</strong> (@Model.NombreTemporada).
                 </p>
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                     <table class="table table-sm table-hover align-middle">
@@ -412,7 +430,7 @@
                                     <td>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">$</span>
-                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end inp-modal-pres" data-cat="@c.Value" value="@montoUSD.ToString("F2")" />
+                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end inp-modal-pres" data-cat="@c.Value" value="@montoUSD.ToString("F2")" @(ViewBag.PuedeEditarFinanzas == true ? "" : "disabled") />
                                         </div>
                                     </td>
                                 </tr>
@@ -422,10 +440,13 @@
                 </div>
             </div>
             <div class="modal-footer bg-light rounded-bottom-4 border-top-0 py-3">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary font-semibold" onclick="guardarTechosPresupuestariosModal()">
-                    <i class="bi bi-check2-circle me-1"></i>Guardar Techos Aprobados
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@(ViewBag.PuedeEditarFinanzas == true ? "Cancelar" : "Cerrar")</button>
+                @if (ViewBag.PuedeEditarFinanzas == true)
+                {
+                    <button type="button" class="btn btn-primary font-semibold" onclick="guardarTechosPresupuestariosModal()">
+                        <i class="bi bi-check2-circle me-1"></i>Guardar Techos Aprobados
+                    </button>
+                }
             </div>
         </div>
     </div>

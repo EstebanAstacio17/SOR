@@ -209,9 +209,10 @@
                             bool esCoordinadorEquipoSesion = uSesion.IdPosicion == 1 || (!string.IsNullOrEmpty(uSesion.NombrePosicion) && uSesion.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0);
                             bool esCoordinadorLogisticaSesion = uSesion.IdPosicion == 6 || (!string.IsNullOrEmpty(uSesion.NombrePosicion) && (uSesion.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || uSesion.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0));
                             bool esCoordinadorRecursosSesion = uSesion.IdPosicion == 4 || (!string.IsNullOrEmpty(uSesion.NombrePosicion) && (uSesion.NombrePosicion.IndexOf("Recursos", StringComparison.OrdinalIgnoreCase) >= 0 || uSesion.NombrePosicion.IndexOf("Finanzas", StringComparison.OrdinalIgnoreCase) >= 0));
+                            bool esCualquierCoordinadorSesion = (uSesion.IdPosicion.HasValue && uSesion.IdPosicion.Value > 0) || uSesion.IdRolSeguridad == 3;
 
                             bool puedeVerLogistica = esAdminSesion || esCoordinadorEquipoSesion || esCoordinadorLogisticaSesion;
-                            bool puedeVerFinanzas = esAdminSesion || esCoordinadorEquipoSesion || esCoordinadorRecursosSesion;
+                            bool puedeVerFinanzas = esAdminSesion || esCualquierCoordinadorSesion;
 
                             if (puedeVerLogistica)
                             {
