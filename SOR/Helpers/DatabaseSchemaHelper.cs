@@ -94,6 +94,21 @@ namespace SOR.Helpers
 
                     // 4. Índices de Rendimiento
                     string sqlIndices = @"
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Usuarios_Correo')
+                            CREATE NONCLUSTERED INDEX IX_Usuarios_Correo ON dbo.Usuarios (Correo);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Equipos_IdNivelEquipo')
+                            CREATE NONCLUSTERED INDEX IX_Equipos_IdNivelEquipo ON dbo.Equipos (IdNivelEquipo);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AsignacionesEquipo_IdUsuario')
+                            CREATE NONCLUSTERED INDEX IX_AsignacionesEquipo_IdUsuario ON dbo.AsignacionesEquipo (IdUsuario);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AsignacionesEquipo_IdEquipo')
+                            CREATE NONCLUSTERED INDEX IX_AsignacionesEquipo_IdEquipo ON dbo.AsignacionesEquipo (IdEquipo);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Participaciones_IdIglesia')
+                            CREATE NONCLUSTERED INDEX IX_Participaciones_IdIglesia ON dbo.ParticipacionesIglesia (IdIglesia);
+
                         IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Iglesias_IdEquipo')
                             CREATE NONCLUSTERED INDEX IX_Iglesias_IdEquipo ON dbo.Iglesias (IdEquipo)
                             INCLUDE (NombreIglesia, RNC_Cedula, Telefono, Denominacion, TipoOrganizacion);

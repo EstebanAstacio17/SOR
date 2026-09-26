@@ -247,7 +247,7 @@ namespace SOR.Repositories
                 if (ig == null) return null;
 
                 // 2. Personas (Pastor, Líder)
-                string sqlPer = "SELECT * FROM dbo.PersonasIglesia WHERE IdIglesia = @Id;";
+                string sqlPer = "SELECT IdPersonaIglesia, IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, DocumentoAdjuntoRuta, Celular, Correo FROM dbo.PersonasIglesia WHERE IdIglesia = @Id;";
                 using (SqlCommand cmdPer = new SqlCommand(sqlPer, cn))
                 {
                     cmdPer.Parameters.AddWithValue("@Id", idIglesia);
@@ -275,7 +275,7 @@ namespace SOR.Repositories
                 }
 
                 // 2.2 Cargar Maestros independientes de la Iglesia
-                string sqlMaestros = "SELECT * FROM dbo.Maestros WHERE IdIglesia = @Id;";
+                string sqlMaestros = "SELECT IdMaestro, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo, Activo FROM dbo.Maestros WHERE IdIglesia = @Id;";
                 using (SqlCommand cmdM = new SqlCommand(sqlMaestros, cn))
                 {
                     cmdM.Parameters.AddWithValue("@Id", idIglesia);

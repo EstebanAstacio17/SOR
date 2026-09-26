@@ -18,7 +18,7 @@ namespace SOR.Controllers
         }
 
         [ValidarSesion]
-        public ActionResult Index()
+        public async System.Threading.Tasks.Task<ActionResult> Index()
         {
             Usuario usuario = (Usuario)Session["usuario"];
             if (usuario != null)
@@ -43,7 +43,7 @@ namespace SOR.Controllers
             string connectionString = SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
             using (System.Data.SqlClient.SqlConnection conn = new System.Data.SqlClient.SqlConnection(connectionString))
             {
-                conn.Open();
+                await conn.OpenAsync();
 
                 // 1. Obtener la temporada activa actual
                 string queryTemp = @"
@@ -52,9 +52,9 @@ namespace SOR.Controllers
                     ORDER BY Activa DESC, FechaInicio DESC, IdTemporada DESC;";
                 using (System.Data.SqlClient.SqlCommand cmd = new System.Data.SqlClient.SqlCommand(queryTemp, conn))
                 {
-                    using (var dr = cmd.ExecuteReader())
+                    using (var dr = await cmd.ExecuteReaderAsync())
                     {
-                        if (dr.Read())
+                        if (await dr.ReadAsync())
                         {
                             idTemporadaActiva = Convert.ToInt32(dr["IdTemporada"]);
                             temporadaActiva = dr["NombreTemporada"].ToString().Replace("Temp ", "").Trim();
@@ -80,7 +80,7 @@ namespace SOR.Controllers
                 {
                     cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
                     cmd.Parameters.AddWithValue("@IdEquipo", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
-                    object res = cmd.ExecuteScalar();
+                    object res = await cmd.ExecuteScalarAsync();
                     if (res != null && res != DBNull.Value)
                     {
                         totalIglesiasRegistradas = Convert.ToInt32(res);
@@ -100,7 +100,7 @@ namespace SOR.Controllers
                 {
                     cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
                     cmd.Parameters.AddWithValue("@IdEquipo", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
-                    object res = cmd.ExecuteScalar();
+                    object res = await cmd.ExecuteScalarAsync();
                     if (res != null && res != DBNull.Value)
                     {
                         solicitudesPendientes = Convert.ToInt32(res);
