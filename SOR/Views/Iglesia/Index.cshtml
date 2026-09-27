@@ -259,6 +259,28 @@
                     </table>
                 </div>
             </div>
+            <!-- PIE DE PAGINACIÓN -->
+            <div class="card-footer bg-white border-top py-3 px-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3" id="paginationContainer">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span class="text-muted small fw-medium" id="paginacionInfo">Cargando registros...</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="filasPorPagina" class="text-muted small mb-0 fw-semibold">Mostrar:</label>
+                        <select id="filasPorPagina" class="form-select form-select-sm bg-light" style="width: 85px; font-size: 0.85rem;">
+                            <option value="15" selected>15</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="all">Todas</option>
+                        </select>
+                        <span class="text-muted small">por pág.</span>
+                    </div>
+                </div>
+                <nav aria-label="Paginación de iglesias">
+                    <ul class="pagination pagination-sm mb-0 gap-1" id="paginacionNav">
+                        <!-- Generado dinámicamente -->
+                    </ul>
+                </nav>
+            </div>
         </div>
     </div>
 </div>
@@ -336,43 +358,210 @@
         background-color: rgba(108, 117, 125, 0.15) !important;
         color: #6c757d !important;
     }
+    .page-item .page-link {
+        border-radius: 6px !important;
+        color: #475569;
+        font-weight: 500;
+        border: 1px solid #e2e8f0;
+        padding: 0.35rem 0.65rem;
+    }
+    .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+    }
+    .page-item.disabled .page-link {
+        color: #94a3b8;
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
+    }
 </style>
 
 <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function() {
         var searchInput = document.getElementById('txtBuscarIglesia');
         var selectEquipo = document.getElementById('filtroEquipoIglesia');
+        var selectFilas = document.getElementById('filasPorPagina');
+        var navPaginacion = document.getElementById('paginacionNav');
+        var infoPaginacion = document.getElementById('paginacionInfo');
 
-        function filtrarTabla() {
+        var paginaActual = 1;
+
+        function actualizarTablaYPaginacion(resetPagina) {
+            if (resetPagina) {
+                paginaActual = 1;
+            }
+
             var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
             var equipo = selectEquipo ? selectEquipo.value.toLowerCase().trim() : '';
-            var rows = document.querySelectorAll('table tbody tr');
+            var filasVal = selectFilas ? selectFilas.value : '15';
+            var pageSize = (filasVal === 'all') ? 999999 : parseInt(filasVal, 10);
+
+            var rows = Array.from(document.querySelectorAll('table tbody tr'));
             
+            // Filtrar filas de datos válidas
+            var matchingRows = [];
             rows.forEach(function(row) {
-                if (row.cells.length === 1 && row.cells[0].colSpan > 1) return;
+                if (row.cells.length === 1 && row.cells[0].colSpan > 1) {
+                    row.style.display = 'none'; // ocultar fila vacía de servidor si existe
+                    return;
+                }
                 
                 var text = row.textContent.toLowerCase();
-                var eqCell = row.cells[0] ? row.cells[0].textContent.toLowerCase() : ''; // El equipo está en la primera celda
+                var eqCell = row.cells[0] ? row.cells[0].textContent.toLowerCase() : '';
 
                 var matchText = text.indexOf(query) > -1;
                 var matchEq = equipo === "" || eqCell.indexOf(equipo) > -1;
 
                 if (matchText && matchEq) {
+                    matchingRows.push(row);
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            var totalCoincidencias = matchingRows.length;
+            var totalPaginas = Math.ceil(totalCoincidencias / pageSize);
+            if (totalPaginas < 1) totalPaginas = 1;
+
+            if (paginaActual > totalPaginas) {
+                paginaActual = totalPaginas;
+            }
+
+            var inicioIdx = (paginaActual - 1) * pageSize;
+            var finIdx = Math.min(inicioIdx + pageSize, totalCoincidencias);
+
+            matchingRows.forEach(function(row, idx) {
+                if (idx >= inicioIdx && idx < finIdx) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
                 }
             });
+
+            // Actualizar texto informativo
+            if (totalCoincidencias === 0) {
+                infoPaginacion.textContent = 'No se encontraron iglesias coincidentes';
+            } else {
+                infoPaginacion.textContent = 'Mostrando ' + (inicioIdx + 1) + ' a ' + finIdx + ' de ' + totalCoincidencias + ' iglesias';
+            }
+
+            // Renderizar botones de paginación
+            renderBotonesPaginacion(totalPaginas, totalCoincidencias);
+        }
+
+        function renderBotonesPaginacion(totalPaginas, totalCoincidencias) {
+            navPaginacion.innerHTML = '';
+            if (totalCoincidencias <= 0 || totalPaginas <= 1) {
+                return;
+            }
+
+            // Botón Anterior
+            var prevLi = document.createElement('li');
+            prevLi.className = 'page-item ' + (paginaActual === 1 ? 'disabled' : '');
+            var prevA = document.createElement('a');
+            prevA.className = 'page-link';
+            prevA.href = '#';
+            prevA.innerHTML = '<i class="bi bi-chevron-left"></i>';
+            prevA.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (paginaActual > 1) {
+                    paginaActual--;
+                    actualizarTablaYPaginacion(false);
+                }
+            });
+            prevLi.appendChild(prevA);
+            navPaginacion.appendChild(prevLi);
+
+            // Rango de páginas a mostrar (smart window)
+            var delta = 2;
+            var startPage = Math.max(1, paginaActual - delta);
+            var endPage = Math.min(totalPaginas, paginaActual + delta);
+
+            if (startPage > 1) {
+                agregarBotonPagina(1);
+                if (startPage > 2) {
+                    var elipLi = document.createElement('li');
+                    elipLi.className = 'page-item disabled';
+                    elipLi.innerHTML = '<span class="page-link border-0 bg-transparent">...</span>';
+                    navPaginacion.appendChild(elipLi);
+                }
+            }
+
+            for (var p = startPage; p <= endPage; p++) {
+                agregarBotonPagina(p);
+            }
+
+            if (endPage < totalPaginas) {
+                if (endPage < totalPaginas - 1) {
+                    var elipLi2 = document.createElement('li');
+                    elipLi2.className = 'page-item disabled';
+                    elipLi2.innerHTML = '<span class="page-link border-0 bg-transparent">...</span>';
+                    navPaginacion.appendChild(elipLi2);
+                }
+                agregarBotonPagina(totalPaginas);
+            }
+
+            // Botón Siguiente
+            var nextLi = document.createElement('li');
+            nextLi.className = 'page-item ' + (paginaActual === totalPaginas ? 'disabled' : '');
+            var nextA = document.createElement('a');
+            nextA.className = 'page-link';
+            nextA.href = '#';
+            nextA.innerHTML = '<i class="bi bi-chevron-right"></i>';
+            nextA.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (paginaActual < totalPaginas) {
+                    paginaActual++;
+                    actualizarTablaYPaginacion(false);
+                }
+            });
+            nextLi.appendChild(nextA);
+            navPaginacion.appendChild(nextLi);
+        }
+
+        function agregarBotonPagina(num) {
+            var li = document.createElement('li');
+            li.className = 'page-item ' + (num === paginaActual ? 'active' : '');
+            var a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = num;
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (paginaActual !== num) {
+                    paginaActual = num;
+                    actualizarTablaYPaginacion(false);
+                }
+            });
+            li.appendChild(a);
+            navPaginacion.appendChild(li);
         }
 
         var debounceTimer;
         if (searchInput) {
             searchInput.addEventListener('keyup', function() {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(filtrarTabla, 300);
+                debounceTimer = setTimeout(function() {
+                    actualizarTablaYPaginacion(true);
+                }, 200);
             });
         }
-        if (selectEquipo) selectEquipo.addEventListener('change', filtrarTabla);
+
+        if (selectEquipo) {
+            selectEquipo.addEventListener('change', function() {
+                actualizarTablaYPaginacion(true);
+            });
+        }
+
+        if (selectFilas) {
+            selectFilas.addEventListener('change', function() {
+                actualizarTablaYPaginacion(true);
+            });
+        }
+
+        // Ejecución inicial
+        actualizarTablaYPaginacion(true);
 
         // Validación del formulario de importación masiva con jquery.validate
         if (typeof $.fn.validate === 'function') {
