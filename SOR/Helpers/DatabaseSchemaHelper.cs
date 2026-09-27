@@ -53,7 +53,7 @@ namespace SOR.Helpers
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Reasignación automática de iglesias registradas a Temp 2025-2026
+                    // Reasignación y activación automática de Temp 2025-2026
                     string sqlReasignar = @"
                         DECLARE @IdTemp2025 INT;
                         SELECT TOP 1 @IdTemp2025 = IdTemporada 
@@ -63,12 +63,23 @@ namespace SOR.Helpers
 
                         IF @IdTemp2025 IS NOT NULL AND @IdTemp2025 > 0
                         BEGIN
-                            UPDATE p
-                            SET p.IdTemporada = @IdTemp2025
-                            FROM dbo.ParticipacionesIglesia p
-                            INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
-                            WHERE CAST(i.FechaCreacion AS DATE) = CAST(GETDATE() AS DATE)
-                              AND p.IdTemporada <> @IdTemp2025;
+                            -- 1. Activar Temp 2025-2026
+                            UPDATE dbo.Temporadas SET Activa = 0 WHERE IdTemporada <> @IdTemp2025;
+                            UPDATE dbo.Temporadas SET Activa = 1 WHERE IdTemporada = @IdTemp2025;
+
+                            -- 2. Actualizar participaciones existentes a 2025-2026
+                            UPDATE dbo.ParticipacionesIglesia 
+                            SET IdTemporada = @IdTemp2025 
+                            WHERE IdTemporada <> @IdTemp2025;
+
+                            -- 3. Crear participación inicial para cualquier iglesia que no tenga
+                            INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EstatusEvaluacionReporte, EtapaActual)
+                            SELECT i.IdIglesia, @IdTemp2025, 1, 'Pendiente', 'Pendiente', 1
+                            FROM dbo.Iglesias i
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM dbo.ParticipacionesIglesia p 
+                                WHERE p.IdIglesia = i.IdIglesia AND p.IdTemporada = @IdTemp2025
+                            );
                         END";
 
                     using (SqlCommand cmdReasig = new SqlCommand(sqlReasignar, cn))

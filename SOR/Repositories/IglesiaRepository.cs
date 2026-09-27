@@ -26,8 +26,19 @@ namespace SOR.Repositories
                            ar.EstadoAsignacion, ar.MotivoNoEntrega
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
-                    LEFT JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
-                        AND p.IdTemporada = ISNULL(@IdTemporadaFiltro, (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC))
+                    LEFT JOIN dbo.ParticipacionesIglesia p ON p.IdParticipacion = (
+                        SELECT TOP 1 p2.IdParticipacion 
+                        FROM dbo.ParticipacionesIglesia p2 
+                        INNER JOIN dbo.Temporadas t2 ON p2.IdTemporada = t2.IdTemporada
+                        WHERE p2.IdIglesia = i.IdIglesia
+                          AND (@IdTemporadaFiltro IS NULL OR p2.IdTemporada = @IdTemporadaFiltro)
+                        ORDER BY 
+                            CASE WHEN @IdTemporadaFiltro IS NOT NULL THEN 0
+                                 WHEN t2.Activa = 1 THEN 1 
+                                 ELSE 2 END,
+                            t2.FechaInicio DESC,
+                            p2.IdParticipacion DESC
+                    )
                     LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     LEFT JOIN dbo.AsignacionesRecursos ar ON p.IdParticipacion = ar.IdParticipacion
                     ORDER BY i.NombreIglesia;";
