@@ -132,6 +132,8 @@
     <Compile Include="Helpers\DataReaderExtensions.cs" />
     <Compile Include="Helpers\SqlRetryHelper.cs" />
     <Compile Include="Helpers\ValidadorArchivosSeguros.cs" />
+    <Compile Include="Helpers\CacheHelper.cs" />
+    <Compile Include="Helpers\RateLimitingHelper.cs" />
     <Compile Include="Helpers\ArchivoStorageHelper.cs" />
     <Compile Include="Helpers\CorreoHelper.cs" />
     <Compile Include="Models\IglesiaModel.cs" />

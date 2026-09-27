@@ -141,7 +141,22 @@ namespace SOR.Helpers
                             CREATE NONCLUSTERED INDEX IX_AsignacionesRecursos_IdPart ON dbo.AsignacionesRecursos (IdParticipacion);
 
                         IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Comentarios_IdIglesia')
-                            CREATE NONCLUSTERED INDEX IX_Comentarios_IdIglesia ON dbo.ComentariosObservaciones (IdIglesia, FechaCreacion DESC);";
+                            CREATE NONCLUSTERED INDEX IX_Comentarios_IdIglesia ON dbo.ComentariosObservaciones (IdIglesia, FechaCreacion DESC);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Iglesias_Busqueda_Av')
+                            CREATE NONCLUSTERED INDEX IX_Iglesias_Busqueda_Av ON dbo.Iglesias (NombreIglesia)
+                            INCLUDE (IdEquipo, Ciudad, Provincia, Telefono, Denominacion, TipoOrganizacion);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Maestros_Busqueda_Av')
+                            CREATE NONCLUSTERED INDEX IX_Maestros_Busqueda_Av ON dbo.Maestros (Nombres, Apellidos)
+                            INCLUDE (IdIglesia, DocumentoIdentidad, Celular, Correo, Activo);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_EventosParticipacion_Evento_Asistio')
+                            CREATE NONCLUSTERED INDEX IX_EventosParticipacion_Evento_Asistio ON dbo.EventosParticipacionIglesia (IdEvento, Asistio)
+                            INCLUDE (IdParticipacion, IdIglesia);
+
+                        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AsignacionesRecursos_Part_Estado')
+                            CREATE NONCLUSTERED INDEX IX_AsignacionesRecursos_Part_Estado ON dbo.AsignacionesRecursos (IdParticipacion, EstadoAsignacion);";
 
                     using (SqlCommand cmd = new SqlCommand(sqlIndices, cn))
                     {

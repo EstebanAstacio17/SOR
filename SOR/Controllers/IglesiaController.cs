@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -61,24 +61,27 @@ namespace SOR.Controllers
 
             CargarCombosFiltros();
             
-            // Cargar Equipos para el filtro de la vista
-            List<SelectListItem> listaEq = new List<SelectListItem>();
-            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            // Cargar Equipos para el filtro de la vista (Caché en RAM de 30 minutos)
+            ViewBag.ListaEquipos = CacheHelper.ObtenerOAgregar("Catalogo_Equipos_Select", () =>
             {
-                string sql = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;";
-                using (SqlCommand cmd = new SqlCommand(sql, cn))
+                var listaEq = new List<SelectListItem>();
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
-                    cn.Open();
-                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    string sql = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos ORDER BY NombreEquipo;";
+                    using (SqlCommand cmd = new SqlCommand(sql, cn))
                     {
-                        while (dr.Read())
+                        cn.Open();
+                        using (SqlDataReader dr = cmd.ExecuteReader())
                         {
-                            listaEq.Add(new SelectListItem { Value = dr["NombreEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+                            while (dr.Read())
+                            {
+                                listaEq.Add(new SelectListItem { Value = dr["NombreEquipo"].ToString(), Text = dr["NombreEquipo"].ToString() });
+                            }
                         }
                     }
                 }
-            }
-            ViewBag.ListaEquipos = listaEq;
+                return listaEq;
+            }, 30);
 
             ViewBag.UsuarioActual = u;
             return View(listaFiltrada.ToList());

@@ -1,4 +1,4 @@
-﻿using SOR.Models;
+using SOR.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Configuration;
@@ -165,6 +165,14 @@ namespace SOR.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Login(Usuario oUsuario)
         {
+            string ipCliente = Request.UserHostAddress ?? "127.0.0.1";
+            if (!SOR.Helpers.RateLimitingHelper.EstaPermitido("login_ip_" + ipCliente, maxPeticiones: 15, ventanaMinutos: 5))
+            {
+                ViewData["Mensaje"] = "Demasiados intentos de acceso desde esta dirección IP. Por seguridad, intente nuevamente en 5 minutos.";
+                ViewData["TipoAlert"] = "alert-danger";
+                return View();
+            }
+
             // Validar correo
             if (string.IsNullOrWhiteSpace(oUsuario.Correo))
             {
@@ -269,6 +277,7 @@ namespace SOR.Controllers
                     Session["usuario"] = usuarioValidador;
                     Session["UltimoAcceso"] = DateTime.Now;
                     Session["RecienLogueado"] = true;
+                    SOR.Helpers.RateLimitingHelper.Resetear("login_ip_" + ipCliente);
                     return RedirectToAction("Index", "Home");
                 }
             }
@@ -321,9 +330,17 @@ namespace SOR.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult RecuperarClave(string correo)
         {
+            string ipCliente = Request.UserHostAddress ?? "127.0.0.1";
+            if (!SOR.Helpers.RateLimitingHelper.EstaPermitido("recuperar_ip_" + ipCliente, maxPeticiones: 5, ventanaMinutos: 10))
+            {
+                ViewData["Mensaje"] = "Ha excedido el límite de solicitudes de recuperación. Intente en 10 minutos.";
+                ViewData["TipoAlert"] = "alert-danger";
+                return View();
+            }
+
             if (string.IsNullOrWhiteSpace(correo))
             {
-                ViewData["Mensaje"] = "Debe ingresar su correo electrÃ³nico.";
+                ViewData["Mensaje"] = "Debe ingresar su correo electrónico.";
                 return View();
             }
 
