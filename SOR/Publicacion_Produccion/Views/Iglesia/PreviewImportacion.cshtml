@@ -221,8 +221,9 @@
                 }
 
                 // 4. Validación de Correo electrónico
-                if (inputType === 'email') {
-                    const emailRegex = new RegExp('^[^\\s@@]+@@[^\\s@@]+\\.[^\\s@@]+$');
+                if (inputType === 'email' && val !== '') {
+                    const at = String.fromCharCode(64);
+                    const emailRegex = new RegExp('^[^\\s' + at + ']+' + at + '[^\\s' + at + ']+\\.[^\\s' + at + ']+$');
                     if (!emailRegex.test(val)) {
                         return { 
                             valid: false, 
