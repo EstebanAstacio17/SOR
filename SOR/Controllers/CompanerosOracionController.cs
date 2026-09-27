@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -70,7 +70,7 @@ namespace SOR.Controllers
 
             if (!PuedeRegistrarOracion(u))
             {
-                TempData["MensajeError"] = "No tienes permisos para registrar compaÃ±eros de oraciÃ³n. Rol requerido: Coordinador de OraciÃ³n (CO) o Administrador.";
+                TempData["MensajeError"] = "No tienes permisos para registrar compañeros de oración. Rol requerido: Coordinador de Oración (CO) o Administrador.";
                 return RedirectToAction("Index");
             }
 
@@ -80,7 +80,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Si no se especificÃ³ temporada, obtener la activa
+            // Si no se especificó temporada, obtener la activa
             if (modelo.IdTemporada <= 0)
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -119,7 +119,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "CompaÃ±ero de oraciÃ³n registrado exitosamente.";
+            TempData["MensajeExito"] = "Compañero de oración registrado exitosamente.";
             return RedirectToAction("Index");
         }
 
@@ -145,7 +145,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "CompaÃ±ero de oraciÃ³n eliminado con Ã©xito.";
+            TempData["MensajeExito"] = "Compañero de oración eliminado con éxito.";
             return RedirectToAction("Index");
         }
 
@@ -153,7 +153,7 @@ namespace SOR.Controllers
         {
             if (u == null) return false;
             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true; // Admins
-            if (u.IdPosicion == 5) return true; // Coordinador de OraciÃ³n (CO)
+            if (u.IdPosicion == 5) return true; // Coordinador de Oración (CO)
             if (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)) return true; // Coordinador de Equipo (CE)
             return false;
         }

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -115,7 +115,7 @@ namespace SOR.Controllers
                 }
             }
 
-            TempData["MensajeExito"] = "ConfiguraciÃ³n de antigÃ¼edad de temporadas actualizada correctamente.";
+            TempData["MensajeExito"] = "Configuración de antigüedad de temporadas actualizada correctamente.";
             return RedirectToAction("Index");
         }
 
@@ -148,7 +148,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Temporada creada con Ã©xito.";
+            TempData["MensajeExito"] = "Temporada creada con éxito.";
             return RedirectToAction("Index");
         }
 
@@ -182,7 +182,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Temporada actualizada con Ã©xito.";
+            TempData["MensajeExito"] = "Temporada actualizada con éxito.";
             return RedirectToAction("Index");
         }
 
@@ -253,7 +253,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Temporada desactivada/inhabilitada con Ã©xito.";
+            TempData["MensajeExito"] = "Temporada desactivada/inhabilitada con éxito.";
             return RedirectToAction("Index");
         }
     }

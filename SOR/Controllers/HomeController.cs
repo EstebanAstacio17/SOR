@@ -1,4 +1,4 @@
-using SOR.Models;
+﻿using SOR.Models;
 using SOR.Permisos;
 using System;
 using System.Data.SqlClient;
@@ -8,7 +8,7 @@ namespace SOR.Controllers
 {
     public class HomeController : Controller
     {
-        // AcciÃ³n pÃºblica: Pantalla de Bienvenida / Landing Page para Voluntarios
+        // Acción pública: Pantalla de Bienvenida / Landing Page para Voluntarios
         public ActionResult Landing()
         {
             if (Session["usuario"] != null)
@@ -119,7 +119,7 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult About()
         {
-            ViewBag.Message = "Sistema de GestiÃ³n Interna OCC Rep Dom (SOR)";
+            ViewBag.Message = "Sistema de Gestión Interna OCC Rep Dom (SOR)";
             return View();
         }
 
@@ -148,7 +148,7 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Contact()
         {
-            ViewBag.Message = "Contacto OCC RepÃºblica Dominicana";
+            ViewBag.Message = "Contacto OCC República Dominicana";
             return View();
         }
 
@@ -157,12 +157,12 @@ namespace SOR.Controllers
             return View();
         }
 
-        // GET: Home/NotFound (PÃ¡gina 404 personalizada)
+        // GET: Home/NotFound (Página 404 personalizada)
         public ActionResult NotFound()
         {
             Response.StatusCode = 404;
             Response.TrySkipIisCustomErrors = true;
-            ViewBag.Title = "PÃ¡gina no encontrada";
+            ViewBag.Title = "Página no encontrada";
             return View();
         }
 
@@ -170,7 +170,7 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Privacidad()
         {
-            ViewBag.Title = "PolÃ­tica de Privacidad";
+            ViewBag.Title = "Política de Privacidad";
             return View();
         }
 
@@ -178,14 +178,14 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Terminos()
         {
-            ViewBag.Title = "TÃ©rminos y Condiciones";
+            ViewBag.Title = "Términos y Condiciones";
             return View();
         }
 
         // GET: Home/Gracias
         public ActionResult Gracias(string tipo)
         {
-            ViewBag.Title = "OperaciÃ³n Exitosa";
+            ViewBag.Title = "Operación Exitosa";
             ViewBag.Tipo = tipo ?? "General";
             return View();
         }
@@ -197,4 +197,4 @@ namespace SOR.Controllers
             return RedirectToAction("Login", "Acceso");
         }
     }
-}
+}

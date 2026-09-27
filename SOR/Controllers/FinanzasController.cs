@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -78,7 +78,7 @@ namespace SOR.Controllers
 
             if (!TieneAccesoFinanzas(u))
             {
-                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al mÃ³dulo de Finanzas.";
+                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al módulo de Finanzas.";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -113,7 +113,7 @@ namespace SOR.Controllers
             }
             else
             {
-                // Coordinador con jerarquÃ­a (ENL ve sus ERLE/ERL, ERLE ve sus ERL, ERL solo su equipo)
+                // Coordinador con jerarquía (ENL ve sus ERLE/ERL, ERLE ve sus ERL, ERL solo su equipo)
                 if (idEquipo.HasValue && equiposPermitidos != null && equiposPermitidos.Contains(idEquipo.Value))
                 {
                     eqId = idEquipo.Value;
@@ -161,7 +161,7 @@ namespace SOR.Controllers
 
             if (!TieneAccesoFinanzas(u))
             {
-                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al mÃ³dulo de Finanzas.";
+                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al módulo de Finanzas.";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -234,7 +234,7 @@ namespace SOR.Controllers
 
             if (!TieneAccesoFinanzas(u))
             {
-                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al mÃ³dulo de Finanzas.";
+                TempData["MensajeError"] = "Acceso restringido: No cuenta con permisos para acceder al módulo de Finanzas.";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -331,7 +331,7 @@ namespace SOR.Controllers
             string rutaFisica = Server.MapPath("~" + rutaRelativa);
             if (!System.IO.File.Exists(rutaFisica))
             {
-                return HttpNotFound("El archivo fÃ­sico del comprobante no existe en el servidor.");
+                return HttpNotFound("El archivo físico del comprobante no existe en el servidor.");
             }
 
             string ext = Path.GetExtension(rutaFisica).ToLowerInvariant();
@@ -366,13 +366,13 @@ namespace SOR.Controllers
             {
                 Usuario u = ObtenerUsuarioActual();
                 if (u == null)
-                    return Json(new { success = false, message = "SesiÃ³n expirada. Por favor inicie sesiÃ³n nuevamente." });
+                    return Json(new { success = false, message = "Sesión expirada. Por favor inicie sesión nuevamente." });
 
                 if (!PuedeEditarFinanzas(u))
                     return Json(new { success = false, message = "Acceso denegado: Solo el Coordinador de Recursos y el Coordinador de Equipo tienen permisos para registrar o modificar movimientos financieros." });
 
                 if (model == null)
-                    return Json(new { success = false, message = "No se recibieron datos de la transacciÃ³n." });
+                    return Json(new { success = false, message = "No se recibieron datos de la transacción." });
 
                 try { _repo.AsegurarEsquema(); } catch { }
 
@@ -406,7 +406,7 @@ namespace SOR.Controllers
                 }
 
                 if (string.IsNullOrWhiteSpace(model.Descripcion) || string.IsNullOrWhiteSpace(model.CategoriaId))
-                    return Json(new { success = false, message = "Datos incompletos. La descripciÃ³n y categorÃ­a son requeridas." });
+                    return Json(new { success = false, message = "Datos incompletos. La descripción y categoría son requeridas." });
 
                 if (model.TasaCambio <= 0)
                     model.TasaCambio = 58.63m;
@@ -449,13 +449,13 @@ namespace SOR.Controllers
             {
                 Usuario u = ObtenerUsuarioActual();
                 if (u == null)
-                    return Json(new { success = false, message = "SesiÃ³n expirada." });
+                    return Json(new { success = false, message = "Sesión expirada." });
 
                 if (!PuedeEditarFinanzas(u))
                     return Json(new { success = false, message = "Acceso denegado: Solo el Coordinador de Recursos y el Coordinador de Equipo tienen permisos para eliminar movimientos financieros." });
 
                 if (transaccionId <= 0)
-                    return Json(new { success = false, message = "Identificador de transacciÃ³n invÃ¡lido." });
+                    return Json(new { success = false, message = "Identificador de transacción inválido." });
 
                 var trans = _repo.ObtenerTransaccionPorId(transaccionId);
                 if (trans != null && !string.IsNullOrWhiteSpace(trans.RutaComprobante))
@@ -475,7 +475,7 @@ namespace SOR.Controllers
                 }
 
                 bool ok = _repo.EliminarTransaccion(transaccionId);
-                return Json(new { success = ok, message = ok ? "TransacciÃ³n eliminada con Ã©xito." : "Registro no encontrado." });
+                return Json(new { success = ok, message = ok ? "Transacción eliminada con éxito." : "Registro no encontrado." });
             }
             catch (Exception ex)
             {
@@ -490,7 +490,7 @@ namespace SOR.Controllers
             {
                 Usuario u = ObtenerUsuarioActual();
                 if (u == null)
-                    return Json(new { success = false, message = "SesiÃ³n expirada." });
+                    return Json(new { success = false, message = "Sesión expirada." });
 
                 if (!PuedeEditarFinanzas(u))
                     return Json(new { success = false, message = "Acceso denegado: Solo el Coordinador de Recursos y el Coordinador de Equipo tienen permisos para configurar techos presupuestarios." });
@@ -507,7 +507,7 @@ namespace SOR.Controllers
                 }
 
                 if (request == null || request.IdTemporada <= 0 || request.IdEquipo <= 0 || request.Items == null)
-                    return Json(new { success = false, message = "ParÃ¡metros de presupuesto invÃ¡lidos." });
+                    return Json(new { success = false, message = "Parámetros de presupuesto inválidos." });
 
                 bool ok = _repo.GuardarPresupuestoAprobado(request.IdTemporada, request.IdEquipo, request.Items);
                 return Json(new { success = ok, message = ok ? "Presupuesto aprobado guardado correctamente." : "Error al guardar presupuesto." });
@@ -527,7 +527,7 @@ namespace SOR.Controllers
 
             if (!TieneAccesoFinanzas(u))
             {
-                TempData["MensajeError"] = "Acceso restringido al mÃ³dulo de Finanzas.";
+                TempData["MensajeError"] = "Acceso restringido al módulo de Finanzas.";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -591,7 +591,7 @@ namespace SOR.Controllers
 
             sb.Append("<table>");
             sb.Append("<thead><tr>");
-            sb.Append("<th>Cat.</th><th>DescripciÃ³n</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th><th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th><th>JUL</th><th>AGO</th><th>Total DOP</th><th>Total USD</th>");
+            sb.Append("<th>Cat.</th><th>Descripción</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th><th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th><th>JUL</th><th>AGO</th><th>Total DOP</th><th>Total USD</th>");
             sb.Append("</tr></thead><tbody>");
 
             var grupos = filas.GroupBy(f => f.Grupo).ToList();

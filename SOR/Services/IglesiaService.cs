@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -55,7 +55,7 @@ namespace SOR.Services
 
             if (modelo.IdEquipo <= 0)
             {
-                throw new ArgumentException("Debe asignar la iglesia a un equipo OCC vÃ¡lido.");
+                throw new ArgumentException("Debe asignar la iglesia a un equipo OCC válido.");
             }
 
             // 1. Determinar temporada destino y temporada activa
@@ -92,29 +92,29 @@ namespace SOR.Services
                 }
             }
 
-            // 2. Validar Campos VacÃ­os en la Temporada de Curso
+            // 2. Validar Campos Vacíos en la Temporada de Curso
             if (esTemporadaCurso)
             {
                 if (string.IsNullOrWhiteSpace(modelo.RNC_Cedula))
-                    throw new ArgumentException("El RNC o CÃ©dula de la iglesia es obligatorio para la temporada en curso.");
+                    throw new ArgumentException("El RNC o Cédula de la iglesia es obligatorio para la temporada en curso.");
                 if (string.IsNullOrWhiteSpace(modelo.Telefono))
-                    throw new ArgumentException("El telÃ©fono de la iglesia es obligatorio para la temporada en curso.");
+                    throw new ArgumentException("El teléfono de la iglesia es obligatorio para la temporada en curso.");
                 if (modelo.Pastor == null || string.IsNullOrWhiteSpace(modelo.Pastor.Nombres))
                     throw new ArgumentException("El nombre del pastor es obligatorio para la temporada en curso.");
                 if (modelo.LiderMinisterial == null || string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Nombres))
-                    throw new ArgumentException("El nombre del lÃ­der discipulado es obligatorio para la temporada en curso.");
+                    throw new ArgumentException("El nombre del líder discipulado es obligatorio para la temporada en curso.");
             }
 
-            // 3. Validar formatos (si no estÃ¡n vacÃ­os)
+            // 3. Validar formatos (si no están vacíos)
             if (!string.IsNullOrWhiteSpace(modelo.RNC_Cedula) && !ValidarFormatoRncCedula(modelo.RNC_Cedula))
-                throw new ArgumentException("El formato del RNC o CÃ©dula de la iglesia no es correcto (debe tener 9 u 11 dÃ­gitos).");
+                throw new ArgumentException("El formato del RNC o Cédula de la iglesia no es correcto (debe tener 9 u 11 dígitos).");
             if (!string.IsNullOrWhiteSpace(modelo.Telefono) && !ValidarFormatoTelefono(modelo.Telefono))
-                throw new ArgumentException("El formato del telÃ©fono institucional no es correcto (debe tener 10 dÃ­gitos).");
+                throw new ArgumentException("El formato del teléfono institucional no es correcto (debe tener 10 dígitos).");
 
             if (modelo.Pastor != null)
             {
                 if (!string.IsNullOrWhiteSpace(modelo.Pastor.DocumentoIdentidad) && !ValidarFormatoRncCedula(modelo.Pastor.DocumentoIdentidad))
-                    throw new ArgumentException("El formato de la cÃ©dula del pastor no es correcto.");
+                    throw new ArgumentException("El formato de la cédula del pastor no es correcto.");
                 if (!string.IsNullOrWhiteSpace(modelo.Pastor.Celular) && !ValidarFormatoTelefono(modelo.Pastor.Celular))
                     throw new ArgumentException("El formato del celular del pastor no es correcto.");
                 if (!string.IsNullOrWhiteSpace(modelo.Pastor.Correo) && !ValidarFormatoCorreo(modelo.Pastor.Correo))
@@ -124,17 +124,17 @@ namespace SOR.Services
             if (modelo.LiderMinisterial != null)
             {
                 if (!string.IsNullOrWhiteSpace(modelo.LiderMinisterial.DocumentoIdentidad) && !ValidarFormatoRncCedula(modelo.LiderMinisterial.DocumentoIdentidad))
-                    throw new ArgumentException("El formato de la cÃ©dula del lÃ­der no es correcto.");
+                    throw new ArgumentException("El formato de la cédula del líder no es correcto.");
                 if (!string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Celular) && !ValidarFormatoTelefono(modelo.LiderMinisterial.Celular))
-                    throw new ArgumentException("El formato del celular del lÃ­der no es correcto.");
+                    throw new ArgumentException("El formato del celular del líder no es correcto.");
                 if (!string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Correo) && !ValidarFormatoCorreo(modelo.LiderMinisterial.Correo))
-                    throw new ArgumentException("El formato del correo del lÃ­der no es correcto.");
+                    throw new ArgumentException("El formato del correo del líder no es correcto.");
             }
 
-            // 4 y 5. Validar reglas de castigo, antigÃ¼edad y estado "No reportÃ³"
+            // 4 y 5. Validar reglas de castigo, antigüedad y estado "No reportó"
             ValidarReglasCastigoYAntiguedad(null, null, modelo.RNC_Cedula, modelo.Pastor?.DocumentoIdentidad, idTemporadaDestino, outAdvertencias);
 
-            // 6 y 7. Validaciones de unicidad vÃ­a Stored Procedure
+            // 6 y 7. Validaciones de unicidad vía Stored Procedure
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -175,7 +175,7 @@ namespace SOR.Services
 
                         IF @NomEquipo IS NOT NULL
                         BEGIN
-                            DECLARE @Msg NVARCHAR(500) = 'Esta iglesia ya estÃ¡ registrada en el equipo: ' + @NomEquipo + '|' + CAST(@IdIglesiaReg AS NVARCHAR(20));
+                            DECLARE @Msg NVARCHAR(500) = 'Esta iglesia ya está registrada en el equipo: ' + @NomEquipo + '|' + CAST(@IdIglesiaReg AS NVARCHAR(20));
                             RAISERROR(@Msg, 16, 1);
                             RETURN;
                         END
@@ -190,7 +190,7 @@ namespace SOR.Services
                               AND per.IdIglesia <> @ExcluirIdIglesia
                         )
                         BEGIN
-                            RAISERROR('El pastor con la cÃ©dula indicada ya estÃ¡ registrado en otra iglesia en esta temporada.', 16, 1);
+                            RAISERROR('El pastor con la cédula indicada ya está registrado en otra iglesia en esta temporada.', 16, 1);
                             RETURN;
                         END
                     END";
@@ -211,7 +211,7 @@ namespace SOR.Services
                 }
             }
 
-            // 8. Advertencia de LÃ­der o Maestro ya asignado en la Temporada Activa
+            // 8. Advertencia de Líder o Maestro ya asignado en la Temporada Activa
             if (modelo.LiderMinisterial != null && !string.IsNullOrWhiteSpace(modelo.LiderMinisterial.DocumentoIdentidad))
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -233,7 +233,7 @@ namespace SOR.Services
                         {
                             if (dr.Read() && outAdvertencias != null)
                             {
-                                outAdvertencias.Add($"El lÃ­der discipulado con identificaciÃ³n '{modelo.LiderMinisterial.DocumentoIdentidad}' ya estÃ¡ registrado en la iglesia '{dr["NombreIglesia"]}', zona/equipo '{dr["NombreEquipo"]}' ({dr["NombreNivel"]}).");
+                                outAdvertencias.Add($"El líder discipulado con identificación '{modelo.LiderMinisterial.DocumentoIdentidad}' ya está registrado en la iglesia '{dr["NombreIglesia"]}', zona/equipo '{dr["NombreEquipo"]}' ({dr["NombreNivel"]}).");
                             }
                         }
                     }
@@ -253,7 +253,7 @@ namespace SOR.Services
         {
             if (!participara && string.IsNullOrWhiteSpace(justificacion))
             {
-                throw new ArgumentException("Debe proporcionar un motivo o justificaciÃ³n en caso de marcar que la iglesia NO participarÃ¡ esta temporada.");
+                throw new ArgumentException("Debe proporcionar un motivo o justificación en caso de marcar que la iglesia NO participará esta temporada.");
             }
 
             _iglesiaRepository.EvaluarParticipacion(idParticipacion, participara, justificacion, estadoEvaluacion, idEvaluador);
@@ -263,7 +263,7 @@ namespace SOR.Services
         {
             if (modelo == null || modelo.IdParticipacion <= 0)
             {
-                throw new ArgumentException("Modelo de asignaciÃ³n de recursos invÃ¡lido.");
+                throw new ArgumentException("Modelo de asignación de recursos inválido.");
             }
 
             _iglesiaRepository.DespacharRecursos(modelo, idDespachador);
@@ -273,20 +273,20 @@ namespace SOR.Services
         {
             if (string.IsNullOrWhiteSpace(comentario))
             {
-                throw new ArgumentException("El contenido del comentario no puede estar vacÃ­o.");
+                throw new ArgumentException("El contenido del comentario no puede estar vacío.");
             }
 
             _iglesiaRepository.AgregarComentario(idIglesia, idUsuario, comentario);
         }
 
         // ============================================================================
-        // MÃ‰TODOS DE TRANSICIÃ“N DE ETAPAS DE LA TEMPORADA ACTIVA (LÃ“GICA GESTIÃ“N TEMP)
+        // MÉTODOS DE TRANSICIÓN DE ETAPAS DE LA TEMPORADA ACTIVA (LÓGICA GESTIÓN TEMP)
         // ============================================================================
 
         public void AvanzarEtapa2(int idParticipacion, string estado, string motivo, string comentario, int idUsuario)
         {
-            if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("El estado de la evaluaciÃ³n es requerido.");
-            if ((estado == "Rechazada" || estado == "Detenido") && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para el rechazo o detenciÃ³n.");
+            if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("El estado de la evaluación es requerido.");
+            if ((estado == "Rechazada" || estado == "Detenido") && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para el rechazo o detención.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -351,10 +351,10 @@ namespace SOR.Services
 
                         // Registrar Log Historial
                         string logCom = (estado == "Aprobada") 
-                            ? "EvaluaciÃ³n inicial APROBADA. Avanza a Evaluada Inicial (Etapa 2)." 
-                            : $"EvaluaciÃ³n inicial {estado.ToUpper()}. Motivo: {motivo}.";
+                            ? "Evaluación inicial APROBADA. Avanza a Evaluada Inicial (Etapa 2)." 
+                            : $"Evaluación inicial {estado.ToUpper()}. Motivo: {motivo}.";
 
-                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "EvaluaciÃ³n Inicial", "Inscrita (Etapa 1)", 
+                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Evaluación Inicial", "Inscrita (Etapa 1)", 
                             (estado == "Aprobada") ? "Evaluada (Etapa 2)" : "Rechazado (Etapa 1)", idUsuario, logCom, motivo);
 
                         tran.Commit();
@@ -370,24 +370,24 @@ namespace SOR.Services
 
         public void AsignarEventoVision(int idParticipacion, int idIglesia, int idEventoVision, PersonaIglesia pastor, PersonaIglesia lider, int idUsuario)
         {
-            if (idEventoVision <= 0) throw new ArgumentException("Debe seleccionar un evento de PresentaciÃ³n de la VisiÃ³n.");
+            if (idEventoVision <= 0) throw new ArgumentException("Debe seleccionar un evento de Presentación de la Visión.");
             if (pastor == null || string.IsNullOrWhiteSpace(pastor.Nombres)) throw new ArgumentException("Los nombres del pastor son obligatorios.");
-            if (lider == null || string.IsNullOrWhiteSpace(lider.Nombres)) throw new ArgumentException("Los nombres del lÃ­der ministerial son obligatorios.");
+            if (lider == null || string.IsNullOrWhiteSpace(lider.Nombres)) throw new ArgumentException("Los nombres del líder ministerial son obligatorios.");
 
-            // Validar formatos de pastor y lÃ­der
+            // Validar formatos de pastor y líder
             if (!string.IsNullOrWhiteSpace(pastor.DocumentoIdentidad) && !ValidarFormatoRncCedula(pastor.DocumentoIdentidad))
-                throw new ArgumentException("El formato de la cÃ©dula del pastor no es correcto.");
+                throw new ArgumentException("El formato de la cédula del pastor no es correcto.");
             if (!string.IsNullOrWhiteSpace(pastor.Celular) && !ValidarFormatoTelefono(pastor.Celular))
                 throw new ArgumentException("El formato del celular del pastor no es correcto.");
             if (!string.IsNullOrWhiteSpace(pastor.Correo) && !ValidarFormatoCorreo(pastor.Correo))
                 throw new ArgumentException("El formato del correo del pastor no es correcto.");
 
             if (!string.IsNullOrWhiteSpace(lider.DocumentoIdentidad) && !ValidarFormatoRncCedula(lider.DocumentoIdentidad))
-                throw new ArgumentException("El formato de la cÃ©dula del lÃ­der no es correcto.");
+                throw new ArgumentException("El formato de la cédula del líder no es correcto.");
             if (!string.IsNullOrWhiteSpace(lider.Celular) && !ValidarFormatoTelefono(lider.Celular))
-                throw new ArgumentException("El formato del celular del lÃ­der no es correcto.");
+                throw new ArgumentException("El formato del celular del líder no es correcto.");
             if (!string.IsNullOrWhiteSpace(lider.Correo) && !ValidarFormatoCorreo(lider.Correo))
-                throw new ArgumentException("El formato del correo del lÃ­der no es correcto.");
+                throw new ArgumentException("El formato del correo del líder no es correcto.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -399,7 +399,7 @@ namespace SOR.Services
                         // 1. Actualizar o Insertar Pastor
                         ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "Pastor", pastor);
 
-                        // 2. Actualizar o Insertar LÃ­der
+                        // 2. Actualizar o Insertar Líder
                         ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
 
                         // 3. Vincular al evento
@@ -415,7 +415,7 @@ namespace SOR.Services
                             cmdLink.ExecuteNonQuery();
                         }
 
-                        // 4. Actualizar etapa de la iglesia a 3 (VisiÃ³n)
+                        // 4. Actualizar etapa de la iglesia a 3 (Visión)
                         string sqlStage = "UPDATE dbo.ParticipacionesIglesia SET EtapaActual = 3 WHERE IdParticipacion = @IdPart;";
                         using (SqlCommand cmdStage = new SqlCommand(sqlStage, cn, tran))
                         {
@@ -424,7 +424,7 @@ namespace SOR.Services
                         }
 
                         // 5. Registrar Historial
-                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "AsignaciÃ³n de VisiÃ³n", "Evaluada Inicial (Etapa 2)", "VisiÃ³n (Etapa 3)", idUsuario, "Se asignÃ³ el evento de PresentaciÃ³n de la VisiÃ³n y se confirmaron/actualizaron los datos del Pastor y LÃ­der.");
+                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Asignación de Visión", "Evaluada Inicial (Etapa 2)", "Visión (Etapa 3)", idUsuario, "Se asignó el evento de Presentación de la Visión y se confirmaron/actualizaron los datos del Pastor y Líder.");
 
                         tran.Commit();
                     }
@@ -491,7 +491,7 @@ namespace SOR.Services
 
         public void AvanzarEtapa3(int idParticipacion, bool invitada, DateTime? fecha, string lugar, bool asistio, string resultado, int idUsuario, int? idEventoTaller = null)
         {
-            if (string.IsNullOrWhiteSpace(resultado)) throw new ArgumentException("El resultado de la presentaciÃ³n es requerido.");
+            if (string.IsNullOrWhiteSpace(resultado)) throw new ArgumentException("El resultado de la presentación es requerido.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -504,7 +504,7 @@ namespace SOR.Services
                         {
                             if (!asistio)
                             {
-                                throw new InvalidOperationException("No se puede continuar en el proceso si no se confirma la asistencia al evento de PresentaciÃ³n de la VisiÃ³n.");
+                                throw new InvalidOperationException("No se puede continuar en el proceso si no se confirma la asistencia al evento de Presentación de la Visión.");
                             }
                             if (!idEventoTaller.HasValue || idEventoTaller.Value <= 0)
                             {
@@ -525,7 +525,7 @@ namespace SOR.Services
                             }
                         }
 
-                        // Sincronizar el estado de asistencia de VisiÃ³n en dbo.EventosParticipacionIglesia
+                        // Sincronizar el estado de asistencia de Visión en dbo.EventosParticipacionIglesia
                         string sqlFindVision = @"
                             SELECT ep.IdEvento 
                             FROM dbo.EventosParticipacionIglesia ep
@@ -578,10 +578,10 @@ namespace SOR.Services
 
                         // Registrar Log Historial
                         string logCom = (resultado == "Continua") 
-                            ? "Asistencia a PresentaciÃ³n de la VisiÃ³n registrada. Elegible para Taller OCC (Etapa 4)." 
-                            : "Asistencia a PresentaciÃ³n de la VisiÃ³n registrada. La iglesia NO continÃºa en el proceso.";
+                            ? "Asistencia a Presentación de la Visión registrada. Elegible para Taller OCC (Etapa 4)." 
+                            : "Asistencia a Presentación de la Visión registrada. La iglesia NO continúa en el proceso.";
 
-                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "PresentaciÃ³n de la VisiÃ³n", "EvaluaciÃ³n Inicial (Etapa 2)", 
+                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Presentación de la Visión", "Evaluación Inicial (Etapa 2)", 
                             (resultado == "Continua") ? "Elegibilidad Taller (Etapa 4)" : "Rechazado (Etapa 3)", idUsuario, logCom);
 
                         tran.Commit();
@@ -597,8 +597,8 @@ namespace SOR.Services
 
         public void AvanzarEtapa4(int idParticipacion, int idIglesia, string estado, string motivo, string comentario, int idUsuario, int? idEventoTaller = null, int? cantidadAsistentes = null, List<Maestro> maestrosNuevos = null)
         {
-            if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("La decisiÃ³n de elegibilidad es requerida.");
-            if (estado == "No Aprobada" && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para la no aprobaciÃ³n.");
+            if (string.IsNullOrWhiteSpace(estado)) throw new ArgumentException("La decisión de elegibilidad es requerida.");
+            if (estado == "No Aprobada" && string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe ingresar un motivo para la no aprobación.");
             if (estado == "Aprobada para Taller OCC" && (!idEventoTaller.HasValue || idEventoTaller.Value <= 0))
                 throw new ArgumentException("Debe seleccionar un evento de Taller OCC para asignar a la iglesia.");
 
@@ -635,7 +635,7 @@ namespace SOR.Services
                                 }
                             }
 
-                            // Validar que la iglesia no estÃ© rechazada en la etapa inicial
+                            // Validar que la iglesia no esté rechazada en la etapa inicial
                             string sqlCheck = "SELECT VisionAsistio, VisionResultado, EtapaActual, EstadoEvaluacion FROM dbo.ParticipacionesIglesia WHERE IdParticipacion = @IdPart;";
                             using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
                             {
@@ -648,12 +648,12 @@ namespace SOR.Services
                                         string estadoEval = dr["EstadoEvaluacion"].ToString();
                                         if (etapaActual < 2 || estadoEval == "Rechazado")
                                         {
-                                            throw new InvalidOperationException("No se puede aprobar la elegibilidad para el Taller OCC porque la iglesia no ha sido aprobada en los pasos de evaluaciÃ³n inicial anteriores.");
+                                            throw new InvalidOperationException("No se puede aprobar la elegibilidad para el Taller OCC porque la iglesia no ha sido aprobada en los pasos de evaluación inicial anteriores.");
                                         }
                                     }
                                     else
                                     {
-                                        throw new InvalidOperationException("No se encontrÃ³ el registro de participaciÃ³n de la iglesia.");
+                                        throw new InvalidOperationException("No se encontró el registro de participación de la iglesia.");
                                     }
                                 }
                             }
@@ -687,7 +687,7 @@ namespace SOR.Services
                             cmd.ExecuteNonQuery();
                         }
 
-                        // Si se aprueba para taller, registrar la invitaciÃ³n al evento de Taller OCC
+                        // Si se aprueba para taller, registrar la invitación al evento de Taller OCC
                         if (estado == "Aprobada para Taller OCC" && idEventoTaller.HasValue)
                         {
                             // Actualizar la cantidad de asistentes del evento sumando o actualizando
@@ -699,7 +699,7 @@ namespace SOR.Services
                                 cmdUCE.ExecuteNonQuery();
                             }
 
-                            // Verificar que no exista ya la invitaciÃ³n
+                            // Verificar que no exista ya la invitación
                             string sqlCheckInv = "SELECT COUNT(1) FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEv AND IdParticipacion = @IdPart;";
                             using (SqlCommand cmdCI = new SqlCommand(sqlCheckInv, cn, tran))
                             {
@@ -724,7 +724,7 @@ namespace SOR.Services
                             ? "Elegibilidad de Taller aprobada. Habilitada para Taller OCC (Etapa 5)." 
                             : $"Elegibilidad de Taller RECHAZADA. Motivo: {motivo}.";
 
-                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Elegibilidad Taller", "PresentaciÃ³n VisiÃ³n (Etapa 3)", 
+                        _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Elegibilidad Taller", "Presentación Visión (Etapa 3)", 
                             (estado == "Aprobada para Taller OCC") ? "Taller OCC (Etapa 5)" : "Rechazado (Etapa 4)", idUsuario, logCom, motivo);
 
                         tran.Commit();
@@ -818,7 +818,7 @@ namespace SOR.Services
                         int idTempPrev = Convert.ToInt32(valAnt);
                         if (idTemporadaDestino - idTempPrev < minAniosAntiguedad)
                         {
-                            // Verificar si existe una excepciÃ³n formal registrada
+                            // Verificar si existe una excepción formal registrada
                             string sqlExcep = @"
                                 SELECT TOP 1 e.Estado, e.AprobadoCE, e.AprobadoCMI, e.MotivoRechazo
                                 FROM dbo.ExcepcionesRegla3Anios e
@@ -840,28 +840,28 @@ namespace SOR.Services
 
                                         if (estadoEx == "APROBADA" && ce && cmi)
                                         {
-                                            // Â¡ExcepciÃ³n formalmente aprobada por CE y CMI!
+                                            // ¡Excepción formalmente aprobada por CE y CMI!
                                             // Se permite continuar sin bloquear.
                                         }
                                         else if (estadoEx == "PENDIENTE")
                                         {
-                                            string detalle = (!ce && !cmi) ? "pendiente de evaluaciÃ³n por CE y CMI" :
-                                                             (!ce ? "aprobada por CMI, pero pendiente de aprobaciÃ³n por CE" : "aprobada por CE, pero pendiente de aprobaciÃ³n por CMI");
-                                            throw new InvalidOperationException($"La iglesia participÃ³ en la temporada reciente #{idTempPrev} (< {minAniosAntiguedad} temporadas). Tiene una excepciÃ³n en curso ({detalle}). Requiere la aprobaciÃ³n de ambas instancias (CE y CMI) para continuar.");
+                                            string detalle = (!ce && !cmi) ? "pendiente de evaluación por CE y CMI" :
+                                                             (!ce ? "aprobada por CMI, pero pendiente de aprobación por CE" : "aprobada por CE, pero pendiente de aprobación por CMI");
+                                            throw new InvalidOperationException($"La iglesia participó en la temporada reciente #{idTempPrev} (< {minAniosAntiguedad} temporadas). Tiene una excepción en curso ({detalle}). Requiere la aprobación de ambas instancias (CE y CMI) para continuar.");
                                         }
                                         else if (estadoEx == "RECHAZADA")
                                         {
                                             string mot = drEx["MotivoRechazo"] != DBNull.Value ? drEx["MotivoRechazo"].ToString() : "Sin motivo especificado";
-                                            throw new InvalidOperationException($"La iglesia participÃ³ en la temporada reciente #{idTempPrev} (< {minAniosAntiguedad} temporadas). La solicitud de excepciÃ³n para esta temporada fue RECHAZADA. Motivo: {mot}.");
+                                            throw new InvalidOperationException($"La iglesia participó en la temporada reciente #{idTempPrev} (< {minAniosAntiguedad} temporadas). La solicitud de excepción para esta temporada fue RECHAZADA. Motivo: {mot}.");
                                         }
                                         else
                                         {
-                                            throw new InvalidOperationException($"La iglesia participÃ³ en la temporada #{idTempPrev}. Se requiere una antigÃ¼edad mÃ­nima de {minAniosAntiguedad} temporadas o una excepciÃ³n aprobada por CE y CMI.");
+                                            throw new InvalidOperationException($"La iglesia participó en la temporada #{idTempPrev}. Se requiere una antigüedad mínima de {minAniosAntiguedad} temporadas o una excepción aprobada por CE y CMI.");
                                         }
                                     }
                                     else
                                     {
-                                        throw new InvalidOperationException($"La iglesia con RNC/CÃ©dula '{rncCedula}' participÃ³ en una temporada reciente (ID {idTempPrev}). Se requiere una antigÃ¼edad mÃ­nima de {minAniosAntiguedad} temporadas para volver a participar, o una excepciÃ³n formal de buen desempeÃ±o aprobada por CE y CMI.");
+                                        throw new InvalidOperationException($"La iglesia con RNC/Cédula '{rncCedula}' participó en una temporada reciente (ID {idTempPrev}). Se requiere una antigüedad mínima de {minAniosAntiguedad} temporadas para volver a participar, o una excepción formal de buen desempeño aprobada por CE y CMI.");
                                     }
                                 }
                             }
@@ -896,13 +896,13 @@ namespace SOR.Services
 
                             if (!string.IsNullOrEmpty(docPastorAnterior) && docPastorAnterior == docPastorNuevo)
                             {
-                                throw new InvalidOperationException($"La iglesia '{nIg}' no reportÃ³ en la temporada '{nTemp}' con el mismo pastor, por lo que tiene prohibida su participaciÃ³n.");
+                                throw new InvalidOperationException($"La iglesia '{nIg}' no reportó en la temporada '{nTemp}' con el mismo pastor, por lo que tiene prohibida su participación.");
                             }
                             else
                             {
                                 if (outAdvertencias != null)
                                 {
-                                    outAdvertencias.Add($"ADVERTENCIA: La iglesia '{nIg}' no reportÃ³ en la temporada '{nTemp}' con su pastor anterior, pero se permite el registro al registrar un pastor diferente.");
+                                    outAdvertencias.Add($"ADVERTENCIA: La iglesia '{nIg}' no reportó en la temporada '{nTemp}' con su pastor anterior, pero se permite el registro al registrar un pastor diferente.");
                                 }
                             }
                         }
@@ -965,7 +965,7 @@ namespace SOR.Services
         }
 
         // ============================================================================
-        // MÃ‰TODOS DE DISCIPULADO Y ACOMPAÃ‘AMIENTO LGA (5 CONTACTOS & CAPACIDAD)
+        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & CAPACIDAD)
         // ============================================================================
 
         public ResumenDiscipuladoLGAModel ObtenerResumenDiscipuladoLGA(int idParticipacion, int idIglesia)
@@ -978,7 +978,7 @@ namespace SOR.Services
         {
             if (contacto == null || contacto.IdParticipacion <= 0)
             {
-                throw new ArgumentException("Datos del contacto invÃ¡lidos.");
+                throw new ArgumentException("Datos del contacto inválidos.");
             }
             _iglesiaRepository.GuardarContactoLGA(contacto, idUsuario);
         }
@@ -987,13 +987,13 @@ namespace SOR.Services
         {
             if (llamada == null || llamada.IdParticipacion <= 0)
             {
-                throw new ArgumentException("Datos de la llamada de acompaÃ±amiento invÃ¡lidos.");
+                throw new ArgumentException("Datos de la llamada de acompañamiento inválidos.");
             }
             _iglesiaRepository.RegistrarLlamadaAcompanamiento(llamada, idUsuario, nombreCoordinador);
         }
 
         // ============================================================================
-        // MÃ‰TODOS DE REPORTES: EVENTOS EVANGELÃSTICOS & GRADUACIÃ“N LGA
+        // MÉTODOS DE REPORTES: EVENTOS EVANGELÍSTICOS & GRADUACIÓN LGA
         // ============================================================================
 
         public ReporteEventosEvangelisticosModel ObtenerReporteEventosEvangelisticos(int idParticipacion, int idIglesia)
@@ -1006,26 +1006,26 @@ namespace SOR.Services
         {
             if (item == null || item.IdParticipacion <= 0)
             {
-                throw new ArgumentException("Datos del evento evangelÃ­stico invÃ¡lidos.");
+                throw new ArgumentException("Datos del evento evangelístico inválidos.");
             }
             _iglesiaRepository.GuardarEventoEvangelistico(item, idUsuario);
         }
 
         public void EliminarEventoEvangelistico(int idEventoDetalle, int idUsuario)
         {
-            if (idEventoDetalle <= 0) throw new ArgumentException("Identificador de evento invÃ¡lido.");
+            if (idEventoDetalle <= 0) throw new ArgumentException("Identificador de evento inválido.");
             _iglesiaRepository.EliminarEventoEvangelistico(idEventoDetalle, idUsuario);
         }
 
         public void EliminarEventoEvangelistico(int idEventoDetalle, int idParticipacion, int idIglesia, int idUsuario)
         {
-            if (idEventoDetalle <= 0) throw new ArgumentException("Identificador de evento invÃ¡lido.");
+            if (idEventoDetalle <= 0) throw new ArgumentException("Identificador de evento inválido.");
             _iglesiaRepository.EliminarEventoEvangelistico(idEventoDetalle, idUsuario);
         }
 
         public void GuardarAnotacionesEventosEvangelisticos(int idParticipacion, int idIglesia, string anotaciones, int idUsuario)
         {
-            if (idParticipacion <= 0) throw new ArgumentException("ParticipaciÃ³n invÃ¡lida.");
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
             _iglesiaRepository.GuardarAnotacionesEventosEvangelisticos(idParticipacion, idIglesia, anotaciones, idUsuario);
         }
 
@@ -1039,30 +1039,30 @@ namespace SOR.Services
         {
             if (rep == null || rep.IdParticipacion <= 0)
             {
-                throw new ArgumentException("Datos del reporte de graduaciÃ³n LGA invÃ¡lidos.");
+                throw new ArgumentException("Datos del reporte de graduación LGA inválidos.");
             }
             _iglesiaRepository.GuardarReporteGraduacionLGA(rep, idUsuario);
         }
 
         // ============================================================================
-        // MÃ‰TODOS DE GESTIÃ“N DIRECTA DE ENTREGA / DESPACHO (ETAPA 7)
+        // MÉTODOS DE GESTIÓN DIRECTA DE ENTREGA / DESPACHO (ETAPA 7)
         // ============================================================================
 
         public void ConfirmarEntregaDirecta(int idParticipacion, int idIglesia, string tipoReceptor, string nombreReceptor, string cedula, string telefono, string observaciones, int idUsuario)
         {
-            if (idParticipacion <= 0) throw new ArgumentException("ParticipaciÃ³n invÃ¡lida.");
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
             _iglesiaRepository.ConfirmarEntregaDirecta(idParticipacion, idIglesia, tipoReceptor, nombreReceptor, cedula, telefono, observaciones, idUsuario);
         }
 
         public void MarcarNoEntregaDirecta(int idParticipacion, int idIglesia, string motivo, string observaciones, int idUsuario)
         {
-            if (idParticipacion <= 0) throw new ArgumentException("ParticipaciÃ³n invÃ¡lida.");
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
             _iglesiaRepository.MarcarNoEntregaDirecta(idParticipacion, idIglesia, motivo, observaciones, idUsuario);
         }
 
         public void ReprogramarEntregaDirecta(int idParticipacion, int idIglesia, int idUsuario)
         {
-            if (idParticipacion <= 0) throw new ArgumentException("ParticipaciÃ³n invÃ¡lida.");
+            if (idParticipacion <= 0) throw new ArgumentException("Participación inválida.");
             _iglesiaRepository.ReprogramarEntregaDirecta(idParticipacion, idIglesia, idUsuario);
         }
     }

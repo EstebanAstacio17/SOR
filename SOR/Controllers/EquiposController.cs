@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Web.Mvc;
 using SOR.Models;
@@ -16,7 +16,7 @@ namespace SOR.Controllers
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
             
-            // RestricciÃ³n estricta: Solo SuperAdmin (1)
+            // Restricción estricta: Solo SuperAdmin (1)
             if (usuarioActual == null || usuarioActual.IdRolSeguridad != 1)
             {
                 filterContext.Result = new RedirectToRouteResult(new System.Web.Routing.RouteValueDictionary(new { controller = "Home", action = "Index" }));
@@ -31,7 +31,7 @@ namespace SOR.Controllers
         {
             List<EquipoConDetalles> equipos = _equipoService.ListarEquipos();
             
-            // Cargar datos para los modales de creaciÃ³n/ediciÃ³n
+            // Cargar datos para los modales de creación/edición
             ViewBag.Niveles = _equipoService.ListarNiveles();
             ViewBag.TodosEquipos = equipos;
 

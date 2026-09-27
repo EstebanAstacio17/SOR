@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -151,9 +151,9 @@ namespace SOR.Repositories
                 int rows = cmd.ExecuteNonQuery();
                 if (rows == 0)
                 {
-                    throw new System.Data.DBConcurrencyException("El equipo fue modificado concurrentemente por otro usuario. Actualice la pÃ¡gina antes de continuar.");
+                    throw new System.Data.DBConcurrencyException("El equipo fue modificado concurrentemente por otro usuario. Actualice la página antes de continuar.");
                 }
-                SOR.Helpers.AuditoriaHelper.Registrar(null, "", "UPDATE", "Equipo", equipo.IdEquipo.ToString(), "ActualizaciÃ³n de equipo: " + equipo.NombreEquipo);
+                SOR.Helpers.AuditoriaHelper.Registrar(null, "", "UPDATE", "Equipo", equipo.IdEquipo.ToString(), "Actualización de equipo: " + equipo.NombreEquipo);
                 return true;
             }
         }
@@ -222,7 +222,7 @@ namespace SOR.Repositories
                             cmdAsig.ExecuteNonQuery();
                         }
 
-                        // 6. Reasignar mÃ³dulos complementarios
+                        // 6. Reasignar módulos complementarios
                         using (SqlCommand cmdEos1 = new SqlCommand("UPDATE dbo.EOS_IglesiasPlantadas SET IdEquipo = @IdSustituto WHERE IdEquipo = @Id;", cn, tran))
                         {
                             cmdEos1.Parameters.Add(new SqlParameter("@IdSustituto", idSustituto));
@@ -282,7 +282,7 @@ namespace SOR.Repositories
                             cmdFinR.ExecuteNonQuery();
                         }
 
-                        // 7. Eliminar fÃ­sicamente el equipo
+                        // 7. Eliminar físicamente el equipo
                         using (SqlCommand cmdDel = new SqlCommand("DELETE FROM dbo.Equipos WHERE IdEquipo = @Id;", cn, tran))
                         {
                             cmdDel.Parameters.Add(new SqlParameter("@Id", idEquipo));
@@ -290,7 +290,7 @@ namespace SOR.Repositories
                             if (del == 0) throw new InvalidOperationException("No se pudo eliminar el equipo.");
                         }
 
-                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, 1, "admin@occrd.org", "DELETE", "Equipo", idEquipo.ToString(), "EliminaciÃ³n completa de equipo: " + nombre);
+                        SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, 1, "admin@occrd.org", "DELETE", "Equipo", idEquipo.ToString(), "Eliminación completa de equipo: " + nombre);
 
                         tran.Commit();
                         return true;

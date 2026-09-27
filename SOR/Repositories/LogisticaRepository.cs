@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -10,8 +10,8 @@ using SOR.Helpers;
 namespace SOR.Repositories
 {
     /// <summary>
-    /// Repositorio de LogÃ­stica â€” Inventario Central, Transferencias y Despacho.
-    /// Todas las operaciones crÃ­ticas usan SqlTransaction con IsolationLevel.ReadCommitted.
+    /// Repositorio de Logística — Inventario Central, Transferencias y Despacho.
+    /// Todas las operaciones críticas usan SqlTransaction con IsolationLevel.ReadCommitted.
     /// </summary>
     public class LogisticaRepository
     {
@@ -240,7 +240,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Cargar equipos asignados a cada almacÃ©n
+                // Cargar equipos asignados a cada almacén
                 if (lista.Any())
                 {
                     string sqlEq = @"
@@ -390,7 +390,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // RECEPCIÃ“N DE CONTENEDORES (TRANSACCIÃ“N ACID Y CONTROL DE DUPLICIDAD)
+        // RECEPCIÓN DE CONTENEDORES (TRANSACCIÓN ACID Y CONTROL DE DUPLICIDAD)
         // =====================================================================
 
         public int RegistrarRecepcion(RecepcionContenedor modelo, int idUsuario)
@@ -414,15 +414,15 @@ namespace SOR.Repositories
                             }
                         }
 
-                        // 1b. Validar que el almacÃ©n exista y estÃ© activo
+                        // 1b. Validar que el almacén exista y esté activo
                         using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.Almacenes WHERE IdAlmacen = @IdAlm AND Activo = 1;", cn, tran))
                         {
                             cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
                             if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
-                                throw new InvalidOperationException("El almacÃ©n seleccionado no es vÃ¡lido o estÃ¡ inactivo.");
+                                throw new InvalidOperationException("El almacén seleccionado no es válido o está inactivo.");
                         }
 
-                        // 1c. Control de concurrencia e Idempotencia (Evitar doble recepciÃ³n)
+                        // 1c. Control de concurrencia e Idempotencia (Evitar doble recepción)
                         using (var cmd = new SqlCommand(
                             "SELECT COUNT(1) FROM dbo.RecepcionesContenedor WITH (UPDLOCK, HOLDLOCK) WHERE IdTemporada = @IdTemp AND LOWER(LTRIM(RTRIM(NumeroContenedor))) = LOWER(LTRIM(RTRIM(@Num))) AND IdAlmacen = @IdAlm AND EstadoRecepcion != 'ANULADA';", cn, tran))
                         {
@@ -431,11 +431,11 @@ namespace SOR.Repositories
                             cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
                             if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
                             {
-                                throw new InvalidOperationException($"El contenedor '{modelo.NumeroContenedor}' ya fue recibido y confirmado previamente en este almacÃ©n para la temporada actual.");
+                                throw new InvalidOperationException($"El contenedor '{modelo.NumeroContenedor}' ya fue recibido y confirmado previamente en este almacén para la temporada actual.");
                             }
                         }
 
-                        // 2. Insertar encabezado de recepciÃ³n
+                        // 2. Insertar encabezado de recepción
                         int idRecepcion = 0;
                         string sqlRecep = @"
                             INSERT INTO dbo.RecepcionesContenedor 
@@ -504,7 +504,7 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 3c. Si la recepciÃ³n estÃ¡ asignada a un equipo o almacÃ©n de equipo, acreditar en InventarioEquipo
+                            // 3c. Si la recepción está asignada a un equipo o almacén de equipo, acreditar en InventarioEquipo
                             int? idEquipoReceptorFinal = (modelo.IdEquipoReceptor.HasValue && modelo.IdEquipoReceptor.Value > 0) ? modelo.IdEquipoReceptor : null;
                             if (!idEquipoReceptorFinal.HasValue)
                             {
@@ -541,10 +541,10 @@ namespace SOR.Repositories
                                 }
                             }
 
-                            // 3d. KÃ¡rdex de entrada
+                            // 3d. Kárdex de entrada
                             RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_CONTENEDOR", det.IdMaterial,
                                 totalUnidades, null, modelo.IdAlmacen, idEquipoReceptorFinal, null,
-                                "REC-" + idRecepcion, idUsuario, $"RecepciÃ³n de contenedor #{modelo.NumeroContenedor} en almacÃ©n ID {modelo.IdAlmacen}");
+                                "REC-" + idRecepcion, idUsuario, $"Recepción de contenedor #{modelo.NumeroContenedor} en almacén ID {modelo.IdAlmacen}");
                         }
 
                         // 4. Guardar evidencias adjuntas (si existen)
@@ -571,8 +571,8 @@ namespace SOR.Repositories
                         }
 
                         tran.Commit();
-                        AuditoriaHelper.Registrar("RecepciÃ³n Contenedor", "Logistica", idRecepcion.ToString(), idUsuario,
-                            $"Contenedor {modelo.NumeroContenedor} recibido y confirmado exitosamente en almacÃ©n ID {modelo.IdAlmacen}. Total materiales: {modelo.Detalles.Count}.");
+                        AuditoriaHelper.Registrar("Recepción Contenedor", "Logistica", idRecepcion.ToString(), idUsuario,
+                            $"Contenedor {modelo.NumeroContenedor} recibido y confirmado exitosamente en almacén ID {modelo.IdAlmacen}. Total materiales: {modelo.Detalles.Count}.");
                         return idRecepcion;
                     }
                     catch
@@ -739,7 +739,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3. Obtener inventario por equipos para el filtro rÃ¡pido
+                // 3. Obtener inventario por equipos para el filtro rápido
                 string sqlEquipos = @"
                     SELECT e.IdEquipo, e.NombreEquipo, n.NombreNivel
                     FROM dbo.Equipos e
@@ -765,7 +765,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Cargar Ã­tems de equipos
+                // Cargar ítems de equipos
                 var itemsEquipos = ObtenerInventarioEquipo(vm.IdTemporada, null);
                 var lookup = System.Linq.Enumerable.ToDictionary(
                     System.Linq.Enumerable.GroupBy(itemsEquipos, x => x.IdEquipo),
@@ -799,7 +799,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // TRANSFERENCIA A EQUIPOS (TRANSACCIÃ“N ACID Y TRAZABILIDAD COMPLETA)
+        // TRANSFERENCIA A EQUIPOS (TRANSACCIÓN ACID Y TRAZABILIDAD COMPLETA)
         // =====================================================================
 
         public int RegistrarTransferencia(TransferenciaEquipo modelo, int idUsuario)
@@ -824,19 +824,19 @@ namespace SOR.Repositories
                             }
                         }
 
-                        // 2. Fechas de EmisiÃ³n y RecepciÃ³n
+                        // 2. Fechas de Emisión y Recepción
                         DateTime fechaEmision = modelo.FechaEmision ?? (modelo.FechaTransferencia != DateTime.MinValue ? modelo.FechaTransferencia : DateTime.Now);
                         modelo.FechaTransferencia = fechaEmision;
 
                         bool esRecibidaInmediata = modelo.FechaRecepcion.HasValue && !string.IsNullOrWhiteSpace(modelo.PersonaReceptoraEquipo);
                         if (modelo.FechaRecepcion.HasValue && modelo.FechaRecepcion.Value < fechaEmision)
                         {
-                            throw new InvalidOperationException("La fecha de recepciÃ³n no puede ser anterior a la fecha de emisiÃ³n.");
+                            throw new InvalidOperationException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
                         }
 
                         string estado = esRecibidaInmediata ? "RECIBIDA" : "EMITIDA";
 
-                        // 3. NÃºmero de constancia Ãºnico
+                        // 3. Número de constancia único
                         string constancia = "TRF-" + fechaEmision.ToString("yyyyMMdd") + "-" + new Random().Next(1000, 9999);
 
                         // 4. Insertar encabezado con trazabilidad
@@ -879,7 +879,7 @@ namespace SOR.Repositories
                         {
                             if (det.CantidadUnidades <= 0) continue;
 
-                            // 5a. Verificar stock suficiente en almacÃ©n origen con bloqueo de lectura
+                            // 5a. Verificar stock suficiente en almacén origen con bloqueo de lectura
                             int disp = 0;
                             using (var cmd = new SqlCommand(
                                 "SELECT ISNULL(CantidadDisponible,0) FROM dbo.InventarioCentral WITH (UPDLOCK, ROWLOCK) WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;", cn, tran))
@@ -891,7 +891,7 @@ namespace SOR.Repositories
                                 disp = val != null && val != DBNull.Value ? Convert.ToInt32(val) : 0;
                             }
                             if (disp < det.CantidadUnidades)
-                                throw new InvalidOperationException($"Stock insuficiente en el almacÃ©n emisor para el material ID {det.IdMaterial}. Disponible: {disp}, Solicitado: {det.CantidadUnidades}.");
+                                throw new InvalidOperationException($"Stock insuficiente en el almacén emisor para el material ID {det.IdMaterial}. Disponible: {disp}, Solicitado: {det.CantidadUnidades}.");
 
                             // 5b. Detalle de transferencia
                             string sqlDet = @"INSERT INTO dbo.TransferenciasEquipoDetalle (IdTransferencia, IdMaterial, CantidadUnidades) VALUES (@IdT, @IdM, @Cant);";
@@ -903,7 +903,7 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 5c. Descontar del inventario central del almacÃ©n origen
+                            // 5c. Descontar del inventario central del almacén origen
                             string sqlCentral = @"
                                 UPDATE dbo.InventarioCentral
                                 SET CantidadTransferida = CantidadTransferida + @Cant,
@@ -936,7 +936,7 @@ namespace SOR.Repositories
                                 }
                             }
 
-                            // 5d. Si la recepciÃ³n es inmediata, acreditar en inventario del equipo receptor
+                            // 5d. Si la recepción es inmediata, acreditar en inventario del equipo receptor
                             if (esRecibidaInmediata)
                             {
                                 string sqlEquipo = @"
@@ -959,7 +959,7 @@ namespace SOR.Repositories
                                 }
                             }
 
-                            // 5e. Registrar movimiento en KÃ¡rdex
+                            // 5e. Registrar movimiento en Kárdex
                             RegistrarMovimiento(cn, tran, idTemporada, "TRANSFERENCIA_EQUIPO", det.IdMaterial,
                                 det.CantidadUnidades, modelo.IdAlmacenOrigen, null, modelo.IdEquipo, null,
                                 constancia, idUsuario, $"Transferencia {constancia} de material ID {det.IdMaterial} al equipo ID {modelo.IdEquipo}");
@@ -967,7 +967,7 @@ namespace SOR.Repositories
 
                         tran.Commit();
                         AuditoriaHelper.Registrar("Transferencia Equipo", "Logistica", idTransf.ToString(), idUsuario,
-                            $"Transferencia {constancia} registrada con Ã©xito. Estado: {estado}.");
+                            $"Transferencia {constancia} registrada con éxito. Estado: {estado}.");
                         return idTransf;
                     }
                     catch
@@ -1021,10 +1021,10 @@ namespace SOR.Repositories
                         if (estadoActual == "RECIBIDA" || estadoActual == "COMPLETADA")
                             throw new InvalidOperationException("La transferencia ya se encuentra confirmada como RECIBIDA.");
                         if (estadoActual == "CANCELADA")
-                            throw new InvalidOperationException("No se puede confirmar la recepciÃ³n de una transferencia cancelada.");
+                            throw new InvalidOperationException("No se puede confirmar la recepción de una transferencia cancelada.");
 
                         if (fechaRecepcion < fechaEmision)
-                            throw new InvalidOperationException("La fecha de recepciÃ³n no puede ser anterior a la fecha de emisiÃ³n.");
+                            throw new InvalidOperationException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
 
                         // 1. Actualizar estado y fecha en encabezado
                         string sqlUpd = @"
@@ -1084,11 +1084,11 @@ namespace SOR.Repositories
 
                             RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_TRANSFERENCIA", idMat,
                                 cant, null, null, idEquipoReceptor, null,
-                                constancia, idUsuario, $"ConfirmaciÃ³n de recepciÃ³n fÃ­sica de transferencia {constancia} por el equipo receptor ID {idEquipoReceptor}");
+                                constancia, idUsuario, $"Confirmación de recepción física de transferencia {constancia} por el equipo receptor ID {idEquipoReceptor}");
                         }
 
                         tran.Commit();
-                        AuditoriaHelper.Registrar("Confirmar RecepciÃ³n", "Logistica", idTransferencia.ToString(), idUsuario,
+                        AuditoriaHelper.Registrar("Confirmar Recepción", "Logistica", idTransferencia.ToString(), idUsuario,
                             $"Transferencia {constancia} confirmada como RECIBIDA por {personaReceptora}.");
                     }
                     catch
@@ -1140,7 +1140,7 @@ namespace SOR.Repositories
                         }
 
                         if (estadoActual == "RECIBIDA" || estadoActual == "COMPLETADA")
-                            throw new InvalidOperationException("No se puede cancelar una transferencia que ya fue recibida fÃ­sicamente por el equipo receptor.");
+                            throw new InvalidOperationException("No se puede cancelar una transferencia que ya fue recibida físicamente por el equipo receptor.");
                         if (estadoActual == "CANCELADA")
                             throw new InvalidOperationException("La transferencia ya se encuentra cancelada.");
 
@@ -1178,7 +1178,7 @@ namespace SOR.Repositories
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // Revertir inventario del equipo emisor si correspondÃ­a
+                            // Revertir inventario del equipo emisor si correspondía
                             if (idEquipoEmisor.HasValue && idEquipoEmisor.Value > 0)
                             {
                                 string sqlRevEq = @"
@@ -1198,7 +1198,7 @@ namespace SOR.Repositories
 
                             RegistrarMovimiento(cn, tran, idTemporada, "CANCELACION_TRANSFERENCIA", idMat,
                                 cant, idAlmacenOrigen, null, null, null,
-                                constancia, idUsuario, $"CancelaciÃ³n de transferencia {constancia}. Motivo: {motivo}");
+                                constancia, idUsuario, $"Cancelación de transferencia {constancia}. Motivo: {motivo}");
                         }
 
                         // 2. Marcar como CANCELADA
@@ -1258,7 +1258,7 @@ namespace SOR.Repositories
                                 IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
                                 NombreTemporada = dr["NombreTemporada"].ToString(),
                                 IdEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null,
-                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "AlmacÃ©n Central / Nacional",
+                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "Almacén Central / Nacional",
                                 IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
                                 NombreEquipo = dr["NombreEquipoReceptor"].ToString(),
                                 IdAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]),
@@ -1341,7 +1341,7 @@ namespace SOR.Repositories
                                 IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
                                 NombreTemporada = dr["NombreTemporada"].ToString(),
                                 IdEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null,
-                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "AlmacÃ©n Central / Nacional",
+                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "Almacén Central / Nacional",
                                 IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
                                 NombreEquipo = dr["NombreEquipoReceptor"].ToString(),
                                 IdAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]),
@@ -1374,7 +1374,7 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // Asegurar columna e Ã­ndices si faltaran
+                // Asegurar columna e índices si faltaran
                 using (var cmdCol = new SqlCommand("IF COL_LENGTH('dbo.RecepcionesContenedor', 'IdEquipoReceptor') IS NULL ALTER TABLE dbo.RecepcionesContenedor ADD IdEquipoReceptor INT NULL;", cn))
                 {
                     cmdCol.ExecuteNonQuery();
@@ -1536,14 +1536,14 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // 1. Obtener lista de equipos con su almacÃ©n asignado y coordinador responsable
+                // 1. Obtener lista de equipos con su almacén asignado y coordinador responsable
                 string sqlEquipos = @"
                     SELECT 
                         e.IdEquipo,
                         e.NombreEquipo,
                         n.NombreNivel,
                         alm.IdAlmacen,
-                        ISNULL(alm.NombreAlmacen, 'Sin AlmacÃ©n Asignado') AS NombreAlmacen,
+                        ISNULL(alm.NombreAlmacen, 'Sin Almacén Asignado') AS NombreAlmacen,
                         coord.IdUsuario AS IdUsuarioCoordinador,
                         ISNULL(coord.NombreCompleto, ISNULL(alm.Responsable, 'Sin Coordinador')) AS NombreCoordinador,
                         ISNULL(coord.Telefono, ISNULL(alm.Telefono, '')) AS TelefonoCoordinador,
@@ -1572,8 +1572,8 @@ namespace SOR.Repositories
                         WHERE asig.IdEquipo = e.IdEquipo AND asig.Activo = 1
                         ORDER BY 
                             CASE 
-                                WHEN pos.NombrePosicion LIKE '%LogÃ­stica%' OR pos.NombrePosicion LIKE '%Logistica%' THEN 1
-                                WHEN pos.NombrePosicion LIKE '%Equipo%' OR pos.NombrePosicion LIKE '%LÃ­der%' OR pos.NombrePosicion LIKE '%Lider%' THEN 2
+                                WHEN pos.NombrePosicion LIKE '%Logística%' OR pos.NombrePosicion LIKE '%Logistica%' THEN 1
+                                WHEN pos.NombrePosicion LIKE '%Equipo%' OR pos.NombrePosicion LIKE '%Líder%' OR pos.NombrePosicion LIKE '%Lider%' THEN 2
                                 ELSE 3 
                             END,
                             asig.IdAsignacion ASC
@@ -1630,7 +1630,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // RECEPCIONES â€” CONSULTA
+        // RECEPCIONES — CONSULTA
         // =====================================================================
 
         public List<RecepcionContenedor> ObtenerRecepciones(int? idTemporada = null, int? idAlmacen = null, int? idEquipo = null)
@@ -1724,7 +1724,7 @@ namespace SOR.Repositories
                 }
                 if (recep == null) return null;
 
-                // Cargar equipos servidos por el almacÃ©n
+                // Cargar equipos servidos por el almacén
                 string sqlEq = @"
                     SELECT e.NombreEquipo 
                     FROM dbo.AlmacenesEquipos ae
@@ -1821,11 +1821,11 @@ namespace SOR.Repositories
                 }
                 if (cnt == 0) throw new InvalidOperationException("El evento no existe o no es de tipo Despacho.");
 
-                // Verificar que no estÃ© ya registrado
+                // Verificar que no esté ya registrado
                 using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.EventosDespacho WHERE IdEvento=@Id;", cn))
                 {
                     cmd.Parameters.Add(new SqlParameter("@Id", idEvento));
-                    if (Convert.ToInt32(cmd.ExecuteScalar()) > 0) throw new InvalidOperationException("El evento ya estÃ¡ registrado como evento de despacho.");
+                    if (Convert.ToInt32(cmd.ExecuteScalar()) > 0) throw new InvalidOperationException("El evento ya está registrado como evento de despacho.");
                 }
 
                 string sql = @"INSERT INTO dbo.EventosDespacho (IdEvento, IdAlmacen, IdEquipo, EstadoDespachoEvento)
@@ -1837,7 +1837,7 @@ namespace SOR.Repositories
                     cmd.Parameters.Add(new SqlParameter("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value));
                     cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo));
                     int idCreado = Convert.ToInt32(cmd.ExecuteScalar());
-                    AuditoriaHelper.Registrar("Evento Despacho", "Logistica", idEvento.ToString(), idUsuario, "CreaciÃ³n de evento de despacho");
+                    AuditoriaHelper.Registrar("Evento Despacho", "Logistica", idEvento.ToString(), idUsuario, "Creación de evento de despacho");
                     return idCreado;
                 }
             }
@@ -1992,7 +1992,7 @@ namespace SOR.Repositories
                     cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
                     cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
-                        throw new InvalidOperationException("Esta iglesia ya estÃ¡ programada en este evento de despacho.");
+                        throw new InvalidOperationException("Esta iglesia ya está programada en este evento de despacho.");
                 }
 
                 // Verificar que la iglesia tenga recursos disponibles para despacho
@@ -2004,7 +2004,7 @@ namespace SOR.Repositories
                         throw new InvalidOperationException("La iglesia no tiene recursos asignados disponibles para despacho.");
                 }
 
-                // Obtener datos del Pastor y LÃ­der para precarga
+                // Obtener datos del Pastor y Líder para precarga
                 string nomPastor = "", cedPastor = "", telPastor = "";
                 string nomLider = "", cedLider = "", telLider = "";
                 string sqlPersonas = @"
@@ -2088,7 +2088,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Actualizar estado de asignaciÃ³n
+                // Actualizar estado de asignación
                 using (var cmd = new SqlCommand(
                     "UPDATE dbo.AsignacionesRecursos SET EstadoAsignacion='PROGRAMADA_DESPACHO', IdEventoDespachoActual=@IdEv WHERE IdParticipacion=@IdPart;", cn))
                 {
@@ -2097,18 +2097,18 @@ namespace SOR.Repositories
                     cmd.ExecuteNonQuery();
                 }
 
-                AuditoriaHelper.Registrar("Programar Despacho", "Logistica", idDespacho.ToString(), idUsuario, $"ProgramaciÃ³n de despacho {comprobante} para la iglesia ID {idIglesia}");
+                AuditoriaHelper.Registrar("Programar Despacho", "Logistica", idDespacho.ToString(), idUsuario, $"Programación de despacho {comprobante} para la iglesia ID {idIglesia}");
                 return idDespacho;
             }
         }
 
         // =====================================================================
-        // CONFIRMAR DESPACHO CON CÃ‰DULA EN MANO (TRANSACCIÃ“N ACID Y CONTROL DE ROL CL)
+        // CONFIRMAR DESPACHO CON CÉDULA EN MANO (TRANSACCIÓN ACID Y CONTROL DE ROL CL)
         // =====================================================================
 
         public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador, int? idRolSeguridad = null, int? idPosicion = null)
         {
-            // Validar autorizaciÃ³n: Solo CL (IdPosicion == 6), CE (IdPosicion == 1) o Admin (IdRolSeguridad in (1, 2))
+            // Validar autorización: Solo CL (IdPosicion == 6), CE (IdPosicion == 1) o Admin (IdRolSeguridad in (1, 2))
             using (var cnAuth = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cnAuth.Open();
@@ -2140,7 +2140,7 @@ namespace SOR.Repositories
                                 int? pos = drAuth["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(drAuth["IdPosicion"]) : null;
                                 string nomPos = drAuth["NombrePosicion"] != DBNull.Value ? drAuth["NombrePosicion"].ToString() : "";
                                 if (rol == 1 || rol == 2 || pos == 6 || pos == 1 ||
-                                    nomPos.IndexOf("LogÃ­stica", StringComparison.OrdinalIgnoreCase) >= 0 || 
+                                    nomPos.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || 
                                     nomPos.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                     nomPos.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
@@ -2153,7 +2153,7 @@ namespace SOR.Repositories
 
                 if (!esAutorizado)
                 {
-                    throw new UnauthorizedAccessException("Acceso denegado: Ãšnicamente el Coordinador de LogÃ­stica (CL) o el Coordinador de Equipo (CE) tienen autorizaciÃ³n para confirmar y ejecutar el despacho de materiales.");
+                    throw new UnauthorizedAccessException("Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) tienen autorización para confirmar y ejecutar el despacho de materiales.");
                 }
             }
 
@@ -2187,7 +2187,7 @@ namespace SOR.Repositories
                             cmd.Parameters.Add(new SqlParameter("@Id", vm.IdDespachoIglesia));
                             using (var dr = cmd.ExecuteReader())
                             {
-                                if (!dr.Read()) throw new InvalidOperationException("No se encontrÃ³ el despacho de la iglesia indicada.");
+                                if (!dr.Read()) throw new InvalidOperationException("No se encontró el despacho de la iglesia indicada.");
                                 estadoActual = dr["EstadoDespacho"].ToString();
                                 idParticipacion = Convert.ToInt32(dr["IdParticipacion"]);
                                 idIglesia = Convert.ToInt32(dr["IdIglesia"]);
@@ -2263,7 +2263,7 @@ namespace SOR.Repositories
                         {
                             cantidades.TryGetValue(idMat.ToString(), out int cantDesp);
                             if (cantDesp < 0) cantDesp = 0;
-                            if (cantDesp > cantAsig) cantDesp = cantAsig; // No puede despachar mÃ¡s de lo asignado
+                            if (cantDesp > cantAsig) cantDesp = cantAsig; // No puede despachar más de lo asignado
 
                             // Verificar stock disponible en el equipo
                             int dispEq = 0;
@@ -2303,7 +2303,7 @@ namespace SOR.Repositories
                                     cmd.ExecuteNonQuery();
                                 }
 
-                                // KÃ¡rdex de salida
+                                // Kárdex de salida
                                 RegistrarMovimiento(cn, tran, idTemporada, "DESPACHO_IGLESIA", idMat,
                                     cantDesp, null, null, idEquipo, idIglesia,
                                     "DSP-" + vm.IdDespachoIglesia, idUsuario, "Despacho a iglesia ID " + idIglesia);
@@ -2336,7 +2336,7 @@ namespace SOR.Repositories
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 6. Actualizar estado de asignaciÃ³n de recursos â†’ DESPACHADA
+                        // 6. Actualizar estado de asignación de recursos â†’ DESPACHADA
                         using (var cmd = new SqlCommand(
                             "UPDATE dbo.AsignacionesRecursos SET EstadoAsignacion='DESPACHADA', FechaDisponibleDespacho=GETDATE() WHERE IdParticipacion=@IdPart;", cn, tran))
                         {
@@ -2399,7 +2399,7 @@ namespace SOR.Repositories
                     cmd.ExecuteNonQuery();
                 }
 
-                // Restaurar a DISPONIBLE_PARA_DESPACHO para reprogramaciÃ³n
+                // Restaurar a DISPONIBLE_PARA_DESPACHO para reprogramación
                 using (var cmd = new SqlCommand(
                     "UPDATE dbo.AsignacionesRecursos SET EstadoAsignacion='DISPONIBLE_PARA_DESPACHO', IdEventoDespachoActual=NULL WHERE IdParticipacion=@IdPart;", cn))
                 {
@@ -2522,7 +2522,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // HELPER PRIVADO: REGISTRO EN KÃRDEX
+        // HELPER PRIVADO: REGISTRO EN KÁRDEX
         // =====================================================================
 
         private void RegistrarMovimiento(SqlConnection cn, SqlTransaction tran, int idTemporada,
@@ -2646,7 +2646,7 @@ namespace SOR.Repositories
                     cmdSync.ExecuteNonQuery();
                 }
 
-                // Cargar materiales ordenados segÃºn flujo oficial
+                // Cargar materiales ordenados según flujo oficial
                 string sqlDet = @"
                     SELECT d.*, m.Codigo, m.NombreMaterial, m.UnidadEntrega
                     FROM dbo.DespachosIglesiaDetalle d
@@ -2682,7 +2682,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Cargar datos de Pastor y LÃ­der
+                // Cargar datos de Pastor y Líder
                 string sqlPersonas = @"
                     SELECT TipoPersona, CONCAT(Nombres,' ',Apellidos) AS NombreCompleto, DocumentoIdentidad, Celular
                     FROM dbo.PersonasIglesia WHERE IdIglesia=@IdIg AND TipoPersona IN ('Pastor','LiderMinisterial');";

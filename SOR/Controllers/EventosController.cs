@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -104,7 +104,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Si no se asignÃ³ temporada, obtener la activa
+            // Si no se asignó temporada, obtener la activa
             if (modelo.IdTemporada <= 0)
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -180,7 +180,7 @@ namespace SOR.Controllers
                 }
             }
 
-            TempData["MensajeExito"] = "Evento creado con Ã©xito.";
+            TempData["MensajeExito"] = "Evento creado con éxito.";
             return RedirectToAction("Index");
         }
 
@@ -234,7 +234,7 @@ namespace SOR.Controllers
                 return HttpNotFound();
             }
 
-            // Si es un evento de Despacho, cargar datos logÃ­sticos
+            // Si es un evento de Despacho, cargar datos logísticos
             if (evento.TipoEvento == "Despacho")
             {
                 var logisticaSvc = new SOR.Services.LogisticaService();
@@ -260,7 +260,7 @@ namespace SOR.Controllers
             List<string> listaRolesEvento = ObtenerRolesEventoActivos();
 
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("LogÃ­stica", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
             bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 
             ViewBag.Evento = evento;
@@ -279,7 +279,7 @@ namespace SOR.Controllers
         }
 
         // =====================================================================
-        // MÃ‰TODOS DE DESPACHO PRESENCIAL (EVENTOS DE DESPACHO)
+        // MÉTODOS DE DESPACHO PRESENCIAL (EVENTOS DE DESPACHO)
         // =====================================================================
 
         [HttpPost]
@@ -319,12 +319,12 @@ namespace SOR.Controllers
             try
             {
                 bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("LogÃ­stica", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
                 bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 
                 if (!esAdmin && !esCL && !esCE)
                 {
-                    TempData["MensajeError"] = "Acceso denegado: Ãšnicamente el Coordinador de LogÃ­stica (CL) o el Coordinador de Equipo (CE) tienen autorizaciÃ³n para confirmar y ejecutar el despacho de materiales.";
+                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) tienen autorización para confirmar y ejecutar el despacho de materiales.";
                     return RedirectToAction("Detalle", new { id = idEvento });
                 }
 
@@ -340,9 +340,9 @@ namespace SOR.Controllers
                         idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
-                string nombre = !string.IsNullOrEmpty(u.PrimerNombre) ? $"{u.PrimerNombre} {u.PrimerApellido}".Trim() : (u.Correo ?? "Coordinador de LogÃ­stica");
+                string nombre = !string.IsNullOrEmpty(u.PrimerNombre) ? $"{u.PrimerNombre} {u.PrimerApellido}".Trim() : (u.Correo ?? "Coordinador de Logística");
                 logisticaSvc.ConfirmarDespacho(vm, idEquipo, idTemporada, u.IdUsuario, nombre, u.IdRolSeguridad, u.IdPosicion);
-                TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cÃ©dula validada.";
+                TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
             }
             catch (Exception ex)
             {
@@ -360,7 +360,7 @@ namespace SOR.Controllers
             {
                 var logisticaSvc = new SOR.Services.LogisticaService();
                 logisticaSvc.MarcarNoDespacho(vm, u.IdUsuario);
-                TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. No se descontÃ³ inventario y queda disponible para reprogramaciÃ³n.";
+                TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. No se descontó inventario y queda disponible para reprogramación.";
             }
             catch (Exception ex)
             {
@@ -424,7 +424,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de un evento fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de un evento fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -457,7 +457,7 @@ namespace SOR.Controllers
                     cmdIns.ExecuteNonQuery();
                 }
 
-                // Sincronizar el estado de asistencia y resultado de VisiÃ³n en dbo.ParticipacionesIglesia
+                // Sincronizar el estado de asistencia y resultado de Visión en dbo.ParticipacionesIglesia
                 string sqlSync = @"
                     UPDATE p
                     SET p.VisionAsistio = @Asistio,
@@ -490,7 +490,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de maestros en un evento fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de maestros en un evento fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -581,12 +581,12 @@ namespace SOR.Controllers
             var idsIglesias = lista.Select(x => x.IdIglesia).Distinct().ToList();
             var idsParticipaciones = lista.Select(x => x.IdParticipacion).Distinct().ToList();
 
-            // OptimizaciÃ³n de Alto Rendimiento: Cargar pastores, lÃ­deres, maestros y asistentes en consultas por lote
+            // Optimización de Alto Rendimiento: Cargar pastores, líderes, maestros y asistentes en consultas por lote
             using (SqlConnection cnBatch = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cnBatch.Open();
 
-                // 1. Cargar Pastores y LÃ­deres en una sola consulta
+                // 1. Cargar Pastores y Líderes en una sola consulta
                 string sqlPersonas = $@"
                     SELECT IdPersonaIglesia, IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo
                     FROM dbo.PersonasIglesia
@@ -749,10 +749,10 @@ namespace SOR.Controllers
 
             ViewBag.ListaTipos = new List<SelectListItem>
             {
-                new SelectListItem { Value = "Vision", Text = "PresentaciÃ³n de la VisiÃ³n" },
+                new SelectListItem { Value = "Vision", Text = "Presentación de la Visión" },
                 new SelectListItem { Value = "Taller", Text = "Taller OCC" },
                 new SelectListItem { Value = "Despacho", Text = "Despacho de Materiales" },
-                new SelectListItem { Value = "Evangelistico", Text = "Evento EvangelÃ­stico" },
+                new SelectListItem { Value = "Evangelistico", Text = "Evento Evangelístico" },
                 new SelectListItem { Value = "GranAventura", Text = "La Gran Aventura" }
             };
 
@@ -814,13 +814,13 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (modelo == null || modelo.IdEvento <= 0)
             {
-                TempData["MensajeError"] = "Datos de evento invÃ¡lidos.";
+                TempData["MensajeError"] = "Datos de evento inválidos.";
                 return RedirectToAction("Index");
             }
 
             if (!PuedeEditarEvento(u, modelo.IdEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar eventos pertenecientes a otro equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para modificar eventos pertenecientes a otro equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
@@ -871,12 +871,12 @@ namespace SOR.Controllers
                 int rowsAffected = cmd.ExecuteNonQuery();
                 if (rowsAffected == 0)
                 {
-                    TempData["MensajeError"] = "Conflicto de concurrencia: El evento fue modificado concurrentemente por otro usuario. Actualice la informaciÃ³n antes de continuar.";
+                    TempData["MensajeError"] = "Conflicto de concurrencia: El evento fue modificado concurrentemente por otro usuario. Actualice la información antes de continuar.";
                     return RedirectToAction("Index");
                 }
             }
 
-            SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Evento", modelo.IdEvento.ToString(), "EdiciÃ³n de evento: " + modelo.NombreEvento);
+            SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Evento", modelo.IdEvento.ToString(), "Edición de evento: " + modelo.NombreEvento);
             TempData["MensajeExito"] = "Evento actualizado correctamente.";
             return RedirectToAction("Index");
         }
@@ -889,7 +889,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para eliminar eventos pertenecientes a otro equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para eliminar eventos pertenecientes a otro equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
@@ -951,7 +951,7 @@ namespace SOR.Controllers
                             ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "Pastor", pastor);
                         }
 
-                        // 2. Actualizar LÃ­der Ministerial
+                        // 2. Actualizar Líder Ministerial
                         if (lider != null && !string.IsNullOrWhiteSpace(lider.Nombres))
                         {
                             ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
@@ -987,7 +987,7 @@ namespace SOR.Controllers
                             asistieronCount++;
                         }
 
-                        // 5. Registrar LÃ­der como asistente si aplica
+                        // 5. Registrar Líder como asistente si aplica
                         if (liderAsistio == true)
                         {
                             string sqlIns = @"
@@ -1039,7 +1039,7 @@ namespace SOR.Controllers
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Asistencia y datos del Pastor/LÃ­der actualizados correctamente.";
+                        TempData["MensajeExito"] = "Asistencia y datos del Pastor/Líder actualizados correctamente.";
                     }
                     catch (Exception ex)
                     {
@@ -1069,7 +1069,7 @@ namespace SOR.Controllers
                 {
                     try
                     {
-                        // 1. Actualizar LÃ­der
+                        // 1. Actualizar Líder
                         if (lider != null && !string.IsNullOrWhiteSpace(lider.Nombres))
                         {
                             ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
@@ -1124,7 +1124,7 @@ namespace SOR.Controllers
                                         cmdInsM.Parameters.Add(new SqlParameter("@Correo", m.Correo ?? (object)DBNull.Value));
                                         int newMId = Convert.ToInt32(cmdInsM.ExecuteScalar());
 
-                                        // Si venÃ­a marcado como asistido en el checkbox correspondiente
+                                        // Si venía marcado como asistido en el checkbox correspondiente
                                         // lo agregamos a la lista
                                         string asistKey = Request.Form["maestroNuevoAsistio_" + i];
                                         if (asistKey == "true")
@@ -1147,7 +1147,7 @@ namespace SOR.Controllers
 
                         int asistieronCount = 0;
 
-                        // 4. Registrar LÃ­der como asistente si aplica
+                        // 4. Registrar Líder como asistente si aplica
                         if (liderAsistio == true)
                         {
                             string sqlIns = @"
@@ -1244,7 +1244,7 @@ namespace SOR.Controllers
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Asistencia y datos del LÃ­der/Maestros actualizados correctamente.";
+                        TempData["MensajeExito"] = "Asistencia y datos del Líder/Maestros actualizados correctamente.";
                     }
                     catch (Exception ex)
                     {
@@ -1264,7 +1264,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (u == null)
             {
-                return Json(new { success = false, message = "SesiÃ³n invÃ¡lida o expirada." });
+                return Json(new { success = false, message = "Sesión inválida o expirada." });
             }
 
             if (!PuedeEditarEvento(u, idEvento))
@@ -1274,7 +1274,7 @@ namespace SOR.Controllers
 
             if (idEvento <= 0 || idAsistente <= 0)
             {
-                return Json(new { success = false, message = "ParÃ¡metros invÃ¡lidos para la eliminaciÃ³n." });
+                return Json(new { success = false, message = "Parámetros inválidos para la eliminación." });
             }
 
             try
@@ -1286,7 +1286,7 @@ namespace SOR.Controllers
                     {
                         try
                         {
-                            // 0. Validar si el evento ya pasÃ³
+                            // 0. Validar si el evento ya pasó
                             DateTime fechaEvento = DateTime.MinValue;
                             string sqlFecha = "SELECT Fecha FROM dbo.Eventos WHERE IdEvento = @IdEvento;";
                             using (SqlCommand cmdF = new SqlCommand(sqlFecha, cn, tran))
@@ -1302,7 +1302,7 @@ namespace SOR.Controllers
                             if (fechaEvento != DateTime.MinValue && fechaEvento.Date < DateTime.Today && u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
                             {
                                 tran.Rollback();
-                                return Json(new { success = false, message = "El evento ya se llevÃ³ a cabo el " + fechaEvento.ToString("dd/MM/yyyy") + ". No se pueden retirar participantes de un evento que ya pasÃ³." });
+                                return Json(new { success = false, message = "El evento ya se llevó a cabo el " + fechaEvento.ToString("dd/MM/yyyy") + ". No se pueden retirar participantes de un evento que ya pasó." });
                             }
 
                             // 1. Obtener datos del asistente en EventosAsistentes
@@ -1366,7 +1366,7 @@ namespace SOR.Controllers
                                 }
                             }
 
-                            // 3. Eliminar relaciÃ³n de dbo.EventosAsistentes
+                            // 3. Eliminar relación de dbo.EventosAsistentes
                             string sqlDelAsist = "DELETE FROM dbo.EventosAsistentes WHERE IdAsistente = @IdAsistente AND IdEvento = @IdEvento;";
                             using (SqlCommand cmdDelA = new SqlCommand(sqlDelAsist, cn, tran))
                             {
@@ -1375,7 +1375,7 @@ namespace SOR.Controllers
                                 cmdDelA.ExecuteNonQuery();
                             }
 
-                            // 4. Si existe relaciÃ³n en dbo.AsistenciaMaestro, eliminar solo de este evento
+                            // 4. Si existe relación en dbo.AsistenciaMaestro, eliminar solo de este evento
                             if (idMaestro > 0)
                             {
                                 string sqlDelAm = "DELETE FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento AND IdMaestro = @IdMaestro;";
@@ -1398,7 +1398,7 @@ namespace SOR.Controllers
                                 cmdUpCant.ExecuteNonQuery();
                             }
 
-                            // 6. Verificar si la iglesia aÃºn tiene asistentes en este evento
+                            // 6. Verificar si la iglesia aún tiene asistentes en este evento
                             string sqlCountRest = "SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                             int restantes = 0;
                             using (SqlCommand cmdRest = new SqlCommand(sqlCountRest, cn, tran))
@@ -1495,7 +1495,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar los asistentes de un evento fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para modificar los asistentes de un evento fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -1539,7 +1539,7 @@ namespace SOR.Controllers
                             }
                         }
 
-                        // Si hay al menos un asistente registrado, asegurar que la iglesia estÃ© marcada como AsistiÃ³
+                        // Si hay al menos un asistente registrado, asegurar que la iglesia esté marcada como Asistió
                         bool tieneAsistentes = asistentes != null && asistentes.Exists(x => !string.IsNullOrWhiteSpace(x.NombreCompleto));
                         string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdUp = new SqlCommand(sqlUpPart, cn, tran))
@@ -1594,7 +1594,7 @@ namespace SOR.Controllers
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Datos de asistentes guardados y asistencia actualizada con Ã©xito.";
+                        TempData["MensajeExito"] = "Datos de asistentes guardados y asistencia actualizada con éxito.";
                     }
                     catch (Exception ex)
                     {
@@ -1682,7 +1682,7 @@ namespace SOR.Controllers
         }
 
         // =====================================================================
-        // MÃ‰TODOS DE ASISTENCIA DE COORDINADORES AL EVENTO
+        // MÉTODOS DE ASISTENCIA DE COORDINADORES AL EVENTO
         // =====================================================================
 
         private List<CoordinadorEventoAsistenciaViewModel> ObtenerCoordinadoresAsistentesEvento(int idEvento)
@@ -1739,7 +1739,7 @@ namespace SOR.Controllers
             var lista = new List<CoordinadorDropdownItem>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                // Traer coordinadores activos que NO estÃ©n ya agregados en este evento
+                // Traer coordinadores activos que NO estén ya agregados en este evento
                 string sql = @"
                     SELECT u.IdUsuario,
                            ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(p.PrimerNombre, ' ', p.PrimerApellido))), ''), u.Correo) AS NombreCompleto,
@@ -1787,7 +1787,7 @@ namespace SOR.Controllers
 
             if (idUsuario <= 0)
             {
-                TempData["MensajeError"] = "Debe seleccionar un coordinador vÃ¡lido de la lista desplegable.";
+                TempData["MensajeError"] = "Debe seleccionar un coordinador válido de la lista desplegable.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -1826,7 +1826,7 @@ namespace SOR.Controllers
                     cmd.ExecuteNonQuery();
                 }
 
-                TempData["MensajeExito"] = "Coordinador registrado en el evento con Ã©xito.";
+                TempData["MensajeExito"] = "Coordinador registrado en el evento con éxito.";
             }
             catch (Exception ex)
             {
@@ -1932,10 +1932,10 @@ namespace SOR.Controllers
                 {
                     "Coordinador Principal / Encargado",
                     "Facilitador / Expositor",
-                    "LogÃ­stica y Despacho",
+                    "Logística y Despacho",
                     "Registro y Asistencia",
-                    "AcompaÃ±amiento y Bienvenida",
-                    "IntercesiÃ³n y OraciÃ³n",
+                    "Acompañamiento y Bienvenida",
+                    "Intercesión y Oración",
                     "Apoyo General"
                 };
             }

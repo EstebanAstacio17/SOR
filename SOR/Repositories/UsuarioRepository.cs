@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Data;
 using System.Data.SqlClient;
 using SOR.Models;
@@ -145,13 +145,13 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // 1. Asegurar SET QUOTED_IDENTIFIER y ANSI_NULLS activos para la sesiÃ³n SQL
+                // 1. Asegurar SET QUOTED_IDENTIFIER y ANSI_NULLS activos para la sesión SQL
                 using (var setCmd = new SqlCommand("SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON;", cn))
                 {
                     setCmd.ExecuteNonQuery();
                 }
 
-                // 2. Recrear/actualizar sp_RegistrarUsuario con QUOTED_IDENTIFIER ON explÃ­cito si fuese necesario
+                // 2. Recrear/actualizar sp_RegistrarUsuario con QUOTED_IDENTIFIER ON explícito si fuese necesario
                 string sqlFixSp = @"
                     CREATE OR ALTER PROCEDURE dbo.sp_RegistrarUsuario
                         @Correo VARCHAR(100),
@@ -175,7 +175,7 @@ namespace SOR.Repositories
                         VALUES (@Correo, @Clave, 3, 1); -- Coordinador, PendienteAprobacionCorreo
 
                         SET @Registrado = 1;
-                        SET @Mensaje = 'Usuario registrado con Ã©xito. Su cuenta estÃ¡ pendiente de aprobaciÃ³n por un administrador.';
+                        SET @Mensaje = 'Usuario registrado con éxito. Su cuenta está pendiente de aprobación por un administrador.';
                     END;";
 
                 using (var cmdFix = new SqlCommand(sqlFixSp, cn))
@@ -235,7 +235,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 2. Si no hay Coordinador de Equipo especÃ­fico activo, notificar a los Superadmins y Administradores
+                // 2. Si no hay Coordinador de Equipo específico activo, notificar a los Superadmins y Administradores
                 if (correos.Count == 0)
                 {
                     string sqlAdmins = @"

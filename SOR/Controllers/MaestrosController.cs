@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -125,7 +125,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesiaPorId(u, modelo.IdIglesia))
             {
-                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
@@ -147,7 +147,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Maestro registrado con Ã©xito.";
+            TempData["MensajeExito"] = "Maestro registrado con éxito.";
             return RedirectToAction("Index");
         }
 
@@ -163,7 +163,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesiaPorId(u, idIglesia))
             {
-                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
             }
 
@@ -187,7 +187,7 @@ namespace SOR.Controllers
                     cmd.ExecuteNonQuery();
                 }
 
-                TempData["MensajeExito"] = "Maestro registrado con Ã©xito.";
+                TempData["MensajeExito"] = "Maestro registrado con éxito.";
             }
             catch (Exception ex)
             {
@@ -208,7 +208,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesiaPorId(u, idIglesia))
             {
-                return Json(new { success = false, message = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicciÃ³n." });
+                return Json(new { success = false, message = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción." });
             }
 
             try
@@ -231,7 +231,7 @@ namespace SOR.Controllers
                     cmd.ExecuteNonQuery();
                 }
 
-                return Json(new { success = true, message = "Maestro registrado con Ã©xito." });
+                return Json(new { success = true, message = "Maestro registrado con éxito." });
             }
             catch (Exception ex)
             {
@@ -252,13 +252,13 @@ namespace SOR.Controllers
 
             if (!PuedeEditarMaestro(u, modelo.IdMaestro))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para modificar este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
             if (!PuedeEditarIglesiaPorId(u, modelo.IdIglesia))
             {
-                TempData["MensajeError"] = "No tiene permiso para asignar este maestro a una iglesia fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para asignar este maestro a una iglesia fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
@@ -284,7 +284,7 @@ namespace SOR.Controllers
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Datos del maestro actualizados con Ã©xito.";
+            TempData["MensajeExito"] = "Datos del maestro actualizados con éxito.";
             return RedirectToAction("Index");
         }
 
@@ -295,7 +295,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarMaestro(u, idMaestro))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar el estado de este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicciÃ³n.";
+                TempData["MensajeError"] = "No tiene permiso para modificar el estado de este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicción.";
                 return RedirectToAction("Index");
             }
 
@@ -329,7 +329,7 @@ namespace SOR.Controllers
                     cmd.ExecuteNonQuery();
                 }
 
-                // Registrar en el historial de la iglesia si tiene participaciÃ³n activa
+                // Registrar en el historial de la iglesia si tiene participación activa
                 if (idIglesia > 0)
                 {
                     string sqlPart = "SELECT TOP 1 IdParticipacion FROM dbo.ParticipacionesIglesia WHERE IdIglesia = @IdIglesia ORDER BY IdParticipacion DESC;";
@@ -340,7 +340,7 @@ namespace SOR.Controllers
                         if (valPart != null)
                         {
                             int idPart = Convert.ToInt32(valPart);
-                            string accion = activo ? "ReactivaciÃ³n de Maestro" : "Baja de Maestro";
+                            string accion = activo ? "Reactivación de Maestro" : "Baja de Maestro";
                             string com = activo ? $"El maestro '{nombreMaestro}' fue reactivado en el sistema." : $"El maestro '{nombreMaestro}' fue dado de baja.";
                             string sqlLog = @"
                                 INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario, Razon)
@@ -396,7 +396,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (u == null)
             {
-                return Json(new { success = false, message = "SesiÃ³n invÃ¡lida." }, JsonRequestBehavior.AllowGet);
+                return Json(new { success = false, message = "Sesión inválida." }, JsonRequestBehavior.AllowGet);
             }
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -489,7 +489,7 @@ namespace SOR.Controllers
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
                     cn.Open();
-                    // 1. Obtener informaciÃ³n bÃ¡sica del maestro
+                    // 1. Obtener información básica del maestro
                     string nombres = "";
                     string apellidos = "";
                     string documentoIdentidad = "";
@@ -508,7 +508,7 @@ namespace SOR.Controllers
                         }
                     }
 
-                    // 2. Obtener participaciÃ³n activa de la iglesia y si ya participÃ³ en Taller OCC
+                    // 2. Obtener participación activa de la iglesia y si ya participó en Taller OCC
                     int idParticipacion = 0;
                     bool tallerParticipo = false;
                     string sqlPart = @"
@@ -532,14 +532,14 @@ namespace SOR.Controllers
                     // 3. Evaluar asistencia por 3 condiciones
                     int asistencia = 0;
 
-                    // CondiciÃ³n C: Si la iglesia ya tiene confirmada la participaciÃ³n del Taller OCC
+                    // Condición C: Si la iglesia ya tiene confirmada la participación del Taller OCC
                     if (tallerParticipo)
                     {
                         asistencia = 1;
                     }
                     else
                     {
-                        // CondiciÃ³n A: Revisar AsistenciaMaestro (por IdMaestro)
+                        // Condición A: Revisar AsistenciaMaestro (por IdMaestro)
                         string sqlCheckA = @"
                             SELECT COUNT(1)
                             FROM dbo.AsistenciaMaestro am
@@ -555,7 +555,7 @@ namespace SOR.Controllers
                             asistencia += Convert.ToInt32(cmdCheckA.ExecuteScalar());
                         }
 
-                        // CondiciÃ³n B: Revisar EventosAsistentes (por CÃ©dula o Coincidencia de Nombre en la participaciÃ³n)
+                        // Condición B: Revisar EventosAsistentes (por Cédula o Coincidencia de Nombre en la participación)
                         if (idParticipacion > 0)
                         {
                             string sqlCheckB = @"
@@ -615,7 +615,7 @@ namespace SOR.Controllers
                     // 4. Registrar Comentario si existe
                     if (!string.IsNullOrWhiteSpace(comentario))
                     {
-                        string cmtFinal = $"{accionRealizada}. RazÃ³n: {comentario}";
+                        string cmtFinal = $"{accionRealizada}. Razón: {comentario}";
                         string sqlCmt = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIg, @IdUsu, @Cmt);";
                         using (SqlCommand cmdCmt = new SqlCommand(sqlCmt, cn))
                         {

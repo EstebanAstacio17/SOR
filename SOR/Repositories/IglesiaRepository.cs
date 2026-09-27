@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -142,13 +142,13 @@ namespace SOR.Repositories
                             InsertarPersona(cn, tran, idIglesiaNew, "Pastor", modelo.Pastor);
                         }
 
-                        // 3. Insertar LÃ­der Ministerial
+                        // 3. Insertar Líder Ministerial
                         if (modelo.LiderMinisterial != null && !string.IsNullOrEmpty(modelo.LiderMinisterial.Nombres))
                         {
                             InsertarPersona(cn, tran, idIglesiaNew, "LiderMinisterial", modelo.LiderMinisterial);
                         }
 
-                        // 4. Crear ParticipaciÃ³n Inicial en la Temporada
+                        // 4. Crear Participación Inicial en la Temporada
                         int idTemporadaDestino = 0;
                         if (idTemporadaDestinoParam.HasValue && idTemporadaDestinoParam.Value > 0)
                         {
@@ -177,14 +177,14 @@ namespace SOR.Repositories
                         cmdPart.Parameters.Add(new SqlParameter("@EstatusReporte", estatusReporte));
                         int idParticipacionNew = Convert.ToInt32(cmdPart.ExecuteScalar());
 
-                        // Crear registro inicial de asignaciÃ³n de recursos despachados
+                        // Crear registro inicial de asignación de recursos despachados
                         string sqlRec = "INSERT INTO dbo.AsignacionesRecursos (IdParticipacion) VALUES (@IdParticipacion);";
                         SqlCommand cmdRec = new SqlCommand(sqlRec, cn, tran);
                         cmdRec.Parameters.Add(new SqlParameter("@IdParticipacion", idParticipacionNew));
                         cmdRec.ExecuteNonQuery();
 
-                        // Registrar Historial de InscripciÃ³n (Etapa 1)
-                        RegistrarLogHistorial(cn, tran, idParticipacionNew, "InscripciÃ³n en Temporada", null, "Inscrita (Etapa 1)", idUsuarioCreacion, "Iglesia inscrita exitosamente en la temporada activa.");
+                        // Registrar Historial de Inscripción (Etapa 1)
+                        RegistrarLogHistorial(cn, tran, idParticipacionNew, "Inscripción en Temporada", null, "Inscrita (Etapa 1)", idUsuarioCreacion, "Iglesia inscrita exitosamente en la temporada activa.");
 
                         tran.Commit();
                         return idIglesiaNew;
@@ -251,7 +251,7 @@ namespace SOR.Repositories
 
                 if (ig == null) return null;
 
-                // 2. Personas (Pastor, LÃ­der)
+                // 2. Personas (Pastor, Líder)
                 string sqlPer = "SELECT IdPersonaIglesia, IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, DocumentoAdjuntoRuta, Celular, Correo FROM dbo.PersonasIglesia WHERE IdIglesia = @Id;";
                 using (SqlCommand cmdPer = new SqlCommand(sqlPer, cn))
                 {
@@ -303,7 +303,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3. ParticipaciÃ³n y Recursos Actuales con soporte de etapas de la temporada
+                // 3. Participación y Recursos Actuales con soporte de etapas de la temporada
                 string sqlPart = @"
                     SELECT p.*, t.NombreTemporada, t.Activa AS TemporadaActiva, r.* 
                     FROM dbo.ParticipacionesIglesia p
@@ -388,7 +388,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3.2 Cargar CompaÃ±eros de OraciÃ³n en la temporada activa
+                // 3.2 Cargar Compañeros de Oración en la temporada activa
                 if (ig.ParticipacionActual != null)
                 {
                     string sqlOracion = "SELECT c.*, us.Correo AS CorreoRegistrador FROM dbo.CompanerosOracion c INNER JOIN dbo.Usuarios us ON c.IdUsuarioRegistro = us.IdUsuario WHERE c.IdIglesia = @Id AND c.IdTemporada = @IdTemp;";
@@ -416,11 +416,11 @@ namespace SOR.Repositories
                         }
                     }
 
-                    // 3.3 Cargar Historial / Timeline de participaciÃ³n de esta temporada
+                    // 3.3 Cargar Historial / Timeline de participación de esta temporada
                     string sqlHist = @"
                         SELECT h.*, us.Correo AS NombreResponsable,
                                COALESCE(LTRIM(RTRIM(ISNULL(pc.PrimerNombre, '') + ' ' + ISNULL(pc.PrimerApellido, ''))), us.Correo) AS NombreCoordinador,
-                               COALESCE(pos.NombrePosicion, 'Sin PosiciÃ³n') AS PosicionCoordinador,
+                               COALESCE(pos.NombrePosicion, 'Sin Posición') AS PosicionCoordinador,
                                COALESCE(eq.NombreEquipo, 'Sin Equipo') AS EquipoCoordinador,
                                t.NombreTemporada
                         FROM dbo.HistorialParticipacion h 
@@ -462,11 +462,11 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 4. Comentarios HistÃ³ricos
+                // 4. Comentarios Históricos
                 string sqlCom = @"
                     SELECT c.*, u.Correo,
                            COALESCE(LTRIM(RTRIM(ISNULL(pc.PrimerNombre, '') + ' ' + ISNULL(pc.PrimerApellido, ''))), u.Correo) AS NombreCoordinador,
-                           COALESCE(pos.NombrePosicion, 'Sin PosiciÃ³n') AS PosicionCoordinador,
+                           COALESCE(pos.NombrePosicion, 'Sin Posición') AS PosicionCoordinador,
                            COALESCE(eq.NombreEquipo, 'Sin Equipo') AS EquipoCoordinador,
                            (SELECT TOP 1 NombreTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC) AS NombreTemporada
                     FROM dbo.ComentariosObservaciones c
@@ -501,7 +501,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 5. Cargar regla de 3 aÃ±os, desempeÃ±o previo y excepciones
+                // 5. Cargar regla de 3 años, desempeño previo y excepciones
                 if (ig.ParticipacionActual != null)
                 {
                     int idTemporadaActiva = ig.ParticipacionActual.IdTemporada;
@@ -546,19 +546,19 @@ namespace SOR.Repositories
                         }
                     }
 
-                    // Cargar ExcepciÃ³n Activa si existe
+                    // Cargar Excepción Activa si existe
                     ig.ExcepcionActiva = ObtenerExcepcionActivaInterno(cn, idIglesia, idTemporadaActiva);
 
                     // Cargar Historial completo de Excepciones
                     ig.HistorialExcepciones = ObtenerHistorialExcepcionesInterno(cn, idIglesia);
 
-                    // Cargar Discipulado LGA y AcompaÃ±amiento
+                    // Cargar Discipulado LGA y Acompañamiento
                     ig.DiscipuladoLGA = ObtenerResumenDiscipuladoLGA(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
 
-                    // Cargar Reporte de Eventos EvangelÃ­sticos
+                    // Cargar Reporte de Eventos Evangelísticos
                     ig.ReporteEvangelistico = ObtenerReporteEventosEvangelisticos(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
 
-                    // Cargar Reporte de Discipulado / GraduaciÃ³n LGA
+                    // Cargar Reporte de Discipulado / Graduación LGA
                     ig.ReporteGraduacionLGA = ObtenerReporteGraduacionLGA(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
                 }
             }
@@ -755,7 +755,7 @@ namespace SOR.Repositories
                             ActualizarOInsertarPersona(cn, tran, modelo.IdIglesia, "Pastor", modelo.Pastor);
                         }
 
-                        // 3. Actualizar o Insertar LÃ­der
+                        // 3. Actualizar o Insertar Líder
                         if (modelo.LiderMinisterial != null)
                         {
                             ActualizarOInsertarPersona(cn, tran, modelo.IdIglesia, "LiderMinisterial", modelo.LiderMinisterial);
@@ -764,7 +764,7 @@ namespace SOR.Repositories
                         // Registrar en Historial
                         string sqlLog = @"
                             INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                            SELECT TOP 1 IdParticipacion, GETDATE(), 'EdiciÃ³n de Iglesia', EstadoEvaluacion, EstadoEvaluacion, @IdUser, 'Datos de la iglesia actualizados por el usuario.'
+                            SELECT TOP 1 IdParticipacion, GETDATE(), 'Edición de Iglesia', EstadoEvaluacion, EstadoEvaluacion, @IdUser, 'Datos de la iglesia actualizados por el usuario.'
                             FROM dbo.ParticipacionesIglesia WHERE IdIglesia = @IdIglesia ORDER BY IdParticipacion DESC;";
                         using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn, tran))
                         {
@@ -826,7 +826,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // MÃ‰TODOS DE EXCEPCIÃ“N A LA REGLA DE 3 AÃ‘OS (DOBLE APROBACIÃ“N CE + CMI)
+        // MÉTODOS DE EXCEPCIÓN A LA REGLA DE 3 AÑOS (DOBLE APROBACIÓN CE + CMI)
         // ============================================================================
 
         private ExcepcionRegla3Anios MapearExcepcion(SqlDataReader dr)
@@ -1004,12 +1004,12 @@ namespace SOR.Repositories
                         des.TotalGraduados = Convert.ToInt32(dr["TotalGraduados"]);
                         des.TotalMaestrosCapacitados = Convert.ToInt32(dr["TotalMaestros"]);
 
-                        des.ResumenTexto = $"En la temporada '{des.NombreTemporadaPrevia}', la iglesia completÃ³ hasta la Etapa {des.EtapaAlcanzada} (Estatus reporte: {des.EstatusReporte}). " +
-                            $"ReportÃ³ {des.TotalNinosAlcanzados} niÃ±os alcanzados, {des.TotalDecisionesFe} decisiones de fe, {des.TotalGraduados} graduados de La Gran Aventura, y {des.TotalMaestrosCapacitados} maestros con asistencia confirmada a capacitaciones.";
+                        des.ResumenTexto = $"En la temporada '{des.NombreTemporadaPrevia}', la iglesia completó hasta la Etapa {des.EtapaAlcanzada} (Estatus reporte: {des.EstatusReporte}). " +
+                            $"Reportó {des.TotalNinosAlcanzados} niños alcanzados, {des.TotalDecisionesFe} decisiones de fe, {des.TotalGraduados} graduados de La Gran Aventura, y {des.TotalMaestrosCapacitados} maestros con asistencia confirmada a capacitaciones.";
                     }
                     else
                     {
-                        des.ResumenTexto = "No se encontraron registros estadÃ­sticos en la base de datos para la temporada previa especificada.";
+                        des.ResumenTexto = "No se encontraron registros estadísticos en la base de datos para la temporada previa especificada.";
                     }
                 }
             }
@@ -1090,9 +1090,9 @@ namespace SOR.Repositories
         public int RegistrarSolicitudExcepcion(ExcepcionRegla3Anios excepcion, int idUsuario)
         {
             if (string.IsNullOrWhiteSpace(excepcion.Motivo))
-                throw new ArgumentException("El motivo de la excepciÃ³n es obligatorio.");
+                throw new ArgumentException("El motivo de la excepción es obligatorio.");
             if (string.IsNullOrWhiteSpace(excepcion.Justificacion))
-                throw new ArgumentException("La justificaciÃ³n detallada de la excepciÃ³n es obligatoria.");
+                throw new ArgumentException("La justificación detallada de la excepción es obligatoria.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -1101,7 +1101,7 @@ namespace SOR.Repositories
                 {
                     try
                     {
-                        // 1. Validar que no exista ya una excepciÃ³n activa (PENDIENTE o APROBADA)
+                        // 1. Validar que no exista ya una excepción activa (PENDIENTE o APROBADA)
                         string sqlCheck = @"
                             SELECT COUNT(1) 
                             FROM dbo.ExcepcionesRegla3Anios 
@@ -1113,11 +1113,11 @@ namespace SOR.Repositories
                             int existe = Convert.ToInt32(cmdCheck.ExecuteScalar());
                             if (existe > 0)
                             {
-                                throw new InvalidOperationException("Esta iglesia ya cuenta con una solicitud de excepciÃ³n activa (Pendiente o Aprobada) para esta temporada.");
+                                throw new InvalidOperationException("Esta iglesia ya cuenta con una solicitud de excepción activa (Pendiente o Aprobada) para esta temporada.");
                             }
                         }
 
-                        // 2. Insertar excepciÃ³n
+                        // 2. Insertar excepción
                         string sqlInsert = @"
                             INSERT INTO dbo.ExcepcionesRegla3Anios (
                                 IdIglesia, IdTemporada, TemporadaPreviaId, DiferenciaTemporadas,
@@ -1149,9 +1149,9 @@ namespace SOR.Repositories
                             idExcepcionNew = Convert.ToInt32(cmdIns.ExecuteScalar());
                         }
 
-                        // 3. Registrar auditorÃ­a
+                        // 3. Registrar auditoría
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "SOLICITAR_EXCEPCION_3ANIOS", "EXCEPCIONES",
-                            idExcepcionNew.ToString(), $"Solicitud de excepciÃ³n registrada para iglesia #{excepcion.IdIglesia}. Motivo: {excepcion.Motivo}");
+                            idExcepcionNew.ToString(), $"Solicitud de excepción registrada para iglesia #{excepcion.IdIglesia}. Motivo: {excepcion.Motivo}");
 
                         tran.Commit();
                         return idExcepcionNew;
@@ -1182,9 +1182,9 @@ namespace SOR.Repositories
                             cmdVal.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             using (SqlDataReader dr = cmdVal.ExecuteReader())
                             {
-                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepciÃ³n no existe.");
+                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepción no existe.");
                                 string estadoActual = dr["Estado"].ToString();
-                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepciÃ³n que ha sido rechazada.");
+                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepción que ha sido rechazada.");
                                 cmiAprobado = Convert.ToBoolean(dr["AprobadoCMI"]);
                             }
                         }
@@ -1215,12 +1215,12 @@ namespace SOR.Repositories
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
                             {
-                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepciÃ³n fue modificada por otro usuario mientras se procesaba su aprobaciÃ³n.");
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario mientras se procesaba su aprobación.");
                             }
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuarioCE, null, "APROBAR_EXCEPCION_CE", "EXCEPCIONES",
-                            idExcepcion.ToString(), $"AprobaciÃ³n de CE registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
+                            idExcepcion.ToString(), $"Aprobación de CE registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
 
                         tran.Commit();
                     }
@@ -1249,9 +1249,9 @@ namespace SOR.Repositories
                             cmdVal.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             using (SqlDataReader dr = cmdVal.ExecuteReader())
                             {
-                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepciÃ³n no existe.");
+                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepción no existe.");
                                 string estadoActual = dr["Estado"].ToString();
-                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepciÃ³n que ha sido rechazada.");
+                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepción que ha sido rechazada.");
                                 ceAprobado = Convert.ToBoolean(dr["AprobadoCE"]);
                             }
                         }
@@ -1282,12 +1282,12 @@ namespace SOR.Repositories
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
                             {
-                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepciÃ³n fue modificada por otro usuario mientras se procesaba su aprobaciÃ³n.");
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario mientras se procesaba su aprobación.");
                             }
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuarioCMI, null, "APROBAR_EXCEPCION_CMI", "EXCEPCIONES",
-                            idExcepcion.ToString(), $"AprobaciÃ³n de CMI registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
+                            idExcepcion.ToString(), $"Aprobación de CMI registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
 
                         tran.Commit();
                     }
@@ -1335,12 +1335,12 @@ namespace SOR.Repositories
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
                             {
-                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepciÃ³n fue modificada por otro usuario.");
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario.");
                             }
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "RECHAZAR_EXCEPCION_3ANIOS", "EXCEPCIONES",
-                            idExcepcion.ToString(), $"ExcepciÃ³n rechazada. Motivo: {motivo}");
+                            idExcepcion.ToString(), $"Excepción rechazada. Motivo: {motivo}");
 
                         tran.Commit();
                     }
@@ -1380,7 +1380,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // MÃ‰TODOS DE DISCIPULADO Y ACOMPAÃ‘AMIENTO LGA (5 CONTACTOS & CAPACIDAD)
+        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & CAPACIDAD)
         // ============================================================================
 
         public ResumenDiscipuladoLGAModel ObtenerResumenDiscipuladoLGA(int idParticipacion, int idIglesia)
@@ -1395,7 +1395,7 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // 1. Obtener datos de asignaciÃ³n y maestros para cÃ¡lculo de capacidad
+                // 1. Obtener datos de asignación y maestros para cálculo de capacidad
                 string sqlCap = @"
                     SELECT ISNULL(ar.OportunidadesEvangelisticas, 0) AS Cajitas,
                            (SELECT COUNT(1) FROM dbo.Maestros WHERE IdIglesia = @IdIglesia AND Activo = 1) AS MaestrosCap,
@@ -1420,7 +1420,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 2. Obtener o inicializar los 5 contactos estÃ¡ndar
+                // 2. Obtener o inicializar los 5 contactos estándar
                 string sqlContactos = @"
                     SELECT s.IdSeguimiento, s.IdParticipacion, s.IdIglesia, s.NumeroContacto,
                            s.FechaContacto, s.IdUsuarioContacto,
@@ -1464,14 +1464,14 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Metadata estÃ¡ndar de los 5 contactos de la planilla LGA
+                // Metadata estándar de los 5 contactos de la planilla LGA
                 var plantillaContactos = new[]
                 {
-                    new { Num = 1, Fase = "PreparaciÃ³n", Agenda = "Antes del Evento EvangelÃ­stico", Pregunta = "Â¿EstÃ¡ listo para iniciar?", Lbl1 = "Cajitas Recibidas", Lbl2 = "Maestros Listos", Lbl3 = "" },
-                    new { Num = 2, Fase = "InscripciÃ³n", Agenda = "Semanas 1 a 3", Pregunta = "Â¿Las cajitas ya se convirtieron en niÃ±os inscritos?", Lbl1 = "Cajitas Entregadas", Lbl2 = "NiÃ±os Inscritos", Lbl3 = "" },
-                    new { Num = 3, Fase = "Cuidado", Agenda = "Semanas 4 a 9", Pregunta = "Â¿Estamos perdiendo niÃ±os inscritos?", Lbl1 = "NiÃ±os Inscritos", Lbl2 = "Asistencia Promedio", Lbl3 = "" },
-                    new { Num = 4, Fase = "GraduaciÃ³n", Agenda = "Semanas 10 a 12", Pregunta = "Â¿Llegaremos a la meta?", Lbl1 = "NiÃ±os Inscritos", Lbl2 = "Graduados Esperados/Confirmados", Lbl3 = "" },
-                    new { Num = 5, Fase = "Aprendizaje", Agenda = "CelebraciÃ³n y Reporte", Pregunta = "Â¿QuÃ© debemos mejorar?", Lbl1 = "1. FuncionÃ³", Lbl2 = "2. DesafÃ­os", Lbl3 = "3. AcciÃ³n Siguiente" }
+                    new { Num = 1, Fase = "Preparación", Agenda = "Antes del Evento Evangelístico", Pregunta = "¿Está listo para iniciar?", Lbl1 = "Cajitas Recibidas", Lbl2 = "Maestros Listos", Lbl3 = "" },
+                    new { Num = 2, Fase = "Inscripción", Agenda = "Semanas 1 a 3", Pregunta = "¿Las cajitas ya se convirtieron en niños inscritos?", Lbl1 = "Cajitas Entregadas", Lbl2 = "Niños Inscritos", Lbl3 = "" },
+                    new { Num = 3, Fase = "Cuidado", Agenda = "Semanas 4 a 9", Pregunta = "¿Estamos perdiendo niños inscritos?", Lbl1 = "Niños Inscritos", Lbl2 = "Asistencia Promedio", Lbl3 = "" },
+                    new { Num = 4, Fase = "Graduación", Agenda = "Semanas 10 a 12", Pregunta = "¿Llegaremos a la meta?", Lbl1 = "Niños Inscritos", Lbl2 = "Graduados Esperados/Confirmados", Lbl3 = "" },
+                    new { Num = 5, Fase = "Aprendizaje", Agenda = "Celebración y Reporte", Pregunta = "¿Qué debemos mejorar?", Lbl1 = "1. Funcionó", Lbl2 = "2. Desafíos", Lbl3 = "3. Acción Siguiente" }
                 };
 
                 foreach (var p in plantillaContactos)
@@ -1505,7 +1505,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3. Extraer mÃ©tricas para el Embudo Real
+                // 3. Extraer métricas para el Embudo Real
                 var c2 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 2);
                 if (c2 != null && int.TryParse(c2.DatoMinimo2, out int nInsc)) resumen.NinosInscritos = nInsc;
 
@@ -1515,7 +1515,7 @@ namespace SOR.Repositories
                 var c4 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 4);
                 if (c4 != null && int.TryParse(c4.DatoMinimo2, out int nGrad)) resumen.NinosGraduados = nGrad;
 
-                // 4. Obtener bitÃ¡cora de llamadas rÃ¡pidas (5 minutos)
+                // 4. Obtener bitácora de llamadas rápidas (5 minutos)
                 string sqlLlamadas = @"
                     SELECT IdLlamada, IdParticipacion, IdIglesia, FechaHora,
                            IdUsuarioCoordinador, NombreCoordinador, EtapaDiscipulado,
@@ -1552,7 +1552,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Determinar semÃ¡foro vigente de la iglesia
+                // Determinar semáforo vigente de la iglesia
                 if (resumen.BitacoraLlamadas.Any())
                 {
                     var ultima = resumen.BitacoraLlamadas.First();
@@ -1624,7 +1624,7 @@ namespace SOR.Repositories
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_CONTACTO_LGA", "DISCIPULADO_LGA",
-                            $"Part_{c.IdParticipacion}_C{c.NumeroContacto}", $"Contacto #{c.NumeroContacto} guardado. DecisiÃ³n: {c.DecisionTomada}");
+                            $"Part_{c.IdParticipacion}_C{c.NumeroContacto}", $"Contacto #{c.NumeroContacto} guardado. Decisión: {c.DecisionTomada}");
 
                         tran.Commit();
                     }
@@ -1677,7 +1677,7 @@ namespace SOR.Repositories
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REGISTRAR_LLAMADA_LGA", "DISCIPULADO_LGA",
-                            $"Part_{ll.IdParticipacion}", $"Llamada de 5 min registrada. SemÃ¡foro: {ll.SemaforoEstado}");
+                            $"Part_{ll.IdParticipacion}", $"Llamada de 5 min registrada. Semáforo: {ll.SemaforoEstado}");
 
                         tran.Commit();
                     }
@@ -1691,7 +1691,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // REPORTE DE EVENTOS EVANGELÃSTICOS (DETALLE Y TOTALES)
+        // REPORTE DE EVENTOS EVANGELÍSTICOS (DETALLE Y TOTALES)
         // ============================================================================
 
         public ReporteEventosEvangelisticosModel ObtenerReporteEventosEvangelisticos(int idParticipacion, int idIglesia)
@@ -1795,7 +1795,7 @@ namespace SOR.Repositories
                         }
                         else
                         {
-                            // Calcular siguiente nÃºmero de evento
+                            // Calcular siguiente número de evento
                             string sqlNum = "SELECT ISNULL(MAX(NumeroEvento), 0) + 1 FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdParticipacion = @IdPart;";
                             int proxNum = 1;
                             using (SqlCommand cmdNum = new SqlCommand(sqlNum, cn, tran))
@@ -1827,7 +1827,7 @@ namespace SOR.Repositories
                         SincronizarTotalesEventosEvangelisticos(cn, tran, item.IdParticipacion, item.IdIglesia);
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_EVENTO_EVANGELISTICO", "REPORTES",
-                            $"Part_{item.IdParticipacion}", $"Evento evangelÃ­stico registrado/actualizado. Asistencia: {item.AsistenciaNinos}");
+                            $"Part_{item.IdParticipacion}", $"Evento evangelístico registrado/actualizado. Asistencia: {item.AsistenciaNinos}");
 
                         tran.Commit();
                     }
@@ -1890,7 +1890,7 @@ namespace SOR.Repositories
                             SincronizarTotalesEventosEvangelisticos(cn, tran, idPart, idIglesia);
 
                             AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "ELIMINAR_EVENTO_EVANGELISTICO", "REPORTES",
-                                $"Det_{idEventoDetalle}", $"Evento evangelÃ­stico eliminado de la participaciÃ³n {idPart}");
+                                $"Det_{idEventoDetalle}", $"Evento evangelístico eliminado de la participación {idPart}");
                         }
 
                         tran.Commit();
@@ -1937,7 +1937,7 @@ namespace SOR.Repositories
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_ANOTACIONES_EVANGELISTICAS", "REPORTES",
-                            $"Part_{idParticipacion}", "Anotaciones de eventos evangelÃ­sticos actualizadas.");
+                            $"Part_{idParticipacion}", "Anotaciones de eventos evangelísticos actualizadas.");
 
                         tran.Commit();
                     }
@@ -2007,7 +2007,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // REPORTE OFICIAL DE DISCIPULADO Y GRADUACIÃ“N LGA (9 PREGUNTAS)
+        // REPORTE OFICIAL DE DISCIPULADO Y GRADUACIÓN LGA (9 PREGUNTAS)
         // ============================================================================
 
         public ReporteGraduacionLGAModel ObtenerReporteGraduacionLGA(int idParticipacion, int idIglesia)
@@ -2067,7 +2067,7 @@ namespace SOR.Repositories
                         if (val != null && val != DBNull.Value) modelo.CajitasRecibidas = Convert.ToInt32(val);
                     }
 
-                    // Precargar Eventos EvangelÃ­sticos y NiÃ±os Asistentes de los eventos registrados
+                    // Precargar Eventos Evangelísticos y Niños Asistentes de los eventos registrados
                     string sqlEv = @"
                         SELECT COUNT(1) AS CantEv, ISNULL(SUM(AsistenciaNinos), 0) AS CantNinos 
                         FROM dbo.ReportesEventosEvangelisticosDetalle 
@@ -2085,7 +2085,7 @@ namespace SOR.Repositories
                         }
                     }
 
-                    // Precargar CompaÃ±eros de OraciÃ³n registrados
+                    // Precargar Compañeros de Oración registrados
                     string sqlOr = "SELECT COUNT(1) FROM dbo.CompanerosOracion WHERE IdIglesia = @IdIglesia;";
                     using (SqlCommand cmdOr = new SqlCommand(sqlOr, cn))
                     {
@@ -2146,9 +2146,9 @@ namespace SOR.Repositories
                                 );
                             END;
 
-                            -- Actualizar estatus de reporte de la participaciÃ³n
+                            -- Actualizar estatus de reporte de la participación
                             UPDATE dbo.ParticipacionesIglesia
-                            SET EstatusEvaluacionReporte = 'ReportÃ³'
+                            SET EstatusEvaluacionReporte = 'Reportó'
                             WHERE IdParticipacion = @IdPart;";
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
@@ -2171,12 +2171,12 @@ namespace SOR.Repositories
                         }
 
                         // Registrar en Historial de la Iglesia
-                        RegistrarLogHistorial(cn, tran, rep.IdParticipacion, "Reporte de Discipulado / GraduaciÃ³n LGA Ingresado",
-                            "Reportes Pendientes", "ReportÃ³", idUsuario,
-                            $"Reporte Oficial LGA completado. Graduados: {rep.NinosGraduadosLGA}, Creyeron en JesÃºs: {rep.NinosCreyeronJesus}, NiÃ±os LGA: {rep.NinosAsistieronLGA}.");
+                        RegistrarLogHistorial(cn, tran, rep.IdParticipacion, "Reporte de Discipulado / Graduación LGA Ingresado",
+                            "Reportes Pendientes", "Reportó", idUsuario,
+                            $"Reporte Oficial LGA completado. Graduados: {rep.NinosGraduadosLGA}, Creyeron en Jesús: {rep.NinosCreyeronJesus}, Niños LGA: {rep.NinosAsistieronLGA}.");
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_REPORTE_GRADUACION_LGA", "REPORTES",
-                            $"Part_{rep.IdParticipacion}", $"Reporte Oficial de GraduaciÃ³n LGA guardado. Graduados: {rep.NinosGraduadosLGA}");
+                            $"Part_{rep.IdParticipacion}", $"Reporte Oficial de Graduación LGA guardado. Graduados: {rep.NinosGraduadosLGA}");
 
                         tran.Commit();
                     }
@@ -2190,7 +2190,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // GESTIÃ“N DIRECTA DE ENTREGA / DESPACHO DE MATERIALES (ETAPA 7)
+        // GESTIÓN DIRECTA DE ENTREGA / DESPACHO DE MATERIALES (ETAPA 7)
         // ============================================================================
 
         public void ConfirmarEntregaDirecta(int idParticipacion, int idIglesia, string tipoReceptor, string nombreReceptor, string cedula, string telefono, string observaciones, int idUsuario)
@@ -2230,7 +2230,7 @@ namespace SOR.Repositories
 
                         RegistrarLogHistorial(cn, tran, idParticipacion, "Entrega de Materiales Confirmada",
                             "Pendiente de Entrega", "Entregado / Despachado", idUsuario,
-                            $"Materiales retirados y confirmados satisfactoriamente. Receptor: {nombreReceptor} ({tipoReceptor}). CÃ©dula: {cedula}.");
+                            $"Materiales retirados y confirmados satisfactoriamente. Receptor: {nombreReceptor} ({tipoReceptor}). Cédula: {cedula}.");
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "CONFIRMAR_ENTREGA_DIRECTA", "LOGISTICA",
                             $"Part_{idParticipacion}", $"Entrega confirmada a {nombreReceptor} ({tipoReceptor})");
@@ -2248,7 +2248,7 @@ namespace SOR.Repositories
 
         public void MarcarNoEntregaDirecta(int idParticipacion, int idIglesia, string motivo, string observaciones, int idUsuario)
         {
-            if (string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe especificar el motivo por el cual no se le entregÃ³ el material.");
+            if (string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe especificar el motivo por el cual no se le entregó el material.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -2277,7 +2277,7 @@ namespace SOR.Repositories
 
                         RegistrarLogHistorial(cn, tran, idParticipacion, "Materiales No Entregados / Cancelado",
                             "Pendiente de Entrega", "No Entregado", idUsuario,
-                            $"No se realizÃ³ la entrega de materiales. Motivo: {motivo}. Observaciones: {observaciones}", motivo);
+                            $"No se realizó la entrega de materiales. Motivo: {motivo}. Observaciones: {observaciones}", motivo);
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "MARCAR_NO_ENTREGA_DIRECTA", "LOGISTICA",
                             $"Part_{idParticipacion}", $"Marcado como NO ENTREGADO. Motivo: {motivo}");
@@ -2316,9 +2316,9 @@ namespace SOR.Repositories
                             cmd.ExecuteNonQuery();
                         }
 
-                        RegistrarLogHistorial(cn, tran, idParticipacion, "ReprogramaciÃ³n de Entrega",
+                        RegistrarLogHistorial(cn, tran, idParticipacion, "Reprogramación de Entrega",
                             "No Entregado", "Pendiente de Entrega", idUsuario,
-                            "La entrega de materiales ha sido restablecida como Disponible para Despacho / ProgramaciÃ³n.");
+                            "La entrega de materiales ha sido restablecida como Disponible para Despacho / Programación.");
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REPROGRAMAR_ENTREGA_DIRECTA", "LOGISTICA",
                             $"Part_{idParticipacion}", "Entrega restablecida a Disponible para Despacho.");
