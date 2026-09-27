@@ -141,7 +141,7 @@
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0" id="tablaIglesias">
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-4">Nombre de la Iglesia</th>
@@ -152,10 +152,10 @@
                                 <th class="text-end pe-4">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tbodyIglesias">
                             @if (!Model.Any())
                             {
-                                <tr>
+                                <tr id="rowVacioServidor">
                                     <td colspan="6" class="text-center py-5 text-muted">
                                         <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-400"></i>
                                         No se encontraron iglesias con los filtros aplicados.
@@ -166,7 +166,7 @@
                             {
                                 foreach (var item in Model)
                                 {
-                                    <tr>
+                                    <tr class="fila-iglesia" data-equipo="@(item.NombreEquipo ?? "")">
                                         <td class="ps-4">
                                             <div class="fw-bold fs-6" style="color: #1e293b;">@item.NombreIglesia</div>
                                             <span class="badge" style="color: #475569; background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.25rem 0.5rem; font-size: 0.75rem;">@item.NombreEquipo</span>
@@ -384,6 +384,8 @@
         var selectFilas = document.getElementById('filasPorPagina');
         var navPaginacion = document.getElementById('paginacionNav');
         var infoPaginacion = document.getElementById('paginacionInfo');
+        var tbody = document.getElementById('tbodyIglesias');
+        var rowVacioServidor = document.getElementById('rowVacioServidor');
 
         var paginaActual = 1;
 
@@ -397,21 +399,35 @@
             var filasVal = selectFilas ? selectFilas.value : '15';
             var pageSize = (filasVal === 'all') ? 999999 : parseInt(filasVal, 10);
 
-            var rows = Array.from(document.querySelectorAll('table tbody tr'));
+            var rows = Array.from(document.querySelectorAll('table tbody tr.fila-iglesia'));
             
+            // Si el servidor no trajo iglesias (Model está vacío):
+            if (rows.length === 0) {
+                if (rowVacioServidor) {
+                    rowVacioServidor.style.display = '';
+                }
+                if (infoPaginacion) {
+                    infoPaginacion.textContent = '0 iglesias registradas';
+                }
+                if (navPaginacion) {
+                    navPaginacion.innerHTML = '';
+                }
+                return;
+            }
+
+            if (rowVacioServidor) {
+                rowVacioServidor.style.display = 'none';
+            }
+
             // Filtrar filas de datos válidas
             var matchingRows = [];
             rows.forEach(function(row) {
-                if (row.cells.length === 1 && row.cells[0].colSpan > 1) {
-                    row.style.display = 'none'; // ocultar fila vacía de servidor si existe
-                    return;
-                }
-                
                 var text = row.textContent.toLowerCase();
+                var eqAttr = (row.getAttribute('data-equipo') || '').toLowerCase();
                 var eqCell = row.cells[0] ? row.cells[0].textContent.toLowerCase() : '';
 
-                var matchText = text.indexOf(query) > -1;
-                var matchEq = equipo === "" || eqCell.indexOf(equipo) > -1;
+                var matchText = query === '' || text.indexOf(query) > -1;
+                var matchEq = equipo === '' || eqAttr.indexOf(equipo) > -1 || eqCell.indexOf(equipo) > -1;
 
                 if (matchText && matchEq) {
                     matchingRows.push(row);
@@ -419,6 +435,28 @@
                     row.style.display = 'none';
                 }
             });
+
+            // Manejo de mensaje cuando el filtro de búsqueda local no da resultados
+            var rowNoCoincidencias = document.getElementById('rowNoCoincidenciasBusqueda');
+            if (matchingRows.length === 0) {
+                if (!rowNoCoincidencias && tbody) {
+                    rowNoCoincidencias = document.createElement('tr');
+                    rowNoCoincidencias.id = 'rowNoCoincidenciasBusqueda';
+                    rowNoCoincidencias.innerHTML = '<td colspan="6" class="text-center py-5 text-muted"><i class="bi bi-search fs-2 d-block mb-2 text-slate-400"></i>No se encontraron iglesias que coincidan con la búsqueda o equipo seleccionado.</td>';
+                    tbody.appendChild(rowNoCoincidencias);
+                } else if (rowNoCoincidencias) {
+                    rowNoCoincidencias.style.display = '';
+                }
+                if (infoPaginacion) {
+                    infoPaginacion.textContent = 'No se encontraron iglesias coincidentes';
+                }
+                if (navPaginacion) {
+                    navPaginacion.innerHTML = '';
+                }
+                return;
+            } else if (rowNoCoincidencias) {
+                rowNoCoincidencias.style.display = 'none';
+            }
 
             var totalCoincidencias = matchingRows.length;
             var totalPaginas = Math.ceil(totalCoincidencias / pageSize);
@@ -440,9 +478,7 @@
             });
 
             // Actualizar texto informativo
-            if (totalCoincidencias === 0) {
-                infoPaginacion.textContent = 'No se encontraron iglesias coincidentes';
-            } else {
+            if (infoPaginacion) {
                 infoPaginacion.textContent = 'Mostrando ' + (inicioIdx + 1) + ' a ' + finIdx + ' de ' + totalCoincidencias + ' iglesias';
             }
 
@@ -451,6 +487,7 @@
         }
 
         function renderBotonesPaginacion(totalPaginas, totalCoincidencias) {
+            if (!navPaginacion) return;
             navPaginacion.innerHTML = '';
             if (totalCoincidencias <= 0 || totalPaginas <= 1) {
                 return;

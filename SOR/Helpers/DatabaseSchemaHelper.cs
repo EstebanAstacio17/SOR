@@ -53,34 +53,28 @@ namespace SOR.Helpers
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Limpieza total de registros de iglesias y reinicio de catálogo
-                    string sqlLimpiarIglesias = @"
-                        BEGIN TRY
-                            IF OBJECT_ID('dbo.AsignacionesRecursos', 'U') IS NOT NULL DELETE FROM dbo.AsignacionesRecursos;
-                            IF OBJECT_ID('dbo.ReportesEventos', 'U') IS NOT NULL DELETE FROM dbo.ReportesEventos;
-                            IF OBJECT_ID('dbo.EventosParticipacionIglesia', 'U') IS NOT NULL DELETE FROM dbo.EventosParticipacionIglesia;
-                            IF OBJECT_ID('dbo.EventosAsistentes', 'U') IS NOT NULL DELETE FROM dbo.EventosAsistentes WHERE IdParticipacion IS NOT NULL;
-                            IF OBJECT_ID('dbo.HistorialParticipacion', 'U') IS NOT NULL DELETE FROM dbo.HistorialParticipacion;
-                            IF OBJECT_ID('dbo.HistorialIglesias', 'U') IS NOT NULL DELETE FROM dbo.HistorialIglesias;
-                            IF OBJECT_ID('dbo.AsistenciaMaestro', 'U') IS NOT NULL DELETE FROM dbo.AsistenciaMaestro;
-                            IF OBJECT_ID('dbo.Maestros', 'U') IS NOT NULL DELETE FROM dbo.Maestros;
-                            IF OBJECT_ID('dbo.CompanerosOracion', 'U') IS NOT NULL DELETE FROM dbo.CompanerosOracion;
-                            IF OBJECT_ID('dbo.LogsCambiosEtapa', 'U') IS NOT NULL DELETE FROM dbo.LogsCambiosEtapa;
-                            IF OBJECT_ID('dbo.SeguimientoIglesias', 'U') IS NOT NULL DELETE FROM dbo.SeguimientoIglesias;
-                            IF OBJECT_ID('dbo.PersonasIglesia', 'U') IS NOT NULL DELETE FROM dbo.PersonasIglesia;
-                            IF OBJECT_ID('dbo.ParticipacionesIglesia', 'U') IS NOT NULL DELETE FROM dbo.ParticipacionesIglesia;
-                            IF OBJECT_ID('dbo.Iglesias', 'U') IS NOT NULL 
-                            BEGIN
-                                DELETE FROM dbo.Iglesias;
-                                DBCC CHECKIDENT ('dbo.Iglesias', RESEED, 0);
-                            END
-                        END TRY
-                        BEGIN CATCH
-                        END CATCH";
+                    // Garantizar participación activa por defecto para iglesias sin ninguna participación
+                    string sqlParticipacionGarantizada = @"
+                        DECLARE @IdTempActiva INT;
+                        SELECT TOP 1 @IdTempActiva = IdTemporada 
+                        FROM dbo.Temporadas 
+                        WHERE Activa = 1 OR NombreTemporada LIKE '%2025-2026%' 
+                        ORDER BY Activa DESC, FechaInicio DESC;
 
-                    using (SqlCommand cmdLimpiar = new SqlCommand(sqlLimpiarIglesias, cn))
+                        IF @IdTempActiva IS NOT NULL AND @IdTempActiva > 0
+                        BEGIN
+                            INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EstatusEvaluacionReporte, EtapaActual)
+                            SELECT i.IdIglesia, @IdTempActiva, 1, 'Pendiente', 'Pendiente', 1
+                            FROM dbo.Iglesias i
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM dbo.ParticipacionesIglesia p 
+                                WHERE p.IdIglesia = i.IdIglesia
+                            );
+                        END";
+
+                    using (SqlCommand cmdPart = new SqlCommand(sqlParticipacionGarantizada, cn))
                     {
-                        cmdLimpiar.ExecuteNonQuery();
+                        cmdPart.ExecuteNonQuery();
                     }
 
                     // 2. Deduplicación preventiva antes de restricciones
