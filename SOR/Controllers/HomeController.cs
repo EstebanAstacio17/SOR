@@ -1,6 +1,7 @@
-﻿using SOR.Models;
+using SOR.Models;
 using SOR.Permisos;
 using System;
+using System.Data.SqlClient;
 using System.Web.Mvc;
 
 namespace SOR.Controllers
