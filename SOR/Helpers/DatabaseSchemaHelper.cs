@@ -53,6 +53,29 @@ namespace SOR.Helpers
                         cmd.ExecuteNonQuery();
                     }
 
+                    // Reasignación automática de iglesias registradas a Temp 2025-2026
+                    string sqlReasignar = @"
+                        DECLARE @IdTemp2025 INT;
+                        SELECT TOP 1 @IdTemp2025 = IdTemporada 
+                        FROM dbo.Temporadas 
+                        WHERE NombreTemporada LIKE '%2025-2026%' 
+                        ORDER BY Activa DESC, FechaInicio DESC;
+
+                        IF @IdTemp2025 IS NOT NULL AND @IdTemp2025 > 0
+                        BEGIN
+                            UPDATE p
+                            SET p.IdTemporada = @IdTemp2025
+                            FROM dbo.ParticipacionesIglesia p
+                            INNER JOIN dbo.Iglesias i ON p.IdIglesia = i.IdIglesia
+                            WHERE CAST(i.FechaCreacion AS DATE) = CAST(GETDATE() AS DATE)
+                              AND p.IdTemporada <> @IdTemp2025;
+                        END";
+
+                    using (SqlCommand cmdReasig = new SqlCommand(sqlReasignar, cn))
+                    {
+                        cmdReasig.ExecuteNonQuery();
+                    }
+
                     // 2. Deduplicación preventiva antes de restricciones
                     string sqlDeduplicar = @"
                         WITH CTE_Part AS (
