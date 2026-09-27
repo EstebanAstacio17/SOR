@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -18,222 +18,10 @@ namespace SOR.Controllers
         {
             return SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
         }
-        private void AsegurarEsquemaEventos()
-        {
-            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
-            {
-                string sql = @"
-                    IF OBJECT_ID('dbo.Eventos', 'U') IS NOT NULL
-                    BEGIN
-                        IF COL_LENGTH('dbo.Eventos', 'TipoLugar') IS NULL
-                        BEGIN
-                            ALTER TABLE dbo.Eventos ADD TipoLugar NVARCHAR(255) NULL;
-                        END
-                        IF COL_LENGTH('dbo.Eventos', 'Hora') IS NULL
-                        BEGIN
-                            ALTER TABLE dbo.Eventos ADD Hora NVARCHAR(50) NULL;
-                        END
-                        IF COL_LENGTH('dbo.Eventos', 'CantidadAsistentes') IS NULL
-                        BEGIN
-                            ALTER TABLE dbo.Eventos ADD CantidadAsistentes INT NULL DEFAULT 0;
-                        END
-                    END
-                    IF OBJECT_ID('dbo.EventosAsistentes', 'U') IS NULL
-                    BEGIN
-                        CREATE TABLE dbo.EventosAsistentes (
-                            IdAsistente INT IDENTITY(1,1) PRIMARY KEY,
-                            IdEvento INT NOT NULL,
-                            IdParticipacion INT NOT NULL,
-                            NombreCompleto NVARCHAR(255) NOT NULL,
-                            Identificacion NVARCHAR(50) NULL,
-                            Telefono NVARCHAR(50) NULL,
-                            Correo NVARCHAR(255) NULL,
-                            FechaRegistro DATETIME DEFAULT GETDATE()
-                        );
-                    END
-                    IF OBJECT_ID('dbo.EventosAsistenciaCoordinadores', 'U') IS NULL
-                    BEGIN
-                        CREATE TABLE dbo.EventosAsistenciaCoordinadores (
-                            IdAsistenciaCoordinador INT IDENTITY(1,1) PRIMARY KEY,
-                            IdEvento INT NOT NULL FOREIGN KEY REFERENCES dbo.Eventos(IdEvento),
-                            IdUsuario INT NOT NULL FOREIGN KEY REFERENCES dbo.Usuarios(IdUsuario),
-                            Asistio BIT NOT NULL DEFAULT 1,
-                            RolEnEvento NVARCHAR(100) NULL,
-                            Observaciones NVARCHAR(255) NULL,
-                            FechaRegistro DATETIME NOT NULL DEFAULT GETDATE(),
-                            IdUsuarioRegistro INT NULL
-                        );
-                        CREATE UNIQUE NONCLUSTERED INDEX IX_EventosAsistenciaCoordinadores_Evento_Usuario 
-                        ON dbo.EventosAsistenciaCoordinadores (IdEvento, IdUsuario);
-                    END";
-                SqlCommand cmd = new SqlCommand(sql, cn);
-                cn.Open();
-                cmd.ExecuteNonQuery();
-
-                // Asegurar Stored Procedure SpEliminarEvento
-                string spCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpEliminarEvento]') AND type in (N'P', N'PC');";
-                SqlCommand cmdCheck = new SqlCommand(spCheck, cn);
-                int spExists = Convert.ToInt32(cmdCheck.ExecuteScalar());
-                if (spExists == 0)
-                {
-                    string spCreate = @"
-                        CREATE PROCEDURE dbo.SpEliminarEvento
-                            @IdEvento INT
-                        AS
-                        BEGIN
-                            SET NOCOUNT ON;
-
-                            IF EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND Asistio = 1)
-                            BEGIN
-                                RAISERROR('No se puede eliminar el evento porque tiene iglesias confirmadas.', 16, 1);
-                                RETURN;
-                            END
-
-                            IF EXISTS (SELECT 1 FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento)
-                            BEGIN
-                                RAISERROR('No se puede eliminar el evento porque tiene asistentes registrados.', 16, 1);
-                                RETURN;
-                            END
-
-                            IF EXISTS (SELECT 1 FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento)
-                            BEGIN
-                                RAISERROR('No se puede eliminar el evento porque tiene asistencia de maestros registrada.', 16, 1);
-                                RETURN;
-                            END
-
-                            DELETE FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento;
-                            DELETE FROM dbo.Eventos WHERE IdEvento = @IdEvento;
-                        END";
-                    SqlCommand cmdCreate = new SqlCommand(spCreate, cn);
-                    cmdCreate.ExecuteNonQuery();
-                }
-
-                // Asegurar Tabla LogsCambiosEtapa
-                string sqlLogsEtapa = @"
-                    IF OBJECT_ID('dbo.LogsCambiosEtapa', 'U') IS NULL
-                    BEGIN
-                        CREATE TABLE dbo.LogsCambiosEtapa (
-                            IdLog INT IDENTITY(1,1) PRIMARY KEY,
-                            IdIglesia INT NOT NULL,
-                            EtapaAnterior INT NOT NULL,
-                            EtapaNueva INT NOT NULL,
-                            IdUsuarioResponsable INT NOT NULL,
-                            FechaHora DATETIME DEFAULT GETDATE(),
-                            Detalles NVARCHAR(MAX) NULL
-                        );
-                    END";
-                SqlCommand cmdLogsEtapa = new SqlCommand(sqlLogsEtapa, cn);
-                cmdLogsEtapa.ExecuteNonQuery();
-
-                // Asegurar Stored Procedure SpAvanzarEtapaTaller
-                string spTallerCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpAvanzarEtapaTaller]') AND type in (N'P', N'PC');";
-                SqlCommand cmdTallerCheck = new SqlCommand(spTallerCheck, cn);
-                int spTallerExists = Convert.ToInt32(cmdTallerCheck.ExecuteScalar());
-                if (spTallerExists == 0)
-                {
-                    string spTallerCreate = @"
-                        CREATE PROCEDURE dbo.SpAvanzarEtapaTaller
-                            @IdParticipacion INT,
-                            @IdEvento INT,
-                            @Asistio BIT,
-                            @IdUsuarioResponsable INT
-                        AS
-                        BEGIN
-                            SET NOCOUNT ON;
-                            DECLARE @EtapaAnterior INT;
-                            DECLARE @IdIglesia INT;
-
-                            SELECT @EtapaAnterior = EtapaActual, @IdIglesia = IdIglesia
-                            FROM dbo.ParticipacionesIglesia
-                            WHERE IdParticipacion = @IdParticipacion;
-
-                            IF @EtapaAnterior = 5 AND @Asistio = 1
-                            BEGIN
-                                -- Actualizar etapa
-                                UPDATE dbo.ParticipacionesIglesia
-                                SET TallerParticipo = 1,
-                                    EtapaActual = 6
-                                WHERE IdParticipacion = @IdParticipacion;
-
-                                -- Registrar en HistorialParticipacion
-                                INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                                VALUES (@IdParticipacion, GETDATE(), 'Completado Taller OCC', 'Taller OCC (Etapa 5)', 'EvaluaciÃ³n AsignaciÃ³n (Etapa 6)', @IdUsuarioResponsable, 'Asistencia al Taller OCC confirmada. Avanza a EvaluaciÃ³n AsignaciÃ³n.');
-
-                                -- Registrar en LogsCambiosEtapa
-                                INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
-                                VALUES (@IdIglesia, 5, 6, @IdUsuarioResponsable, GETDATE(), 'TransiciÃ³n automÃ¡tica tras registrar asistencia en Taller OCC.');
-                            END
-                            ELSE
-                            BEGIN
-                                -- Solo actualizar participaciÃ³n
-                                UPDATE dbo.ParticipacionesIglesia
-                                SET TallerParticipo = @Asistio
-                                WHERE IdParticipacion = @IdParticipacion;
-                            END
-                        END";
-                    SqlCommand cmdTallerCreate = new SqlCommand(spTallerCreate, cn);
-                    cmdTallerCreate.ExecuteNonQuery();
-                }
-
-                // Asegurar Stored Procedure SpAvanzarEtapaRecursos
-                string spRecursosCheck = "SELECT COUNT(1) FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SpAvanzarEtapaRecursos]') AND type in (N'P', N'PC');";
-                SqlCommand cmdRecursosCheck = new SqlCommand(spRecursosCheck, cn);
-                int spRecursosExists = Convert.ToInt32(cmdRecursosCheck.ExecuteScalar());
-                if (spRecursosExists == 0)
-                {
-                    string spRecursosCreate = @"
-                        CREATE PROCEDURE dbo.SpAvanzarEtapaRecursos
-                            @IdParticipacion INT,
-                            @TallerNombre NVARCHAR(255),
-                            @TallerFecha DATETIME,
-                            @TallerLugar NVARCHAR(255),
-                            @CantNinos INT,
-                            @CantMaestrosReg INT,
-                            @CantMaestrosAsist INT,
-                            @CantMaestrosAus INT,
-                            @IdUsuarioResponsable INT
-                        AS
-                        BEGIN
-                            SET NOCOUNT ON;
-                            DECLARE @EtapaAnterior INT;
-                            DECLARE @IdIglesia INT;
-
-                            SELECT @EtapaAnterior = EtapaActual, @IdIglesia = IdIglesia
-                            FROM dbo.ParticipacionesIglesia
-                            WHERE IdParticipacion = @IdParticipacion;
-
-                            -- Actualizar los datos
-                            UPDATE dbo.ParticipacionesIglesia SET
-                                EtapaActual = 7,
-                                EstadoEvaluacion = 'Aprobado',
-                                TallerParticipo = 1,
-                                TallerNombre = @TallerNombre,
-                                TallerFecha = @TallerFecha,
-                                TallerLugar = @TallerLugar,
-                                TallerCantNinos = @CantNinos,
-                                TallerCantMaestrosReg = @CantMaestrosReg,
-                                TallerCantMaestrosAsist = @CantMaestrosAsist,
-                                TallerCantMaestrosAus = @CantMaestrosAus
-                            WHERE IdParticipacion = @IdParticipacion;
-
-                            -- Registrar en HistorialParticipacion
-                            INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                            VALUES (@IdParticipacion, GETDATE(), 'AsignaciÃ³n de Recursos Finalizada', 'EvaluaciÃ³n AsignaciÃ³n (Etapa 6)', 'AprobaciÃ³n Final (Etapa 7)', @IdUsuarioResponsable, 'Se finalizÃ³ la asignaciÃ³n de recursos y se completÃ³ la participaciÃ³n.');
-
-                            -- Registrar en LogsCambiosEtapa
-                            INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
-                            VALUES (@IdIglesia, @EtapaAnterior, 7, @IdUsuarioResponsable, GETDATE(), 'TransiciÃ³n de asignaciÃ³n final de recursos y cierre de participaciÃ³n.');
-                        END";
-                    SqlCommand cmdRecursosCreate = new SqlCommand(spRecursosCreate, cn);
-                    cmdRecursosCreate.ExecuteNonQuery();
-                }
-            }
-        }
 
         // GET: Eventos
         public ActionResult Index(string tipo = null)
         {
-            AsegurarEsquemaEventos();
             Usuario u = (Usuario)Session["usuario"];
             List<Evento> lista = new List<Evento>();
 
@@ -399,7 +187,6 @@ namespace SOR.Controllers
         // GET: Eventos/Detalle/5
         public ActionResult Detalle(int id)
         {
-            AsegurarEsquemaEventos();
             Usuario u = (Usuario)Session["usuario"];
             Evento evento = null;
 
@@ -1025,7 +812,6 @@ namespace SOR.Controllers
         public ActionResult Editar(Evento modelo)
         {
             Usuario u = (Usuario)Session["usuario"];
-            AsegurarEsquemaEventos();
             if (modelo == null || modelo.IdEvento <= 0)
             {
                 TempData["MensajeError"] = "Datos de evento invÃ¡lidos.";
@@ -1713,7 +1499,6 @@ namespace SOR.Controllers
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
-            AsegurarEsquemaEventos();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();

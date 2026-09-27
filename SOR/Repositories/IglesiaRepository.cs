@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -17,8 +17,12 @@ namespace SOR.Repositories
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = @"
-                    SELECT i.*, e.NombreEquipo,
-                           p.IdParticipacion, p.EstadoEvaluacion, p.EstatusEvaluacionReporte, p.EtapaActual, t.NombreTemporada,
+                    SELECT i.IdIglesia, i.NombreIglesia, i.RNC_Cedula, i.Telefono, i.CorreoInstitucion, i.Calle, i.Numero, 
+                           i.Sector, i.Ciudad, i.Provincia, i.Referencia, i.IdEquipo, i.FechaCreacion,
+                           i.Denominacion, i.TipoOrganizacion, i.CantidadMaestros, i.CantidadNinos, 
+                           i.Ref1Nombre, i.Ref1Contacto, i.Ref2Nombre, i.Ref2Contacto,
+                           e.NombreEquipo,
+                           p.IdParticipacion, p.IdTemporada, p.EstadoEvaluacion, p.EstatusEvaluacionReporte, p.EtapaActual, t.NombreTemporada,
                            ar.EstadoAsignacion, ar.MotivoNoEntrega
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
@@ -69,10 +73,11 @@ namespace SOR.Repositories
                             {
                                 IdParticipacion = Convert.ToInt32(dr["IdParticipacion"]),
                                 IdIglesia = ig.IdIglesia,
-                                EstadoEvaluacion = dr["EstadoEvaluacion"].ToString(),
+                                IdTemporada = dr["IdTemporada"] != DBNull.Value ? Convert.ToInt32(dr["IdTemporada"]) : 0,
+                                EstadoEvaluacion = dr["EstadoEvaluacion"] != DBNull.Value ? dr["EstadoEvaluacion"].ToString() : "",
                                 EstatusEvaluacionReporte = dr["EstatusEvaluacionReporte"] != DBNull.Value ? dr["EstatusEvaluacionReporte"].ToString() : "Pendiente",
-                                EtapaActual = Convert.ToInt32(dr["EtapaActual"]),
-                                NombreTemporada = dr["NombreTemporada"].ToString(),
+                                EtapaActual = dr["EtapaActual"] != DBNull.Value ? Convert.ToInt32(dr["EtapaActual"]) : 0,
+                                NombreTemporada = dr["NombreTemporada"] != DBNull.Value ? dr["NombreTemporada"].ToString() : "",
                                 EstatusDespacho = (dr["EstadoAsignacion"] != DBNull.Value ? dr["EstadoAsignacion"].ToString() : "PENDIENTE"),
                                 MotivoNoEntrega = (dr["MotivoNoEntrega"] != DBNull.Value ? dr["MotivoNoEntrega"].ToString() : "")
                             };

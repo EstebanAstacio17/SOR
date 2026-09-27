@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -16,49 +16,75 @@ namespace SOR.Controllers
             return SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
         }
 
-        // GET: Maestros
         public ActionResult Index(int? idIglesia = null)
         {
             Usuario u = (Usuario)Session["usuario"];
             List<Maestro> lista = new List<Maestro>();
+            bool esAdmin = (u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2));
+            int? idEquipoUsuario = (u != null && u.IdEquipo.HasValue) ? u.IdEquipo.Value : (int?)null;
+            HashSet<int> equiposPermitidos = new HashSet<int>();
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
+                cn.Open();
                 string sql = @"
-                    SELECT m.*, i.NombreIglesia, i.IdEquipo AS IdEquipoIglesia
+                    WITH CTE_Equipos AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipo = @IdEquipoRaiz
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e INNER JOIN CTE_Equipos c ON e.IdEquipoPadre = c.IdEquipo
+                    )
+                    SELECT m.IdMaestro, m.IdIglesia, m.Nombres, m.Apellidos, m.DocumentoIdentidad, m.Celular, m.Correo, m.Activo,
+                           i.NombreIglesia, i.IdEquipo AS IdEquipoIglesia
                     FROM dbo.Maestros m
                     LEFT JOIN dbo.Iglesias i ON m.IdIglesia = i.IdIglesia
-                    ORDER BY m.Nombres, m.Apellidos;";
+                    WHERE (@EsAdmin = 1 OR i.IdEquipo IN (SELECT IdEquipo FROM CTE_Equipos) OR (i.IdEquipo IS NULL AND @IdEquipoRaiz IS NULL))
+                      AND (@IdIglesiaPre IS NULL OR @IdIglesiaPre = 0 OR m.IdIglesia = @IdIglesiaPre)
+                    ORDER BY m.Nombres, m.Apellidos;
 
-                SqlCommand cmd = new SqlCommand(sql, cn);
-                cn.Open();
-                using (SqlDataReader dr = cmd.ExecuteReader())
+                    WITH CTE_EquiposPerm AS (
+                        SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipo = @IdEquipoRaiz
+                        UNION ALL
+                        SELECT e.IdEquipo FROM dbo.Equipos e INNER JOIN CTE_EquiposPerm c ON e.IdEquipoPadre = c.IdEquipo
+                    )
+                    SELECT IdEquipo FROM CTE_EquiposPerm;";
+
+                using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    while (dr.Read())
+                    cmd.Parameters.Add(new SqlParameter("@EsAdmin", esAdmin ? 1 : 0));
+                    cmd.Parameters.Add(new SqlParameter("@IdEquipoRaiz", idEquipoUsuario.HasValue ? (object)idEquipoUsuario.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdIglesiaPre", (idIglesia.HasValue && idIglesia.Value > 0) ? (object)idIglesia.Value : DBNull.Value));
+
+                    using (SqlDataReader dr = cmd.ExecuteReader())
                     {
-                        lista.Add(new Maestro
+                        while (dr.Read())
                         {
-                            IdMaestro = Convert.ToInt32(dr["IdMaestro"]),
-                            IdIglesia = dr["IdIglesia"] != DBNull.Value ? Convert.ToInt32(dr["IdIglesia"]) : 0,
-                            NombreIglesia = dr["NombreIglesia"] != DBNull.Value ? dr["NombreIglesia"].ToString() : "",
-                            IdEquipoIglesia = dr["IdEquipoIglesia"] != DBNull.Value ? Convert.ToInt32(dr["IdEquipoIglesia"]) : 0,
-                            Nombres = dr["Nombres"].ToString(),
-                            Apellidos = dr["Apellidos"].ToString(),
-                            DocumentoIdentidad = dr["DocumentoIdentidad"] != DBNull.Value ? dr["DocumentoIdentidad"].ToString() : "",
-                            Celular = dr["Celular"] != DBNull.Value ? dr["Celular"].ToString() : "",
-                            Correo = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "",
-                            Activo = Convert.ToBoolean(dr["Activo"])
-                        });
+                            lista.Add(new Maestro
+                            {
+                                IdMaestro = Convert.ToInt32(dr["IdMaestro"]),
+                                IdIglesia = dr["IdIglesia"] != DBNull.Value ? Convert.ToInt32(dr["IdIglesia"]) : 0,
+                                NombreIglesia = dr["NombreIglesia"] != DBNull.Value ? dr["NombreIglesia"].ToString() : "",
+                                IdEquipoIglesia = dr["IdEquipoIglesia"] != DBNull.Value ? Convert.ToInt32(dr["IdEquipoIglesia"]) : 0,
+                                Nombres = dr["Nombres"].ToString(),
+                                Apellidos = dr["Apellidos"].ToString(),
+                                DocumentoIdentidad = dr["DocumentoIdentidad"] != DBNull.Value ? dr["DocumentoIdentidad"].ToString() : "",
+                                Celular = dr["Celular"] != DBNull.Value ? dr["Celular"].ToString() : "",
+                                Correo = dr["Correo"] != DBNull.Value ? dr["Correo"].ToString() : "",
+                                Activo = Convert.ToBoolean(dr["Activo"])
+                            });
+                        }
+
+                        if (dr.NextResult())
+                        {
+                            while (dr.Read())
+                            {
+                                if (dr["IdEquipo"] != DBNull.Value)
+                                    equiposPermitidos.Add(Convert.ToInt32(dr["IdEquipo"]));
+                            }
+                        }
                     }
                 }
             }
 
-            HashSet<int> equiposPermitidos = new HashSet<int>();
-            if (u != null && u.IdEquipo.HasValue)
-            {
-                equiposPermitidos.Add(u.IdEquipo.Value);
-                ObtenerEquiposHijosRecursivo(u.IdEquipo.Value, equiposPermitidos);
-            }
             ViewBag.EquiposPermitidos = equiposPermitidos;
 
             CargarIglesiasDisponibles();

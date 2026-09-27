@@ -1,4 +1,4 @@
-﻿using SOR.Helpers;
+using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -34,19 +34,6 @@ namespace SOR.Controllers
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
-
-                // Saneamiento preventivo: inactivar registros de asignaciÃ³n cuyos usuarios estÃ©n inactivos o suspendidos
-                // Estados vÃ¡lidos que conservan su asignaciÃ³n: 3 (Perfil Pendiente), 4 (Activo), 7 (Pend. Restablecimiento), 8 (Apro. Restablecimiento)
-                string sqlSaneamiento = @"
-                    UPDATE a
-                    SET a.Activo = 0
-                    FROM dbo.AsignacionesEquipo a
-                    INNER JOIN dbo.Usuarios u ON a.IdUsuario = u.IdUsuario
-                    WHERE a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
-                using (SqlCommand cmdSanear = new SqlCommand(sqlSaneamiento, cn))
-                {
-                    cmdSanear.ExecuteNonQuery();
-                }
 
                 string sql = @"
                     SELECT 

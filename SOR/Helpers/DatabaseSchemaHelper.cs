@@ -1136,6 +1136,164 @@ namespace SOR.Helpers
             {
                 cmd.ExecuteNonQuery();
             }
+
+            AsegurarEsquemaEventos(cn);
+        }
+
+        public static void AsegurarEsquemaEventos(SqlConnection cn)
+        {
+            string sql = @"
+                IF OBJECT_ID('dbo.Eventos', 'U') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('dbo.Eventos', 'TipoLugar') IS NULL
+                        ALTER TABLE dbo.Eventos ADD TipoLugar NVARCHAR(255) NULL;
+                    IF COL_LENGTH('dbo.Eventos', 'Hora') IS NULL
+                        ALTER TABLE dbo.Eventos ADD Hora NVARCHAR(50) NULL;
+                    IF COL_LENGTH('dbo.Eventos', 'CantidadAsistentes') IS NULL
+                        ALTER TABLE dbo.Eventos ADD CantidadAsistentes INT NULL DEFAULT 0;
+                END
+                IF OBJECT_ID('dbo.EventosAsistentes', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.EventosAsistentes (
+                        IdAsistente INT IDENTITY(1,1) PRIMARY KEY,
+                        IdEvento INT NOT NULL,
+                        IdParticipacion INT NOT NULL,
+                        NombreCompleto NVARCHAR(255) NOT NULL,
+                        Identificacion NVARCHAR(50) NULL,
+                        Telefono NVARCHAR(50) NULL,
+                        Correo NVARCHAR(255) NULL,
+                        FechaRegistro DATETIME DEFAULT GETDATE()
+                    );
+                END
+                IF OBJECT_ID('dbo.LogsCambiosEtapa', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.LogsCambiosEtapa (
+                        IdLog INT IDENTITY(1,1) PRIMARY KEY,
+                        IdIglesia INT NOT NULL,
+                        EtapaAnterior INT NOT NULL,
+                        EtapaNueva INT NOT NULL,
+                        IdUsuarioResponsable INT NOT NULL,
+                        FechaHora DATETIME DEFAULT GETDATE(),
+                        Detalles NVARCHAR(MAX) NULL
+                    );
+                END";
+            using (SqlCommand cmd = new SqlCommand(sql, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            string spEliminar = @"
+                CREATE OR ALTER PROCEDURE dbo.SpEliminarEvento
+                    @IdEvento INT
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    IF EXISTS (SELECT 1 FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND Asistio = 1)
+                    BEGIN
+                        RAISERROR('No se puede eliminar el evento porque tiene iglesias confirmadas.', 16, 1);
+                        RETURN;
+                    END
+                    IF EXISTS (SELECT 1 FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento)
+                    BEGIN
+                        RAISERROR('No se puede eliminar el evento porque tiene asistentes registrados.', 16, 1);
+                        RETURN;
+                    END
+                    IF EXISTS (SELECT 1 FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento)
+                    BEGIN
+                        RAISERROR('No se puede eliminar el evento porque tiene asistencia de maestros registrada.', 16, 1);
+                        RETURN;
+                    END
+                    DELETE FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento;
+                    DELETE FROM dbo.Eventos WHERE IdEvento = @IdEvento;
+                END;";
+            using (SqlCommand cmd = new SqlCommand(spEliminar, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            string spTaller = @"
+                CREATE OR ALTER PROCEDURE dbo.SpAvanzarEtapaTaller
+                    @IdParticipacion INT,
+                    @IdEvento INT,
+                    @Asistio BIT,
+                    @IdUsuarioResponsable INT
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    DECLARE @EtapaAnterior INT;
+                    DECLARE @IdIglesia INT;
+                    SELECT @EtapaAnterior = EtapaActual, @IdIglesia = IdIglesia
+                    FROM dbo.ParticipacionesIglesia
+                    WHERE IdParticipacion = @IdParticipacion;
+
+                    IF @EtapaAnterior = 5 AND @Asistio = 1
+                    BEGIN
+                        UPDATE dbo.ParticipacionesIglesia
+                        SET TallerParticipo = 1,
+                            EtapaActual = 6
+                        WHERE IdParticipacion = @IdParticipacion;
+
+                        INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
+                        VALUES (@IdParticipacion, GETDATE(), 'Completado Taller OCC', 'Taller OCC (Etapa 5)', 'Evaluación Asignación (Etapa 6)', @IdUsuarioResponsable, 'Asistencia al Taller OCC confirmada. Avanza a Evaluación Asignación.');
+
+                        INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
+                        VALUES (@IdIglesia, 5, 6, @IdUsuarioResponsable, GETDATE(), 'Transición automática tras registrar asistencia en Taller OCC.');
+                    END
+                    ELSE
+                    BEGIN
+                        UPDATE dbo.ParticipacionesIglesia
+                        SET TallerParticipo = @Asistio
+                        WHERE IdParticipacion = @IdParticipacion;
+                    END
+                END;";
+            using (SqlCommand cmd = new SqlCommand(spTaller, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            string spRecursos = @"
+                CREATE OR ALTER PROCEDURE dbo.SpAvanzarEtapaRecursos
+                    @IdParticipacion INT,
+                    @TallerNombre NVARCHAR(255),
+                    @TallerFecha DATETIME,
+                    @TallerLugar NVARCHAR(255),
+                    @CantNinos INT,
+                    @CantMaestrosReg INT,
+                    @CantMaestrosAsist INT,
+                    @CantMaestrosAus INT,
+                    @IdUsuarioResponsable INT
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    DECLARE @EtapaAnterior INT;
+                    DECLARE @IdIglesia INT;
+                    SELECT @EtapaAnterior = EtapaActual, @IdIglesia = IdIglesia
+                    FROM dbo.ParticipacionesIglesia
+                    WHERE IdParticipacion = @IdParticipacion;
+
+                    UPDATE dbo.ParticipacionesIglesia SET
+                        EtapaActual = 7,
+                        EstadoEvaluacion = 'Aprobado',
+                        TallerParticipo = 1,
+                        TallerNombre = @TallerNombre,
+                        TallerFecha = @TallerFecha,
+                        TallerLugar = @TallerLugar,
+                        TallerCantNinos = @CantNinos,
+                        TallerCantMaestrosReg = @CantMaestrosReg,
+                        TallerCantMaestrosAsist = @CantMaestrosAsist,
+                        TallerCantMaestrosAus = @CantMaestrosAus
+                    WHERE IdParticipacion = @IdParticipacion;
+
+                    INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
+                    VALUES (@IdParticipacion, GETDATE(), 'Asignación de Recursos Finalizada', 'Evaluación Asignación (Etapa 6)', 'Aprobación Final (Etapa 7)', @IdUsuarioResponsable, 'Se finalizó la asignación de recursos y se completó la participación.');
+
+                    INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
+                    VALUES (@IdIglesia, @EtapaAnterior, 7, @IdUsuarioResponsable, GETDATE(), 'Transición de asignación final de recursos y cierre de participación.');
+                END;";
+            using (SqlCommand cmd = new SqlCommand(spRecursos, cn))
+            {
+                cmd.ExecuteNonQuery();
+            }
         }
     }
 }
