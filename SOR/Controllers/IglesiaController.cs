@@ -1,13 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
-using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using System.Xml.Linq;
 using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
@@ -1351,17 +1352,26 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 if (ext == ".csv")
                 {
                     // Lector nativo CSV
-                    using (StreamReader reader = new StreamReader(filePath))
+                    using (StreamReader reader = new StreamReader(filePath, System.Text.Encoding.UTF8))
                     {
-                        string headerLine = reader.ReadLine(); // Saltar cabecera
                         string line;
-                        int filaNum = 1;
+                        int filaNum = 0;
                         while ((line = reader.ReadLine()) != null)
                         {
                             filaNum++;
+                            if (string.IsNullOrWhiteSpace(line)) continue;
                             string[] cols = line.Split(',');
-                            // Leer y procesar solo si la columna 0 es un número del 1 al 200
-                            if (int.TryParse(cols[0].Trim(), out int noFila) && noFila >= 1 && noFila <= 200)
+
+                            string col0 = cols.Length > 0 ? cols[0].Trim() : "";
+                            string col1 = cols.Length > 1 ? cols[1].Trim() : "";
+
+                            // Ignorar cabeceras y fila de ejemplo
+                            if (col0.Equals("NO", StringComparison.OrdinalIgnoreCase) || col0.Equals("Ejemplo", StringComparison.OrdinalIgnoreCase) || col1.StartsWith("NombredeIglesia", StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(col1))
                             {
                                 try
                                 {
@@ -1371,7 +1381,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                                 }
                                 catch (Exception ex)
                                 {
-                                    if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} (NO: {noFila}): {ex.Message}");
+                                    if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} ({col1}): {ex.Message}");
                                 }
                             }
                         }
@@ -1379,42 +1389,35 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 }
                 else
                 {
-                    // Lector OleDb Excel
-                    string conString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={filePath};Extended Properties=\"Excel 12.0 Xml;HDR=YES;IMEX=1;\"";
-                    using (OleDbConnection connExcel = new OleDbConnection(conString))
+                    // Lector OpenXML nativo (sin dependencias externas de ACE OLEDB)
+                    List<string[]> filasExcel = LeerFilasExcelOpenXml(filePath);
+                    int filaNum = 0;
+                    foreach (var cols in filasExcel)
                     {
-                        connExcel.Open();
-                        DataTable dtSchema = connExcel.GetSchema("Tables");
-                        if (dtSchema.Rows.Count > 0)
-                        {
-                            string sheetName = dtSchema.Rows[0]["TABLE_NAME"].ToString();
-                            OleDbCommand cmd = new OleDbCommand("SELECT * FROM [" + sheetName + "]", connExcel);
-                            int filaNum = 1;
-                            using (OleDbDataReader dr = cmd.ExecuteReader())
-                            {
-                                while (dr.Read())
-                                {
-                                    filaNum++;
-                                    string noFilaStr = dr[0] != DBNull.Value ? dr[0].ToString().Trim() : "";
-                                    
-                                    // Leer y procesar solo si la columna 0 es un número del 1 al 200
-                                    if (int.TryParse(noFilaStr, out int noFila) && noFila >= 1 && noFila <= 200)
-                                    {
-                                        // Ignoramos si no tiene nombre
-                                        if (dr.FieldCount <= 1 || dr[1] == DBNull.Value || string.IsNullOrWhiteSpace(dr[1].ToString())) continue;
+                        filaNum++;
+                        if (cols == null || cols.Length == 0) continue;
 
-                                        try
-                                        {
-                                            Iglesia ig = MapearDataReaderImport(dr, u.IdEquipo ?? 1);
-                                            ig.IdEquipo = u.IdEquipo ?? 1;
-                                            iglesiasPreview.Add(ig);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} (NO: {noFila}): {ex.Message}");
-                                        }
-                                    }
-                                }
+                        string col0 = cols.Length > 0 ? cols[0].Trim() : "";
+                        string col1 = cols.Length > 1 ? cols[1].Trim() : "";
+
+                        // Ignorar encabezados y fila de ejemplo
+                        if (col0.Equals("NO", StringComparison.OrdinalIgnoreCase) || col0.Equals("Ejemplo", StringComparison.OrdinalIgnoreCase) || col1.StartsWith("NombredeIglesia", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        // Si tiene nombre de iglesia válido
+                        if (!string.IsNullOrWhiteSpace(col1))
+                        {
+                            try
+                            {
+                                Iglesia ig = MapearColumnasImport(cols);
+                                ig.IdEquipo = u.IdEquipo ?? 1;
+                                iglesiasPreview.Add(ig);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} ({col1}): {ex.Message}");
                             }
                         }
                     }
@@ -1422,7 +1425,13 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
                 if (detalleErrores.Any())
                 {
-                    TempData["MensajeError"] = "Se encontraron errores al leer algunas filas:<br/>" + string.Join("<br/>", detalleErrores);
+                    TempData["MensajeError"] = "Se encontraron advertencias al leer algunas filas:<br/>" + string.Join("<br/>", detalleErrores);
+                }
+
+                if (!iglesiasPreview.Any())
+                {
+                    TempData["MensajeError"] = "No se encontraron registros de iglesias válidos en el archivo subido. Asegúrese de completar los nombres de las iglesias a partir de la fila de datos de la plantilla.";
+                    return RedirectToAction("Index");
                 }
 
                 Session["IglesiasImportPreview"] = iglesiasPreview;
@@ -1432,7 +1441,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
+                TempData["MensajeError"] = "Error al procesar el archivo de importación: " + ex.Message;
                 return RedirectToAction("Index");
             }
             finally
@@ -1570,57 +1579,114 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
             return ig;
         }
 
-        private Iglesia MapearDataReaderImport(OleDbDataReader dr, int defaultIdEquipo)
+        private static int LetrasColumnaAIndice(string cellRef)
         {
-            Iglesia ig = new Iglesia
+            if (string.IsNullOrEmpty(cellRef)) return 0;
+            string colLetters = "";
+            foreach (char c in cellRef)
             {
-                NombreIglesia = dr.FieldCount > 1 && dr[1] != DBNull.Value ? SanitizarFormulaExcel(dr[1].ToString()) : "Iglesia Importada",
-                RNC_Cedula = dr.FieldCount > 2 && dr[2] != DBNull.Value ? SanitizarFormulaExcel(dr[2].ToString()) : "",
-                Telefono = dr.FieldCount > 3 && dr[3] != DBNull.Value ? SanitizarFormulaExcel(dr[3].ToString()) : "",
-                CorreoInstitucion = dr.FieldCount > 4 && dr[4] != DBNull.Value ? SanitizarFormulaExcel(dr[4].ToString()) : "",
-                Provincia = dr.FieldCount > 5 && dr[5] != DBNull.Value ? SanitizarFormulaExcel(dr[5].ToString()) : "",
-                Ciudad = dr.FieldCount > 6 && dr[6] != DBNull.Value ? SanitizarFormulaExcel(dr[6].ToString()) : "",
-                Sector = dr.FieldCount > 7 && dr[7] != DBNull.Value ? SanitizarFormulaExcel(dr[7].ToString()) : "",
-                Calle = dr.FieldCount > 8 && dr[8] != DBNull.Value ? SanitizarFormulaExcel(dr[8].ToString()) : "",
-                Numero = dr.FieldCount > 9 && dr[9] != DBNull.Value ? SanitizarFormulaExcel(dr[9].ToString()) : "",
-                Referencia = dr.FieldCount > 10 && dr[10] != DBNull.Value ? SanitizarFormulaExcel(dr[10].ToString()) : "",
-                Denominacion = dr.FieldCount > 11 && dr[11] != DBNull.Value ? SanitizarFormulaExcel(dr[11].ToString()) : "",
-                TipoOrganizacion = "Iglesia",
-                IdEquipo = defaultIdEquipo
-            };
-
-            SepararNombresApellidos(dr.FieldCount > 12 && dr[12] != DBNull.Value ? dr[12].ToString() : "", out string pNombres, out string pApellidos);
-            ig.Pastor = new PersonaIglesia
+                if (char.IsLetter(c)) colLetters += c;
+                else break;
+            }
+            int sum = 0;
+            foreach (char c in colLetters.ToUpperInvariant())
             {
-                TipoPersona = "Pastor",
-                Nombres = SanitizarFormulaExcel(pNombres),
-                Apellidos = SanitizarFormulaExcel(pApellidos),
-                DocumentoIdentidad = dr.FieldCount > 13 && dr[13] != DBNull.Value ? SanitizarFormulaExcel(dr[13].ToString()) : "",
-                Celular = dr.FieldCount > 14 && dr[14] != DBNull.Value ? SanitizarFormulaExcel(dr[14].ToString()) : "",
-                Correo = dr.FieldCount > 15 && dr[15] != DBNull.Value ? SanitizarFormulaExcel(dr[15].ToString()) : ""
-            };
+                sum *= 26;
+                sum += (c - 'A' + 1);
+            }
+            return Math.Max(0, sum - 1);
+        }
 
-            SepararNombresApellidos(dr.FieldCount > 16 && dr[16] != DBNull.Value ? dr[16].ToString() : "", out string lNombres, out string lApellidos);
-            ig.LiderMinisterial = new PersonaIglesia
+        private static List<string[]> LeerFilasExcelOpenXml(string filePath)
+        {
+            List<string[]> filas = new List<string[]>();
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (ZipArchive archive = new ZipArchive(fs, ZipArchiveMode.Read))
             {
-                TipoPersona = "LiderMinisterial",
-                Nombres = SanitizarFormulaExcel(lNombres),
-                Apellidos = SanitizarFormulaExcel(lApellidos),
-                DocumentoIdentidad = dr.FieldCount > 17 && dr[17] != DBNull.Value ? SanitizarFormulaExcel(dr[17].ToString()) : "",
-                Celular = dr.FieldCount > 18 && dr[18] != DBNull.Value ? SanitizarFormulaExcel(dr[18].ToString()) : "",
-                Correo = dr.FieldCount > 19 && dr[19] != DBNull.Value ? SanitizarFormulaExcel(dr[19].ToString()) : ""
-            };
+                // 1. Cargar Shared Strings si existen
+                List<string> sharedStrings = new List<string>();
+                ZipArchiveEntry sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml") 
+                    ?? archive.Entries.FirstOrDefault(e => e.FullName.EndsWith("sharedStrings.xml", StringComparison.OrdinalIgnoreCase));
+                
+                if (sharedStringsEntry != null)
+                {
+                    using (Stream s = sharedStringsEntry.Open())
+                    {
+                        XDocument xdoc = XDocument.Load(s);
+                        XNamespace ns = xdoc.Root != null ? xdoc.Root.GetDefaultNamespace() : XNamespace.None;
+                        foreach (XElement si in xdoc.Descendants(ns + "si"))
+                        {
+                            string text = string.Concat(si.Descendants(ns + "t").Select(t => t.Value));
+                            sharedStrings.Add(text);
+                        }
+                    }
+                }
 
-            if (dr.FieldCount > 20 && dr[20] != DBNull.Value && int.TryParse(dr[20].ToString(), out int m)) ig.CantidadMaestros = m;
-            if (dr.FieldCount > 21 && dr[21] != DBNull.Value && int.TryParse(dr[21].ToString(), out int n)) ig.CantidadNinos = n;
+                // 2. Encontrar la primera hoja (sheet1.xml o primer worksheet disponible)
+                ZipArchiveEntry sheetEntry = archive.GetEntry("xl/worksheets/sheet1.xml") 
+                    ?? archive.Entries.FirstOrDefault(e => e.FullName.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase) && e.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase));
 
-            string reportoVal = dr.FieldCount > 22 && dr[22] != DBNull.Value ? dr[22].ToString().Trim().ToUpper() : "NO";
-            ig.ParticipacionActual = new ParticipacionIglesia
-            {
-                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÍ") ? "Reportó" : "No Reportó"
-            };
+                if (sheetEntry != null)
+                {
+                    using (Stream s = sheetEntry.Open())
+                    {
+                        XDocument xdoc = XDocument.Load(s);
+                        XNamespace ns = xdoc.Root != null ? xdoc.Root.GetDefaultNamespace() : XNamespace.None;
 
-            return ig;
+                        foreach (XElement row in xdoc.Descendants(ns + "row"))
+                        {
+                            var cElements = row.Elements(ns + "c").ToList();
+                            if (!cElements.Any()) continue;
+
+                            int maxCol = 0;
+                            Dictionary<int, string> rowValues = new Dictionary<int, string>();
+
+                            foreach (XElement c in cElements)
+                            {
+                                string rAttr = (string)c.Attribute("r");
+                                int colIndex = !string.IsNullOrEmpty(rAttr) ? LetrasColumnaAIndice(rAttr) : maxCol;
+                                if (colIndex > maxCol) maxCol = colIndex;
+
+                                string tAttr = (string)c.Attribute("t");
+                                string cellValue = "";
+
+                                if (tAttr == "s") // Shared String
+                                {
+                                    XElement vElem = c.Element(ns + "v");
+                                    if (vElem != null && int.TryParse(vElem.Value, out int sIndex) && sIndex >= 0 && sIndex < sharedStrings.Count)
+                                    {
+                                        cellValue = sharedStrings[sIndex];
+                                    }
+                                }
+                                else if (tAttr == "inlineStr") // Inline String
+                                {
+                                    XElement isElem = c.Element(ns + "is");
+                                    if (isElem != null)
+                                    {
+                                        cellValue = string.Concat(isElem.Descendants(ns + "t").Select(t => t.Value));
+                                    }
+                                }
+                                else // Número, fecha o string directo
+                                {
+                                    XElement vElem = c.Element(ns + "v");
+                                    if (vElem != null) cellValue = vElem.Value;
+                                }
+
+                                rowValues[colIndex] = cellValue != null ? cellValue.Trim() : "";
+                            }
+
+                            string[] cols = new string[maxCol + 1];
+                            for (int i = 0; i <= maxCol; i++)
+                            {
+                                cols[i] = rowValues.ContainsKey(i) ? rowValues[i] : "";
+                            }
+
+                            filas.Add(cols);
+                        }
+                    }
+                }
+            }
+            return filas;
         }
 
         // ============================================================================
