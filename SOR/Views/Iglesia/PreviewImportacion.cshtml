@@ -96,34 +96,34 @@
                                         <!-- PASTOR -->
                                         <td>
                                             <input type="hidden" name="iglesias[@i].Pastor.TipoPersona" value="Pastor" />
-                                            <input type="text" name="iglesias[@i].Pastor.Nombres" value="@Model[i].Pastor.Nombres" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Pastor.Nombres) ? "is-invalid" : "")" required />
+                                            <input type="text" name="iglesias[@i].Pastor.Nombres" value="@(Model[i].Pastor != null ? Model[i].Pastor.Nombres : "")" class="form-control form-control-sm @(Model[i].Pastor == null || string.IsNullOrWhiteSpace(Model[i].Pastor.Nombres) ? "is-invalid" : "")" required />
                                         </td>
                                         <td>
-                                            <input type="text" name="iglesias[@i].Pastor.Apellidos" value="@Model[i].Pastor.Apellidos" class="form-control form-control-sm" />
+                                            <input type="text" name="iglesias[@i].Pastor.Apellidos" value="@(Model[i].Pastor != null ? Model[i].Pastor.Apellidos : "")" class="form-control form-control-sm" />
                                         </td>
                                         <td>
-                                            <input type="text" name="iglesias[@i].Pastor.DocumentoIdentidad" value="@Model[i].Pastor.DocumentoIdentidad" class="form-control form-control-sm" data-val-type="cedula" />
+                                            <input type="text" name="iglesias[@i].Pastor.DocumentoIdentidad" value="@(Model[i].Pastor != null ? Model[i].Pastor.DocumentoIdentidad : "")" class="form-control form-control-sm" data-val-type="cedula" />
                                         </td>
                                         <td>
-                                            <input type="text" name="iglesias[@i].Pastor.Celular" value="@Model[i].Pastor.Celular" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].Pastor.Celular) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                            <input type="text" name="iglesias[@i].Pastor.Celular" value="@(Model[i].Pastor != null ? Model[i].Pastor.Celular : "")" class="form-control form-control-sm @(Model[i].Pastor == null || string.IsNullOrWhiteSpace(Model[i].Pastor.Celular) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                            <input type="hidden" name="iglesias[@i].Pastor.Correo" value="@(Model[i].Pastor != null ? Model[i].Pastor.Correo : "")" />
                                         </td>
-                                        <input type="hidden" name="iglesias[@i].Pastor.Correo" value="@Model[i].Pastor.Correo" />
 
                                         <!-- LIDER -->
                                         <td>
                                             <input type="hidden" name="iglesias[@i].LiderMinisterial.TipoPersona" value="LiderMinisterial" />
-                                            <input type="text" name="iglesias[@i].LiderMinisterial.Nombres" value="@Model[i].LiderMinisterial.Nombres" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].LiderMinisterial.Nombres) ? "is-invalid" : "")" required />
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.Nombres" value="@(Model[i].LiderMinisterial != null ? Model[i].LiderMinisterial.Nombres : "")" class="form-control form-control-sm @(Model[i].LiderMinisterial == null || string.IsNullOrWhiteSpace(Model[i].LiderMinisterial.Nombres) ? "is-invalid" : "")" required />
                                         </td>
                                         <td>
-                                            <input type="text" name="iglesias[@i].LiderMinisterial.Apellidos" value="@Model[i].LiderMinisterial.Apellidos" class="form-control form-control-sm" />
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.Apellidos" value="@(Model[i].LiderMinisterial != null ? Model[i].LiderMinisterial.Apellidos : "")" class="form-control form-control-sm" />
                                         </td>
                                         <td>
-                                            <input type="text" name="iglesias[@i].LiderMinisterial.DocumentoIdentidad" value="@Model[i].LiderMinisterial.DocumentoIdentidad" class="form-control form-control-sm" data-val-type="cedula" />
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.DocumentoIdentidad" value="@(Model[i].LiderMinisterial != null ? Model[i].LiderMinisterial.DocumentoIdentidad : "")" class="form-control form-control-sm" data-val-type="cedula" />
                                         </td>
                                         <td>
-                                            <input type="text" name="iglesias[@i].LiderMinisterial.Celular" value="@Model[i].LiderMinisterial.Celular" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model[i].LiderMinisterial.Celular) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                            <input type="text" name="iglesias[@i].LiderMinisterial.Celular" value="@(Model[i].LiderMinisterial != null ? Model[i].LiderMinisterial.Celular : "")" class="form-control form-control-sm @(Model[i].LiderMinisterial == null || string.IsNullOrWhiteSpace(Model[i].LiderMinisterial.Celular) ? "is-invalid" : "")" required data-val-type="telefono" />
+                                            <input type="hidden" name="iglesias[@i].LiderMinisterial.Correo" value="@(Model[i].LiderMinisterial != null ? Model[i].LiderMinisterial.Correo : "")" />
                                         </td>
-                                        <input type="hidden" name="iglesias[@i].LiderMinisterial.Correo" value="@Model[i].LiderMinisterial.Correo" />
 
                                         <!-- OTROS DATOS -->
                                         <td>
@@ -137,8 +137,8 @@
                                                 <option value="Reportó" @(Model[i].ParticipacionActual != null && Model[i].ParticipacionActual.EstatusEvaluacionReporte == "Reportó" ? "selected" : "")>SÍ</option>
                                                 <option value="No Reportó" @(Model[i].ParticipacionActual == null || Model[i].ParticipacionActual.EstatusEvaluacionReporte != "Reportó" ? "selected" : "")>NO</option>
                                             </select>
+                                            <input type="hidden" name="iglesias[@i].TipoOrganizacion" value="Iglesia" />
                                         </td>
-                                        <input type="hidden" name="iglesias[@i].TipoOrganizacion" value="Iglesia" />
                                         <td class="text-center">
                                             <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row" title="Eliminar registro">
                                                 <i class="bi bi-x-lg"></i>

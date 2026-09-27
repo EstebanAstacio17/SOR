@@ -1337,13 +1337,6 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 return RedirectToAction("Index");
             }
 
-            string uploadPath = Server.MapPath("~/Uploads/Importaciones/");
-            if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
-
-            string filePath = Path.Combine(uploadPath, Guid.NewGuid().ToString() + ext);
-            archivoExcel.SaveAs(filePath);
-
-
             List<Iglesia> iglesiasPreview = new List<Iglesia>();
             List<string> detalleErrores = new List<string>();
 
@@ -1351,8 +1344,8 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
             {
                 if (ext == ".csv")
                 {
-                    // Lector nativo CSV
-                    using (StreamReader reader = new StreamReader(filePath, System.Text.Encoding.UTF8))
+                    // Lector nativo CSV desde memoria
+                    using (StreamReader reader = new StreamReader(archivoExcel.InputStream, System.Text.Encoding.UTF8))
                     {
                         string line;
                         int filaNum = 0;
@@ -1389,8 +1382,8 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 }
                 else
                 {
-                    // Lector OpenXML nativo (sin dependencias externas de ACE OLEDB)
-                    List<string[]> filasExcel = LeerFilasExcelOpenXml(filePath);
+                    // Lector OpenXML nativo desde memoria (sin dependencias externas de ACE OLEDB)
+                    List<string[]> filasExcel = LeerFilasExcelOpenXml(archivoExcel.InputStream);
                     int filaNum = 0;
                     foreach (var cols in filasExcel)
                     {
@@ -1443,10 +1436,6 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
             {
                 TempData["MensajeError"] = "Error al procesar el archivo de importación: " + ex.Message;
                 return RedirectToAction("Index");
-            }
-            finally
-            {
-                if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
             }
         }
 
@@ -1526,51 +1515,60 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
             }
         }
 
+        private static string ObtenerCol(string[] cols, int idx)
+        {
+            if (cols == null || idx >= cols.Length || cols[idx] == null) return "";
+            return cols[idx].Trim();
+        }
+
         private Iglesia MapearColumnasImport(string[] cols)
         {
+            string col1 = ObtenerCol(cols, 1);
             Iglesia ig = new Iglesia
             {
-                NombreIglesia = cols.Length > 1 ? SanitizarFormulaExcel(cols[1]) : "Iglesia Importada",
-                RNC_Cedula = cols.Length > 2 ? SanitizarFormulaExcel(cols[2]) : "",
-                Telefono = cols.Length > 3 ? SanitizarFormulaExcel(cols[3]) : "",
-                CorreoInstitucion = cols.Length > 4 ? SanitizarFormulaExcel(cols[4]) : "",
-                Provincia = cols.Length > 5 ? SanitizarFormulaExcel(cols[5]) : "",
-                Ciudad = cols.Length > 6 ? SanitizarFormulaExcel(cols[6]) : "",
-                Sector = cols.Length > 7 ? SanitizarFormulaExcel(cols[7]) : "",
-                Calle = cols.Length > 8 ? SanitizarFormulaExcel(cols[8]) : "",
-                Numero = cols.Length > 9 ? SanitizarFormulaExcel(cols[9]) : "",
-                Referencia = cols.Length > 10 ? SanitizarFormulaExcel(cols[10]) : "",
-                Denominacion = cols.Length > 11 ? SanitizarFormulaExcel(cols[11]) : "",
+                NombreIglesia = !string.IsNullOrWhiteSpace(col1) ? SanitizarFormulaExcel(col1) : "Iglesia Importada",
+                RNC_Cedula = SanitizarFormulaExcel(ObtenerCol(cols, 2)) ?? "",
+                Telefono = SanitizarFormulaExcel(ObtenerCol(cols, 3)) ?? "",
+                CorreoInstitucion = SanitizarFormulaExcel(ObtenerCol(cols, 4)) ?? "",
+                Provincia = SanitizarFormulaExcel(ObtenerCol(cols, 5)) ?? "",
+                Ciudad = SanitizarFormulaExcel(ObtenerCol(cols, 6)) ?? "",
+                Sector = SanitizarFormulaExcel(ObtenerCol(cols, 7)) ?? "",
+                Calle = SanitizarFormulaExcel(ObtenerCol(cols, 8)) ?? "",
+                Numero = SanitizarFormulaExcel(ObtenerCol(cols, 9)) ?? "",
+                Referencia = SanitizarFormulaExcel(ObtenerCol(cols, 10)) ?? "",
+                Denominacion = SanitizarFormulaExcel(ObtenerCol(cols, 11)) ?? "",
                 TipoOrganizacion = "Iglesia",
                 IdEquipo = 1 // Se reasignará luego
             };
 
-            SepararNombresApellidos(cols.Length > 12 ? cols[12] : "", out string pNombres, out string pApellidos);
+            SepararNombresApellidos(ObtenerCol(cols, 12), out string pNombres, out string pApellidos);
             ig.Pastor = new PersonaIglesia
             {
                 TipoPersona = "Pastor",
-                Nombres = SanitizarFormulaExcel(pNombres),
-                Apellidos = SanitizarFormulaExcel(pApellidos),
-                DocumentoIdentidad = cols.Length > 13 ? SanitizarFormulaExcel(cols[13]) : "",
-                Celular = cols.Length > 14 ? SanitizarFormulaExcel(cols[14]) : "",
-                Correo = cols.Length > 15 ? SanitizarFormulaExcel(cols[15]) : ""
+                Nombres = SanitizarFormulaExcel(pNombres) ?? "",
+                Apellidos = SanitizarFormulaExcel(pApellidos) ?? "",
+                DocumentoIdentidad = SanitizarFormulaExcel(ObtenerCol(cols, 13)) ?? "",
+                Celular = SanitizarFormulaExcel(ObtenerCol(cols, 14)) ?? "",
+                Correo = SanitizarFormulaExcel(ObtenerCol(cols, 15)) ?? ""
             };
 
-            SepararNombresApellidos(cols.Length > 16 ? cols[16] : "", out string lNombres, out string lApellidos);
+            SepararNombresApellidos(ObtenerCol(cols, 16), out string lNombres, out string lApellidos);
             ig.LiderMinisterial = new PersonaIglesia
             {
                 TipoPersona = "LiderMinisterial",
-                Nombres = SanitizarFormulaExcel(lNombres),
-                Apellidos = SanitizarFormulaExcel(lApellidos),
-                DocumentoIdentidad = cols.Length > 17 ? SanitizarFormulaExcel(cols[17]) : "",
-                Celular = cols.Length > 18 ? SanitizarFormulaExcel(cols[18]) : "",
-                Correo = cols.Length > 19 ? SanitizarFormulaExcel(cols[19]) : ""
+                Nombres = SanitizarFormulaExcel(lNombres) ?? "",
+                Apellidos = SanitizarFormulaExcel(lApellidos) ?? "",
+                DocumentoIdentidad = SanitizarFormulaExcel(ObtenerCol(cols, 17)) ?? "",
+                Celular = SanitizarFormulaExcel(ObtenerCol(cols, 18)) ?? "",
+                Correo = SanitizarFormulaExcel(ObtenerCol(cols, 19)) ?? ""
             };
 
-            ig.CantidadMaestros = cols.Length > 20 && int.TryParse(cols[20], out int m) ? (int?)m : null;
-            ig.CantidadNinos = cols.Length > 21 && int.TryParse(cols[21], out int n) ? (int?)n : null;
+            string col20 = ObtenerCol(cols, 20);
+            string col21 = ObtenerCol(cols, 21);
+            ig.CantidadMaestros = int.TryParse(col20, out int m) ? (int?)m : null;
+            ig.CantidadNinos = int.TryParse(col21, out int n) ? (int?)n : null;
 
-            string reportoVal = cols.Length > 22 ? cols[22].Trim().ToUpper() : "NO";
+            string reportoVal = ObtenerCol(cols, 22).ToUpper();
             ig.ParticipacionActual = new ParticipacionIglesia
             {
                 EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÍ") ? "Reportó" : "No Reportó"
@@ -1599,9 +1597,16 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
         private static List<string[]> LeerFilasExcelOpenXml(string filePath)
         {
-            List<string[]> filas = new List<string[]>();
             using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (ZipArchive archive = new ZipArchive(fs, ZipArchiveMode.Read))
+            {
+                return LeerFilasExcelOpenXml(fs);
+            }
+        }
+
+        private static List<string[]> LeerFilasExcelOpenXml(Stream stream)
+        {
+            List<string[]> filas = new List<string[]>();
+            using (ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read, true))
             {
                 // 1. Cargar Shared Strings si existen
                 List<string> sharedStrings = new List<string>();
