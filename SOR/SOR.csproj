@@ -250,6 +250,7 @@
     <Content Include="Views\Iglesia\Crear.cshtml" />
     <Content Include="Views\Iglesia\Detalle.cshtml" />
     <Content Include="Views\Iglesia\Editar.cshtml" />
+    <Content Include="Views\Iglesia\PreviewImportacion.cshtml" />
     <Content Include="Views\Reporte\Index.cshtml" />
     <Content Include="Views\Equipos\Index.cshtml" />
     <Content Include="Views\Temporadas\Index.cshtml" />
