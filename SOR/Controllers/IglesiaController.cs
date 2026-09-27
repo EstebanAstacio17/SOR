@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -1292,6 +1292,11 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
         public ActionResult ImportarMasivo(HttpPostedFileBase archivoExcel, int? idTemporadaImportar)
         {
             Usuario u = (Usuario)Session["usuario"];
+            if (u == null)
+            {
+                return RedirectToAction("Login", "Acceso");
+            }
+
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2)
             {
                 TempData["MensajeError"] = "Tu rol no tiene permisos para realizar importaciones masivas de iglesias.";
@@ -1312,16 +1317,24 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
             // Validar que la temporada seleccionada exista en el sistema
             bool esTemporadaValida = false;
-            using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
+            try
             {
-                cn.Open();
-                string sqlCheck = "SELECT COUNT(1) FROM dbo.Temporadas WHERE IdTemporada = @Id;";
-                using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn))
+                using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
-                    cmdCheck.Parameters.Add(new SqlParameter("@Id", idTemporadaImportar.Value));
-                    int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
-                    if (count > 0) esTemporadaValida = true;
+                    cn.Open();
+                    string sqlCheck = "SELECT COUNT(1) FROM dbo.Temporadas WHERE IdTemporada = @Id;";
+                    using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn))
+                    {
+                        cmdCheck.Parameters.Add(new SqlParameter("@Id", idTemporadaImportar.Value));
+                        int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                        if (count > 0) esTemporadaValida = true;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = "Error al verificar la temporada: " + ex.Message;
+                return RedirectToAction("Index");
             }
 
             if (!esTemporadaValida)
@@ -1342,28 +1355,69 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
             try
             {
-                if (ext == ".csv")
+                using (MemoryStream ms = new MemoryStream())
                 {
-                    // Lector nativo CSV desde memoria
-                    using (StreamReader reader = new StreamReader(archivoExcel.InputStream, System.Text.Encoding.UTF8))
+                    archivoExcel.InputStream.CopyTo(ms);
+                    ms.Position = 0;
+
+                    if (ext == ".csv")
                     {
-                        string line;
+                        // Lector nativo CSV desde MemoryStream
+                        using (StreamReader reader = new StreamReader(ms, System.Text.Encoding.UTF8))
+                        {
+                            string line;
+                            int filaNum = 0;
+                            while ((line = reader.ReadLine()) != null)
+                            {
+                                filaNum++;
+                                if (string.IsNullOrWhiteSpace(line)) continue;
+                                string[] cols = line.Split(',');
+
+                                string col0 = cols.Length > 0 ? cols[0].Trim() : "";
+                                string col1 = cols.Length > 1 ? cols[1].Trim() : "";
+
+                                // Ignorar cabeceras y fila de ejemplo
+                                if (col0.Equals("NO", StringComparison.OrdinalIgnoreCase) || col0.Equals("Ejemplo", StringComparison.OrdinalIgnoreCase) || col1.StartsWith("NombredeIglesia", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    continue;
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(col1))
+                                {
+                                    try
+                                    {
+                                        Iglesia ig = MapearColumnasImport(cols);
+                                        ig.IdEquipo = u.IdEquipo ?? 1;
+                                        iglesiasPreview.Add(ig);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} ({col1}): {ex.Message}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Lector OpenXML nativo desde MemoryStream con Seek garantizado
+                        List<string[]> filasExcel = LeerFilasExcelOpenXml(ms);
                         int filaNum = 0;
-                        while ((line = reader.ReadLine()) != null)
+                        foreach (var cols in filasExcel)
                         {
                             filaNum++;
-                            if (string.IsNullOrWhiteSpace(line)) continue;
-                            string[] cols = line.Split(',');
+                            if (cols == null || cols.Length == 0) continue;
 
                             string col0 = cols.Length > 0 ? cols[0].Trim() : "";
                             string col1 = cols.Length > 1 ? cols[1].Trim() : "";
 
-                            // Ignorar cabeceras y fila de ejemplo
+                            // Ignorar encabezados y fila de ejemplo
                             if (col0.Equals("NO", StringComparison.OrdinalIgnoreCase) || col0.Equals("Ejemplo", StringComparison.OrdinalIgnoreCase) || col1.StartsWith("NombredeIglesia", StringComparison.OrdinalIgnoreCase))
                             {
                                 continue;
                             }
 
+                            // Si tiene nombre de iglesia válido
                             if (!string.IsNullOrWhiteSpace(col1))
                             {
                                 try
@@ -1376,41 +1430,6 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                                 {
                                     if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} ({col1}): {ex.Message}");
                                 }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // Lector OpenXML nativo desde memoria (sin dependencias externas de ACE OLEDB)
-                    List<string[]> filasExcel = LeerFilasExcelOpenXml(archivoExcel.InputStream);
-                    int filaNum = 0;
-                    foreach (var cols in filasExcel)
-                    {
-                        filaNum++;
-                        if (cols == null || cols.Length == 0) continue;
-
-                        string col0 = cols.Length > 0 ? cols[0].Trim() : "";
-                        string col1 = cols.Length > 1 ? cols[1].Trim() : "";
-
-                        // Ignorar encabezados y fila de ejemplo
-                        if (col0.Equals("NO", StringComparison.OrdinalIgnoreCase) || col0.Equals("Ejemplo", StringComparison.OrdinalIgnoreCase) || col1.StartsWith("NombredeIglesia", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
-
-                        // Si tiene nombre de iglesia válido
-                        if (!string.IsNullOrWhiteSpace(col1))
-                        {
-                            try
-                            {
-                                Iglesia ig = MapearColumnasImport(cols);
-                                ig.IdEquipo = u.IdEquipo ?? 1;
-                                iglesiasPreview.Add(ig);
-                            }
-                            catch (Exception ex)
-                            {
-                                if (detalleErrores.Count < 10) detalleErrores.Add($"Fila {filaNum} ({col1}): {ex.Message}");
                             }
                         }
                     }
