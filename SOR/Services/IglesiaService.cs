@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -29,15 +29,15 @@ namespace SOR.Services
         public static bool ValidarFormatoRncCedula(string doc)
         {
             if (string.IsNullOrWhiteSpace(doc)) return false;
-            string clean = doc.Replace("-", "").Replace(" ", "").Trim();
-            return System.Text.RegularExpressions.Regex.IsMatch(clean, @"^\d{9}$|^\d{11}$");
+            string clean = System.Text.RegularExpressions.Regex.Replace(doc, @"\D", "");
+            return clean.Length == 9 || clean.Length == 11;
         }
 
         public static bool ValidarFormatoTelefono(string tel)
         {
             if (string.IsNullOrWhiteSpace(tel)) return false;
-            string clean = tel.Replace("-", "").Replace(" ", "").Replace("(", "").Replace(")", "").Trim();
-            return System.Text.RegularExpressions.Regex.IsMatch(clean, @"^\d{10}$");
+            string clean = System.Text.RegularExpressions.Regex.Replace(tel, @"\D", "");
+            return clean.Length == 10;
         }
 
         public static bool ValidarFormatoCorreo(string email)
