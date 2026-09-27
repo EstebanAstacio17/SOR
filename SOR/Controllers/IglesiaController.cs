@@ -31,7 +31,7 @@ namespace SOR.Controllers
         public ActionResult Index(int? idTemporada, string denominacion, string tipoOrg, int? etapaProcess, string estadoParticipacion, string estatusEvalReporte)
         {
             Usuario u = (Usuario)Session["usuario"];
-            List<Iglesia> listaCompleta = _iglesiaService.ObtenerIglesias();
+            List<Iglesia> listaCompleta = _iglesiaService.ObtenerIglesias(idTemporada);
 
             // Filtrado del lado del servidor
             var listaFiltrada = listaCompleta.AsEnumerable();
@@ -1472,6 +1472,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
                 Session["IglesiasImportPreview"] = iglesiasPreview;
                 Session["IdTemporadaImportPreview"] = idTemporadaImportar.Value;
+                ViewBag.IdTemporada = idTemporadaImportar.Value;
                 
                 return View("PreviewImportacion", iglesiasPreview);
             }
@@ -1483,7 +1484,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
         }
 
         [HttpPost]
-        public ActionResult ConfirmarImportacionMasiva(List<Iglesia> iglesias)
+        public ActionResult ConfirmarImportacionMasiva(List<Iglesia> iglesias, int? idTemporada)
         {
             Usuario u = (Usuario)Session["usuario"];
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2)
@@ -1492,10 +1493,13 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 return RedirectToAction("Index");
             }
 
-            int idTemporadaImportar = Session["IdTemporadaImportPreview"] != null ? (int)Session["IdTemporadaImportPreview"] : 0;
+            int idTemporadaImportar = (idTemporada.HasValue && idTemporada.Value > 0)
+                ? idTemporada.Value
+                : (Session["IdTemporadaImportPreview"] != null ? (int)Session["IdTemporadaImportPreview"] : 0);
+
             if (idTemporadaImportar <= 0)
             {
-                TempData["MensajeError"] = "Sesión de importación caducada. Vuelve a subir el archivo.";
+                TempData["MensajeError"] = "Sesión de importación caducada o temporada no seleccionada. Vuelve a subir el archivo.";
                 return RedirectToAction("Index");
             }
 

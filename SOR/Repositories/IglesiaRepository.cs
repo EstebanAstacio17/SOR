@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -10,7 +10,7 @@ namespace SOR.Repositories
 {
     public class IglesiaRepository : BaseRepository
     {
-        public List<Iglesia> ObtenerIglesias()
+        public List<Iglesia> ObtenerIglesias(int? idTemporadaFiltro = null)
         {
             List<Iglesia> lista = new List<Iglesia>();
 
@@ -27,12 +27,13 @@ namespace SOR.Repositories
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
                     LEFT JOIN dbo.ParticipacionesIglesia p ON i.IdIglesia = p.IdIglesia
-                        AND p.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC)
+                        AND p.IdTemporada = ISNULL(@IdTemporadaFiltro, (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY Activa DESC, FechaInicio DESC))
                     LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     LEFT JOIN dbo.AsignacionesRecursos ar ON p.IdParticipacion = ar.IdParticipacion
                     ORDER BY i.NombreIglesia;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
+                cmd.Parameters.Add(new SqlParameter("@IdTemporadaFiltro", (idTemporadaFiltro.HasValue && idTemporadaFiltro.Value > 0) ? (object)idTemporadaFiltro.Value : DBNull.Value));
                 cn.Open();
 
                 using (SqlDataReader dr = cmd.ExecuteReader())

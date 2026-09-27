@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -21,9 +21,9 @@ namespace SOR.Services
             return SOR.Helpers.ConnectionHelper.ObtenerCadenaConexion();
         }
 
-        public List<Iglesia> ObtenerIglesias()
+        public List<Iglesia> ObtenerIglesias(int? idTemporada = null)
         {
-            return _iglesiaRepository.ObtenerIglesias();
+            return _iglesiaRepository.ObtenerIglesias(idTemporada);
         }
 
         public static bool ValidarFormatoRncCedula(string doc)
