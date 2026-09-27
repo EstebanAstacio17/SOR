@@ -53,38 +53,34 @@ namespace SOR.Helpers
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Reasignación y activación automática de Temp 2025-2026
-                    string sqlReasignar = @"
-                        DECLARE @IdTemp2025 INT;
-                        SELECT TOP 1 @IdTemp2025 = IdTemporada 
-                        FROM dbo.Temporadas 
-                        WHERE NombreTemporada LIKE '%2025-2026%' 
-                        ORDER BY Activa DESC, FechaInicio DESC;
+                    // Limpieza total de registros de iglesias y reinicio de catálogo
+                    string sqlLimpiarIglesias = @"
+                        BEGIN TRY
+                            IF OBJECT_ID('dbo.AsignacionesRecursos', 'U') IS NOT NULL DELETE FROM dbo.AsignacionesRecursos;
+                            IF OBJECT_ID('dbo.ReportesEventos', 'U') IS NOT NULL DELETE FROM dbo.ReportesEventos;
+                            IF OBJECT_ID('dbo.EventosParticipacionIglesia', 'U') IS NOT NULL DELETE FROM dbo.EventosParticipacionIglesia;
+                            IF OBJECT_ID('dbo.EventosAsistentes', 'U') IS NOT NULL DELETE FROM dbo.EventosAsistentes WHERE IdParticipacion IS NOT NULL;
+                            IF OBJECT_ID('dbo.HistorialParticipacion', 'U') IS NOT NULL DELETE FROM dbo.HistorialParticipacion;
+                            IF OBJECT_ID('dbo.HistorialIglesias', 'U') IS NOT NULL DELETE FROM dbo.HistorialIglesias;
+                            IF OBJECT_ID('dbo.AsistenciaMaestro', 'U') IS NOT NULL DELETE FROM dbo.AsistenciaMaestro;
+                            IF OBJECT_ID('dbo.Maestros', 'U') IS NOT NULL DELETE FROM dbo.Maestros;
+                            IF OBJECT_ID('dbo.CompanerosOracion', 'U') IS NOT NULL DELETE FROM dbo.CompanerosOracion;
+                            IF OBJECT_ID('dbo.LogsCambiosEtapa', 'U') IS NOT NULL DELETE FROM dbo.LogsCambiosEtapa;
+                            IF OBJECT_ID('dbo.SeguimientoIglesias', 'U') IS NOT NULL DELETE FROM dbo.SeguimientoIglesias;
+                            IF OBJECT_ID('dbo.PersonasIglesia', 'U') IS NOT NULL DELETE FROM dbo.PersonasIglesia;
+                            IF OBJECT_ID('dbo.ParticipacionesIglesia', 'U') IS NOT NULL DELETE FROM dbo.ParticipacionesIglesia;
+                            IF OBJECT_ID('dbo.Iglesias', 'U') IS NOT NULL 
+                            BEGIN
+                                DELETE FROM dbo.Iglesias;
+                                DBCC CHECKIDENT ('dbo.Iglesias', RESEED, 0);
+                            END
+                        END TRY
+                        BEGIN CATCH
+                        END CATCH";
 
-                        IF @IdTemp2025 IS NOT NULL AND @IdTemp2025 > 0
-                        BEGIN
-                            -- 1. Activar Temp 2025-2026
-                            UPDATE dbo.Temporadas SET Activa = 0 WHERE IdTemporada <> @IdTemp2025;
-                            UPDATE dbo.Temporadas SET Activa = 1 WHERE IdTemporada = @IdTemp2025;
-
-                            -- 2. Actualizar participaciones existentes a 2025-2026
-                            UPDATE dbo.ParticipacionesIglesia 
-                            SET IdTemporada = @IdTemp2025 
-                            WHERE IdTemporada <> @IdTemp2025;
-
-                            -- 3. Crear participación inicial para cualquier iglesia que no tenga
-                            INSERT INTO dbo.ParticipacionesIglesia (IdIglesia, IdTemporada, Participara, EstadoEvaluacion, EstatusEvaluacionReporte, EtapaActual)
-                            SELECT i.IdIglesia, @IdTemp2025, 1, 'Pendiente', 'Pendiente', 1
-                            FROM dbo.Iglesias i
-                            WHERE NOT EXISTS (
-                                SELECT 1 FROM dbo.ParticipacionesIglesia p 
-                                WHERE p.IdIglesia = i.IdIglesia AND p.IdTemporada = @IdTemp2025
-                            );
-                        END";
-
-                    using (SqlCommand cmdReasig = new SqlCommand(sqlReasignar, cn))
+                    using (SqlCommand cmdLimpiar = new SqlCommand(sqlLimpiarIglesias, cn))
                     {
-                        cmdReasig.ExecuteNonQuery();
+                        cmdLimpiar.ExecuteNonQuery();
                     }
 
                     // 2. Deduplicación preventiva antes de restricciones
