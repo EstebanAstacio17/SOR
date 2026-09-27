@@ -332,22 +332,27 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         var searchInput = document.getElementById('txtBuscarMaestro');
+        var debounceTimer;
         if (searchInput) {
             searchInput.addEventListener('keyup', function() {
-                var query = this.value.toLowerCase().trim();
-                var rows = document.querySelectorAll('table tbody tr');
-                
-                rows.forEach(function(row) {
-                    // Ignorar la fila de "no hay datos"
-                    if (row.cells.length === 1 && row.cells[0].colSpan > 1) return;
+                clearTimeout(debounceTimer);
+                var inputEl = this;
+                debounceTimer = setTimeout(function() {
+                    var query = inputEl.value.toLowerCase().trim();
+                    var rows = document.querySelectorAll('table tbody tr');
                     
-                    var text = row.textContent.toLowerCase();
-                    if (text.indexOf(query) > -1) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
+                    rows.forEach(function(row) {
+                        // Ignorar la fila de "no hay datos"
+                        if (row.cells.length === 1 && row.cells[0].colSpan > 1) return;
+                        
+                        var text = row.textContent.toLowerCase();
+                        if (text.indexOf(query) > -1) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                }, 300);
             });
         }
     });

@@ -365,7 +365,13 @@
             });
         }
 
-        if (searchInput) searchInput.addEventListener('keyup', filtrarTabla);
+        var debounceTimer;
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(filtrarTabla, 300);
+            });
+        }
         if (selectEquipo) selectEquipo.addEventListener('change', filtrarTabla);
 
         // Validación del formulario de importación masiva con jquery.validate

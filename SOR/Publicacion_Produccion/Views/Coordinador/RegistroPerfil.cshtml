@@ -6,6 +6,7 @@
     var listaPosiciones = (List<SelectListItem>)ViewBag.ListaPosiciones ?? new List<SelectListItem>();
     var usuarioActual = (SOR.Models.Usuario)Session["usuario"];
     bool esUsuarioAprobado = usuarioActual != null && usuarioActual.IdEstado == 4;
+    bool esAdmin = usuarioActual != null && (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
 }
 
 @if (ViewData["MensajeError"] != null)
@@ -289,7 +290,7 @@
                 <div class="tab-pane fade" id="sec-occ" role="tabpanel">
                     <h4 class="h5 font-bold mb-3 text-primary border-bottom pb-2">Asignación de Equipo y Rol en OCC Rep Dom</h4>
 
-                    @if (esUsuarioAprobado)
+                    @if (esUsuarioAprobado && !esAdmin)
                     {
                         <div class="alert alert-warning border-0 rounded-3 mb-4 shadow-sm">
                             <i class="bi bi-shield-lock-fill me-2 text-warning fs-5"></i>
@@ -307,7 +308,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label font-semibold" for="ddlEquipo">Equipo OCC <span class="text-danger">*</span></label>
-                            @if (esUsuarioAprobado)
+                            @if (esUsuarioAprobado && !esAdmin)
                             {
                                 @Html.DropDownListFor(m => m.IdEquipo, listaEquipos, "-- Seleccionar Equipo --", new { @class = "form-select bg-light", id = "ddlEquipo", disabled = "disabled" })
                                 <input type="hidden" name="IdEquipo" value="@Model.IdEquipo" />
@@ -321,7 +322,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label font-semibold" for="ddlPosicion">Posición / Rol en el Equipo <span class="text-danger">*</span></label>
-                            @if (esUsuarioAprobado)
+                            @if (esUsuarioAprobado && !esAdmin)
                             {
                                 @Html.DropDownListFor(m => m.IdPosicion, listaPosiciones, "-- Seleccionar Posición --", new { @class = "form-select bg-light", id = "ddlPosicion", disabled = "disabled" })
                                 <input type="hidden" name="IdPosicion" value="@Model.IdPosicion" />
