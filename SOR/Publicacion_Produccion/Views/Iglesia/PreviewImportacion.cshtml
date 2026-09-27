@@ -222,7 +222,7 @@
 
                 // 4. Validación de Correo electrónico
                 if (inputType === 'email') {
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    const emailRegex = new RegExp('^[^\\s@@]+@@[^\\s@@]+\\.[^\\s@@]+$');
                     if (!emailRegex.test(val)) {
                         return { 
                             valid: false, 
