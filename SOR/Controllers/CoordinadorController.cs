@@ -1,4 +1,4 @@
-using SOR.Helpers;
+﻿using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -50,7 +50,7 @@ namespace SOR.Controllers
         }
 
         // ==========================================
-        // VALIDACIÓN DE SEGURIDAD PARA ARCHIVOS
+        // VALIDACIÃ“N DE SEGURIDAD PARA ARCHIVOS
         // ==========================================
         private static readonly HashSet<string> ExtensionesPermitidasArchivos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -62,22 +62,22 @@ namespace SOR.Controllers
             error = string.Empty;
             if (archivo == null || archivo.ContentLength == 0) return true;
 
-            // 1. Tamaño máximo: 5 MB (5 * 1024 * 1024 bytes)
+            // 1. TamaÃ±o mÃ¡ximo: 5 MB (5 * 1024 * 1024 bytes)
             if (archivo.ContentLength > 5 * 1024 * 1024)
             {
-                error = "El archivo '" + Path.GetFileName(archivo.FileName) + "' excede el tamaño máximo permitido de 5 MB.";
+                error = "El archivo '" + HttpUtility.HtmlEncode(Path.GetFileName(archivo.FileName)) + "' excede el tamaÃ±o mÃ¡ximo permitido de 5 MB.";
                 return false;
             }
 
-            // 2. Validación de extensión por lista blanca estricta
+            // 2. ValidaciÃ³n de extensiÃ³n por lista blanca estricta
             string ext = Path.GetExtension(archivo.FileName);
             if (string.IsNullOrEmpty(ext) || !ExtensionesPermitidasArchivos.Contains(ext))
             {
-                error = "El tipo de archivo '" + ext + "' no está permitido. Solo se aceptan documentos PDF e imágenes JPG o PNG.";
+                error = "El tipo de archivo '" + HttpUtility.HtmlEncode(ext) + "' no estÃ¡ permitido. Solo se aceptan documentos PDF e imÃ¡genes JPG o PNG.";
                 return false;
             }
 
-            // 3. Validación de Magic Bytes (firmas binarias)
+            // 3. ValidaciÃ³n de Magic Bytes (firmas binarias)
             try
             {
                 byte[] buffer = new byte[8];
@@ -88,7 +88,7 @@ namespace SOR.Controllers
 
                 if (bytesLeidos < 4)
                 {
-                    error = "El archivo '" + Path.GetFileName(archivo.FileName) + "' está corrupto o incompleto.";
+                    error = "El archivo '" + HttpUtility.HtmlEncode(Path.GetFileName(archivo.FileName)) + "' estÃ¡ corrupto o incompleto.";
                     return false;
                 }
 
@@ -98,7 +98,7 @@ namespace SOR.Controllers
 
                 if (!esPdf && !esJpg && !esPng)
                 {
-                    error = "El contenido interno del archivo '" + Path.GetFileName(archivo.FileName) + "' no coincide con su formato legítimo.";
+                    error = "El contenido interno del archivo '" + HttpUtility.HtmlEncode(Path.GetFileName(archivo.FileName)) + "' no coincide con su formato legÃ­timo.";
                     return false;
                 }
             }
@@ -118,23 +118,23 @@ namespace SOR.Controllers
             Usuario usuarioActual = (Usuario)Session["usuario"];
             CargarCombosEquiposYPosiciones();
 
-            // 1. Validar campos obligatorios y determinar en qué pestañas faltan datos
+            // 1. Validar campos obligatorios y determinar en quÃ© pestaÃ±as faltan datos
             List<string> errores = new List<string>();
 
             if (string.IsNullOrWhiteSpace(modelo.PrimerNombre))
-                errores.Add("Pestaña 1 (Datos Personales): 'Primer Nombre' es obligatorio.");
+                errores.Add("PestaÃ±a 1 (Datos Personales): 'Primer Nombre' es obligatorio.");
             if (string.IsNullOrWhiteSpace(modelo.PrimerApellido))
-                errores.Add("Pestaña 1 (Datos Personales): 'Primer Apellido' es obligatorio.");
+                errores.Add("PestaÃ±a 1 (Datos Personales): 'Primer Apellido' es obligatorio.");
             if (string.IsNullOrWhiteSpace(modelo.TelefonoCelularWhatsApp))
-                errores.Add("Pestaña 1 (Datos Personales): 'Celular / WhatsApp' es obligatorio.");
+                errores.Add("PestaÃ±a 1 (Datos Personales): 'Celular / WhatsApp' es obligatorio.");
 
             if (string.IsNullOrWhiteSpace(modelo.IglesiaLocal))
-                errores.Add("Pestaña 2 (Ministerial / Educativo): 'Iglesia Local' es obligatoria.");
+                errores.Add("PestaÃ±a 2 (Ministerial / Educativo): 'Iglesia Local' es obligatoria.");
 
             if (!modelo.IdEquipo.HasValue || modelo.IdEquipo.Value <= 0)
-                errores.Add("Pestaña 3 (Datos OCC y Equipo): Debe seleccionar un 'Equipo OCC'.");
+                errores.Add("PestaÃ±a 3 (Datos OCC y Equipo): Debe seleccionar un 'Equipo OCC'.");
             if (!modelo.IdPosicion.HasValue || modelo.IdPosicion.Value <= 0)
-                errores.Add("Pestaña 3 (Datos OCC y Equipo): Debe seleccionar una 'Posición / Rol'.");
+                errores.Add("PestaÃ±a 3 (Datos OCC y Equipo): Debe seleccionar una 'PosiciÃ³n / Rol'.");
 
             // Validar seguridad de los 3 archivos adjuntos
             string errDoc, errPas, errFoto;
@@ -144,16 +144,16 @@ namespace SOR.Controllers
 
             if (errores.Any())
             {
-                ViewData["MensajeError"] = "Por favor completa y corrige los siguientes campos obligatorios:<br/>• " + string.Join("<br/>• ", errores);
+                ViewData["MensajeError"] = "Por favor completa y corrige los siguientes campos obligatorios:<br/>â€¢ " + string.Join("<br/>â€¢ ", errores);
                 return View(modelo);
             }
 
-            // 2. Validar ocupación de posición en el equipo seleccionado
+            // 2. Validar ocupaciÃ³n de posiciÃ³n en el equipo seleccionado
             if (modelo.IdEquipo.HasValue && modelo.IdPosicion.HasValue)
             {
                 if (PosicionEstaOcupada(modelo.IdEquipo.Value, modelo.IdPosicion.Value, usuarioActual.IdUsuario))
                 {
-                    ViewData["MensajeError"] = "La posición seleccionada en este equipo ya se encuentra ocupada por otro coordinador activo. Por favor selecciona otra posición o equipo en la Pestaña 3 (Datos OCC y Equipo).";
+                    ViewData["MensajeError"] = "La posiciÃ³n seleccionada en este equipo ya se encuentra ocupada por otro coordinador activo. Por favor selecciona otra posiciÃ³n o equipo en la PestaÃ±a 3 (Datos OCC y Equipo).";
                     return View(modelo);
                 }
             }
@@ -180,20 +180,20 @@ namespace SOR.Controllers
                 cn.Open();
                 string sqlCheck = "SELECT COUNT(1) FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                 SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn);
-                cmdCheck.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                cmdCheck.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
                 int existe = Convert.ToInt32(cmdCheck.ExecuteScalar());
 
                 SqlCommand cmd;
                 if (existe > 0)
                 {
                     bool esSuperAdmin = (usuarioActual.IdRolSeguridad == 1 || usuarioActual.IdRolSeguridad == 2);
-                    // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado o está en proceso de restablecimiento y NO es administrador
+                    // Si el perfil ya existe, preservar IdEquipo e IdPosicion previos si el usuario ya ha sido aprobado o estÃ¡ en proceso de restablecimiento y NO es administrador
                     if (!esSuperAdmin && (usuarioActual.IdEstado == 4 || usuarioActual.IdEstado == 7 || usuarioActual.IdEstado == 8))
                     {
                         string sqlGetPrev = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdPrev = new SqlCommand(sqlGetPrev, cn))
                         {
-                            cmdPrev.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                            cmdPrev.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
                             using (SqlDataReader drP = cmdPrev.ExecuteReader())
                             {
                                 if (drP.Read())
@@ -268,54 +268,54 @@ namespace SOR.Controllers
                     cmd = new SqlCommand(sqlInsert, cn);
                 }
 
-                cmd.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
-                cmd.Parameters.AddWithValue("@PrimerNombre", modelo.PrimerNombre ?? "");
-                cmd.Parameters.AddWithValue("@OtrosNombres", modelo.OtrosNombres ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@PrimerApellido", modelo.PrimerApellido ?? "");
-                cmd.Parameters.AddWithValue("@OtrosApellidos", modelo.OtrosApellidos ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@FechaNacimiento", modelo.FechaNacimiento ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Sexo", modelo.Sexo ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@EstadoCivil", modelo.EstadoCivil ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Calle", modelo.Calle ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Numero", modelo.Numero ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Sector", modelo.Sector ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Ciudad", modelo.Ciudad ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Provincia", modelo.Provincia ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Pais", modelo.Pais ?? "República Dominicana");
-                cmd.Parameters.AddWithValue("@Nacionalidad", modelo.Nacionalidad ?? "Dominicana");
-                cmd.Parameters.AddWithValue("@Talla", modelo.Talla ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@NumeroDocumento", modelo.NumeroDocumento ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DocumentoAdjuntoRuta", modelo.DocumentoAdjuntoRuta ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@NumeroPasaporte", modelo.NumeroPasaporte ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@NoPoseePasaporte", modelo.NoPoseePasaporte);
-                cmd.Parameters.AddWithValue("@PasaporteAdjuntoRuta", modelo.PasaporteAdjuntoRuta ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@TelefonoFijo", modelo.TelefonoFijo ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@TelefonoCelularWhatsApp", modelo.TelefonoCelularWhatsApp ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Correo", usuarioActual.Correo);
-                cmd.Parameters.AddWithValue("@FotoRuta", modelo.FotoRuta ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DatosConyugue", modelo.DatosConyugue ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ContactoEmergencia", modelo.ContactoEmergencia ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
+                cmd.Parameters.Add(new SqlParameter("@PrimerNombre", modelo.PrimerNombre ?? ""));
+                cmd.Parameters.Add(new SqlParameter("@OtrosNombres", modelo.OtrosNombres ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@PrimerApellido", modelo.PrimerApellido ?? ""));
+                cmd.Parameters.Add(new SqlParameter("@OtrosApellidos", modelo.OtrosApellidos ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@FechaNacimiento", modelo.FechaNacimiento ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Sexo", modelo.Sexo ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@EstadoCivil", modelo.EstadoCivil ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Calle", modelo.Calle ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Numero", modelo.Numero ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Sector", modelo.Sector ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Ciudad", modelo.Ciudad ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Provincia", modelo.Provincia ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Pais", modelo.Pais ?? "RepÃºblica Dominicana"));
+                cmd.Parameters.Add(new SqlParameter("@Nacionalidad", modelo.Nacionalidad ?? "Dominicana"));
+                cmd.Parameters.Add(new SqlParameter("@Talla", modelo.Talla ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@NumeroDocumento", modelo.NumeroDocumento ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@DocumentoAdjuntoRuta", modelo.DocumentoAdjuntoRuta ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@NumeroPasaporte", modelo.NumeroPasaporte ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@NoPoseePasaporte", modelo.NoPoseePasaporte));
+                cmd.Parameters.Add(new SqlParameter("@PasaporteAdjuntoRuta", modelo.PasaporteAdjuntoRuta ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@TelefonoFijo", modelo.TelefonoFijo ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@TelefonoCelularWhatsApp", modelo.TelefonoCelularWhatsApp ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Correo", usuarioActual.Correo));
+                cmd.Parameters.Add(new SqlParameter("@FotoRuta", modelo.FotoRuta ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@DatosConyugue", modelo.DatosConyugue ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@ContactoEmergencia", modelo.ContactoEmergencia ?? (object)DBNull.Value));
 
-                cmd.Parameters.AddWithValue("@IglesiaLocal", modelo.IglesiaLocal ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@PastorIglesiaLocal", modelo.PastorIglesiaLocal ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CargoIglesiaLocal", modelo.CargoIglesiaLocal ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@AniosServicioMinisterial", modelo.AniosServicioMinisterial ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@InfoMinisterial", modelo.InfoMinisterial ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@IglesiaLocal", modelo.IglesiaLocal ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@PastorIglesiaLocal", modelo.PastorIglesiaLocal ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@CargoIglesiaLocal", modelo.CargoIglesiaLocal ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@AniosServicioMinisterial", modelo.AniosServicioMinisterial ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@InfoMinisterial", modelo.InfoMinisterial ?? (object)DBNull.Value));
 
-                cmd.Parameters.AddWithValue("@NivelEducativo", modelo.NivelEducativo ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ProfesionCarrera", modelo.ProfesionCarrera ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@InfoEducativa", modelo.InfoEducativa ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@NivelEducativo", modelo.NivelEducativo ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@ProfesionCarrera", modelo.ProfesionCarrera ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@InfoEducativa", modelo.InfoEducativa ?? (object)DBNull.Value));
 
-                cmd.Parameters.AddWithValue("@OcupacionEmpresaLaboral", modelo.OcupacionEmpresaLaboral ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@TelefonoTrabajo", modelo.TelefonoTrabajo ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@InfoLaboral", modelo.InfoLaboral ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@OcupacionEmpresaLaboral", modelo.OcupacionEmpresaLaboral ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@TelefonoTrabajo", modelo.TelefonoTrabajo ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@InfoLaboral", modelo.InfoLaboral ?? (object)DBNull.Value));
 
-                cmd.Parameters.AddWithValue("@CapacitacionesOCC", modelo.CapacitacionesOCC ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@CapacitacionesOCC", modelo.CapacitacionesOCC ?? (object)DBNull.Value));
 
-                cmd.Parameters.AddWithValue("@Ministerio", modelo.Ministerio ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdEquipo", modelo.IdEquipo ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdPosicion", modelo.IdPosicion ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@FechaIngreso", modelo.FechaIngreso ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@Ministerio", modelo.Ministerio ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", modelo.IdEquipo ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdPosicion", modelo.IdPosicion ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@FechaIngreso", modelo.FechaIngreso ?? (object)DBNull.Value));
 
                 cmd.ExecuteNonQuery();
 
@@ -330,27 +330,27 @@ namespace SOR.Controllers
                     ";
                     using (SqlCommand cmdAsig = new SqlCommand(sqlAsig, cn))
                     {
-                        cmdAsig.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
-                        cmdAsig.Parameters.AddWithValue("@IdEquipo", modelo.IdEquipo.Value);
-                        cmdAsig.Parameters.AddWithValue("@IdPosicion", modelo.IdPosicion.Value);
+                        cmdAsig.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
+                        cmdAsig.Parameters.Add(new SqlParameter("@IdEquipo", modelo.IdEquipo.Value));
+                        cmdAsig.Parameters.Add(new SqlParameter("@IdPosicion", modelo.IdPosicion.Value));
                         cmdAsig.ExecuteNonQuery();
                     }
                 }
 
-                // 4. Actualizar Estado de Usuario a PerfilPendienteAprobacion (3) si no está activo aún
-                // No cambiar el estado si está en proceso de restablecimiento de contraseña (7 u 8)
+                // 4. Actualizar Estado de Usuario a PerfilPendienteAprobacion (3) si no estÃ¡ activo aÃºn
+                // No cambiar el estado si estÃ¡ en proceso de restablecimiento de contraseÃ±a (7 u 8)
                 if (usuarioActual.IdEstado != 4 && usuarioActual.IdEstado != 7 && usuarioActual.IdEstado != 8)
                 {
                     string sqlUpdEstado = "UPDATE dbo.Usuarios SET IdEstado = 3 WHERE IdUsuario = @IdUsuario;";
                     SqlCommand cmdEstado = new SqlCommand(sqlUpdEstado, cn);
-                    cmdEstado.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                    cmdEstado.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
                     cmdEstado.ExecuteNonQuery();
 
                     usuarioActual.IdEstado = 3;
                     usuarioActual.NombreEstado = "PerfilPendienteAprobacion";
                 }
 
-                // 5. Refrescar datos completos del usuario en la sesión para que todo el sistema y Dashboard queden sincronizados e intercomunicados
+                // 5. Refrescar datos completos del usuario en la sesiÃ³n para que todo el sistema y Dashboard queden sincronizados e intercomunicados
                 var repoUsuario = new Repositories.UsuarioRepository();
                 Usuario usuarioActualizado = repoUsuario.ObtenerUsuarioPorId(usuarioActual.IdUsuario) 
                                              ?? repoUsuario.ObtenerUsuarioPorCorreo(usuarioActual.Correo);
@@ -391,15 +391,15 @@ namespace SOR.Controllers
                 }
                 catch (Exception ex)
                 {
-                    TempData["MensajeError"] = "Tus datos se guardaron, pero no se pudo notificar a la coordinación: " + ex.Message;
+                    TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                 }
             }
 
-            TempData["MensajeExito"] = "Tus datos han sido guardados exitosamente en el sistema. Se ha notificado a la coordinación de tu equipo.";
+            TempData["MensajeExito"] = "Tus datos han sido guardados exitosamente en el sistema. Se ha notificado a la coordinaciÃ³n de tu equipo.";
             return RedirectToAction("RegistroPerfil");
         }
 
-        // GET: JSON API - Obtener posiciones ocupadas en un equipo específico
+        // GET: JSON API - Obtener posiciones ocupadas en un equipo especÃ­fico
         [HttpGet]
         public JsonResult ObtenerPosicionesOcupadas(int idEquipo)
         {
@@ -422,8 +422,8 @@ namespace SOR.Controllers
                     ) AS Ocupados;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
-                cmd.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -471,7 +471,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT * FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -492,7 +492,7 @@ namespace SOR.Controllers
                             Sector = dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
                             Ciudad = dr["Ciudad"] != DBNull.Value ? dr["Ciudad"].ToString() : "",
                             Provincia = dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
-                            Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
+                            Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "RepÃºblica Dominicana",
                             Nacionalidad = dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
                             Sexo = dr["Sexo"] != DBNull.Value ? dr["Sexo"].ToString() : "",
                             EstadoCivil = dr["EstadoCivil"] != DBNull.Value ? dr["EstadoCivil"].ToString() : "",
@@ -549,9 +549,9 @@ namespace SOR.Controllers
                     ) AS CheckOcupado;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
-                cmd.Parameters.AddWithValue("@IdPosicion", idPosicion);
-                cmd.Parameters.AddWithValue("@IdUsuario", idUsuarioActual);
+                cmd.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo));
+                cmd.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuarioActual));
 
                 cn.Open();
                 int cnt = Convert.ToInt32(cmd.ExecuteScalar());
@@ -613,14 +613,14 @@ namespace SOR.Controllers
 
             if (string.IsNullOrWhiteSpace(claveActual) || string.IsNullOrWhiteSpace(nuevaClave) || string.IsNullOrWhiteSpace(confirmarClave))
             {
-                TempData["ErrorClave"] = "Todos los campos de contraseña son obligatorios.";
+                TempData["ErrorClave"] = "Todos los campos de contraseÃ±a son obligatorios.";
                 TempData["TabActiva"] = "seguridad";
                 return RedirectToAction("RegistroPerfil");
             }
 
             if (nuevaClave != confirmarClave)
             {
-                TempData["ErrorClave"] = "Las nuevas contraseñas no coinciden.";
+                TempData["ErrorClave"] = "Las nuevas contraseÃ±as no coinciden.";
                 TempData["TabActiva"] = "seguridad";
                 return RedirectToAction("RegistroPerfil");
             }
@@ -630,7 +630,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT Clave FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
 
                 cn.Open();
                 claveGuardada = cmd.ExecuteScalar()?.ToString();
@@ -638,26 +638,26 @@ namespace SOR.Controllers
 
             if (string.IsNullOrEmpty(claveGuardada) || !Helpers.Criptografia.VerificarClave(claveActual, claveGuardada))
             {
-                TempData["ErrorClave"] = "La contraseña actual es incorrecta.";
+                TempData["ErrorClave"] = "La contraseÃ±a actual es incorrecta.";
                 TempData["TabActiva"] = "seguridad";
                 return RedirectToAction("RegistroPerfil");
             }
 
-            // Hashear nueva contraseña
+            // Hashear nueva contraseÃ±a
             string nuevaClaveFormateada = Helpers.Criptografia.CrearClaveFormateada(nuevaClave);
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 string sql = "UPDATE dbo.Usuarios SET Clave = @Clave WHERE IdUsuario = @IdUsuario;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Clave", nuevaClaveFormateada);
-                cmd.Parameters.AddWithValue("@IdUsuario", usuarioActual.IdUsuario);
+                cmd.Parameters.Add(new SqlParameter("@Clave", nuevaClaveFormateada));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", usuarioActual.IdUsuario));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["ExitoClave"] = "Su contraseña ha sido cambiada exitosamente.";
+            TempData["ExitoClave"] = "Su contraseÃ±a ha sido cambiada exitosamente.";
             TempData["TabActiva"] = "seguridad";
             return RedirectToAction("RegistroPerfil");
         }

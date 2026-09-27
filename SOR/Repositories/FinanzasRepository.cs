@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -16,7 +16,7 @@ namespace SOR.Repositories
                 conn.Open();
 
                 string ddl = @"
-                -- Categorías Financieras Universales
+                -- CategorÃ­as Financieras Universales
                 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Finanzas_Categorias')
                 BEGIN
                     CREATE TABLE dbo.Finanzas_Categorias (
@@ -28,23 +28,23 @@ namespace SOR.Repositories
                     );
 
                     INSERT INTO dbo.Finanzas_Categorias (CategoriaId, Tipo, Grupo, Descripcion, Orden) VALUES
-                    ('I-1', 'INGRESO', 'INGRESOS', 'Subvención - Entrenamientos', 1),
-                    ('I-2', 'INGRESO', 'INGRESOS', 'Subvención - Mentoreo', 2),
-                    ('I-3', 'INGRESO', 'INGRESOS', 'Ingresos para Logística', 3),
+                    ('I-1', 'INGRESO', 'INGRESOS', 'SubvenciÃ³n - Entrenamientos', 1),
+                    ('I-2', 'INGRESO', 'INGRESOS', 'SubvenciÃ³n - Mentoreo', 2),
+                    ('I-3', 'INGRESO', 'INGRESOS', 'Ingresos para LogÃ­stica', 3),
                     ('I-4', 'INGRESO', 'INGRESOS', 'Otros Ingresos', 4),
-                    ('E-0', 'GASTO', 'ENTRENAMIENTO', 'Envío, Retiro o Transferencia para Entrenamientos', 5),
+                    ('E-0', 'GASTO', 'ENTRENAMIENTO', 'EnvÃ­o, Retiro o Transferencia para Entrenamientos', 5),
                     ('E-1', 'GASTO', 'ENTRENAMIENTO', 'Transporte', 6),
                     ('E-2', 'GASTO', 'ENTRENAMIENTO', 'Snacks o Refrigerios', 7),
                     ('E-3', 'GASTO', 'ENTRENAMIENTO', 'Alimento', 8),
-                    ('E-4', 'GASTO', 'ENTRENAMIENTO', 'Administración y Otros Gastos de Oficina', 9),
-                    ('M-0', 'GASTO', 'MENTOREO', 'Envío, Retiro o Transferencia para Mentoreo', 10),
+                    ('E-4', 'GASTO', 'ENTRENAMIENTO', 'AdministraciÃ³n y Otros Gastos de Oficina', 9),
+                    ('M-0', 'GASTO', 'MENTOREO', 'EnvÃ­o, Retiro o Transferencia para Mentoreo', 10),
                     ('M-1', 'GASTO', 'MENTOREO', 'Transporte', 11),
                     ('M-2', 'GASTO', 'MENTOREO', 'Alimento', 12),
                     ('M-3', 'GASTO', 'MENTOREO', 'Hospedaje', 13),
-                    ('M-4', 'GASTO', 'MENTOREO', 'Administración y Otros Gastos de Oficina', 14),
+                    ('M-4', 'GASTO', 'MENTOREO', 'AdministraciÃ³n y Otros Gastos de Oficina', 14),
                     ('L-1', 'GASTO', 'LOGISTICA', 'Transporte de Cajitas y Literatura', 15),
                     ('L-2', 'GASTO', 'LOGISTICA', 'Almacenaje de Cajitas y Literatura', 16),
-                    ('L-3', 'GASTO', 'LOGISTICA', 'Otros Gastos de Logística', 17),
+                    ('L-3', 'GASTO', 'LOGISTICA', 'Otros Gastos de LogÃ­stica', 17),
                     ('O-1', 'GASTO', 'OTROS', 'Otros eventos o gastos aprobados', 18);
                 END;
 
@@ -103,7 +103,7 @@ namespace SOR.Repositories
                     cmd.ExecuteNonQuery();
                 }
 
-                // Procedimientos Almacenados Genéricos
+                // Procedimientos Almacenados GenÃ©ricos
                 string sp1 = @"
                 CREATE OR ALTER PROCEDURE dbo.usp_Finanzas_ObtenerTransaccionesMes
                     @IdTemporada INT,
@@ -321,7 +321,7 @@ namespace SOR.Repositories
                 string sql = "SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipoPadre = @Id AND Activo = 1;";
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idEquipoPadre);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idEquipoPadre));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -397,7 +397,7 @@ namespace SOR.Repositories
                 string sql = "SELECT NombreEquipo FROM dbo.Equipos WHERE IdEquipo = @Id;";
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idEquipo);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idEquipo));
                     object val = cmd.ExecuteScalar();
                     return val != null ? val.ToString() : "Equipo " + idEquipo;
                 }
@@ -412,7 +412,7 @@ namespace SOR.Repositories
                 string sql = "SELECT NombreTemporada FROM dbo.Temporadas WHERE IdTemporada = @Id;";
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idTemporada);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idTemporada));
                     object val = cmd.ExecuteScalar();
                     return val != null ? val.ToString() : "Temporada " + idTemporada;
                 }
@@ -443,8 +443,8 @@ namespace SOR.Repositories
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
-                    cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemporada", idTemporada));
+                    cmd.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo));
                     object res = cmd.ExecuteScalar();
                     return res != null ? Convert.ToDecimal(res) : 0m;
                 }
@@ -771,10 +771,10 @@ namespace SOR.Repositories
 
                             using (var cmd = new SqlCommand(sql, conn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdEquipo", idEquipo);
-                                cmd.Parameters.AddWithValue("@CatId", item.CategoriaId);
-                                cmd.Parameters.AddWithValue("@Monto", item.MontoAprobadoUSD);
+                                cmd.Parameters.Add(new SqlParameter("@IdTemporada", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo));
+                                cmd.Parameters.Add(new SqlParameter("@CatId", item.CategoriaId));
+                                cmd.Parameters.Add(new SqlParameter("@Monto", item.MontoAprobadoUSD));
                                 cmd.ExecuteNonQuery();
                             }
                         }

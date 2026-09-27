@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -70,7 +70,7 @@ namespace SOR.Controllers
 
             if (!PuedeRegistrarOracion(u))
             {
-                TempData["MensajeError"] = "No tienes permisos para registrar compañeros de oración. Rol requerido: Coordinador de Oración (CO) o Administrador.";
+                TempData["MensajeError"] = "No tienes permisos para registrar compaÃ±eros de oraciÃ³n. Rol requerido: Coordinador de OraciÃ³n (CO) o Administrador.";
                 return RedirectToAction("Index");
             }
 
@@ -80,7 +80,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Si no se especificó temporada, obtener la activa
+            // Si no se especificÃ³ temporada, obtener la activa
             if (modelo.IdTemporada <= 0)
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -108,18 +108,18 @@ namespace SOR.Controllers
                     VALUES (@Nombre, @WhatsApp, @EsMayor, @IdIglesia, @IdTemp, @IdUsuario);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Nombre", modelo.NombreCompleto);
-                cmd.Parameters.AddWithValue("@WhatsApp", modelo.ContactoWhatsApp ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@EsMayor", modelo.EsMayorEdad);
-                cmd.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
-                cmd.Parameters.AddWithValue("@IdTemp", modelo.IdTemporada);
-                cmd.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                cmd.Parameters.Add(new SqlParameter("@Nombre", modelo.NombreCompleto));
+                cmd.Parameters.Add(new SqlParameter("@WhatsApp", modelo.ContactoWhatsApp ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@EsMayor", modelo.EsMayorEdad));
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", modelo.IdIglesia));
+                cmd.Parameters.Add(new SqlParameter("@IdTemp", modelo.IdTemporada));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Compañero de oración registrado exitosamente.";
+            TempData["MensajeExito"] = "CompaÃ±ero de oraciÃ³n registrado exitosamente.";
             return RedirectToAction("Index");
         }
 
@@ -139,13 +139,13 @@ namespace SOR.Controllers
             {
                 string sql = "DELETE FROM dbo.CompanerosOracion WHERE IdCompanero = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idCompanero);
+                cmd.Parameters.Add(new SqlParameter("@Id", idCompanero));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Compañero de oración eliminado con éxito.";
+            TempData["MensajeExito"] = "CompaÃ±ero de oraciÃ³n eliminado con Ã©xito.";
             return RedirectToAction("Index");
         }
 
@@ -153,7 +153,7 @@ namespace SOR.Controllers
         {
             if (u == null) return false;
             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true; // Admins
-            if (u.IdPosicion == 5) return true; // Coordinador de Oración (CO)
+            if (u.IdPosicion == 5) return true; // Coordinador de OraciÃ³n (CO)
             if (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)) return true; // Coordinador de Equipo (CE)
             return false;
         }

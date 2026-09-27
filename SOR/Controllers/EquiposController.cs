@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Web.Mvc;
 using SOR.Models;
@@ -16,7 +16,7 @@ namespace SOR.Controllers
         {
             Usuario usuarioActual = (Usuario)Session["usuario"];
             
-            // Restricción estricta: Solo SuperAdmin (1)
+            // RestricciÃ³n estricta: Solo SuperAdmin (1)
             if (usuarioActual == null || usuarioActual.IdRolSeguridad != 1)
             {
                 filterContext.Result = new RedirectToRouteResult(new System.Web.Routing.RouteValueDictionary(new { controller = "Home", action = "Index" }));
@@ -31,7 +31,7 @@ namespace SOR.Controllers
         {
             List<EquipoConDetalles> equipos = _equipoService.ListarEquipos();
             
-            // Cargar datos para los modales de creación/edición
+            // Cargar datos para los modales de creaciÃ³n/ediciÃ³n
             ViewBag.Niveles = _equipoService.ListarNiveles();
             ViewBag.TodosEquipos = equipos;
 
@@ -53,7 +53,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." }, JsonRequestBehavior.AllowGet);
             }
         }
 
@@ -69,7 +69,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al crear equipo: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Index");
@@ -91,7 +91,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al actualizar equipo: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Index");
@@ -109,7 +109,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Index");

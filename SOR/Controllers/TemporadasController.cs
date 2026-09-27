@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -109,13 +109,13 @@ namespace SOR.Controllers
                         : "INSERT INTO dbo.ConfiguracionesSistema (Clave, Valor) VALUES ('MinAniosAntiguedad', @Val);";
                     using (SqlCommand cmdSave = new SqlCommand(sqlSave, cn))
                     {
-                        cmdSave.Parameters.AddWithValue("@Val", minAniosAntiguedad.ToString());
+                        cmdSave.Parameters.Add(new SqlParameter("@Val", minAniosAntiguedad.ToString()));
                         cmdSave.ExecuteNonQuery();
                     }
                 }
             }
 
-            TempData["MensajeExito"] = "Configuración de antigüedad de temporadas actualizada correctamente.";
+            TempData["MensajeExito"] = "ConfiguraciÃ³n de antigÃ¼edad de temporadas actualizada correctamente.";
             return RedirectToAction("Index");
         }
 
@@ -140,15 +140,15 @@ namespace SOR.Controllers
             {
                 string sql = "INSERT INTO dbo.Temporadas (NombreTemporada, FechaInicio, FechaFin, Activa) VALUES (@Nombre, @Inicio, @Fin, 0);";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Nombre", nombreTemporada);
-                cmd.Parameters.AddWithValue("@Inicio", (object)fechaInicio ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Fin", (object)fechaFin ?? DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@Nombre", nombreTemporada));
+                cmd.Parameters.Add(new SqlParameter("@Inicio", (object)fechaInicio ?? DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Fin", (object)fechaFin ?? DBNull.Value));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Temporada creada con éxito.";
+            TempData["MensajeExito"] = "Temporada creada con Ã©xito.";
             return RedirectToAction("Index");
         }
 
@@ -173,16 +173,16 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.Temporadas SET NombreTemporada = @Nombre, FechaInicio = @Inicio, FechaFin = @Fin WHERE IdTemporada = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Nombre", nombreTemporada);
-                cmd.Parameters.AddWithValue("@Inicio", (object)fechaInicio ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Fin", (object)fechaFin ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Id", idTemporada);
+                cmd.Parameters.Add(new SqlParameter("@Nombre", nombreTemporada));
+                cmd.Parameters.Add(new SqlParameter("@Inicio", (object)fechaInicio ?? DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Fin", (object)fechaFin ?? DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Id", idTemporada));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Temporada actualizada con éxito.";
+            TempData["MensajeExito"] = "Temporada actualizada con Ã©xito.";
             return RedirectToAction("Index");
         }
 
@@ -215,7 +215,7 @@ namespace SOR.Controllers
                         string sqlActivar = "UPDATE dbo.Temporadas SET Activa = 1 WHERE IdTemporada = @Id;";
                         using (SqlCommand cmdAct = new SqlCommand(sqlActivar, cn, tran))
                         {
-                            cmdAct.Parameters.AddWithValue("@Id", idTemporada);
+                            cmdAct.Parameters.Add(new SqlParameter("@Id", idTemporada));
                             cmdAct.ExecuteNonQuery();
                         }
 
@@ -225,7 +225,7 @@ namespace SOR.Controllers
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al activar la temporada: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -248,12 +248,12 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.Temporadas SET Activa = 0 WHERE IdTemporada = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idTemporada);
+                cmd.Parameters.Add(new SqlParameter("@Id", idTemporada));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Temporada desactivada/inhabilitada con éxito.";
+            TempData["MensajeExito"] = "Temporada desactivada/inhabilitada con Ã©xito.";
             return RedirectToAction("Index");
         }
     }

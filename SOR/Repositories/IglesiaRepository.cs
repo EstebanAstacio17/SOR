@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -107,27 +107,27 @@ namespace SOR.Repositories
                             SELECT SCOPE_IDENTITY();";
 
                         SqlCommand cmdIg = new SqlCommand(sqlIglesia, cn, tran);
-                        cmdIg.Parameters.AddWithValue("@NombreIglesia", modelo.NombreIglesia);
-                        cmdIg.Parameters.AddWithValue("@RNC_Cedula", modelo.RNC_Cedula ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Telefono", modelo.Telefono ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@CorreoInstitucion", modelo.CorreoInstitucion ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Calle", modelo.Calle ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Numero", modelo.Numero ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Sector", modelo.Sector ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Ciudad", modelo.Ciudad ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Provincia", modelo.Provincia ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Referencia", modelo.Referencia ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@IdEquipo", modelo.IdEquipo);
-                        cmdIg.Parameters.AddWithValue("@IdUsuarioCreacion", idUsuarioCreacion);
+                        cmdIg.Parameters.Add(new SqlParameter("@NombreIglesia", modelo.NombreIglesia));
+                        cmdIg.Parameters.Add(new SqlParameter("@RNC_Cedula", modelo.RNC_Cedula ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Telefono", modelo.Telefono ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@CorreoInstitucion", modelo.CorreoInstitucion ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Calle", modelo.Calle ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Numero", modelo.Numero ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Sector", modelo.Sector ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Ciudad", modelo.Ciudad ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Provincia", modelo.Provincia ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Referencia", modelo.Referencia ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@IdEquipo", modelo.IdEquipo));
+                        cmdIg.Parameters.Add(new SqlParameter("@IdUsuarioCreacion", idUsuarioCreacion));
 
-                        cmdIg.Parameters.AddWithValue("@Denominacion", modelo.Denominacion ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@TipoOrganizacion", modelo.TipoOrganizacion ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@CantidadMaestros", modelo.CantidadMaestros ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@CantidadNinos", modelo.CantidadNinos ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Ref1Nombre", modelo.Ref1Nombre ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Ref1Contacto", modelo.Ref1Contacto ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Ref2Nombre", modelo.Ref2Nombre ?? (object)DBNull.Value);
-                        cmdIg.Parameters.AddWithValue("@Ref2Contacto", modelo.Ref2Contacto ?? (object)DBNull.Value);
+                        cmdIg.Parameters.Add(new SqlParameter("@Denominacion", modelo.Denominacion ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@TipoOrganizacion", modelo.TipoOrganizacion ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@CantidadMaestros", modelo.CantidadMaestros ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@CantidadNinos", modelo.CantidadNinos ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Ref1Nombre", modelo.Ref1Nombre ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Ref1Contacto", modelo.Ref1Contacto ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Ref2Nombre", modelo.Ref2Nombre ?? (object)DBNull.Value));
+                        cmdIg.Parameters.Add(new SqlParameter("@Ref2Contacto", modelo.Ref2Contacto ?? (object)DBNull.Value));
 
                         int idIglesiaNew = Convert.ToInt32(cmdIg.ExecuteScalar());
 
@@ -137,13 +137,13 @@ namespace SOR.Repositories
                             InsertarPersona(cn, tran, idIglesiaNew, "Pastor", modelo.Pastor);
                         }
 
-                        // 3. Insertar Líder Ministerial
+                        // 3. Insertar LÃ­der Ministerial
                         if (modelo.LiderMinisterial != null && !string.IsNullOrEmpty(modelo.LiderMinisterial.Nombres))
                         {
                             InsertarPersona(cn, tran, idIglesiaNew, "LiderMinisterial", modelo.LiderMinisterial);
                         }
 
-                        // 4. Crear Participación Inicial en la Temporada
+                        // 4. Crear ParticipaciÃ³n Inicial en la Temporada
                         int idTemporadaDestino = 0;
                         if (idTemporadaDestinoParam.HasValue && idTemporadaDestinoParam.Value > 0)
                         {
@@ -167,19 +167,19 @@ namespace SOR.Repositories
                             SELECT SCOPE_IDENTITY();";
 
                         SqlCommand cmdPart = new SqlCommand(sqlPart, cn, tran);
-                        cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesiaNew);
-                        cmdPart.Parameters.AddWithValue("@IdTemporada", idTemporadaDestino);
-                        cmdPart.Parameters.AddWithValue("@EstatusReporte", estatusReporte);
+                        cmdPart.Parameters.Add(new SqlParameter("@IdIglesia", idIglesiaNew));
+                        cmdPart.Parameters.Add(new SqlParameter("@IdTemporada", idTemporadaDestino));
+                        cmdPart.Parameters.Add(new SqlParameter("@EstatusReporte", estatusReporte));
                         int idParticipacionNew = Convert.ToInt32(cmdPart.ExecuteScalar());
 
-                        // Crear registro inicial de asignación de recursos despachados
+                        // Crear registro inicial de asignaciÃ³n de recursos despachados
                         string sqlRec = "INSERT INTO dbo.AsignacionesRecursos (IdParticipacion) VALUES (@IdParticipacion);";
                         SqlCommand cmdRec = new SqlCommand(sqlRec, cn, tran);
-                        cmdRec.Parameters.AddWithValue("@IdParticipacion", idParticipacionNew);
+                        cmdRec.Parameters.Add(new SqlParameter("@IdParticipacion", idParticipacionNew));
                         cmdRec.ExecuteNonQuery();
 
-                        // Registrar Historial de Inscripción (Etapa 1)
-                        RegistrarLogHistorial(cn, tran, idParticipacionNew, "Inscripción en Temporada", null, "Inscrita (Etapa 1)", idUsuarioCreacion, "Iglesia inscrita exitosamente en la temporada activa.");
+                        // Registrar Historial de InscripciÃ³n (Etapa 1)
+                        RegistrarLogHistorial(cn, tran, idParticipacionNew, "InscripciÃ³n en Temporada", null, "Inscrita (Etapa 1)", idUsuarioCreacion, "Iglesia inscrita exitosamente en la temporada activa.");
 
                         tran.Commit();
                         return idIglesiaNew;
@@ -205,7 +205,7 @@ namespace SOR.Repositories
                 string sqlIg = "SELECT i.*, e.NombreEquipo FROM dbo.Iglesias i INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo WHERE i.IdIglesia = @Id;";
                 using (SqlCommand cmd = new SqlCommand(sqlIg, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idIglesia));
                     using (SqlDataReader dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -246,11 +246,11 @@ namespace SOR.Repositories
 
                 if (ig == null) return null;
 
-                // 2. Personas (Pastor, Líder)
+                // 2. Personas (Pastor, LÃ­der)
                 string sqlPer = "SELECT IdPersonaIglesia, IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, DocumentoAdjuntoRuta, Celular, Correo FROM dbo.PersonasIglesia WHERE IdIglesia = @Id;";
                 using (SqlCommand cmdPer = new SqlCommand(sqlPer, cn))
                 {
-                    cmdPer.Parameters.AddWithValue("@Id", idIglesia);
+                    cmdPer.Parameters.Add(new SqlParameter("@Id", idIglesia));
                     using (SqlDataReader drP = cmdPer.ExecuteReader())
                     {
                         while (drP.Read())
@@ -278,7 +278,7 @@ namespace SOR.Repositories
                 string sqlMaestros = "SELECT IdMaestro, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo, Activo FROM dbo.Maestros WHERE IdIglesia = @Id;";
                 using (SqlCommand cmdM = new SqlCommand(sqlMaestros, cn))
                 {
-                    cmdM.Parameters.AddWithValue("@Id", idIglesia);
+                    cmdM.Parameters.Add(new SqlParameter("@Id", idIglesia));
                     using (SqlDataReader drM = cmdM.ExecuteReader())
                     {
                         while (drM.Read())
@@ -298,7 +298,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3. Participación y Recursos Actuales con soporte de etapas de la temporada
+                // 3. ParticipaciÃ³n y Recursos Actuales con soporte de etapas de la temporada
                 string sqlPart = @"
                     SELECT p.*, t.NombreTemporada, t.Activa AS TemporadaActiva, r.* 
                     FROM dbo.ParticipacionesIglesia p
@@ -309,7 +309,7 @@ namespace SOR.Repositories
 
                 using (SqlCommand cmdPart = new SqlCommand(sqlPart, cn))
                 {
-                    cmdPart.Parameters.AddWithValue("@Id", idIglesia);
+                    cmdPart.Parameters.Add(new SqlParameter("@Id", idIglesia));
                     using (SqlDataReader drPart = cmdPart.ExecuteReader())
                     {
                         if (drPart.Read())
@@ -383,14 +383,14 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3.2 Cargar Compañeros de Oración en la temporada activa
+                // 3.2 Cargar CompaÃ±eros de OraciÃ³n en la temporada activa
                 if (ig.ParticipacionActual != null)
                 {
                     string sqlOracion = "SELECT c.*, us.Correo AS CorreoRegistrador FROM dbo.CompanerosOracion c INNER JOIN dbo.Usuarios us ON c.IdUsuarioRegistro = us.IdUsuario WHERE c.IdIglesia = @Id AND c.IdTemporada = @IdTemp;";
                     using (SqlCommand cmdOr = new SqlCommand(sqlOracion, cn))
                     {
-                        cmdOr.Parameters.AddWithValue("@Id", idIglesia);
-                        cmdOr.Parameters.AddWithValue("@IdTemp", ig.ParticipacionActual.IdTemporada);
+                        cmdOr.Parameters.Add(new SqlParameter("@Id", idIglesia));
+                        cmdOr.Parameters.Add(new SqlParameter("@IdTemp", ig.ParticipacionActual.IdTemporada));
                         using (SqlDataReader drOr = cmdOr.ExecuteReader())
                         {
                             while (drOr.Read())
@@ -411,11 +411,11 @@ namespace SOR.Repositories
                         }
                     }
 
-                    // 3.3 Cargar Historial / Timeline de participación de esta temporada
+                    // 3.3 Cargar Historial / Timeline de participaciÃ³n de esta temporada
                     string sqlHist = @"
                         SELECT h.*, us.Correo AS NombreResponsable,
                                COALESCE(LTRIM(RTRIM(ISNULL(pc.PrimerNombre, '') + ' ' + ISNULL(pc.PrimerApellido, ''))), us.Correo) AS NombreCoordinador,
-                               COALESCE(pos.NombrePosicion, 'Sin Posición') AS PosicionCoordinador,
+                               COALESCE(pos.NombrePosicion, 'Sin PosiciÃ³n') AS PosicionCoordinador,
                                COALESCE(eq.NombreEquipo, 'Sin Equipo') AS EquipoCoordinador,
                                t.NombreTemporada
                         FROM dbo.HistorialParticipacion h 
@@ -430,7 +430,7 @@ namespace SOR.Repositories
                         ORDER BY h.FechaHora DESC;";
                     using (SqlCommand cmdH = new SqlCommand(sqlHist, cn))
                     {
-                        cmdH.Parameters.AddWithValue("@IdPart", ig.ParticipacionActual.IdParticipacion);
+                        cmdH.Parameters.Add(new SqlParameter("@IdPart", ig.ParticipacionActual.IdParticipacion));
                         using (SqlDataReader drH = cmdH.ExecuteReader())
                         {
                             while (drH.Read())
@@ -457,11 +457,11 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 4. Comentarios Históricos
+                // 4. Comentarios HistÃ³ricos
                 string sqlCom = @"
                     SELECT c.*, u.Correo,
                            COALESCE(LTRIM(RTRIM(ISNULL(pc.PrimerNombre, '') + ' ' + ISNULL(pc.PrimerApellido, ''))), u.Correo) AS NombreCoordinador,
-                           COALESCE(pos.NombrePosicion, 'Sin Posición') AS PosicionCoordinador,
+                           COALESCE(pos.NombrePosicion, 'Sin PosiciÃ³n') AS PosicionCoordinador,
                            COALESCE(eq.NombreEquipo, 'Sin Equipo') AS EquipoCoordinador,
                            (SELECT TOP 1 NombreTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC) AS NombreTemporada
                     FROM dbo.ComentariosObservaciones c
@@ -474,7 +474,7 @@ namespace SOR.Repositories
                     ORDER BY c.FechaCreacion DESC;";
                 using (SqlCommand cmdCom = new SqlCommand(sqlCom, cn))
                 {
-                    cmdCom.Parameters.AddWithValue("@Id", idIglesia);
+                    cmdCom.Parameters.Add(new SqlParameter("@Id", idIglesia));
                     using (SqlDataReader drC = cmdCom.ExecuteReader())
                     {
                         while (drC.Read())
@@ -496,7 +496,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 5. Cargar regla de 3 años, desempeño previo y excepciones
+                // 5. Cargar regla de 3 aÃ±os, desempeÃ±o previo y excepciones
                 if (ig.ParticipacionActual != null)
                 {
                     int idTemporadaActiva = ig.ParticipacionActual.IdTemporada;
@@ -519,9 +519,9 @@ namespace SOR.Repositories
 
                     using (SqlCommand cmdAnt = new SqlCommand(sqlAnt, cn))
                     {
-                        cmdAnt.Parameters.AddWithValue("@Id", idIglesia);
-                        cmdAnt.Parameters.AddWithValue("@Rnc", ig.RNC_Cedula ?? "");
-                        cmdAnt.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
+                        cmdAnt.Parameters.Add(new SqlParameter("@Id", idIglesia));
+                        cmdAnt.Parameters.Add(new SqlParameter("@Rnc", ig.RNC_Cedula ?? ""));
+                        cmdAnt.Parameters.Add(new SqlParameter("@IdTemp", idTemporadaActiva));
                         using (SqlDataReader drAnt = cmdAnt.ExecuteReader())
                         {
                             if (drAnt.Read())
@@ -541,19 +541,19 @@ namespace SOR.Repositories
                         }
                     }
 
-                    // Cargar Excepción Activa si existe
+                    // Cargar ExcepciÃ³n Activa si existe
                     ig.ExcepcionActiva = ObtenerExcepcionActivaInterno(cn, idIglesia, idTemporadaActiva);
 
                     // Cargar Historial completo de Excepciones
                     ig.HistorialExcepciones = ObtenerHistorialExcepcionesInterno(cn, idIglesia);
 
-                    // Cargar Discipulado LGA y Acompañamiento
+                    // Cargar Discipulado LGA y AcompaÃ±amiento
                     ig.DiscipuladoLGA = ObtenerResumenDiscipuladoLGA(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
 
-                    // Cargar Reporte de Eventos Evangelísticos
+                    // Cargar Reporte de Eventos EvangelÃ­sticos
                     ig.ReporteEvangelistico = ObtenerReporteEventosEvangelisticos(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
 
-                    // Cargar Reporte de Discipulado / Graduación LGA
+                    // Cargar Reporte de Discipulado / GraduaciÃ³n LGA
                     ig.ReporteGraduacionLGA = ObtenerReporteGraduacionLGA(ig.ParticipacionActual.IdParticipacion, ig.IdIglesia);
                 }
             }
@@ -575,11 +575,11 @@ namespace SOR.Repositories
                     WHERE IdParticipacion = @IdParticipacion;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Participara", participara);
-                cmd.Parameters.AddWithValue("@Justificacion", justificacion ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@EstadoEvaluacion", estadoEvaluacion ?? "Pendiente");
-                cmd.Parameters.AddWithValue("@IdEvaluador", idEvaluador);
-                cmd.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
+                cmd.Parameters.Add(new SqlParameter("@Participara", participara));
+                cmd.Parameters.Add(new SqlParameter("@Justificacion", justificacion ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@EstadoEvaluacion", estadoEvaluacion ?? "Pendiente"));
+                cmd.Parameters.Add(new SqlParameter("@IdEvaluador", idEvaluador));
+                cmd.Parameters.Add(new SqlParameter("@IdParticipacion", idParticipacion));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
@@ -603,14 +603,14 @@ namespace SOR.Repositories
                     WHERE IdParticipacion = @IdParticipacion;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Oportunidades", modelo.OportunidadesEvangelisticas);
-                cmd.Parameters.AddWithValue("@Regalo", modelo.LibrosMejorRegalo);
-                cmd.Parameters.AddWithValue("@Maestros", modelo.LibrosMaestros);
-                cmd.Parameters.AddWithValue("@Alumno", modelo.LibrosAlumno);
-                cmd.Parameters.AddWithValue("@Posters", modelo.Posters);
-                cmd.Parameters.AddWithValue("@Testamentos", modelo.NuevosTestamentos);
-                cmd.Parameters.AddWithValue("@IdDespacho", idDespachador);
-                cmd.Parameters.AddWithValue("@IdParticipacion", modelo.IdParticipacion);
+                cmd.Parameters.Add(new SqlParameter("@Oportunidades", modelo.OportunidadesEvangelisticas));
+                cmd.Parameters.Add(new SqlParameter("@Regalo", modelo.LibrosMejorRegalo));
+                cmd.Parameters.Add(new SqlParameter("@Maestros", modelo.LibrosMaestros));
+                cmd.Parameters.Add(new SqlParameter("@Alumno", modelo.LibrosAlumno));
+                cmd.Parameters.Add(new SqlParameter("@Posters", modelo.Posters));
+                cmd.Parameters.Add(new SqlParameter("@Testamentos", modelo.NuevosTestamentos));
+                cmd.Parameters.Add(new SqlParameter("@IdDespacho", idDespachador));
+                cmd.Parameters.Add(new SqlParameter("@IdParticipacion", modelo.IdParticipacion));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
@@ -623,9 +623,9 @@ namespace SOR.Repositories
             {
                 string sql = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                cmd.Parameters.AddWithValue("@Comentario", comentario);
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+                cmd.Parameters.Add(new SqlParameter("@Comentario", comentario));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
@@ -639,13 +639,13 @@ namespace SOR.Repositories
                 VALUES (@IdPart, GETDATE(), @Accion, @Ant, @Nue, @IdUsuario, @Com, @Raz);";
 
             SqlCommand cmd = new SqlCommand(sql, cn, tran);
-            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
-            cmd.Parameters.AddWithValue("@Accion", accion);
-            cmd.Parameters.AddWithValue("@Ant", anterior ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Nue", nuevo ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
-            cmd.Parameters.AddWithValue("@Com", comentario ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Raz", razon ?? (object)DBNull.Value);
+            cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+            cmd.Parameters.Add(new SqlParameter("@Accion", accion));
+            cmd.Parameters.Add(new SqlParameter("@Ant", anterior ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Nue", nuevo ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+            cmd.Parameters.Add(new SqlParameter("@Com", comentario ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Raz", razon ?? (object)DBNull.Value));
 
             cmd.ExecuteNonQuery();
         }
@@ -657,18 +657,18 @@ namespace SOR.Repositories
                 VALUES (@IdIglesia, @TipoPersona, @Nombres, @Apellidos, @DocumentoIdentidad, @DocumentoAdjuntoRuta, @Celular, @Correo, @Calle, @Numero, @Sector, @Referencia);";
 
             SqlCommand cmd = new SqlCommand(sql, cn, tran);
-            cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
-            cmd.Parameters.AddWithValue("@TipoPersona", tipoPersona);
-            cmd.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
-            cmd.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
-            cmd.Parameters.AddWithValue("@DocumentoIdentidad", persona.DocumentoIdentidad ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@DocumentoAdjuntoRuta", persona.DocumentoAdjuntoRuta ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Calle", persona.Calle ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Numero", persona.Numero ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Sector", persona.Sector ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@Referencia", persona.Referencia ?? (object)DBNull.Value);
+            cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+            cmd.Parameters.Add(new SqlParameter("@TipoPersona", tipoPersona));
+            cmd.Parameters.Add(new SqlParameter("@Nombres", persona.Nombres ?? ""));
+            cmd.Parameters.Add(new SqlParameter("@Apellidos", persona.Apellidos ?? ""));
+            cmd.Parameters.Add(new SqlParameter("@DocumentoIdentidad", persona.DocumentoIdentidad ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@DocumentoAdjuntoRuta", persona.DocumentoAdjuntoRuta ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Celular", persona.Celular ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Correo", persona.Correo ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Calle", persona.Calle ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Numero", persona.Numero ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Sector", persona.Sector ?? (object)DBNull.Value));
+            cmd.Parameters.Add(new SqlParameter("@Referencia", persona.Referencia ?? (object)DBNull.Value));
 
             cmd.ExecuteNonQuery();
         }
@@ -711,30 +711,30 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmdIg = new SqlCommand(sqlIglesia, cn, tran))
                         {
-                            cmdIg.Parameters.AddWithValue("@NombreIglesia", modelo.NombreIglesia);
-                            cmdIg.Parameters.AddWithValue("@RNC_Cedula", modelo.RNC_Cedula ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Telefono", modelo.Telefono ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@CorreoInstitucion", modelo.CorreoInstitucion ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Calle", modelo.Calle ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Numero", modelo.Numero ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Sector", modelo.Sector ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Ciudad", modelo.Ciudad ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Provincia", modelo.Provincia ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Referencia", modelo.Referencia ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@IdEquipo", modelo.IdEquipo);
-                            cmdIg.Parameters.AddWithValue("@Denominacion", modelo.Denominacion ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@TipoOrganizacion", modelo.TipoOrganizacion ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@CantidadMaestros", modelo.CantidadMaestros ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@CantidadNinos", modelo.CantidadNinos ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Ref1Nombre", modelo.Ref1Nombre ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Ref1Contacto", modelo.Ref1Contacto ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Ref2Nombre", modelo.Ref2Nombre ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@Ref2Contacto", modelo.Ref2Contacto ?? (object)DBNull.Value);
-                            cmdIg.Parameters.AddWithValue("@IdUsuarioEdicion", idUsuarioEdicion);
+                            cmdIg.Parameters.Add(new SqlParameter("@NombreIglesia", modelo.NombreIglesia));
+                            cmdIg.Parameters.Add(new SqlParameter("@RNC_Cedula", modelo.RNC_Cedula ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Telefono", modelo.Telefono ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@CorreoInstitucion", modelo.CorreoInstitucion ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Calle", modelo.Calle ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Numero", modelo.Numero ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Sector", modelo.Sector ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Ciudad", modelo.Ciudad ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Provincia", modelo.Provincia ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Referencia", modelo.Referencia ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@IdEquipo", modelo.IdEquipo));
+                            cmdIg.Parameters.Add(new SqlParameter("@Denominacion", modelo.Denominacion ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@TipoOrganizacion", modelo.TipoOrganizacion ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@CantidadMaestros", modelo.CantidadMaestros ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@CantidadNinos", modelo.CantidadNinos ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Ref1Nombre", modelo.Ref1Nombre ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Ref1Contacto", modelo.Ref1Contacto ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Ref2Nombre", modelo.Ref2Nombre ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@Ref2Contacto", modelo.Ref2Contacto ?? (object)DBNull.Value));
+                            cmdIg.Parameters.Add(new SqlParameter("@IdUsuarioEdicion", idUsuarioEdicion));
                             var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
                             pRowVer.Value = (modelo.RowVersion != null && modelo.RowVersion.Length > 0) ? (object)modelo.RowVersion : DBNull.Value;
                             cmdIg.Parameters.Add(pRowVer);
-                            cmdIg.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
+                            cmdIg.Parameters.Add(new SqlParameter("@IdIglesia", modelo.IdIglesia));
 
                             int filas = cmdIg.ExecuteNonQuery();
                             if (filas == 0)
@@ -750,7 +750,7 @@ namespace SOR.Repositories
                             ActualizarOInsertarPersona(cn, tran, modelo.IdIglesia, "Pastor", modelo.Pastor);
                         }
 
-                        // 3. Actualizar o Insertar Líder
+                        // 3. Actualizar o Insertar LÃ­der
                         if (modelo.LiderMinisterial != null)
                         {
                             ActualizarOInsertarPersona(cn, tran, modelo.IdIglesia, "LiderMinisterial", modelo.LiderMinisterial);
@@ -759,12 +759,12 @@ namespace SOR.Repositories
                         // Registrar en Historial
                         string sqlLog = @"
                             INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                            SELECT TOP 1 IdParticipacion, GETDATE(), 'Edición de Iglesia', EstadoEvaluacion, EstadoEvaluacion, @IdUser, 'Datos de la iglesia actualizados por el usuario.'
+                            SELECT TOP 1 IdParticipacion, GETDATE(), 'EdiciÃ³n de Iglesia', EstadoEvaluacion, EstadoEvaluacion, @IdUser, 'Datos de la iglesia actualizados por el usuario.'
                             FROM dbo.ParticipacionesIglesia WHERE IdIglesia = @IdIglesia ORDER BY IdParticipacion DESC;";
                         using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn, tran))
                         {
-                            cmdLog.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
-                            cmdLog.Parameters.AddWithValue("@IdUser", idUsuarioEdicion);
+                            cmdLog.Parameters.Add(new SqlParameter("@IdIglesia", modelo.IdIglesia));
+                            cmdLog.Parameters.Add(new SqlParameter("@IdUser", idUsuarioEdicion));
                             cmdLog.ExecuteNonQuery();
                         }
 
@@ -785,8 +785,8 @@ namespace SOR.Repositories
             int count = 0;
             using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
             {
-                cmdCheck.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                cmdCheck.Parameters.AddWithValue("@Tipo", tipoPersona);
+                cmdCheck.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                cmdCheck.Parameters.Add(new SqlParameter("@Tipo", tipoPersona));
                 count = Convert.ToInt32(cmdCheck.ExecuteScalar());
             }
 
@@ -803,14 +803,14 @@ namespace SOR.Repositories
                     WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
                 using (SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn, tran))
                 {
-                    cmdUp.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
-                    cmdUp.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
-                    cmdUp.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
-                    cmdUp.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
-                    cmdUp.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
-                    cmdUp.Parameters.AddWithValue("@Ruta", string.IsNullOrEmpty(persona.DocumentoAdjuntoRuta) ? (object)DBNull.Value : persona.DocumentoAdjuntoRuta);
-                    cmdUp.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmdUp.Parameters.AddWithValue("@Tipo", tipoPersona);
+                    cmdUp.Parameters.Add(new SqlParameter("@Nombres", persona.Nombres ?? ""));
+                    cmdUp.Parameters.Add(new SqlParameter("@Apellidos", persona.Apellidos ?? ""));
+                    cmdUp.Parameters.Add(new SqlParameter("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value));
+                    cmdUp.Parameters.Add(new SqlParameter("@Celular", persona.Celular ?? (object)DBNull.Value));
+                    cmdUp.Parameters.Add(new SqlParameter("@Correo", persona.Correo ?? (object)DBNull.Value));
+                    cmdUp.Parameters.Add(new SqlParameter("@Ruta", string.IsNullOrEmpty(persona.DocumentoAdjuntoRuta) ? (object)DBNull.Value : persona.DocumentoAdjuntoRuta));
+                    cmdUp.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmdUp.Parameters.Add(new SqlParameter("@Tipo", tipoPersona));
                     cmdUp.ExecuteNonQuery();
                 }
             }
@@ -821,7 +821,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // MÉTODOS DE EXCEPCIÓN A LA REGLA DE 3 AÑOS (DOBLE APROBACIÓN CE + CMI)
+        // MÃ‰TODOS DE EXCEPCIÃ“N A LA REGLA DE 3 AÃ‘OS (DOBLE APROBACIÃ“N CE + CMI)
         // ============================================================================
 
         private ExcepcionRegla3Anios MapearExcepcion(SqlDataReader dr)
@@ -892,8 +892,8 @@ namespace SOR.Repositories
 
             using (SqlCommand cmd = new SqlCommand(sql, cn))
             {
-                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", idTemporada));
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
                     if (dr.Read())
@@ -934,7 +934,7 @@ namespace SOR.Repositories
 
             using (SqlCommand cmd = new SqlCommand(sql, cn))
             {
-                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
                     while (dr.Read())
@@ -980,8 +980,8 @@ namespace SOR.Repositories
 
             using (SqlCommand cmd = new SqlCommand(sql, cn))
             {
-                cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                cmd.Parameters.AddWithValue("@IdTempPrev", idTemporadaPrevia);
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                cmd.Parameters.Add(new SqlParameter("@IdTempPrev", idTemporadaPrevia));
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
                     if (dr.Read())
@@ -999,12 +999,12 @@ namespace SOR.Repositories
                         des.TotalGraduados = Convert.ToInt32(dr["TotalGraduados"]);
                         des.TotalMaestrosCapacitados = Convert.ToInt32(dr["TotalMaestros"]);
 
-                        des.ResumenTexto = $"En la temporada '{des.NombreTemporadaPrevia}', la iglesia completó hasta la Etapa {des.EtapaAlcanzada} (Estatus reporte: {des.EstatusReporte}). " +
-                            $"Reportó {des.TotalNinosAlcanzados} niños alcanzados, {des.TotalDecisionesFe} decisiones de fe, {des.TotalGraduados} graduados de La Gran Aventura, y {des.TotalMaestrosCapacitados} maestros con asistencia confirmada a capacitaciones.";
+                        des.ResumenTexto = $"En la temporada '{des.NombreTemporadaPrevia}', la iglesia completÃ³ hasta la Etapa {des.EtapaAlcanzada} (Estatus reporte: {des.EstatusReporte}). " +
+                            $"ReportÃ³ {des.TotalNinosAlcanzados} niÃ±os alcanzados, {des.TotalDecisionesFe} decisiones de fe, {des.TotalGraduados} graduados de La Gran Aventura, y {des.TotalMaestrosCapacitados} maestros con asistencia confirmada a capacitaciones.";
                     }
                     else
                     {
-                        des.ResumenTexto = "No se encontraron registros estadísticos en la base de datos para la temporada previa especificada.";
+                        des.ResumenTexto = "No se encontraron registros estadÃ­sticos en la base de datos para la temporada previa especificada.";
                     }
                 }
             }
@@ -1069,7 +1069,7 @@ namespace SOR.Repositories
 
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdExcepcion", idExcepcion);
+                    cmd.Parameters.Add(new SqlParameter("@IdExcepcion", idExcepcion));
                     using (SqlDataReader dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -1085,9 +1085,9 @@ namespace SOR.Repositories
         public int RegistrarSolicitudExcepcion(ExcepcionRegla3Anios excepcion, int idUsuario)
         {
             if (string.IsNullOrWhiteSpace(excepcion.Motivo))
-                throw new ArgumentException("El motivo de la excepción es obligatorio.");
+                throw new ArgumentException("El motivo de la excepciÃ³n es obligatorio.");
             if (string.IsNullOrWhiteSpace(excepcion.Justificacion))
-                throw new ArgumentException("La justificación detallada de la excepción es obligatoria.");
+                throw new ArgumentException("La justificaciÃ³n detallada de la excepciÃ³n es obligatoria.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -1096,23 +1096,23 @@ namespace SOR.Repositories
                 {
                     try
                     {
-                        // 1. Validar que no exista ya una excepción activa (PENDIENTE o APROBADA)
+                        // 1. Validar que no exista ya una excepciÃ³n activa (PENDIENTE o APROBADA)
                         string sqlCheck = @"
                             SELECT COUNT(1) 
                             FROM dbo.ExcepcionesRegla3Anios 
                             WHERE IdIglesia = @IdIglesia AND IdTemporada = @IdTemp AND Estado IN ('PENDIENTE', 'APROBADA');";
                         using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
                         {
-                            cmdCheck.Parameters.AddWithValue("@IdIglesia", excepcion.IdIglesia);
-                            cmdCheck.Parameters.AddWithValue("@IdTemp", excepcion.IdTemporada);
+                            cmdCheck.Parameters.Add(new SqlParameter("@IdIglesia", excepcion.IdIglesia));
+                            cmdCheck.Parameters.Add(new SqlParameter("@IdTemp", excepcion.IdTemporada));
                             int existe = Convert.ToInt32(cmdCheck.ExecuteScalar());
                             if (existe > 0)
                             {
-                                throw new InvalidOperationException("Esta iglesia ya cuenta con una solicitud de excepción activa (Pendiente o Aprobada) para esta temporada.");
+                                throw new InvalidOperationException("Esta iglesia ya cuenta con una solicitud de excepciÃ³n activa (Pendiente o Aprobada) para esta temporada.");
                             }
                         }
 
-                        // 2. Insertar excepción
+                        // 2. Insertar excepciÃ³n
                         string sqlInsert = @"
                             INSERT INTO dbo.ExcepcionesRegla3Anios (
                                 IdIglesia, IdTemporada, TemporadaPreviaId, DiferenciaTemporadas,
@@ -1132,21 +1132,21 @@ namespace SOR.Repositories
                         int idExcepcionNew;
                         using (SqlCommand cmdIns = new SqlCommand(sqlInsert, cn, tran))
                         {
-                            cmdIns.Parameters.AddWithValue("@IdIglesia", excepcion.IdIglesia);
-                            cmdIns.Parameters.AddWithValue("@IdTemporada", excepcion.IdTemporada);
-                            cmdIns.Parameters.AddWithValue("@TemporadaPreviaId", excepcion.TemporadaPreviaId.HasValue ? (object)excepcion.TemporadaPreviaId.Value : DBNull.Value);
-                            cmdIns.Parameters.AddWithValue("@DiferenciaTemporadas", excepcion.DiferenciaTemporadas);
-                            cmdIns.Parameters.AddWithValue("@Motivo", excepcion.Motivo.Trim());
-                            cmdIns.Parameters.AddWithValue("@Justificacion", excepcion.Justificacion.Trim());
-                            cmdIns.Parameters.AddWithValue("@ResultadoDesempeno", (object)excepcion.ResultadoDesempeno ?? DBNull.Value);
-                            cmdIns.Parameters.AddWithValue("@SolicitadoPor", idUsuario);
+                            cmdIns.Parameters.Add(new SqlParameter("@IdIglesia", excepcion.IdIglesia));
+                            cmdIns.Parameters.Add(new SqlParameter("@IdTemporada", excepcion.IdTemporada));
+                            cmdIns.Parameters.Add(new SqlParameter("@TemporadaPreviaId", excepcion.TemporadaPreviaId.HasValue ? (object)excepcion.TemporadaPreviaId.Value : DBNull.Value));
+                            cmdIns.Parameters.Add(new SqlParameter("@DiferenciaTemporadas", excepcion.DiferenciaTemporadas));
+                            cmdIns.Parameters.Add(new SqlParameter("@Motivo", excepcion.Motivo.Trim()));
+                            cmdIns.Parameters.Add(new SqlParameter("@Justificacion", excepcion.Justificacion.Trim()));
+                            cmdIns.Parameters.Add(new SqlParameter("@ResultadoDesempeno", (object)excepcion.ResultadoDesempeno ?? DBNull.Value));
+                            cmdIns.Parameters.Add(new SqlParameter("@SolicitadoPor", idUsuario));
 
                             idExcepcionNew = Convert.ToInt32(cmdIns.ExecuteScalar());
                         }
 
-                        // 3. Registrar auditoría
+                        // 3. Registrar auditorÃ­a
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "SOLICITAR_EXCEPCION_3ANIOS", "EXCEPCIONES",
-                            idExcepcionNew.ToString(), $"Solicitud de excepción registrada para iglesia #{excepcion.IdIglesia}. Motivo: {excepcion.Motivo}");
+                            idExcepcionNew.ToString(), $"Solicitud de excepciÃ³n registrada para iglesia #{excepcion.IdIglesia}. Motivo: {excepcion.Motivo}");
 
                         tran.Commit();
                         return idExcepcionNew;
@@ -1174,12 +1174,12 @@ namespace SOR.Repositories
                         bool cmiAprobado = false;
                         using (SqlCommand cmdVal = new SqlCommand(sqlVal, cn, tran))
                         {
-                            cmdVal.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdVal.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             using (SqlDataReader dr = cmdVal.ExecuteReader())
                             {
-                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepción no existe.");
+                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepciÃ³n no existe.");
                                 string estadoActual = dr["Estado"].ToString();
-                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepción que ha sido rechazada.");
+                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepciÃ³n que ha sido rechazada.");
                                 cmiAprobado = Convert.ToBoolean(dr["AprobadoCMI"]);
                             }
                         }
@@ -1199,10 +1199,10 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmdUp = new SqlCommand(sqlUp, cn, tran))
                         {
-                            cmdUp.Parameters.AddWithValue("@IdUser", idUsuarioCE);
-                            cmdUp.Parameters.AddWithValue("@Comentario", (object)comentario ?? DBNull.Value);
-                            cmdUp.Parameters.AddWithValue("@NuevoEstado", nuevoEstado);
-                            cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdUp.Parameters.Add(new SqlParameter("@IdUser", idUsuarioCE));
+                            cmdUp.Parameters.Add(new SqlParameter("@Comentario", (object)comentario ?? DBNull.Value));
+                            cmdUp.Parameters.Add(new SqlParameter("@NuevoEstado", nuevoEstado));
+                            cmdUp.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
                             pRowVer.Value = (rowVersion != null && rowVersion.Length > 0) ? (object)rowVersion : DBNull.Value;
                             cmdUp.Parameters.Add(pRowVer);
@@ -1210,12 +1210,12 @@ namespace SOR.Repositories
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
                             {
-                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario mientras se procesaba su aprobación.");
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepciÃ³n fue modificada por otro usuario mientras se procesaba su aprobaciÃ³n.");
                             }
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuarioCE, null, "APROBAR_EXCEPCION_CE", "EXCEPCIONES",
-                            idExcepcion.ToString(), $"Aprobación de CE registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
+                            idExcepcion.ToString(), $"AprobaciÃ³n de CE registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
 
                         tran.Commit();
                     }
@@ -1241,12 +1241,12 @@ namespace SOR.Repositories
                         bool ceAprobado = false;
                         using (SqlCommand cmdVal = new SqlCommand(sqlVal, cn, tran))
                         {
-                            cmdVal.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdVal.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             using (SqlDataReader dr = cmdVal.ExecuteReader())
                             {
-                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepción no existe.");
+                                if (!dr.Read()) throw new InvalidOperationException("La solicitud de excepciÃ³n no existe.");
                                 string estadoActual = dr["Estado"].ToString();
-                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepción que ha sido rechazada.");
+                                if (estadoActual == "RECHAZADA") throw new InvalidOperationException("No se puede aprobar una excepciÃ³n que ha sido rechazada.");
                                 ceAprobado = Convert.ToBoolean(dr["AprobadoCE"]);
                             }
                         }
@@ -1266,10 +1266,10 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmdUp = new SqlCommand(sqlUp, cn, tran))
                         {
-                            cmdUp.Parameters.AddWithValue("@IdUser", idUsuarioCMI);
-                            cmdUp.Parameters.AddWithValue("@Comentario", (object)comentario ?? DBNull.Value);
-                            cmdUp.Parameters.AddWithValue("@NuevoEstado", nuevoEstado);
-                            cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdUp.Parameters.Add(new SqlParameter("@IdUser", idUsuarioCMI));
+                            cmdUp.Parameters.Add(new SqlParameter("@Comentario", (object)comentario ?? DBNull.Value));
+                            cmdUp.Parameters.Add(new SqlParameter("@NuevoEstado", nuevoEstado));
+                            cmdUp.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
                             pRowVer.Value = (rowVersion != null && rowVersion.Length > 0) ? (object)rowVersion : DBNull.Value;
                             cmdUp.Parameters.Add(pRowVer);
@@ -1277,12 +1277,12 @@ namespace SOR.Repositories
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
                             {
-                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario mientras se procesaba su aprobación.");
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepciÃ³n fue modificada por otro usuario mientras se procesaba su aprobaciÃ³n.");
                             }
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuarioCMI, null, "APROBAR_EXCEPCION_CMI", "EXCEPCIONES",
-                            idExcepcion.ToString(), $"Aprobación de CMI registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
+                            idExcepcion.ToString(), $"AprobaciÃ³n de CMI registrada. Estado resultante: {nuevoEstado}. Comentario: {comentario}");
 
                         tran.Commit();
                     }
@@ -1320,9 +1320,9 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmdUp = new SqlCommand(sqlUp, cn, tran))
                         {
-                            cmdUp.Parameters.AddWithValue("@IdUser", idUsuario);
-                            cmdUp.Parameters.AddWithValue("@Motivo", motivo.Trim());
-                            cmdUp.Parameters.AddWithValue("@Id", idExcepcion);
+                            cmdUp.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                            cmdUp.Parameters.Add(new SqlParameter("@Motivo", motivo.Trim()));
+                            cmdUp.Parameters.Add(new SqlParameter("@Id", idExcepcion));
                             var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
                             pRowVer.Value = (rowVersion != null && rowVersion.Length > 0) ? (object)rowVersion : DBNull.Value;
                             cmdUp.Parameters.Add(pRowVer);
@@ -1330,12 +1330,12 @@ namespace SOR.Repositories
                             int rows = cmdUp.ExecuteNonQuery();
                             if (rows == 0)
                             {
-                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepción fue modificada por otro usuario.");
+                                throw new DBConcurrencyException("Conflicto de concurrencia: La excepciÃ³n fue modificada por otro usuario.");
                             }
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "RECHAZAR_EXCEPCION_3ANIOS", "EXCEPCIONES",
-                            idExcepcion.ToString(), $"Excepción rechazada. Motivo: {motivo}");
+                            idExcepcion.ToString(), $"ExcepciÃ³n rechazada. Motivo: {motivo}");
 
                         tran.Commit();
                     }
@@ -1367,15 +1367,15 @@ namespace SOR.Repositories
 
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Rnc", rncCedula.Trim());
-                    cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                    cmd.Parameters.Add(new SqlParameter("@Rnc", rncCedula.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@IdTemporada", idTemporada));
                     return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
                 }
             }
         }
 
         // ============================================================================
-        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & CAPACIDAD)
+        // MÃ‰TODOS DE DISCIPULADO Y ACOMPAÃ‘AMIENTO LGA (5 CONTACTOS & CAPACIDAD)
         // ============================================================================
 
         public ResumenDiscipuladoLGAModel ObtenerResumenDiscipuladoLGA(int idParticipacion, int idIglesia)
@@ -1390,7 +1390,7 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // 1. Obtener datos de asignación y maestros para cálculo de capacidad
+                // 1. Obtener datos de asignaciÃ³n y maestros para cÃ¡lculo de capacidad
                 string sqlCap = @"
                     SELECT ISNULL(ar.OportunidadesEvangelisticas, 0) AS Cajitas,
                            (SELECT COUNT(1) FROM dbo.Maestros WHERE IdIglesia = @IdIglesia AND Activo = 1) AS MaestrosCap,
@@ -1401,8 +1401,8 @@ namespace SOR.Repositories
 
                 using (SqlCommand cmdCap = new SqlCommand(sqlCap, cn))
                 {
-                    cmdCap.Parameters.AddWithValue("@IdPart", idParticipacion);
-                    cmdCap.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                    cmdCap.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                    cmdCap.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
                     using (var dr = cmdCap.ExecuteReader())
                     {
                         if (dr.Read())
@@ -1415,7 +1415,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 2. Obtener o inicializar los 5 contactos estándar
+                // 2. Obtener o inicializar los 5 contactos estÃ¡ndar
                 string sqlContactos = @"
                     SELECT s.IdSeguimiento, s.IdParticipacion, s.IdIglesia, s.NumeroContacto,
                            s.FechaContacto, s.IdUsuarioContacto,
@@ -1431,7 +1431,7 @@ namespace SOR.Repositories
                 var listaDb = new List<ContactoLGAModel>();
                 using (SqlCommand cmdCon = new SqlCommand(sqlContactos, cn))
                 {
-                    cmdCon.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdCon.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     using (var dr = cmdCon.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1459,14 +1459,14 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Metadata estándar de los 5 contactos de la planilla LGA
+                // Metadata estÃ¡ndar de los 5 contactos de la planilla LGA
                 var plantillaContactos = new[]
                 {
-                    new { Num = 1, Fase = "Preparación", Agenda = "Antes del Evento Evangelístico", Pregunta = "¿Está listo para iniciar?", Lbl1 = "Cajitas Recibidas", Lbl2 = "Maestros Listos", Lbl3 = "" },
-                    new { Num = 2, Fase = "Inscripción", Agenda = "Semanas 1 a 3", Pregunta = "¿Las cajitas ya se convirtieron en niños inscritos?", Lbl1 = "Cajitas Entregadas", Lbl2 = "Niños Inscritos", Lbl3 = "" },
-                    new { Num = 3, Fase = "Cuidado", Agenda = "Semanas 4 a 9", Pregunta = "¿Estamos perdiendo niños inscritos?", Lbl1 = "Niños Inscritos", Lbl2 = "Asistencia Promedio", Lbl3 = "" },
-                    new { Num = 4, Fase = "Graduación", Agenda = "Semanas 10 a 12", Pregunta = "¿Llegaremos a la meta?", Lbl1 = "Niños Inscritos", Lbl2 = "Graduados Esperados/Confirmados", Lbl3 = "" },
-                    new { Num = 5, Fase = "Aprendizaje", Agenda = "Celebración y Reporte", Pregunta = "¿Qué debemos mejorar?", Lbl1 = "1. Funcionó", Lbl2 = "2. Desafíos", Lbl3 = "3. Acción Siguiente" }
+                    new { Num = 1, Fase = "PreparaciÃ³n", Agenda = "Antes del Evento EvangelÃ­stico", Pregunta = "Â¿EstÃ¡ listo para iniciar?", Lbl1 = "Cajitas Recibidas", Lbl2 = "Maestros Listos", Lbl3 = "" },
+                    new { Num = 2, Fase = "InscripciÃ³n", Agenda = "Semanas 1 a 3", Pregunta = "Â¿Las cajitas ya se convirtieron en niÃ±os inscritos?", Lbl1 = "Cajitas Entregadas", Lbl2 = "NiÃ±os Inscritos", Lbl3 = "" },
+                    new { Num = 3, Fase = "Cuidado", Agenda = "Semanas 4 a 9", Pregunta = "Â¿Estamos perdiendo niÃ±os inscritos?", Lbl1 = "NiÃ±os Inscritos", Lbl2 = "Asistencia Promedio", Lbl3 = "" },
+                    new { Num = 4, Fase = "GraduaciÃ³n", Agenda = "Semanas 10 a 12", Pregunta = "Â¿Llegaremos a la meta?", Lbl1 = "NiÃ±os Inscritos", Lbl2 = "Graduados Esperados/Confirmados", Lbl3 = "" },
+                    new { Num = 5, Fase = "Aprendizaje", Agenda = "CelebraciÃ³n y Reporte", Pregunta = "Â¿QuÃ© debemos mejorar?", Lbl1 = "1. FuncionÃ³", Lbl2 = "2. DesafÃ­os", Lbl3 = "3. AcciÃ³n Siguiente" }
                 };
 
                 foreach (var p in plantillaContactos)
@@ -1500,7 +1500,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3. Extraer métricas para el Embudo Real
+                // 3. Extraer mÃ©tricas para el Embudo Real
                 var c2 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 2);
                 if (c2 != null && int.TryParse(c2.DatoMinimo2, out int nInsc)) resumen.NinosInscritos = nInsc;
 
@@ -1510,7 +1510,7 @@ namespace SOR.Repositories
                 var c4 = resumen.Contactos.FirstOrDefault(x => x.NumeroContacto == 4);
                 if (c4 != null && int.TryParse(c4.DatoMinimo2, out int nGrad)) resumen.NinosGraduados = nGrad;
 
-                // 4. Obtener bitácora de llamadas rápidas (5 minutos)
+                // 4. Obtener bitÃ¡cora de llamadas rÃ¡pidas (5 minutos)
                 string sqlLlamadas = @"
                     SELECT IdLlamada, IdParticipacion, IdIglesia, FechaHora,
                            IdUsuarioCoordinador, NombreCoordinador, EtapaDiscipulado,
@@ -1522,7 +1522,7 @@ namespace SOR.Repositories
 
                 using (SqlCommand cmdLl = new SqlCommand(sqlLlamadas, cn))
                 {
-                    cmdLl.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdLl.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     using (var dr = cmdLl.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1547,7 +1547,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Determinar semáforo vigente de la iglesia
+                // Determinar semÃ¡foro vigente de la iglesia
                 if (resumen.BitacoraLlamadas.Any())
                 {
                     var ultima = resumen.BitacoraLlamadas.First();
@@ -1602,24 +1602,24 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdPart", c.IdParticipacion);
-                            cmd.Parameters.AddWithValue("@IdIglesia", c.IdIglesia);
-                            cmd.Parameters.AddWithValue("@Num", c.NumeroContacto);
-                            cmd.Parameters.AddWithValue("@Fecha", (object)c.FechaContacto ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                            cmd.Parameters.AddWithValue("@Pregunta", (object)c.PreguntaClave ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Dato1", (object)c.DatoMinimo1 ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Dato2", (object)c.DatoMinimo2 ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Dato3", (object)c.DatoMinimo3 ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Decision", (object)c.DecisionTomada ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Comentario", (object)c.ComentarioAccion ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Estado", string.IsNullOrEmpty(c.EstadoContacto) ? "COMPLETADO" : c.EstadoContacto);
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", c.IdParticipacion));
+                            cmd.Parameters.Add(new SqlParameter("@IdIglesia", c.IdIglesia));
+                            cmd.Parameters.Add(new SqlParameter("@Num", c.NumeroContacto));
+                            cmd.Parameters.Add(new SqlParameter("@Fecha", (object)c.FechaContacto ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                            cmd.Parameters.Add(new SqlParameter("@Pregunta", (object)c.PreguntaClave ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Dato1", (object)c.DatoMinimo1 ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Dato2", (object)c.DatoMinimo2 ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Dato3", (object)c.DatoMinimo3 ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Decision", (object)c.DecisionTomada ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Comentario", (object)c.ComentarioAccion ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Estado", string.IsNullOrEmpty(c.EstadoContacto) ? "COMPLETADO" : c.EstadoContacto));
 
                             cmd.ExecuteNonQuery();
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_CONTACTO_LGA", "DISCIPULADO_LGA",
-                            $"Part_{c.IdParticipacion}_C{c.NumeroContacto}", $"Contacto #{c.NumeroContacto} guardado. Decisión: {c.DecisionTomada}");
+                            $"Part_{c.IdParticipacion}_C{c.NumeroContacto}", $"Contacto #{c.NumeroContacto} guardado. DecisiÃ³n: {c.DecisionTomada}");
 
                         tran.Commit();
                     }
@@ -1656,23 +1656,23 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdPart", ll.IdParticipacion);
-                            cmd.Parameters.AddWithValue("@IdIglesia", ll.IdIglesia);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                            cmd.Parameters.AddWithValue("@NombreCoord", (object)nombreCoordinador ?? "Coordinador");
-                            cmd.Parameters.AddWithValue("@Etapa", (object)ll.EtapaDiscipulado ?? "General");
-                            cmd.Parameters.AddWithValue("@Obstaculo", (object)ll.ObstaculoReportado ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Apoyo", (object)ll.ApoyoRequerido ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Accion", (object)ll.AccionAcordada ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Semaforo", string.IsNullOrEmpty(ll.SemaforoEstado) ? "VERDE" : ll.SemaforoEstado);
-                            cmd.Parameters.AddWithValue("@Enfoque", string.IsNullOrEmpty(ll.EnfoqueAplicado) ? "EQUILIBRIO" : ll.EnfoqueAplicado);
-                            cmd.Parameters.AddWithValue("@Duracion", ll.DuracionMinutos > 0 ? ll.DuracionMinutos : 5);
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", ll.IdParticipacion));
+                            cmd.Parameters.Add(new SqlParameter("@IdIglesia", ll.IdIglesia));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                            cmd.Parameters.Add(new SqlParameter("@NombreCoord", (object)nombreCoordinador ?? "Coordinador"));
+                            cmd.Parameters.Add(new SqlParameter("@Etapa", (object)ll.EtapaDiscipulado ?? "General"));
+                            cmd.Parameters.Add(new SqlParameter("@Obstaculo", (object)ll.ObstaculoReportado ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Apoyo", (object)ll.ApoyoRequerido ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Accion", (object)ll.AccionAcordada ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Semaforo", string.IsNullOrEmpty(ll.SemaforoEstado) ? "VERDE" : ll.SemaforoEstado));
+                            cmd.Parameters.Add(new SqlParameter("@Enfoque", string.IsNullOrEmpty(ll.EnfoqueAplicado) ? "EQUILIBRIO" : ll.EnfoqueAplicado));
+                            cmd.Parameters.Add(new SqlParameter("@Duracion", ll.DuracionMinutos > 0 ? ll.DuracionMinutos : 5));
 
                             cmd.ExecuteNonQuery();
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REGISTRAR_LLAMADA_LGA", "DISCIPULADO_LGA",
-                            $"Part_{ll.IdParticipacion}", $"Llamada de 5 min registrada. Semáforo: {ll.SemaforoEstado}");
+                            $"Part_{ll.IdParticipacion}", $"Llamada de 5 min registrada. SemÃ¡foro: {ll.SemaforoEstado}");
 
                         tran.Commit();
                     }
@@ -1686,7 +1686,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // REPORTE DE EVENTOS EVANGELÍSTICOS (DETALLE Y TOTALES)
+        // REPORTE DE EVENTOS EVANGELÃSTICOS (DETALLE Y TOTALES)
         // ============================================================================
 
         public ReporteEventosEvangelisticosModel ObtenerReporteEventosEvangelisticos(int idParticipacion, int idIglesia)
@@ -1709,7 +1709,7 @@ namespace SOR.Repositories
                     ORDER BY FechaCreacion DESC;";
                 using (SqlCommand cmdEnc = new SqlCommand(sqlEnc, cn))
                 {
-                    cmdEnc.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdEnc.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     using (SqlDataReader drEnc = cmdEnc.ExecuteReader())
                     {
                         if (drEnc.Read())
@@ -1728,7 +1728,7 @@ namespace SOR.Repositories
                     ORDER BY NumeroEvento ASC, FechaEvento ASC;";
                 using (SqlCommand cmdDet = new SqlCommand(sqlDet, cn))
                 {
-                    cmdDet.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdDet.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     using (SqlDataReader drDet = cmdDet.ExecuteReader())
                     {
                         while (drDet.Read())
@@ -1780,22 +1780,22 @@ namespace SOR.Repositories
                                 WHERE IdEventoDetalle = @IdDet;";
                             using (SqlCommand cmd = new SqlCommand(sqlUpd, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@Fecha", item.FechaEvento);
-                                cmd.Parameters.AddWithValue("@Asistencia", item.AsistenciaNinos);
-                                cmd.Parameters.AddWithValue("@Lugar", (object)item.Lugar ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Notas", (object)item.Notas ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@IdDet", item.IdEventoDetalle);
+                                cmd.Parameters.Add(new SqlParameter("@Fecha", item.FechaEvento));
+                                cmd.Parameters.Add(new SqlParameter("@Asistencia", item.AsistenciaNinos));
+                                cmd.Parameters.Add(new SqlParameter("@Lugar", (object)item.Lugar ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@Notas", (object)item.Notas ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@IdDet", item.IdEventoDetalle));
                                 cmd.ExecuteNonQuery();
                             }
                         }
                         else
                         {
-                            // Calcular siguiente número de evento
+                            // Calcular siguiente nÃºmero de evento
                             string sqlNum = "SELECT ISNULL(MAX(NumeroEvento), 0) + 1 FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdParticipacion = @IdPart;";
                             int proxNum = 1;
                             using (SqlCommand cmdNum = new SqlCommand(sqlNum, cn, tran))
                             {
-                                cmdNum.Parameters.AddWithValue("@IdPart", item.IdParticipacion);
+                                cmdNum.Parameters.Add(new SqlParameter("@IdPart", item.IdParticipacion));
                                 proxNum = Convert.ToInt32(cmdNum.ExecuteScalar());
                             }
 
@@ -1807,13 +1807,13 @@ namespace SOR.Repositories
                                 );";
                             using (SqlCommand cmd = new SqlCommand(sqlIns, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdPart", item.IdParticipacion);
-                                cmd.Parameters.AddWithValue("@IdIglesia", item.IdIglesia);
-                                cmd.Parameters.AddWithValue("@Num", proxNum);
-                                cmd.Parameters.AddWithValue("@Fecha", item.FechaEvento);
-                                cmd.Parameters.AddWithValue("@Asistencia", item.AsistenciaNinos);
-                                cmd.Parameters.AddWithValue("@Lugar", (object)item.Lugar ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Notas", (object)item.Notas ?? DBNull.Value);
+                                cmd.Parameters.Add(new SqlParameter("@IdPart", item.IdParticipacion));
+                                cmd.Parameters.Add(new SqlParameter("@IdIglesia", item.IdIglesia));
+                                cmd.Parameters.Add(new SqlParameter("@Num", proxNum));
+                                cmd.Parameters.Add(new SqlParameter("@Fecha", item.FechaEvento));
+                                cmd.Parameters.Add(new SqlParameter("@Asistencia", item.AsistenciaNinos));
+                                cmd.Parameters.Add(new SqlParameter("@Lugar", (object)item.Lugar ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@Notas", (object)item.Notas ?? DBNull.Value));
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -1822,7 +1822,7 @@ namespace SOR.Repositories
                         SincronizarTotalesEventosEvangelisticos(cn, tran, item.IdParticipacion, item.IdIglesia);
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_EVENTO_EVANGELISTICO", "REPORTES",
-                            $"Part_{item.IdParticipacion}", $"Evento evangelístico registrado/actualizado. Asistencia: {item.AsistenciaNinos}");
+                            $"Part_{item.IdParticipacion}", $"Evento evangelÃ­stico registrado/actualizado. Asistencia: {item.AsistenciaNinos}");
 
                         tran.Commit();
                     }
@@ -1848,7 +1848,7 @@ namespace SOR.Repositories
                         string sqlGet = "SELECT IdParticipacion, IdIglesia FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdEventoDetalle = @Id;";
                         using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn, tran))
                         {
-                            cmdGet.Parameters.AddWithValue("@Id", idEventoDetalle);
+                            cmdGet.Parameters.Add(new SqlParameter("@Id", idEventoDetalle));
                             using (SqlDataReader dr = cmdGet.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -1864,7 +1864,7 @@ namespace SOR.Repositories
                             string sqlDel = "DELETE FROM dbo.ReportesEventosEvangelisticosDetalle WHERE IdEventoDetalle = @Id;";
                             using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
                             {
-                                cmdDel.Parameters.AddWithValue("@Id", idEventoDetalle);
+                                cmdDel.Parameters.Add(new SqlParameter("@Id", idEventoDetalle));
                                 cmdDel.ExecuteNonQuery();
                             }
 
@@ -1878,14 +1878,14 @@ namespace SOR.Repositories
                                 UPDATE CTE SET NumeroEvento = NuevoNum;";
                             using (SqlCommand cmdReenum = new SqlCommand(sqlReenum, cn, tran))
                             {
-                                cmdReenum.Parameters.AddWithValue("@IdPart", idPart);
+                                cmdReenum.Parameters.Add(new SqlParameter("@IdPart", idPart));
                                 cmdReenum.ExecuteNonQuery();
                             }
 
                             SincronizarTotalesEventosEvangelisticos(cn, tran, idPart, idIglesia);
 
                             AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "ELIMINAR_EVENTO_EVANGELISTICO", "REPORTES",
-                                $"Det_{idEventoDetalle}", $"Evento evangelístico eliminado de la participación {idPart}");
+                                $"Det_{idEventoDetalle}", $"Evento evangelÃ­stico eliminado de la participaciÃ³n {idPart}");
                         }
 
                         tran.Commit();
@@ -1926,13 +1926,13 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
-                            cmd.Parameters.AddWithValue("@Notas", (object)anotaciones ?? DBNull.Value);
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                            cmd.Parameters.Add(new SqlParameter("@Notas", (object)anotaciones ?? DBNull.Value));
                             cmd.ExecuteNonQuery();
                         }
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_ANOTACIONES_EVANGELISTICAS", "REPORTES",
-                            $"Part_{idParticipacion}", "Anotaciones de eventos evangelísticos actualizadas.");
+                            $"Part_{idParticipacion}", "Anotaciones de eventos evangelÃ­sticos actualizadas.");
 
                         tran.Commit();
                     }
@@ -1957,7 +1957,7 @@ namespace SOR.Repositories
 
             using (SqlCommand cmdTot = new SqlCommand(sqlTot, cn, tran))
             {
-                cmdTot.Parameters.AddWithValue("@IdPart", idParticipacion);
+                cmdTot.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                 using (SqlDataReader dr = cmdTot.ExecuteReader())
                 {
                     if (dr.Read())
@@ -1993,16 +1993,16 @@ namespace SOR.Repositories
 
             using (SqlCommand cmdSync = new SqlCommand(sqlSync, cn, tran))
             {
-                cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
-                cmdSync.Parameters.AddWithValue("@TotalNinos", totNinos);
-                cmdSync.Parameters.AddWithValue("@TotalEv", totEv);
-                cmdSync.Parameters.AddWithValue("@MaxFecha", (object)maxFecha ?? DBNull.Value);
+                cmdSync.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                cmdSync.Parameters.Add(new SqlParameter("@TotalNinos", totNinos));
+                cmdSync.Parameters.Add(new SqlParameter("@TotalEv", totEv));
+                cmdSync.Parameters.Add(new SqlParameter("@MaxFecha", (object)maxFecha ?? DBNull.Value));
                 cmdSync.ExecuteNonQuery();
             }
         }
 
         // ============================================================================
-        // REPORTE OFICIAL DE DISCIPULADO Y GRADUACIÓN LGA (9 PREGUNTAS)
+        // REPORTE OFICIAL DE DISCIPULADO Y GRADUACIÃ“N LGA (9 PREGUNTAS)
         // ============================================================================
 
         public ReporteGraduacionLGAModel ObtenerReporteGraduacionLGA(int idParticipacion, int idIglesia)
@@ -2026,7 +2026,7 @@ namespace SOR.Repositories
 
                 using (SqlCommand cmd = new SqlCommand(sqlRep, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     using (SqlDataReader dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -2057,19 +2057,19 @@ namespace SOR.Repositories
                     string sqlCaj = "SELECT ISNULL(OportunidadesEvangelisticas, 0) FROM dbo.AsignacionesRecursos WHERE IdParticipacion = @IdPart;";
                     using (SqlCommand cmdCaj = new SqlCommand(sqlCaj, cn))
                     {
-                        cmdCaj.Parameters.AddWithValue("@IdPart", idParticipacion);
+                        cmdCaj.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                         object val = cmdCaj.ExecuteScalar();
                         if (val != null && val != DBNull.Value) modelo.CajitasRecibidas = Convert.ToInt32(val);
                     }
 
-                    // Precargar Eventos Evangelísticos y Niños Asistentes de los eventos registrados
+                    // Precargar Eventos EvangelÃ­sticos y NiÃ±os Asistentes de los eventos registrados
                     string sqlEv = @"
                         SELECT COUNT(1) AS CantEv, ISNULL(SUM(AsistenciaNinos), 0) AS CantNinos 
                         FROM dbo.ReportesEventosEvangelisticosDetalle 
                         WHERE IdParticipacion = @IdPart;";
                     using (SqlCommand cmdEv = new SqlCommand(sqlEv, cn))
                     {
-                        cmdEv.Parameters.AddWithValue("@IdPart", idParticipacion);
+                        cmdEv.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                         using (SqlDataReader drEv = cmdEv.ExecuteReader())
                         {
                             if (drEv.Read())
@@ -2080,11 +2080,11 @@ namespace SOR.Repositories
                         }
                     }
 
-                    // Precargar Compañeros de Oración registrados
+                    // Precargar CompaÃ±eros de OraciÃ³n registrados
                     string sqlOr = "SELECT COUNT(1) FROM dbo.CompanerosOracion WHERE IdIglesia = @IdIglesia;";
                     using (SqlCommand cmdOr = new SqlCommand(sqlOr, cn))
                     {
-                        cmdOr.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                        cmdOr.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
                         object valOr = cmdOr.ExecuteScalar();
                         if (valOr != null && valOr != DBNull.Value && modelo.CompanerosOracion == 0)
                         {
@@ -2141,37 +2141,37 @@ namespace SOR.Repositories
                                 );
                             END;
 
-                            -- Actualizar estatus de reporte de la participación
+                            -- Actualizar estatus de reporte de la participaciÃ³n
                             UPDATE dbo.ParticipacionesIglesia
-                            SET EstatusEvaluacionReporte = 'Reportó'
+                            SET EstatusEvaluacionReporte = 'ReportÃ³'
                             WHERE IdParticipacion = @IdPart;";
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdPart", rep.IdParticipacion);
-                            cmd.Parameters.AddWithValue("@Fecha", (object)rep.FechaReporte ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@NinosLGA", rep.NinosAsistieronLGA);
-                            cmd.Parameters.AddWithValue("@ClasesLGA", rep.ClasesLGAEnsenadas);
-                            cmd.Parameters.AddWithValue("@Aceptaron", rep.NinosCreyeronJesus);
-                            cmd.Parameters.AddWithValue("@Comprometieron", rep.NinosComprometieronOrar);
-                            cmd.Parameters.AddWithValue("@Graduaron", rep.NinosGraduadosLGA);
-                            cmd.Parameters.AddWithValue("@Cajitas", rep.CajitasRecibidas);
-                            cmd.Parameters.AddWithValue("@EventosEv", rep.TotalEventosEvangelisticos);
-                            cmd.Parameters.AddWithValue("@NinosEv", rep.TotalNinosEvangelisticos);
-                            cmd.Parameters.AddWithValue("@CompanerosOr", rep.CompanerosOracion);
-                            cmd.Parameters.AddWithValue("@RutaAdjunto", string.IsNullOrEmpty(rep.ReporteAdjuntoRuta) ? (object)DBNull.Value : rep.ReporteAdjuntoRuta);
-                            cmd.Parameters.AddWithValue("@Notas", (object)rep.Notas ?? DBNull.Value);
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", rep.IdParticipacion));
+                            cmd.Parameters.Add(new SqlParameter("@Fecha", (object)rep.FechaReporte ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@NinosLGA", rep.NinosAsistieronLGA));
+                            cmd.Parameters.Add(new SqlParameter("@ClasesLGA", rep.ClasesLGAEnsenadas));
+                            cmd.Parameters.Add(new SqlParameter("@Aceptaron", rep.NinosCreyeronJesus));
+                            cmd.Parameters.Add(new SqlParameter("@Comprometieron", rep.NinosComprometieronOrar));
+                            cmd.Parameters.Add(new SqlParameter("@Graduaron", rep.NinosGraduadosLGA));
+                            cmd.Parameters.Add(new SqlParameter("@Cajitas", rep.CajitasRecibidas));
+                            cmd.Parameters.Add(new SqlParameter("@EventosEv", rep.TotalEventosEvangelisticos));
+                            cmd.Parameters.Add(new SqlParameter("@NinosEv", rep.TotalNinosEvangelisticos));
+                            cmd.Parameters.Add(new SqlParameter("@CompanerosOr", rep.CompanerosOracion));
+                            cmd.Parameters.Add(new SqlParameter("@RutaAdjunto", string.IsNullOrEmpty(rep.ReporteAdjuntoRuta) ? (object)DBNull.Value : rep.ReporteAdjuntoRuta));
+                            cmd.Parameters.Add(new SqlParameter("@Notas", (object)rep.Notas ?? DBNull.Value));
 
                             cmd.ExecuteNonQuery();
                         }
 
                         // Registrar en Historial de la Iglesia
-                        RegistrarLogHistorial(cn, tran, rep.IdParticipacion, "Reporte de Discipulado / Graduación LGA Ingresado",
-                            "Reportes Pendientes", "Reportó", idUsuario,
-                            $"Reporte Oficial LGA completado. Graduados: {rep.NinosGraduadosLGA}, Creyeron en Jesús: {rep.NinosCreyeronJesus}, Niños LGA: {rep.NinosAsistieronLGA}.");
+                        RegistrarLogHistorial(cn, tran, rep.IdParticipacion, "Reporte de Discipulado / GraduaciÃ³n LGA Ingresado",
+                            "Reportes Pendientes", "ReportÃ³", idUsuario,
+                            $"Reporte Oficial LGA completado. Graduados: {rep.NinosGraduadosLGA}, Creyeron en JesÃºs: {rep.NinosCreyeronJesus}, NiÃ±os LGA: {rep.NinosAsistieronLGA}.");
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "GUARDAR_REPORTE_GRADUACION_LGA", "REPORTES",
-                            $"Part_{rep.IdParticipacion}", $"Reporte Oficial de Graduación LGA guardado. Graduados: {rep.NinosGraduadosLGA}");
+                            $"Part_{rep.IdParticipacion}", $"Reporte Oficial de GraduaciÃ³n LGA guardado. Graduados: {rep.NinosGraduadosLGA}");
 
                         tran.Commit();
                     }
@@ -2185,7 +2185,7 @@ namespace SOR.Repositories
         }
 
         // ============================================================================
-        // GESTIÓN DIRECTA DE ENTREGA / DESPACHO DE MATERIALES (ETAPA 7)
+        // GESTIÃ“N DIRECTA DE ENTREGA / DESPACHO DE MATERIALES (ETAPA 7)
         // ============================================================================
 
         public void ConfirmarEntregaDirecta(int idParticipacion, int idIglesia, string tipoReceptor, string nombreReceptor, string cedula, string telefono, string observaciones, int idUsuario)
@@ -2213,19 +2213,19 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@TipoR", (object)tipoReceptor ?? "PASTOR");
-                            cmd.Parameters.AddWithValue("@NomR", (object)nombreReceptor ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@CedR", (object)cedula ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@TelR", (object)telefono ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Obs", (object)observaciones ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.Parameters.Add(new SqlParameter("@TipoR", (object)tipoReceptor ?? "PASTOR"));
+                            cmd.Parameters.Add(new SqlParameter("@NomR", (object)nombreReceptor ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@CedR", (object)cedula ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@TelR", (object)telefono ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Obs", (object)observaciones ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmd.ExecuteNonQuery();
                         }
 
                         RegistrarLogHistorial(cn, tran, idParticipacion, "Entrega de Materiales Confirmada",
                             "Pendiente de Entrega", "Entregado / Despachado", idUsuario,
-                            $"Materiales retirados y confirmados satisfactoriamente. Receptor: {nombreReceptor} ({tipoReceptor}). Cédula: {cedula}.");
+                            $"Materiales retirados y confirmados satisfactoriamente. Receptor: {nombreReceptor} ({tipoReceptor}). CÃ©dula: {cedula}.");
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "CONFIRMAR_ENTREGA_DIRECTA", "LOGISTICA",
                             $"Part_{idParticipacion}", $"Entrega confirmada a {nombreReceptor} ({tipoReceptor})");
@@ -2243,7 +2243,7 @@ namespace SOR.Repositories
 
         public void MarcarNoEntregaDirecta(int idParticipacion, int idIglesia, string motivo, string observaciones, int idUsuario)
         {
-            if (string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe especificar el motivo por el cual no se le entregó el material.");
+            if (string.IsNullOrWhiteSpace(motivo)) throw new ArgumentException("Debe especificar el motivo por el cual no se le entregÃ³ el material.");
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -2263,16 +2263,16 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Motivo", motivo);
-                            cmd.Parameters.AddWithValue("@Obs", (object)observaciones ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.Parameters.Add(new SqlParameter("@Motivo", motivo));
+                            cmd.Parameters.Add(new SqlParameter("@Obs", (object)observaciones ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmd.ExecuteNonQuery();
                         }
 
                         RegistrarLogHistorial(cn, tran, idParticipacion, "Materiales No Entregados / Cancelado",
                             "Pendiente de Entrega", "No Entregado", idUsuario,
-                            $"No se realizó la entrega de materiales. Motivo: {motivo}. Observaciones: {observaciones}", motivo);
+                            $"No se realizÃ³ la entrega de materiales. Motivo: {motivo}. Observaciones: {observaciones}", motivo);
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "MARCAR_NO_ENTREGA_DIRECTA", "LOGISTICA",
                             $"Part_{idParticipacion}", $"Marcado como NO ENTREGADO. Motivo: {motivo}");
@@ -2307,13 +2307,13 @@ namespace SOR.Repositories
 
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmd.ExecuteNonQuery();
                         }
 
-                        RegistrarLogHistorial(cn, tran, idParticipacion, "Reprogramación de Entrega",
+                        RegistrarLogHistorial(cn, tran, idParticipacion, "ReprogramaciÃ³n de Entrega",
                             "No Entregado", "Pendiente de Entrega", idUsuario,
-                            "La entrega de materiales ha sido restablecida como Disponible para Despacho / Programación.");
+                            "La entrega de materiales ha sido restablecida como Disponible para Despacho / ProgramaciÃ³n.");
 
                         AuditoriaHelper.Registrar(cn, tran, idUsuario, null, "REPROGRAMAR_ENTREGA_DIRECTA", "LOGISTICA",
                             $"Part_{idParticipacion}", "Entrega restablecida a Disponible para Despacho.");

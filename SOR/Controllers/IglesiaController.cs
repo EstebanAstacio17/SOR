@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -110,7 +110,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeRegistrarIglesia(u))
             {
-                TempData["MensajeError"] = "Tu rol o posición de coordinador no posee permisos para registrar nuevas iglesias.";
+                TempData["MensajeError"] = "Tu rol o posiciÃ³n de coordinador no posee permisos para registrar nuevas iglesias.";
                 return RedirectToAction("Index");
             }
 
@@ -120,7 +120,7 @@ namespace SOR.Controllers
         }
 
         // ==========================================
-        // VALIDACIÓN DE SEGURIDAD PARA ARCHIVOS
+        // VALIDACIÃ“N DE SEGURIDAD PARA ARCHIVOS
         // ==========================================
         private static readonly HashSet<string> ExtensionesPermitidasAdjuntos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -132,10 +132,10 @@ namespace SOR.Controllers
             error = string.Empty;
             if (archivo == null || archivo.ContentLength == 0) return true;
 
-            // Límite: 5 MB
+            // LÃ­mite: 5 MB
             if (archivo.ContentLength > 5 * 1024 * 1024)
             {
-                error = "El archivo excede el límite de 5 MB.";
+                error = "El archivo excede el lÃ­mite de 5 MB.";
                 return false;
             }
 
@@ -156,7 +156,7 @@ namespace SOR.Controllers
 
                 if (bytesLeidos < 4)
                 {
-                    error = "El archivo subido está corrupto o incompleto.";
+                    error = "El archivo subido estÃ¡ corrupto o incompleto.";
                     return false;
                 }
 
@@ -166,7 +166,7 @@ namespace SOR.Controllers
 
                 if (!esPdf && !esJpg && !esPng)
                 {
-                    error = "La firma binaria del archivo no coincide con su formato legítimo.";
+                    error = "La firma binaria del archivo no coincide con su formato legÃ­timo.";
                     return false;
                 }
             }
@@ -213,12 +213,12 @@ namespace SOR.Controllers
             // Validar seguridad de archivos adjuntos
             if (!ValidarArchivoSeguroIglesia(docPastor, out string errPastor))
             {
-                ViewData["MensajeError"] = "Cédula del Pastor: " + errPastor;
+                ViewData["MensajeError"] = "CÃ©dula del Pastor: " + errPastor;
                 return View(modelo);
             }
             if (!ValidarArchivoSeguroIglesia(docLider, out string errLider))
             {
-                ViewData["MensajeError"] = "Cédula del Líder: " + errLider;
+                ViewData["MensajeError"] = "CÃ©dula del LÃ­der: " + errLider;
                 return View(modelo);
             }
 
@@ -256,10 +256,10 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("Esta iglesia ya está registrada en el equipo:"))
+                if (ex.Message.Contains("Esta iglesia ya estÃ¡ registrada en el equipo:"))
                 {
                     string raw = ex.Message;
-                    int idx = raw.IndexOf("Esta iglesia ya está registrada en el equipo:");
+                    int idx = raw.IndexOf("Esta iglesia ya estÃ¡ registrada en el equipo:");
                     string sub = raw.Substring(idx);
                     string[] parts = sub.Split('|');
                     string msgBase = parts[0].Trim();
@@ -274,7 +274,7 @@ namespace SOR.Controllers
                 }
                 else
                 {
-                    ViewData["MensajeError"] = "Error al registrar la iglesia: " + ex.Message;
+                    ViewData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                 }
                 return View(modelo);
             }
@@ -291,14 +291,14 @@ namespace SOR.Controllers
                 return HttpNotFound();
             }
 
-            // Mitigación IDOR: Coordinadores solo pueden consultar iglesias de su jurisdicción / equipo
+            // MitigaciÃ³n IDOR: Coordinadores solo pueden consultar iglesias de su jurisdicciÃ³n / equipo
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue && iglesia.IdEquipo != u.IdEquipo.Value)
             {
-                TempData["MensajeError"] = "No tienes autorización para acceder al expediente de una iglesia perteneciente a otro equipo.";
+                TempData["MensajeError"] = "No tienes autorizaciÃ³n para acceder al expediente de una iglesia perteneciente a otro equipo.";
                 return RedirectToAction("Index");
             }
 
-            // Cargar eventos de tipo Visión, Taller y Despacho para la temporada activa filtrados por equipo
+            // Cargar eventos de tipo VisiÃ³n, Taller y Despacho para la temporada activa filtrados por equipo
             List<SelectListItem> eventosVision = new List<SelectListItem>();
             List<SelectListItem> eventosTaller = new List<SelectListItem>();
             List<SelectListItem> eventosDespacho = new List<SelectListItem>();
@@ -328,7 +328,7 @@ namespace SOR.Controllers
                 
                 if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue)
                 {
-                    cmd.Parameters.AddWithValue("@IdEquipo", u.IdEquipo.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdEquipo", u.IdEquipo.Value));
                 }
 
                 cn.Open();
@@ -349,7 +349,7 @@ namespace SOR.Controllers
                             Text = $"{nom} | {f:dd/MM/yyyy}" + (!string.IsNullOrEmpty(lug) ? $" ({lug})" : "")
                         };
                         
-                        // CMI (2) ve Visión, CD (3) ve Taller, CE (1) / Admin (Rol 1,2) ve ambos
+                        // CMI (2) ve VisiÃ³n, CD (3) ve Taller, CE (1) / Admin (Rol 1,2) ve ambos
                         bool esCMI = (u.IdPosicion == 2);
                         bool esCD = (u.IdPosicion == 3);
                         
@@ -393,7 +393,7 @@ namespace SOR.Controllers
             ViewBag.PuedeSolicitarExcepcion = puedeSolicitarExcepcion;
             ViewBag.PuedeGestionarDiscipulado = puedeGestionarDiscipulado;
 
-            // Cargar datos de Discipulado y 5 Contactos LGA si hay participación activa
+            // Cargar datos de Discipulado y 5 Contactos LGA si hay participaciÃ³n activa
             if (iglesia.ParticipacionActual != null)
             {
                 iglesia.DiscipuladoLGA = _iglesiaService.ObtenerResumenDiscipuladoLGA(iglesia.ParticipacionActual.IdParticipacion, iglesia.IdIglesia);
@@ -403,7 +403,7 @@ namespace SOR.Controllers
         }
 
         // ============================================================================
-        // MÉTODOS DE DISCIPULADO Y ACOMPAÑAMIENTO LGA (5 CONTACTOS & LLAMADA 5 MIN)
+        // MÃ‰TODOS DE DISCIPULADO Y ACOMPAÃ‘AMIENTO LGA (5 CONTACTOS & LLAMADA 5 MIN)
         // ============================================================================
 
         [HttpPost]
@@ -435,7 +435,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al guardar el contacto: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -458,7 +458,7 @@ namespace SOR.Controllers
 
             if (!puede)
             {
-                TempData["MensajeError"] = "Acceso denegado: No tiene permisos para registrar llamadas de acompañamiento para esta iglesia.";
+                TempData["MensajeError"] = "Acceso denegado: No tiene permisos para registrar llamadas de acompaÃ±amiento para esta iglesia.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -467,18 +467,18 @@ namespace SOR.Controllers
                 vm.IdIglesia = idIglesia;
                 string nombreCoord = !string.IsNullOrEmpty(u.NombreCompleto) ? u.NombreCompleto : (u.Correo ?? "Coordinador");
                 _iglesiaService.RegistrarLlamadaAcompanamiento(vm, u.IdUsuario, nombreCoord);
-                TempData["MensajeExito"] = "Llamada de acompañamiento de 5 minutos registrada con éxito. Semáforo actualizado.";
+                TempData["MensajeExito"] = "Llamada de acompaÃ±amiento de 5 minutos registrada con Ã©xito. SemÃ¡foro actualizado.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar la llamada: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
         // ============================================================================
-        // GESTIÓN DE EXCEPCIONES A LA REGLA DE 3 AÑOS (DOBLE APROBACIÓN CE + CMI)
+        // GESTIÃ“N DE EXCEPCIONES A LA REGLA DE 3 AÃ‘OS (DOBLE APROBACIÃ“N CE + CMI)
         // ============================================================================
 
         [HttpPost]
@@ -497,7 +497,7 @@ namespace SOR.Controllers
 
             if (string.IsNullOrWhiteSpace(motivo) || string.IsNullOrWhiteSpace(justificacion))
             {
-                TempData["MensajeError"] = "El motivo y la justificación detallada son obligatorios para solicitar la excepción.";
+                TempData["MensajeError"] = "El motivo y la justificaciÃ³n detallada son obligatorios para solicitar la excepciÃ³n.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -515,11 +515,11 @@ namespace SOR.Controllers
                 };
 
                 _iglesiaService.SolicitarExcepcion(excepcion, u.IdUsuario);
-                TempData["MensajeExito"] = "Solicitud de excepción registrada exitosamente. Queda pendiente de evaluación independiente por el Coordinador de Equipo (CE) y el Coordinador de Movilización (CMI).";
+                TempData["MensajeExito"] = "Solicitud de excepciÃ³n registrada exitosamente. Queda pendiente de evaluaciÃ³n independiente por el Coordinador de Equipo (CE) y el Coordinador de MovilizaciÃ³n (CMI).";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al solicitar la excepción: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -538,7 +538,7 @@ namespace SOR.Controllers
 
             if (!esAdmin && !esCE)
             {
-                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Equipo (CE) autorizado o un Administrador pueden registrar la aprobación de CE.";
+                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Equipo (CE) autorizado o un Administrador pueden registrar la aprobaciÃ³n de CE.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -546,15 +546,15 @@ namespace SOR.Controllers
             {
                 byte[] rowVersion = !string.IsNullOrEmpty(rowVersionString) ? Convert.FromBase64String(rowVersionString) : null;
                 _iglesiaService.AprobarExcepcionCE(idExcepcion, u.IdUsuario, comentarioCE, rowVersion);
-                TempData["MensajeExito"] = "Aprobación de CE registrada correctamente.";
+                TempData["MensajeExito"] = "AprobaciÃ³n de CE registrada correctamente.";
             }
             catch (DBConcurrencyException ex)
             {
-                TempData["MensajeError"] = "Conflicto de concurrencia: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar aprobación de CE: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -574,7 +574,7 @@ namespace SOR.Controllers
 
             if (!esAdmin && !esCMI && !esCE)
             {
-                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de Movilización (CMI), Coordinador de Equipo (CE) autorizado o un Administrador pueden registrar la aprobación de CMI.";
+                TempData["MensajeError"] = "Acceso denegado: Solo el Coordinador de MovilizaciÃ³n (CMI), Coordinador de Equipo (CE) autorizado o un Administrador pueden registrar la aprobaciÃ³n de CMI.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -582,15 +582,15 @@ namespace SOR.Controllers
             {
                 byte[] rowVersion = !string.IsNullOrEmpty(rowVersionString) ? Convert.FromBase64String(rowVersionString) : null;
                 _iglesiaService.AprobarExcepcionCMI(idExcepcion, u.IdUsuario, comentarioCMI, rowVersion);
-                TempData["MensajeExito"] = "Aprobación de CMI registrada correctamente.";
+                TempData["MensajeExito"] = "AprobaciÃ³n de CMI registrada correctamente.";
             }
             catch (DBConcurrencyException ex)
             {
-                TempData["MensajeError"] = "Conflicto de concurrencia: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar aprobación de CMI: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -610,13 +610,13 @@ namespace SOR.Controllers
 
             if (!esAdmin && !esCE && !esCMI)
             {
-                TempData["MensajeError"] = "Acceso denegado: Solo CE, CMI o un Administrador pueden rechazar una solicitud de excepción.";
+                TempData["MensajeError"] = "Acceso denegado: Solo CE, CMI o un Administrador pueden rechazar una solicitud de excepciÃ³n.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
             if (string.IsNullOrWhiteSpace(motivoRechazo))
             {
-                TempData["MensajeError"] = "Debe indicar el motivo del rechazo de la excepción.";
+                TempData["MensajeError"] = "Debe indicar el motivo del rechazo de la excepciÃ³n.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -624,15 +624,15 @@ namespace SOR.Controllers
             {
                 byte[] rowVersion = !string.IsNullOrEmpty(rowVersionString) ? Convert.FromBase64String(rowVersionString) : null;
                 _iglesiaService.RechazarExcepcion(idExcepcion, u.IdUsuario, motivoRechazo, rowVersion);
-                TempData["MensajeExito"] = "La solicitud de excepción fue rechazada.";
+                TempData["MensajeExito"] = "La solicitud de excepciÃ³n fue rechazada.";
             }
             catch (DBConcurrencyException ex)
             {
-                TempData["MensajeError"] = "Conflicto de concurrencia: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al rechazar la excepción: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -663,11 +663,11 @@ namespace SOR.Controllers
                     _iglesiaService.AgregarComentario(idIglesia, u.IdUsuario, comentario);
                 }
 
-                TempData["MensajeExito"] = "Evaluación inicial procesada correctamente.";
+                TempData["MensajeExito"] = "EvaluaciÃ³n inicial procesada correctamente.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
@@ -687,11 +687,11 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.AsignarEventoVision(idParticipacion, idIglesia, idEventoVision, pastor, lider, u.IdUsuario);
-                TempData["MensajeExito"] = "Evento de Presentación de la Visión asignado correctamente.";
+                TempData["MensajeExito"] = "Evento de PresentaciÃ³n de la VisiÃ³n asignado correctamente.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al asignar visión: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
@@ -710,7 +710,7 @@ namespace SOR.Controllers
 
             try
             {
-                // Validar que la asistencia al evento de Presentación de la Visión esté confirmada
+                // Validar que la asistencia al evento de PresentaciÃ³n de la VisiÃ³n estÃ© confirmada
                 using (SqlConnection cnVal = new SqlConnection(ObtenerCadenaConexion()))
                 {
                     cnVal.Open();
@@ -723,11 +723,11 @@ namespace SOR.Controllers
                           AND ep.Asistio = 1;";
                     using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cnVal))
                     {
-                        cmdCheck.Parameters.AddWithValue("@IdPart", idParticipacion);
+                        cmdCheck.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                         int asistenciaConfirmada = Convert.ToInt32(cmdCheck.ExecuteScalar());
                         if (asistenciaConfirmada == 0)
                         {
-                            TempData["MensajeError"] = "No se puede aprobar la iglesia aún. Primero debe confirmarse la asistencia de la iglesia al evento de Presentación de la Visión. Ingrese al evento correspondiente y confirme la asistencia antes de aprobar.";
+                            TempData["MensajeError"] = "No se puede aprobar la iglesia aÃºn. Primero debe confirmarse la asistencia de la iglesia al evento de PresentaciÃ³n de la VisiÃ³n. Ingrese al evento correspondiente y confirme la asistencia antes de aprobar.";
                             return RedirectToAction("Detalle", new { id = idIglesia });
                         }
                     }
@@ -743,11 +743,11 @@ namespace SOR.Controllers
                             string sql = "UPDATE dbo.ParticipacionesIglesia SET EtapaActual = 4, EstadoEvaluacion = 'Aprobado', VisionAsistio = 1, VisionResultado = 'Continua' WHERE IdParticipacion = @IdPart;";
                             using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                                 cmd.ExecuteNonQuery();
                             }
 
-                            _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "Aprobación Elegibilidad Taller", "Visión (Etapa 3)", "Elegible Taller (Etapa 4)", u.IdUsuario, "El CMI/CE aprobó la elegibilidad de la iglesia. Asistencia a Visión confirmada. Iglesia elegible para Taller OCC.");
+                            _iglesiaRepository.RegistrarLogHistorial(cn, tran, idParticipacion, "AprobaciÃ³n Elegibilidad Taller", "VisiÃ³n (Etapa 3)", "Elegible Taller (Etapa 4)", u.IdUsuario, "El CMI/CE aprobÃ³ la elegibilidad de la iglesia. Asistencia a VisiÃ³n confirmada. Iglesia elegible para Taller OCC.");
 
                             tran.Commit();
                         }
@@ -762,7 +762,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
@@ -781,13 +781,13 @@ namespace SOR.Controllers
 
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2 && u.IdPosicion != 3)
             {
-                TempData["MensajeError"] = "Su usuario no tiene autorización para reabrir el proceso.";
+                TempData["MensajeError"] = "Su usuario no tiene autorizaciÃ³n para reabrir el proceso.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
             if (string.IsNullOrWhiteSpace(comentario))
             {
-                TempData["MensajeError"] = "Debe proporcionar una justificación para reabrir el proceso.";
+                TempData["MensajeError"] = "Debe proporcionar una justificaciÃ³n para reabrir el proceso.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -798,7 +798,7 @@ namespace SOR.Controllers
                 cn.Open();
                 using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn))
                 {
-                    cmdGet.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmdGet.Parameters.Add(new SqlParameter("@Id", idParticipacion));
                     object val = cmdGet.ExecuteScalar();
                     if (val != null) etapaActual = Convert.ToInt32(val);
                 }
@@ -818,8 +818,8 @@ namespace SOR.Controllers
 
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@EtapaRetorno", etapaRetorno);
-                    cmd.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@EtapaRetorno", etapaRetorno));
+                    cmd.Parameters.Add(new SqlParameter("@Id", idParticipacion));
                     cmd.ExecuteNonQuery();
                 }
 
@@ -828,18 +828,18 @@ namespace SOR.Controllers
                     VALUES (@IdPart, GETDATE(), 'Reapertura de Proceso', 'Detenido/Rechazado', 'Pendiente', @IdUser, @Cmt);";
                 using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
                 {
-                    cmdLog.Parameters.AddWithValue("@IdPart", idParticipacion);
-                    cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
-                    cmdLog.Parameters.AddWithValue("@Cmt", "Proceso Reabierto. Razón: " + comentario);
+                    cmdLog.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                    cmdLog.Parameters.Add(new SqlParameter("@IdUser", u.IdUsuario));
+                    cmdLog.Parameters.Add(new SqlParameter("@Cmt", "Proceso Reabierto. RazÃ³n: " + comentario));
                     cmdLog.ExecuteNonQuery();
                 }
 
                 string sqlComentario = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
                 using (SqlCommand cmdCmt = new SqlCommand(sqlComentario, cn))
                 {
-                    cmdCmt.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmdCmt.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
-                    cmdCmt.Parameters.AddWithValue("@Comentario", "Reapertura de Proceso: " + comentario);
+                    cmdCmt.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmdCmt.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
+                    cmdCmt.Parameters.Add(new SqlParameter("@Comentario", "Reapertura de Proceso: " + comentario));
                     cmdCmt.ExecuteNonQuery();
                 }
             }
@@ -867,7 +867,7 @@ namespace SOR.Controllers
                 string estadoAnterior = "Desconocido";
                 using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn))
                 {
-                    cmdGet.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmdGet.Parameters.Add(new SqlParameter("@Id", idParticipacion));
                     object val = cmdGet.ExecuteScalar();
                     if (val != null) estadoAnterior = val.ToString();
                 }
@@ -875,29 +875,29 @@ namespace SOR.Controllers
                 string sql = "UPDATE dbo.ParticipacionesIglesia SET EstadoEvaluacion = 'Detenido' WHERE IdParticipacion = @Id;";
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idParticipacion));
                     cmd.ExecuteNonQuery();
                 }
 
                 string histCmt = $"Proceso Detenido. Motivo: {motivo}. " + (!string.IsNullOrWhiteSpace(comentario) ? $"Notas: {comentario}" : "");
                 string sqlLog = @"
                     INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                    VALUES (@IdPart, GETDATE(), 'Detención de Proceso', @EstadoAnt, 'Detenido', @IdUser, @Cmt);";
+                    VALUES (@IdPart, GETDATE(), 'DetenciÃ³n de Proceso', @EstadoAnt, 'Detenido', @IdUser, @Cmt);";
                 using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
                 {
-                    cmdLog.Parameters.AddWithValue("@IdPart", idParticipacion);
-                    cmdLog.Parameters.AddWithValue("@EstadoAnt", estadoAnterior);
-                    cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
-                    cmdLog.Parameters.AddWithValue("@Cmt", histCmt);
+                    cmdLog.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                    cmdLog.Parameters.Add(new SqlParameter("@EstadoAnt", estadoAnterior));
+                    cmdLog.Parameters.Add(new SqlParameter("@IdUser", u.IdUsuario));
+                    cmdLog.Parameters.Add(new SqlParameter("@Cmt", histCmt));
                     cmdLog.ExecuteNonQuery();
                 }
 
                 string sqlComentario = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
                 using (SqlCommand cmdCmt = new SqlCommand(sqlComentario, cn))
                 {
-                    cmdCmt.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmdCmt.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
-                    cmdCmt.Parameters.AddWithValue("@Comentario", histCmt);
+                    cmdCmt.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmdCmt.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
+                    cmdCmt.Parameters.Add(new SqlParameter("@Comentario", histCmt));
                     cmdCmt.ExecuteNonQuery();
                 }
             }
@@ -916,7 +916,7 @@ namespace SOR.Controllers
             // Permitir que Administradores, CD y CE puedan cambiar esto
             if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdPosicion != 1 && u.IdPosicion != 2 && u.IdPosicion != 3)
             {
-                TempData["MensajeError"] = "Su usuario no tiene autorización para cambiar el estatus de reportes.";
+                TempData["MensajeError"] = "Su usuario no tiene autorizaciÃ³n para cambiar el estatus de reportes.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -933,7 +933,7 @@ namespace SOR.Controllers
                 string estadoAnterior = "Desconocido";
                 using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn))
                 {
-                    cmdGet.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmdGet.Parameters.Add(new SqlParameter("@Id", idParticipacion));
                     object val = cmdGet.ExecuteScalar();
                     if (val != null) estadoAnterior = val.ToString();
                 }
@@ -941,22 +941,22 @@ namespace SOR.Controllers
                 string sql = "UPDATE dbo.ParticipacionesIglesia SET EstatusEvaluacionReporte = @Estatus WHERE IdParticipacion = @Id;";
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Estatus", estatusEvaluacionReporte);
-                    cmd.Parameters.AddWithValue("@Id", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@Estatus", estatusEvaluacionReporte));
+                    cmd.Parameters.Add(new SqlParameter("@Id", idParticipacion));
                     cmd.ExecuteNonQuery();
                 }
 
-                string histCmt = $"El Estatus de Evaluación (Reporte) cambió de '{estadoAnterior}' a '{estatusEvaluacionReporte}'. " + (!string.IsNullOrWhiteSpace(comentario) ? $"Notas: {comentario}" : "");
+                string histCmt = $"El Estatus de EvaluaciÃ³n (Reporte) cambiÃ³ de '{estadoAnterior}' a '{estatusEvaluacionReporte}'. " + (!string.IsNullOrWhiteSpace(comentario) ? $"Notas: {comentario}" : "");
                 string sqlLog = @"
                     INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
                     VALUES (@IdPart, GETDATE(), 'Cambio Estatus Reporte', @EstadoAnt, @EstadoNue, @IdUser, @Cmt);";
                 using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
                 {
-                    cmdLog.Parameters.AddWithValue("@IdPart", idParticipacion);
-                    cmdLog.Parameters.AddWithValue("@EstadoAnt", estadoAnterior);
-                    cmdLog.Parameters.AddWithValue("@EstadoNue", iglesia.ParticipacionActual.EstadoEvaluacion); // El estado del proceso sigue igual
-                    cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
-                    cmdLog.Parameters.AddWithValue("@Cmt", histCmt);
+                    cmdLog.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                    cmdLog.Parameters.Add(new SqlParameter("@EstadoAnt", estadoAnterior));
+                    cmdLog.Parameters.Add(new SqlParameter("@EstadoNue", iglesia.ParticipacionActual.EstadoEvaluacion)); // El estado del proceso sigue igual
+                    cmdLog.Parameters.Add(new SqlParameter("@IdUser", u.IdUsuario));
+                    cmdLog.Parameters.Add(new SqlParameter("@Cmt", histCmt));
                     cmdLog.ExecuteNonQuery();
                 }
 
@@ -965,15 +965,15 @@ namespace SOR.Controllers
                     string sqlComentario = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIglesia, @IdUsuario, @Comentario);";
                     using (SqlCommand cmdCmt = new SqlCommand(sqlComentario, cn))
                     {
-                        cmdCmt.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                        cmdCmt.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
-                        cmdCmt.Parameters.AddWithValue("@Comentario", "Cambio de Estatus de Reporte: " + comentario);
+                        cmdCmt.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                        cmdCmt.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
+                        cmdCmt.Parameters.Add(new SqlParameter("@Comentario", "Cambio de Estatus de Reporte: " + comentario));
                         cmdCmt.ExecuteNonQuery();
                     }
                 }
             }
 
-            TempData["MensajeExito"] = "El estatus de evaluación de reportes ha sido actualizado exitosamente.";
+            TempData["MensajeExito"] = "El estatus de evaluaciÃ³n de reportes ha sido actualizado exitosamente.";
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
@@ -992,11 +992,11 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.AvanzarEtapa3(idParticipacion, invitada, fecha, lugar, asistio, resultado, u.IdUsuario, idEventoTaller);
-                TempData["MensajeExito"] = "Datos de Presentación de la Visión guardados.";
+                TempData["MensajeExito"] = "Datos de PresentaciÃ³n de la VisiÃ³n guardados.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
@@ -1016,11 +1016,11 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.AvanzarEtapa4(idParticipacion, idIglesia, estado, motivo, comentario, u.IdUsuario, idEventoTaller, cantidadAsistentes, maestrosNuevos);
-                TempData["MensajeExito"] = "Evaluación de elegibilidad para Taller OCC guardada.";
+                TempData["MensajeExito"] = "EvaluaciÃ³n de elegibilidad para Taller OCC guardada.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
@@ -1063,7 +1063,7 @@ namespace SOR.Controllers
                 int cantNt = nuevosTestamentos.GetValueOrDefault(cantNinos.HasValue && cantNinos.Value > 0 ? cantNinos.Value : 50);
                 int cantPost = posters.GetValueOrDefault(10);
 
-                // Si se seleccionó un evento de despacho opcional, validar exhaustivamente en backend
+                // Si se seleccionÃ³ un evento de despacho opcional, validar exhaustivamente en backend
                 if (idEventoDespacho.HasValue && idEventoDespacho.Value > 0)
                 {
                     using (var cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -1081,7 +1081,7 @@ namespace SOR.Controllers
 
                         using (var cmdVal = new SqlCommand(sqlValEv, cn))
                         {
-                            cmdVal.Parameters.AddWithValue("@IdEv", idEventoDespacho.Value);
+                            cmdVal.Parameters.Add(new SqlParameter("@IdEv", idEventoDespacho.Value));
                             using (var drVal = cmdVal.ExecuteReader())
                             {
                                 if (!drVal.Read())
@@ -1112,7 +1112,7 @@ namespace SOR.Controllers
                                     return RedirectToAction("Detalle", new { id = idIglesia });
                                 }
 
-                                // Validación estricta del equipo del usuario autenticado
+                                // ValidaciÃ³n estricta del equipo del usuario autenticado
                                 if (u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2 && u.IdEquipo.HasValue)
                                 {
                                     int? idEquipoEvento = drVal["IdEquipoEvento"] != DBNull.Value ? Convert.ToInt32(drVal["IdEquipoEvento"]) : (int?)null;
@@ -1127,7 +1127,7 @@ namespace SOR.Controllers
                     }
                 }
 
-                // Preservar datos de participación existente al avanzar de etapa
+                // Preservar datos de participaciÃ³n existente al avanzar de etapa
                 var part = iglesia.ParticipacionActual;
                 string nombreTaller = !string.IsNullOrEmpty(tallerNombre) ? tallerNombre : ((part != null && !string.IsNullOrEmpty(part.TallerNombre)) ? part.TallerNombre : "Taller OCC");
                 DateTime? fechaTaller = tallerFecha.HasValue ? tallerFecha : ((part != null && part.TallerFecha.HasValue) ? part.TallerFecha : DateTime.Today);
@@ -1139,7 +1139,7 @@ namespace SOR.Controllers
 
                 _iglesiaService.AvanzarEtapa5(idParticipacion, nombreTaller, fechaTaller, lugarTaller, ninosVal, maestrosRegVal, maestrosAsistVal, maestrosAusVal, u.IdUsuario);
 
-                // Guardar / actualizar la asignación de materiales para despacho
+                // Guardar / actualizar la asignaciÃ³n de materiales para despacho
                 using (var cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
                     cn.Open();
@@ -1168,35 +1168,35 @@ namespace SOR.Controllers
 
                     using (var cmd = new SqlCommand(sqlAsig, cn))
                     {
-                        cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
-                        cmd.Parameters.AddWithValue("@Oportunidades", cantOp);
-                        cmd.Parameters.AddWithValue("@Regalo", cantRegalo);
-                        cmd.Parameters.AddWithValue("@Maestros", cantMaest);
-                        cmd.Parameters.AddWithValue("@Alumno", cantAlum);
-                        cmd.Parameters.AddWithValue("@Posters", cantPost);
-                        cmd.Parameters.AddWithValue("@Testamentos", cantNt);
-                        cmd.Parameters.AddWithValue("@IdEventoDespacho", idEventoDespacho.HasValue && idEventoDespacho.Value > 0 ? (object)idEventoDespacho.Value : DBNull.Value);
+                        cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                        cmd.Parameters.Add(new SqlParameter("@Oportunidades", cantOp));
+                        cmd.Parameters.Add(new SqlParameter("@Regalo", cantRegalo));
+                        cmd.Parameters.Add(new SqlParameter("@Maestros", cantMaest));
+                        cmd.Parameters.Add(new SqlParameter("@Alumno", cantAlum));
+                        cmd.Parameters.Add(new SqlParameter("@Posters", cantPost));
+                        cmd.Parameters.Add(new SqlParameter("@Testamentos", cantNt));
+                        cmd.Parameters.Add(new SqlParameter("@IdEventoDespacho", idEventoDespacho.HasValue && idEventoDespacho.Value > 0 ? (object)idEventoDespacho.Value : DBNull.Value));
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Si se seleccionó un evento de despacho específico, programar la iglesia de forma atómica
+                    // Si se seleccionÃ³ un evento de despacho especÃ­fico, programar la iglesia de forma atÃ³mica
                     if (idEventoDespacho.HasValue && idEventoDespacho.Value > 0)
                     {
                         var logisticaSvc = new SOR.Services.LogisticaService();
                         int idEquipo = iglesia.IdEquipo;
                         int idTemporada = iglesia.ParticipacionActual != null ? iglesia.ParticipacionActual.IdTemporada : 1;
                         logisticaSvc.ProgramarIglesiaEnDespacho(idEventoDespacho.Value, idParticipacion, idIglesia, idEquipo, idTemporada, u.IdUsuario);
-                        TempData["MensajeExito"] = "Materiales asignados y programación en el Evento de Despacho confirmada exitosamente.";
+                        TempData["MensajeExito"] = "Materiales asignados y programaciÃ³n en el Evento de Despacho confirmada exitosamente.";
                     }
                     else
                     {
-                        TempData["MensajeExito"] = "Materiales asignados exitosamente. La iglesia queda habilitada y disponible para posterior programación en un Evento de Despacho.";
+                        TempData["MensajeExito"] = "Materiales asignados exitosamente. La iglesia queda habilitada y disponible para posterior programaciÃ³n en un Evento de Despacho.";
                     }
                 }
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
@@ -1211,17 +1211,17 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.AgregarComentario(idIglesia, u.IdUsuario, comentario);
-                TempData["MensajeExito"] = "Observación guardada correctamente.";
+                TempData["MensajeExito"] = "ObservaciÃ³n guardada correctamente.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
         // ============================================================================
-        // IMPORTACIÓN MASIVA DESDE EXCEL / CSV
+        // IMPORTACIÃ“N MASIVA DESDE EXCEL / CSV
         // ============================================================================
 
         [HttpPost]
@@ -1236,13 +1236,13 @@ namespace SOR.Controllers
 
             if (archivoExcel == null || archivoExcel.ContentLength <= 0)
             {
-                TempData["MensajeError"] = "Por favor selecciona un archivo válido.";
+                TempData["MensajeError"] = "Por favor selecciona un archivo vÃ¡lido.";
                 return RedirectToAction("Index");
             }
 
             if (!idTemporadaImportar.HasValue || idTemporadaImportar.Value <= 0)
             {
-                TempData["MensajeError"] = "Por favor selecciona una temporada de destino válida.";
+                TempData["MensajeError"] = "Por favor selecciona una temporada de destino vÃ¡lida.";
                 return RedirectToAction("Index");
             }
 
@@ -1254,7 +1254,7 @@ namespace SOR.Controllers
                 string sqlCheck = "SELECT COUNT(1) FROM dbo.Temporadas WHERE IdTemporada = @Id;";
                 using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn))
                 {
-                    cmdCheck.Parameters.AddWithValue("@Id", idTemporadaImportar.Value);
+                    cmdCheck.Parameters.Add(new SqlParameter("@Id", idTemporadaImportar.Value));
                     int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
                     if (count > 0) esTemporadaValida = true;
                 }
@@ -1262,7 +1262,7 @@ namespace SOR.Controllers
 
             if (!esTemporadaValida)
             {
-                TempData["MensajeError"] = "La temporada seleccionada no es válida o no existe en el sistema.";
+                TempData["MensajeError"] = "La temporada seleccionada no es vÃ¡lida o no existe en el sistema.";
                 return RedirectToAction("Index");
             }
 
@@ -1297,7 +1297,7 @@ namespace SOR.Controllers
                         {
                             filaNum++;
                             string[] cols = line.Split(',');
-                            // Leer y procesar solo si la columna 0 es un número del 1 al 200
+                            // Leer y procesar solo si la columna 0 es un nÃºmero del 1 al 200
                             if (int.TryParse(cols[0].Trim(), out int noFila) && noFila >= 1 && noFila <= 200)
                             {
                                 try
@@ -1334,7 +1334,7 @@ namespace SOR.Controllers
                                     filaNum++;
                                     string noFilaStr = dr[0] != DBNull.Value ? dr[0].ToString().Trim() : "";
                                     
-                                    // Leer y procesar solo si la columna 0 es un número del 1 al 200
+                                    // Leer y procesar solo si la columna 0 es un nÃºmero del 1 al 200
                                     if (int.TryParse(noFilaStr, out int noFila) && noFila >= 1 && noFila <= 200)
                                     {
                                         // Ignoramos si no tiene nombre
@@ -1369,7 +1369,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error crítico durante la lectura del archivo: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                 return RedirectToAction("Index");
             }
             finally
@@ -1391,7 +1391,7 @@ namespace SOR.Controllers
             int idTemporadaImportar = Session["IdTemporadaImportPreview"] != null ? (int)Session["IdTemporadaImportPreview"] : 0;
             if (idTemporadaImportar <= 0)
             {
-                TempData["MensajeError"] = "Sesión de importación caducada. Vuelve a subir el archivo.";
+                TempData["MensajeError"] = "SesiÃ³n de importaciÃ³n caducada. Vuelve a subir el archivo.";
                 return RedirectToAction("Index");
             }
 
@@ -1423,7 +1423,7 @@ namespace SOR.Controllers
             Session.Remove("IglesiasImportPreview");
             Session.Remove("IdTemporadaImportPreview");
 
-            string msg = $"Importación completada: {insertados} iglesias registradas exitosamente. Errores: {errores}.";
+            string msg = $"ImportaciÃ³n completada: {insertados} iglesias registradas exitosamente. Errores: {errores}.";
             if (detalleErrores.Any())
             {
                 msg += "<br/><strong>Detalle de Errores:</strong><br/>" + string.Join("<br/>", detalleErrores);
@@ -1470,7 +1470,7 @@ namespace SOR.Controllers
                 Referencia = cols.Length > 10 ? SanitizarFormulaExcel(cols[10]) : "",
                 Denominacion = cols.Length > 11 ? SanitizarFormulaExcel(cols[11]) : "",
                 TipoOrganizacion = "Iglesia",
-                IdEquipo = 1 // Se reasignará luego
+                IdEquipo = 1 // Se reasignarÃ¡ luego
             };
 
             SepararNombresApellidos(cols.Length > 12 ? cols[12] : "", out string pNombres, out string pApellidos);
@@ -1501,7 +1501,7 @@ namespace SOR.Controllers
             string reportoVal = cols.Length > 22 ? cols[22].Trim().ToUpper() : "NO";
             ig.ParticipacionActual = new ParticipacionIglesia
             {
-                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÍ") ? "Reportó" : "No Reportó"
+                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÃ") ? "ReportÃ³" : "No ReportÃ³"
             };
 
             return ig;
@@ -1554,14 +1554,14 @@ namespace SOR.Controllers
             string reportoVal = dr.FieldCount > 22 && dr[22] != DBNull.Value ? dr[22].ToString().Trim().ToUpper() : "NO";
             ig.ParticipacionActual = new ParticipacionIglesia
             {
-                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÍ") ? "Reportó" : "No Reportó"
+                EstatusEvaluacionReporte = (reportoVal == "SI" || reportoVal == "SÃ") ? "ReportÃ³" : "No ReportÃ³"
             };
 
             return ig;
         }
 
         // ============================================================================
-        // MÉTODOS AUXILIARES DE COMPROBACIÓN DE ROLES
+        // MÃ‰TODOS AUXILIARES DE COMPROBACIÃ“N DE ROLES
         // ============================================================================
 
         private bool PuedeRegistrarIglesia(Usuario u)
@@ -1575,7 +1575,7 @@ namespace SOR.Controllers
         {
             if (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2) return true; // SuperAdmin o Admin
             
-            // Todos los demás usuarios (coordinadores CE, CMI, CD) deben pertenecer al mismo equipo o ser un equipo padre del equipo de la iglesia
+            // Todos los demÃ¡s usuarios (coordinadores CE, CMI, CD) deben pertenecer al mismo equipo o ser un equipo padre del equipo de la iglesia
             if (u.IdEquipo.HasValue)
             {
                 if (u.IdEquipo.Value == idEquipoIglesia) return true;
@@ -1590,8 +1590,8 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT COUNT(1) FROM dbo.Equipos WHERE IdEquipo = @IdHijo AND IdEquipoPadre = @IdPadre;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdHijo", idEquipoHijo);
-                cmd.Parameters.AddWithValue("@IdPadre", idEquipoPadre);
+                cmd.Parameters.Add(new SqlParameter("@IdHijo", idEquipoHijo));
+                cmd.Parameters.Add(new SqlParameter("@IdPadre", idEquipoPadre));
                 cn.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
             }
@@ -1644,7 +1644,7 @@ namespace SOR.Controllers
                     }
                 }
 
-                // Tipos Organización
+                // Tipos OrganizaciÃ³n
                 string sqlT = @"
                     IF OBJECT_ID('dbo.TiposOrganizacion', 'U') IS NOT NULL
                         SELECT Nombre FROM dbo.TiposOrganizacion WHERE Activo = 1 ORDER BY Nombre;
@@ -1695,7 +1695,7 @@ namespace SOR.Controllers
                     string sqlAnterior = "SELECT TOP 1 IdTemporada FROM dbo.Temporadas WHERE FechaInicio < @FechaInicioActiva ORDER BY FechaInicio DESC;";
                     using (SqlCommand cmdAnterior = new SqlCommand(sqlAnterior, cn))
                     {
-                        cmdAnterior.Parameters.AddWithValue("@FechaInicioActiva", fechaInicioActiva.Value);
+                        cmdAnterior.Parameters.Add(new SqlParameter("@FechaInicioActiva", fechaInicioActiva.Value));
                         object val = cmdAnterior.ExecuteScalar();
                         if (val != null) idAnterior = Convert.ToInt32(val);
                     }
@@ -1729,7 +1729,7 @@ namespace SOR.Controllers
                                 Text = nombre
                             });
 
-                            // Combo de importación (todas con etiquetas de ayuda)
+                            // Combo de importaciÃ³n (todas con etiquetas de ayuda)
                             importarTemporadas.Add(new SelectListItem
                             {
                                 Value = idTemp.ToString(),
@@ -1746,10 +1746,10 @@ namespace SOR.Controllers
             {
                 new SelectListItem { Value = "1", Text = "Etapa 1: Inscrita" },
                 new SelectListItem { Value = "2", Text = "Etapa 2: Evaluada" },
-                new SelectListItem { Value = "3", Text = "Etapa 3: Visión" },
+                new SelectListItem { Value = "3", Text = "Etapa 3: VisiÃ³n" },
                 new SelectListItem { Value = "4", Text = "Etapa 4: Elegible Taller" },
                 new SelectListItem { Value = "5", Text = "Etapa 5: Taller OCC" },
-                new SelectListItem { Value = "6", Text = "Etapa 6: Asignación" },
+                new SelectListItem { Value = "6", Text = "Etapa 6: AsignaciÃ³n" },
                 new SelectListItem { Value = "7", Text = "Etapa 7: Entrega / Despacho" }
             };
 
@@ -1764,8 +1764,8 @@ namespace SOR.Controllers
             ViewBag.FiltroEstatusReportes = new List<SelectListItem>
             {
                 new SelectListItem { Value = "Pendiente", Text = "Pendiente" },
-                new SelectListItem { Value = "Reportó", Text = "Reportó" },
-                new SelectListItem { Value = "No Reportó", Text = "No Reportó" },
+                new SelectListItem { Value = "ReportÃ³", Text = "ReportÃ³" },
+                new SelectListItem { Value = "No ReportÃ³", Text = "No ReportÃ³" },
                 new SelectListItem { Value = "Castigada", Text = "Castigada" }
             };
         }
@@ -1814,8 +1814,8 @@ namespace SOR.Controllers
                       AND REPLACE(m.DocumentoIdentidad, '-', '') = @Doc AND m.Activo = 1;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
-                cmd.Parameters.AddWithValue("@Doc", cleanCedula);
+                cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporadaActiva));
+                cmd.Parameters.Add(new SqlParameter("@Doc", cleanCedula));
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -1876,10 +1876,10 @@ namespace SOR.Controllers
                       AND (@ExcluirId <= 0 OR i.IdIglesia <> @ExcluirId);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
-                cmd.Parameters.AddWithValue("@RncCedula", rncCedula.Trim());
-                cmd.Parameters.AddWithValue("@CleanDoc", cleanDoc);
-                cmd.Parameters.AddWithValue("@ExcluirId", idExcluir);
+                cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporadaActiva));
+                cmd.Parameters.Add(new SqlParameter("@RncCedula", rncCedula.Trim()));
+                cmd.Parameters.Add(new SqlParameter("@CleanDoc", cleanDoc));
+                cmd.Parameters.Add(new SqlParameter("@ExcluirId", idExcluir));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -1903,13 +1903,13 @@ namespace SOR.Controllers
                             idEquipo = idEq,
                             nombreEquipo = nombreEq,
                             idTemporada = idTemp,
-                            mensaje = $"Esta iglesia ya está registrada en el equipo: {nombreEq}"
+                            mensaje = $"Esta iglesia ya estÃ¡ registrada en el equipo: {nombreEq}"
                         }, JsonRequestBehavior.AllowGet);
                     }
                 }
             }
 
-            // 2. Si no está en la temporada activa, verificar si participó en una temporada previa reciente (< minAnios)
+            // 2. Si no estÃ¡ en la temporada activa, verificar si participÃ³ en una temporada previa reciente (< minAnios)
             int minAnios = 3;
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
@@ -1933,9 +1933,9 @@ namespace SOR.Controllers
 
                 using (SqlCommand cmdAnt = new SqlCommand(sqlAnt, cn))
                 {
-                    cmdAnt.Parameters.AddWithValue("@RncCedula", rncCedula.Trim());
-                    cmdAnt.Parameters.AddWithValue("@CleanDoc", cleanDoc);
-                    cmdAnt.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
+                    cmdAnt.Parameters.Add(new SqlParameter("@RncCedula", rncCedula.Trim()));
+                    cmdAnt.Parameters.Add(new SqlParameter("@CleanDoc", cleanDoc));
+                    cmdAnt.Parameters.Add(new SqlParameter("@IdTemp", idTemporadaActiva));
 
                     using (SqlDataReader drAnt = cmdAnt.ExecuteReader())
                     {
@@ -1964,8 +1964,8 @@ namespace SOR.Controllers
                                     diferenciaTemporadas = diff,
                                     minAnios,
                                     mensaje = excepcionAprobada
-                                        ? $"La iglesia '{nomIgAnt}' participó en la temporada '{nomPrev}' ({diff} temp. de diferencia), pero cuenta con una EXCEPCIÓN APROBADA (CE y CMI) para esta temporada."
-                                        : $"ATENCIÓN: La iglesia '{nomIgAnt}' participó en la temporada reciente '{nomPrev}' ({diff} temp. de diferencia; mínimo requerido: {minAnios}). Requiere una excepción formal aprobada por CE y CMI para poder participar."
+                                        ? $"La iglesia '{nomIgAnt}' participÃ³ en la temporada '{nomPrev}' ({diff} temp. de diferencia), pero cuenta con una EXCEPCIÃ“N APROBADA (CE y CMI) para esta temporada."
+                                        : $"ATENCIÃ“N: La iglesia '{nomIgAnt}' participÃ³ en la temporada reciente '{nomPrev}' ({diff} temp. de diferencia; mÃ­nimo requerido: {minAnios}). Requiere una excepciÃ³n formal aprobada por CE y CMI para poder participar."
                                 }, JsonRequestBehavior.AllowGet);
                             }
                         }
@@ -1977,7 +1977,7 @@ namespace SOR.Controllers
         }
 
         // ============================================================================
-        // EDICIÓN DE IGLESIAS (GET y POST)
+        // EDICIÃ“N DE IGLESIAS (GET y POST)
         // ============================================================================
 
         // GET: Iglesia/Editar/5
@@ -1989,7 +1989,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
             {
-                TempData["MensajeError"] = "Su usuario no tiene autorización para editar este expediente.";
+                TempData["MensajeError"] = "Su usuario no tiene autorizaciÃ³n para editar este expediente.";
                 return RedirectToAction("Detalle", new { id });
             }
 
@@ -2022,7 +2022,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesia(u, iglesiaOriginal.IdEquipo))
             {
-                TempData["MensajeError"] = "Su usuario no tiene autorización para realizar esta edición.";
+                TempData["MensajeError"] = "Su usuario no tiene autorizaciÃ³n para realizar esta ediciÃ³n.";
                 return RedirectToAction("Detalle", new { id = modelo.IdIglesia });
             }
 
@@ -2040,7 +2040,7 @@ namespace SOR.Controllers
             CargarEquiposDisponibles();
             CargarCatalogosDenominacionesYTipos();
 
-            // Validar si intentó cambiar de equipo y no tiene permiso
+            // Validar si intentÃ³ cambiar de equipo y no tiene permiso
             bool cambioDeEquipo = (modelo.IdEquipo != iglesiaOriginal.IdEquipo);
             if (cambioDeEquipo && (!PuedeCambiarEquipo(u) || !esTemporadaActual))
             {
@@ -2062,7 +2062,7 @@ namespace SOR.Controllers
             // Validar seguridad de archivos adjuntos
             if (!ValidarArchivoSeguroIglesia(docPastor, out string errPastor))
             {
-                TempData["MensajeError"] = "Cédula del Pastor: " + errPastor;
+                TempData["MensajeError"] = "CÃ©dula del Pastor: " + errPastor;
                 CargarEquiposDisponibles();
                 ViewBag.UsuarioActual = u;
                 ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
@@ -2070,7 +2070,7 @@ namespace SOR.Controllers
             }
             if (!ValidarArchivoSeguroIglesia(docLider, out string errLider))
             {
-                TempData["MensajeError"] = "Cédula del Líder: " + errLider;
+                TempData["MensajeError"] = "CÃ©dula del LÃ­der: " + errLider;
                 CargarEquiposDisponibles();
                 ViewBag.UsuarioActual = u;
                 ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
@@ -2101,7 +2101,7 @@ namespace SOR.Controllers
                 // Guardar cambios en BD
                 _iglesiaService.ActualizarIglesia(modelo, u.IdUsuario);
 
-                // Si se cambió de equipo, registrar notificaciones para coordinadores/movilizadores de ambos equipos
+                // Si se cambiÃ³ de equipo, registrar notificaciones para coordinadores/movilizadores de ambos equipos
                 if (cambioDeEquipo)
                 {
                     using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -2122,7 +2122,7 @@ namespace SOR.Controllers
                     }
                 }
 
-                SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Iglesia", modelo.IdIglesia.ToString(), "Edición de iglesia: " + modelo.NombreIglesia);
+                SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Iglesia", modelo.IdIglesia.ToString(), "EdiciÃ³n de iglesia: " + modelo.NombreIglesia);
                 TempData["MensajeExito"] = "Expediente de la iglesia actualizado exitosamente.";
                 return RedirectToAction("Detalle", new { id = modelo.IdIglesia });
             }
@@ -2133,7 +2133,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al actualizar el expediente: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                 CargarEquiposDisponibles();
                 ViewBag.UsuarioActual = u;
                 ViewBag.PuedeCambiarEquipo = PuedeCambiarEquipo(u);
@@ -2157,37 +2157,37 @@ namespace SOR.Controllers
 
             // Validar Iglesia
             if (string.IsNullOrWhiteSpace(modelo.NombreIglesia)) { error = "El nombre de la iglesia es obligatorio."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.RNC_Cedula) || !rncCedulaRegex.IsMatch(modelo.RNC_Cedula.Trim())) { error = "El RNC/Cédula es requerido y debe tener 9 dígitos (RNC) u 11 dígitos (Cédula)."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Telefono) || !phoneRegex.IsMatch(modelo.Telefono.Trim())) { error = "El teléfono de la iglesia es requerido y debe ser un número dominicano válido (809/829/849)."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Calle)) { error = "La calle de la dirección es obligatoria."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Numero)) { error = "El número de la dirección es obligatorio."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.RNC_Cedula) || !rncCedulaRegex.IsMatch(modelo.RNC_Cedula.Trim())) { error = "El RNC/CÃ©dula es requerido y debe tener 9 dÃ­gitos (RNC) u 11 dÃ­gitos (CÃ©dula)."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Telefono) || !phoneRegex.IsMatch(modelo.Telefono.Trim())) { error = "El telÃ©fono de la iglesia es requerido y debe ser un nÃºmero dominicano vÃ¡lido (809/829/849)."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Calle)) { error = "La calle de la direcciÃ³n es obligatoria."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Numero)) { error = "El nÃºmero de la direcciÃ³n es obligatorio."; return false; }
             if (string.IsNullOrWhiteSpace(modelo.Sector)) { error = "El sector es obligatorio."; return false; }
             if (string.IsNullOrWhiteSpace(modelo.Ciudad)) { error = "La ciudad/provincia es obligatoria."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Referencia)) { error = "La referencia de ubicación es obligatoria."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Referencia)) { error = "La referencia de ubicaciÃ³n es obligatoria."; return false; }
 
-            // Validar sección ministerial
+            // Validar secciÃ³n ministerial
             if (!modelo.CantidadMaestros.HasValue || modelo.CantidadMaestros.Value < 0) { error = "La cantidad de maestros es obligatoria y debe ser mayor o igual a 0."; return false; }
-            if (!modelo.CantidadNinos.HasValue || modelo.CantidadNinos.Value < 0) { error = "La cantidad proyectada de niños es obligatoria y debe ser mayor o igual a 0."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Denominacion)) { error = "La denominación es obligatoria."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.TipoOrganizacion)) { error = "El tipo de organización es obligatorio."; return false; }
+            if (!modelo.CantidadNinos.HasValue || modelo.CantidadNinos.Value < 0) { error = "La cantidad proyectada de niÃ±os es obligatoria y debe ser mayor o igual a 0."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Denominacion)) { error = "La denominaciÃ³n es obligatoria."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.TipoOrganizacion)) { error = "El tipo de organizaciÃ³n es obligatorio."; return false; }
             if (string.IsNullOrWhiteSpace(modelo.Ref1Nombre)) { error = "El nombre de la Referencia 1 es obligatorio."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Ref1Contacto) || !phoneRegex.IsMatch(modelo.Ref1Contacto.Trim())) { error = "El contacto de la Referencia 1 debe ser un teléfono dominicano válido (809/829/849)."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Ref1Contacto) || !phoneRegex.IsMatch(modelo.Ref1Contacto.Trim())) { error = "El contacto de la Referencia 1 debe ser un telÃ©fono dominicano vÃ¡lido (809/829/849)."; return false; }
             if (string.IsNullOrWhiteSpace(modelo.Ref2Nombre)) { error = "El nombre de la Referencia 2 es obligatorio."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Ref2Contacto) || !phoneRegex.IsMatch(modelo.Ref2Contacto.Trim())) { error = "El contacto de la Referencia 2 debe ser un teléfono dominicano válido (809/829/849)."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Ref2Contacto) || !phoneRegex.IsMatch(modelo.Ref2Contacto.Trim())) { error = "El contacto de la Referencia 2 debe ser un telÃ©fono dominicano vÃ¡lido (809/829/849)."; return false; }
 
             // Validar Pastor
             if (modelo.Pastor == null) { error = "Los datos del Pastor son obligatorios."; return false; }
             if (string.IsNullOrWhiteSpace(modelo.Pastor.Nombres) || string.IsNullOrWhiteSpace(modelo.Pastor.Apellidos)) { error = "El nombre del Pastor es obligatorio."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Pastor.DocumentoIdentidad) || !cedulaRegex.IsMatch(modelo.Pastor.DocumentoIdentidad.Trim())) { error = "La cédula del Pastor es obligatoria (11 dígitos)."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Pastor.Celular) || !phoneRegex.IsMatch(modelo.Pastor.Celular.Trim())) { error = "El celular del Pastor debe ser un teléfono dominicano válido."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.Pastor.Correo) || !modelo.Pastor.Correo.Contains("@")) { error = "El correo electrónico del Pastor debe ser válido."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Pastor.DocumentoIdentidad) || !cedulaRegex.IsMatch(modelo.Pastor.DocumentoIdentidad.Trim())) { error = "La cÃ©dula del Pastor es obligatoria (11 dÃ­gitos)."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Pastor.Celular) || !phoneRegex.IsMatch(modelo.Pastor.Celular.Trim())) { error = "El celular del Pastor debe ser un telÃ©fono dominicano vÃ¡lido."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.Pastor.Correo) || !modelo.Pastor.Correo.Contains("@")) { error = "El correo electrÃ³nico del Pastor debe ser vÃ¡lido."; return false; }
 
-            // Validar Líder
-            if (modelo.LiderMinisterial == null) { error = "Los datos del Líder Ministerial son obligatorios."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Nombres) || string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Apellidos)) { error = "El nombre del Líder es obligatorio."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.DocumentoIdentidad) || !cedulaRegex.IsMatch(modelo.LiderMinisterial.DocumentoIdentidad.Trim())) { error = "La cédula del Líder es obligatoria (11 dígitos)."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Celular) || !phoneRegex.IsMatch(modelo.LiderMinisterial.Celular.Trim())) { error = "El celular del Líder debe ser un teléfono dominicano válido."; return false; }
-            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Correo) || !modelo.LiderMinisterial.Correo.Contains("@")) { error = "El correo electrónico del Líder debe ser válido."; return false; }
+            // Validar LÃ­der
+            if (modelo.LiderMinisterial == null) { error = "Los datos del LÃ­der Ministerial son obligatorios."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Nombres) || string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Apellidos)) { error = "El nombre del LÃ­der es obligatorio."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.DocumentoIdentidad) || !cedulaRegex.IsMatch(modelo.LiderMinisterial.DocumentoIdentidad.Trim())) { error = "La cÃ©dula del LÃ­der es obligatoria (11 dÃ­gitos)."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Celular) || !phoneRegex.IsMatch(modelo.LiderMinisterial.Celular.Trim())) { error = "El celular del LÃ­der debe ser un telÃ©fono dominicano vÃ¡lido."; return false; }
+            if (string.IsNullOrWhiteSpace(modelo.LiderMinisterial.Correo) || !modelo.LiderMinisterial.Correo.Contains("@")) { error = "El correo electrÃ³nico del LÃ­der debe ser vÃ¡lido."; return false; }
 
             return true;
         }
@@ -2200,8 +2200,8 @@ namespace SOR.Controllers
             string sqlEq = "SELECT IdEquipo, NombreEquipo FROM dbo.Equipos WHERE IdEquipo IN (@IdAnterior, @IdNuevo);";
             using (SqlCommand cmdEq = new SqlCommand(sqlEq, cn, tran))
             {
-                cmdEq.Parameters.AddWithValue("@IdAnterior", idEquipoAnterior);
-                cmdEq.Parameters.AddWithValue("@IdNuevo", idEquipoNuevo);
+                cmdEq.Parameters.Add(new SqlParameter("@IdAnterior", idEquipoAnterior));
+                cmdEq.Parameters.Add(new SqlParameter("@IdNuevo", idEquipoNuevo));
                 using (SqlDataReader dr = cmdEq.ExecuteReader())
                 {
                     while (dr.Read())
@@ -2233,8 +2233,8 @@ namespace SOR.Controllers
             string sqlUsers = "SELECT u.IdUsuario FROM dbo.Usuarios u INNER JOIN dbo.AsignacionesEquipo a ON u.IdUsuario = a.IdUsuario WHERE a.Activo = 1 AND a.IdEquipo IN (@IdAnterior, @IdNuevo) AND a.IdPosicion IN (1, 2, 3) AND u.IdEstado = 4;";
             using (SqlCommand cmdUsers = new SqlCommand(sqlUsers, cn, tran))
             {
-                cmdUsers.Parameters.AddWithValue("@IdAnterior", idEquipoAnterior);
-                cmdUsers.Parameters.AddWithValue("@IdNuevo", idEquipoNuevo);
+                cmdUsers.Parameters.Add(new SqlParameter("@IdAnterior", idEquipoAnterior));
+                cmdUsers.Parameters.Add(new SqlParameter("@IdNuevo", idEquipoNuevo));
                 using (SqlDataReader dr = cmdUsers.ExecuteReader())
                 {
                     while (dr.Read())
@@ -2244,14 +2244,14 @@ namespace SOR.Controllers
                 }
             }
 
-            string msg = $"Notificación: La iglesia '{nombreIglesia}' ha sido reasignada del equipo '{nombreEqAnterior}' al equipo '{nombreEqNuevo}'.";
+            string msg = $"NotificaciÃ³n: La iglesia '{nombreIglesia}' ha sido reasignada del equipo '{nombreEqAnterior}' al equipo '{nombreEqNuevo}'.";
             string sqlInsert = "INSERT INTO dbo.Notificaciones (IdUsuarioDestinatario, Mensaje) VALUES (@IdDest, @Msg);";
             foreach (var userId in usuariosNotificar.Distinct())
             {
                 using (SqlCommand cmdIns = new SqlCommand(sqlInsert, cn, tran))
                 {
-                    cmdIns.Parameters.AddWithValue("@IdDest", userId);
-                    cmdIns.Parameters.AddWithValue("@Msg", msg);
+                    cmdIns.Parameters.Add(new SqlParameter("@IdDest", userId));
+                    cmdIns.Parameters.Add(new SqlParameter("@Msg", msg));
                     cmdIns.ExecuteNonQuery();
                 }
             }
@@ -2285,7 +2285,7 @@ namespace SOR.Controllers
                     string sql = "SELECT * FROM dbo.Notificaciones WHERE IdUsuarioDestinatario = @IdUser AND Leida = 0 ORDER BY IdNotificacion DESC;";
                     using (SqlCommand cmd = new SqlCommand(sql, cn))
                     {
-                        cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                        cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
                         using (SqlDataReader dr = cmd.ExecuteReader())
                         {
                             while (dr.Read())
@@ -2317,8 +2317,8 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.Notificaciones SET Leida = 1, FechaLectura = GETDATE(), IdUsuarioLectura = @IdUser WHERE IdNotificacion = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdUser", u.IdUsuario);
-                cmd.Parameters.AddWithValue("@Id", idNotificacion);
+                cmd.Parameters.Add(new SqlParameter("@IdUser", u.IdUsuario));
+                cmd.Parameters.Add(new SqlParameter("@Id", idNotificacion));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
@@ -2348,18 +2348,18 @@ namespace SOR.Controllers
 
             if (string.IsNullOrWhiteSpace(nombreReceptor))
             {
-                TempData["MensajeError"] = "Debe indicar el nombre de la persona o líder que recibe los materiales.";
+                TempData["MensajeError"] = "Debe indicar el nombre de la persona o lÃ­der que recibe los materiales.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
             try
             {
-                _iglesiaService.ConfirmarEntregaDirecta(idParticipacion, idIglesia, tipoReceptor ?? "Pastor / Líder", nombreReceptor.Trim(), cedula?.Trim(), telefono?.Trim(), observaciones?.Trim(), u.IdUsuario);
-                TempData["MensajeExito"] = "¡Entrega de materiales confirmada exitosamente! La iglesia ahora figura como Despachada / Entregada y puede proceder con los reportes ministeriales.";
+                _iglesiaService.ConfirmarEntregaDirecta(idParticipacion, idIglesia, tipoReceptor ?? "Pastor / LÃ­der", nombreReceptor.Trim(), cedula?.Trim(), telefono?.Trim(), observaciones?.Trim(), u.IdUsuario);
+                TempData["MensajeExito"] = "Â¡Entrega de materiales confirmada exitosamente! La iglesia ahora figura como Despachada / Entregada y puede proceder con los reportes ministeriales.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al confirmar la entrega: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -2383,7 +2383,7 @@ namespace SOR.Controllers
 
             if (string.IsNullOrWhiteSpace(motivoNoEntrega))
             {
-                TempData["MensajeError"] = "Debe especificar el motivo por el cual no se realizó o no se realizará la entrega.";
+                TempData["MensajeError"] = "Debe especificar el motivo por el cual no se realizÃ³ o no se realizarÃ¡ la entrega.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -2394,7 +2394,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar la no entrega: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -2412,25 +2412,25 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesia(u, iglesia.IdEquipo))
             {
-                TempData["MensajeError"] = "No tiene permisos para modificar la asignación de esta iglesia.";
+                TempData["MensajeError"] = "No tiene permisos para modificar la asignaciÃ³n de esta iglesia.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
             try
             {
                 _iglesiaService.ReprogramarEntregaDirecta(idParticipacion, idIglesia, u.IdUsuario);
-                TempData["MensajeExito"] = "La asignación ha sido restablecida a 'Disponible / Pendiente de Despacho'.";
+                TempData["MensajeExito"] = "La asignaciÃ³n ha sido restablecida a 'Disponible / Pendiente de Despacho'.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al restablecer estado: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
         // ============================================================================
-        // REPORTES MINISTERILES: EVENTOS EVANGELÍSTICOS
+        // REPORTES MINISTERILES: EVENTOS EVANGELÃSTICOS
         // ============================================================================
 
         [HttpPost]
@@ -2451,13 +2451,13 @@ namespace SOR.Controllers
 
             if (!item.FechaEvento.HasValue)
             {
-                TempData["MensajeError"] = "Debe especificar la fecha de realización del evento evangelístico.";
+                TempData["MensajeError"] = "Debe especificar la fecha de realizaciÃ³n del evento evangelÃ­stico.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
             if (item.CantidadNinosAsistieron < 0)
             {
-                TempData["MensajeError"] = "La cantidad de niños asistentes no puede ser negativa.";
+                TempData["MensajeError"] = "La cantidad de niÃ±os asistentes no puede ser negativa.";
                 return RedirectToAction("Detalle", new { id = idIglesia });
             }
 
@@ -2465,11 +2465,11 @@ namespace SOR.Controllers
             {
                 item.IdIglesia = idIglesia;
                 _iglesiaService.GuardarEventoEvangelistico(item, u.IdUsuario);
-                TempData["MensajeExito"] = "Evento evangelístico guardado correctamente.";
+                TempData["MensajeExito"] = "Evento evangelÃ­stico guardado correctamente.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al guardar el evento evangelístico: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -2494,11 +2494,11 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.EliminarEventoEvangelistico(idEventoDetalle, idParticipacion, idIglesia, u.IdUsuario);
-                TempData["MensajeExito"] = "Evento evangelístico eliminado exitosamente.";
+                TempData["MensajeExito"] = "Evento evangelÃ­stico eliminado exitosamente.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al eliminar el evento: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
@@ -2523,18 +2523,18 @@ namespace SOR.Controllers
             try
             {
                 _iglesiaService.GuardarAnotacionesEventosEvangelisticos(idParticipacion, idIglesia, anotaciones?.Trim(), u.IdUsuario);
-                TempData["MensajeExito"] = "Anotaciones de eventos evangelísticos guardadas correctamente.";
+                TempData["MensajeExito"] = "Anotaciones de eventos evangelÃ­sticos guardadas correctamente.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al guardar las anotaciones: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });
         }
 
         // ============================================================================
-        // REPORTE OFICIAL DE DISCIPULADO / GRADUACIÓN LA GRAN AVENTURA (9 PREGUNTAS)
+        // REPORTE OFICIAL DE DISCIPULADO / GRADUACIÃ“N LA GRAN AVENTURA (9 PREGUNTAS)
         // ============================================================================
 
         [HttpPost]
@@ -2575,7 +2575,7 @@ namespace SOR.Controllers
                 }
                 else
                 {
-                    TempData["MensajeError"] = "Archivo de evidencia inválido: " + errAdjunto;
+                    TempData["MensajeError"] = "Archivo de evidencia invÃ¡lido: " + errAdjunto;
                     return RedirectToAction("Detalle", new { id = idIglesia });
                 }
             }
@@ -2584,11 +2584,11 @@ namespace SOR.Controllers
             {
                 vm.IdIglesia = idIglesia;
                 _iglesiaService.GuardarReporteGraduacionLGA(vm, u.IdUsuario);
-                TempData["MensajeExito"] = "¡Reporte Oficial de Discipulado / Graduación de La Gran Aventura guardado con éxito! Estatus actualizado a 'Reportó'.";
+                TempData["MensajeExito"] = "Â¡Reporte Oficial de Discipulado / GraduaciÃ³n de La Gran Aventura guardado con Ã©xito! Estatus actualizado a 'ReportÃ³'.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar el reporte de discipulado: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idIglesia });

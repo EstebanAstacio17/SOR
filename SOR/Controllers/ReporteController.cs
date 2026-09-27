@@ -1,4 +1,4 @@
-using SOR.Models;
+﻿using SOR.Models;
 using SOR.Permisos;
 using System;
 using System.Collections.Generic;
@@ -89,7 +89,7 @@ namespace SOR.Controllers
                 // Obtener participacion activa de la iglesia
                 string sqlPart = "SELECT TOP 1 p.IdParticipacion FROM dbo.ParticipacionesIglesia p INNER JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada WHERE p.IdIglesia = @IdIglesia AND t.Activa = 1;";
                 SqlCommand cmdPart = new SqlCommand(sqlPart, cn);
-                cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                cmdPart.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
                 object partObj = cmdPart.ExecuteScalar();
 
                 if (partObj != null)
@@ -108,17 +108,17 @@ namespace SOR.Controllers
                         );";
 
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
-                    cmd.Parameters.AddWithValue("@TipoReporte", modelo.TipoReporte ?? "Evangelistico");
-                    cmd.Parameters.AddWithValue("@Fecha", modelo.Fecha ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@CantidadNinos", modelo.CantidadNinos);
-                    cmd.Parameters.AddWithValue("@CantidadClases", modelo.CantidadClases);
-                    cmd.Parameters.AddWithValue("@AsistenciaPorClase", modelo.AsistenciaPorClase ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@CuantosAceptaronSenor", modelo.CuantosAceptaronSenor);
-                    cmd.Parameters.AddWithValue("@CuantosComprometieron", modelo.CuantosComprometieron);
-                    cmd.Parameters.AddWithValue("@CuantosGraduaron", modelo.CuantosGraduaron);
-                    cmd.Parameters.AddWithValue("@ReporteAdjuntoRuta", modelo.ReporteAdjuntoRuta ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Notas", modelo.Notas ?? (object)DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdParticipacion", idParticipacion));
+                    cmd.Parameters.Add(new SqlParameter("@TipoReporte", modelo.TipoReporte ?? "Evangelistico"));
+                    cmd.Parameters.Add(new SqlParameter("@Fecha", modelo.Fecha ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@CantidadNinos", modelo.CantidadNinos));
+                    cmd.Parameters.Add(new SqlParameter("@CantidadClases", modelo.CantidadClases));
+                    cmd.Parameters.Add(new SqlParameter("@AsistenciaPorClase", modelo.AsistenciaPorClase ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@CuantosAceptaronSenor", modelo.CuantosAceptaronSenor));
+                    cmd.Parameters.Add(new SqlParameter("@CuantosComprometieron", modelo.CuantosComprometieron));
+                    cmd.Parameters.Add(new SqlParameter("@CuantosGraduaron", modelo.CuantosGraduaron));
+                    cmd.Parameters.Add(new SqlParameter("@ReporteAdjuntoRuta", modelo.ReporteAdjuntoRuta ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Notas", modelo.Notas ?? (object)DBNull.Value));
 
                     cmd.ExecuteNonQuery();
                 }

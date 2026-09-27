@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -130,7 +130,7 @@ namespace SOR.Controllers
             try
             {
                 Usuario u = ObtenerUsuarioActual();
-                if (u == null) return Json(new { success = false, message = "Sesión expirada." });
+                if (u == null) return Json(new { success = false, message = "SesiÃ³n expirada." });
 
                 if (string.IsNullOrWhiteSpace(dto.NombreIglesia) || string.IsNullOrWhiteSpace(dto.PastorPrincipal))
                     return Json(new { success = false, message = "Nombre de la iglesia y Pastor son obligatorios." });
@@ -140,7 +140,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error: " + ex.Message });
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
         }
 
@@ -150,14 +150,14 @@ namespace SOR.Controllers
             try
             {
                 Usuario u = ObtenerUsuarioActual();
-                if (u == null) return Json(new { success = false, message = "Sesión expirada." });
+                if (u == null) return Json(new { success = false, message = "SesiÃ³n expirada." });
 
                 bool ok = _repo.EliminarIglesiaPlantada(id);
-                return Json(new { success = ok, message = ok ? "Registro eliminado." : "No se encontró el registro." });
+                return Json(new { success = ok, message = ok ? "Registro eliminado." : "No se encontrÃ³ el registro." });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error: " + ex.Message });
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
         }
 
@@ -167,17 +167,17 @@ namespace SOR.Controllers
             try
             {
                 Usuario u = ObtenerUsuarioActual();
-                if (u == null) return Json(new { success = false, message = "Sesión expirada." });
+                if (u == null) return Json(new { success = false, message = "SesiÃ³n expirada." });
 
                 if (string.IsNullOrWhiteSpace(dto.NombreGNA) || string.IsNullOrWhiteSpace(dto.CompaneroMinisterio))
-                    return Json(new { success = false, message = "Nombre del GNA y Compañero de Ministerio son obligatorios." });
+                    return Json(new { success = false, message = "Nombre del GNA y CompaÃ±ero de Ministerio son obligatorios." });
 
                 bool ok = _repo.GuardarGNA(dto);
                 return Json(new { success = ok, message = ok ? "Grupo No Alcanzado registrado exitosamente." : "Error al registrar." });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error: " + ex.Message });
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
         }
 
@@ -187,14 +187,14 @@ namespace SOR.Controllers
             try
             {
                 Usuario u = ObtenerUsuarioActual();
-                if (u == null) return Json(new { success = false, message = "Sesión expirada." });
+                if (u == null) return Json(new { success = false, message = "SesiÃ³n expirada." });
 
                 bool ok = _repo.EliminarGNA(id);
-                return Json(new { success = ok, message = ok ? "Registro eliminado." : "No se encontró el registro." });
+                return Json(new { success = ok, message = ok ? "Registro eliminado." : "No se encontrÃ³ el registro." });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error: " + ex.Message });
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
         }
 
@@ -222,18 +222,18 @@ namespace SOR.Controllers
             sb.Append(".num { text-align: right; }");
             sb.Append("</style></head><body>");
 
-            sb.Append("<h2>REPORTES DE TEMPORADA — OCC REPÚBLICA DOMINICANA</h2>");
-            sb.Append($"<p><strong>Fecha Generación:</strong> {DateTime.Now:dd/MM/yyyy hh:mm tt}</p>");
+            sb.Append("<h2>REPORTES DE TEMPORADA â€” OCC REPÃšBLICA DOMINICANA</h2>");
+            sb.Append($"<p><strong>Fecha GeneraciÃ³n:</strong> {DateTime.Now:dd/MM/yyyy hh:mm tt}</p>");
 
-            // 1. MOVILIZACIÓN
+            // 1. MOVILIZACIÃ“N
             sb.Append("<table>");
-            sb.Append("<tr><th colspan='2' class='section-title'>1. COORDINADOR DE MOVILIZACIÓN DE IGLESIAS</th></tr>");
-            sb.Append($"<tr><td>Total Presentaciones de la Visión</td><td class='num'><strong>{mov.TotalPresentacionesVision}</strong></td></tr>");
-            sb.Append($"<tr><td>Total Asistentes a Presentaciones de Visión</td><td class='num'><strong>{mov.TotalAsistentesVision:N0}</strong></td></tr>");
+            sb.Append("<tr><th colspan='2' class='section-title'>1. COORDINADOR DE MOVILIZACIÃ“N DE IGLESIAS</th></tr>");
+            sb.Append($"<tr><td>Total Presentaciones de la VisiÃ³n</td><td class='num'><strong>{mov.TotalPresentacionesVision}</strong></td></tr>");
+            sb.Append($"<tr><td>Total Asistentes a Presentaciones de VisiÃ³n</td><td class='num'><strong>{mov.TotalAsistentesVision:N0}</strong></td></tr>");
             sb.Append($"<tr><td>Equipos Ministeriales Capacitados</td><td class='num'><strong>{mov.EquiposMinisterialesCapacitados}</strong></td></tr>");
-            sb.Append($"<tr><td>Cajitas Entregadas a Compañeros de Ministerio</td><td class='num'><strong>{mov.CajitasEntregadasCompaneros:N0}</strong></td></tr>");
-            sb.Append($"<tr><td>Eventos Evangelísticos Realizados</td><td class='num'><strong>{mov.EventosEvangelisticos}</strong></td></tr>");
-            sb.Append($"<tr><td>Niños Asistentes a Eventos Evangelísticos</td><td class='num'><strong>{mov.NinosAsistentesEvangelisticos:N0}</strong></td></tr>");
+            sb.Append($"<tr><td>Cajitas Entregadas a CompaÃ±eros de Ministerio</td><td class='num'><strong>{mov.CajitasEntregadasCompaneros:N0}</strong></td></tr>");
+            sb.Append($"<tr><td>Eventos EvangelÃ­sticos Realizados</td><td class='num'><strong>{mov.EventosEvangelisticos}</strong></td></tr>");
+            sb.Append($"<tr><td>NiÃ±os Asistentes a Eventos EvangelÃ­sticos</td><td class='num'><strong>{mov.NinosAsistentesEvangelisticos:N0}</strong></td></tr>");
             sb.Append("</table>");
 
             // 2. DISCIPULADO
@@ -242,8 +242,8 @@ namespace SOR.Controllers
             sb.Append($"<tr><td>Capacitaciones OCC Impartidas</td><td class='num'><strong>{disc.TotalCapacitacionesOCC}</strong></td></tr>");
             sb.Append($"<tr><td>Total Asistentes a Capacitaciones</td><td class='num'><strong>{disc.TotalAsistentesCapacitacion:N0}</strong></td></tr>");
             sb.Append($"<tr><td>LGA: Cursos / Aulas Impartidos</td><td class='num'><strong>{disc.LgaCursosImpartidos}</strong></td></tr>");
-            sb.Append($"<tr><td>LGA: Niños Asistentes</td><td class='num'><strong>{disc.LgaNinosAsistentes:N0}</strong></td></tr>");
-            sb.Append($"<tr><td>LGA: Decisiones por Jesús</td><td class='num'><strong>{disc.LgaDecisionesJesus:N0}</strong></td></tr>");
+            sb.Append($"<tr><td>LGA: NiÃ±os Asistentes</td><td class='num'><strong>{disc.LgaNinosAsistentes:N0}</strong></td></tr>");
+            sb.Append($"<tr><td>LGA: Decisiones por JesÃºs</td><td class='num'><strong>{disc.LgaDecisionesJesus:N0}</strong></td></tr>");
             sb.Append($"<tr><td>LGA: Comprometidos a Orar y Compartir</td><td class='num'><strong>{disc.LgaComprometidosOrarCompartir:N0}</strong></td></tr>");
             sb.Append($"<tr><td>LGA: Graduados Totales</td><td class='num'><strong>{disc.LgaGraduadosTotales:N0}</strong></td></tr>");
             sb.Append($"<tr><td>VDC: Asistieron a 1 clase</td><td class='num'><strong>{disc.VdcAsistieronUnaClase:N0}</strong></td></tr>");
@@ -251,13 +251,13 @@ namespace SOR.Controllers
             sb.Append($"<tr><td>VDC: Continuaron en LGA o DET</td><td class='num'><strong>{disc.VdcContinuaronLgaODet:N0}</strong></td></tr>");
             sb.Append("</table>");
 
-            // 3. ORACIÓN
+            // 3. ORACIÃ“N
             sb.Append("<table>");
-            sb.Append("<tr><th colspan='2' class='section-title'>3. COORDINADOR DE ORACIÓN</th></tr>");
-            sb.Append($"<tr><td>Eventos de Oración Organizados</td><td class='num'><strong>{orac.EventosOracionOrganizados}</strong></td></tr>");
-            sb.Append($"<tr><td>Total Asistentes a Eventos de Oración</td><td class='num'><strong>{orac.TotalAsistentesOracion:N0}</strong></td></tr>");
-            sb.Append($"<tr><td>Compañeros de Oración Reportados</td><td class='num'><strong>{orac.CompanerosOracionReportados}</strong></td></tr>");
-            sb.Append($"<tr><td>Miembros en la Red de Oración Local</td><td class='num'><strong>{orac.MiembrosRedOracionLocal}</strong></td></tr>");
+            sb.Append("<tr><th colspan='2' class='section-title'>3. COORDINADOR DE ORACIÃ“N</th></tr>");
+            sb.Append($"<tr><td>Eventos de OraciÃ³n Organizados</td><td class='num'><strong>{orac.EventosOracionOrganizados}</strong></td></tr>");
+            sb.Append($"<tr><td>Total Asistentes a Eventos de OraciÃ³n</td><td class='num'><strong>{orac.TotalAsistentesOracion:N0}</strong></td></tr>");
+            sb.Append($"<tr><td>CompaÃ±eros de OraciÃ³n Reportados</td><td class='num'><strong>{orac.CompanerosOracionReportados}</strong></td></tr>");
+            sb.Append($"<tr><td>Miembros en la Red de OraciÃ³n Local</td><td class='num'><strong>{orac.MiembrosRedOracionLocal}</strong></td></tr>");
             sb.Append("</table>");
 
             sb.Append("</body></html>");

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -157,15 +157,15 @@ namespace SOR.Controllers
 
                                 -- Registrar en HistorialParticipacion
                                 INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                                VALUES (@IdParticipacion, GETDATE(), 'Completado Taller OCC', 'Taller OCC (Etapa 5)', 'Evaluación Asignación (Etapa 6)', @IdUsuarioResponsable, 'Asistencia al Taller OCC confirmada. Avanza a Evaluación Asignación.');
+                                VALUES (@IdParticipacion, GETDATE(), 'Completado Taller OCC', 'Taller OCC (Etapa 5)', 'EvaluaciÃ³n AsignaciÃ³n (Etapa 6)', @IdUsuarioResponsable, 'Asistencia al Taller OCC confirmada. Avanza a EvaluaciÃ³n AsignaciÃ³n.');
 
                                 -- Registrar en LogsCambiosEtapa
                                 INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
-                                VALUES (@IdIglesia, 5, 6, @IdUsuarioResponsable, GETDATE(), 'Transición automática tras registrar asistencia en Taller OCC.');
+                                VALUES (@IdIglesia, 5, 6, @IdUsuarioResponsable, GETDATE(), 'TransiciÃ³n automÃ¡tica tras registrar asistencia en Taller OCC.');
                             END
                             ELSE
                             BEGIN
-                                -- Solo actualizar participación
+                                -- Solo actualizar participaciÃ³n
                                 UPDATE dbo.ParticipacionesIglesia
                                 SET TallerParticipo = @Asistio
                                 WHERE IdParticipacion = @IdParticipacion;
@@ -218,11 +218,11 @@ namespace SOR.Controllers
 
                             -- Registrar en HistorialParticipacion
                             INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario)
-                            VALUES (@IdParticipacion, GETDATE(), 'Asignación de Recursos Finalizada', 'Evaluación Asignación (Etapa 6)', 'Aprobación Final (Etapa 7)', @IdUsuarioResponsable, 'Se finalizó la asignación de recursos y se completó la participación.');
+                            VALUES (@IdParticipacion, GETDATE(), 'AsignaciÃ³n de Recursos Finalizada', 'EvaluaciÃ³n AsignaciÃ³n (Etapa 6)', 'AprobaciÃ³n Final (Etapa 7)', @IdUsuarioResponsable, 'Se finalizÃ³ la asignaciÃ³n de recursos y se completÃ³ la participaciÃ³n.');
 
                             -- Registrar en LogsCambiosEtapa
                             INSERT INTO dbo.LogsCambiosEtapa (IdIglesia, EtapaAnterior, EtapaNueva, IdUsuarioResponsable, FechaHora, Detalles)
-                            VALUES (@IdIglesia, @EtapaAnterior, 7, @IdUsuarioResponsable, GETDATE(), 'Transición de asignación final de recursos y cierre de participación.');
+                            VALUES (@IdIglesia, @EtapaAnterior, 7, @IdUsuarioResponsable, GETDATE(), 'TransiciÃ³n de asignaciÃ³n final de recursos y cierre de participaciÃ³n.');
                         END";
                     SqlCommand cmdRecursosCreate = new SqlCommand(spRecursosCreate, cn);
                     cmdRecursosCreate.ExecuteNonQuery();
@@ -316,7 +316,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Si no se asignó temporada, obtener la activa
+            // Si no se asignÃ³ temporada, obtener la activa
             if (modelo.IdTemporada <= 0)
             {
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -345,16 +345,16 @@ namespace SOR.Controllers
                     VALUES (@Nombre, @Tipo, @IdTemp, @Fecha, @Lugar, @Resp, @IdUsuario, @TipoLugar, @Hora, @Cant);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Nombre", modelo.NombreEvento);
-                cmd.Parameters.AddWithValue("@Tipo", modelo.TipoEvento);
-                cmd.Parameters.AddWithValue("@IdTemp", modelo.IdTemporada);
-                cmd.Parameters.AddWithValue("@Fecha", modelo.Fecha);
-                cmd.Parameters.AddWithValue("@Lugar", modelo.Lugar ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Resp", modelo.Responsable ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
-                cmd.Parameters.AddWithValue("@TipoLugar", modelo.TipoLugar ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Hora", modelo.Hora ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Cant", modelo.CantidadAsistentes);
+                cmd.Parameters.Add(new SqlParameter("@Nombre", modelo.NombreEvento));
+                cmd.Parameters.Add(new SqlParameter("@Tipo", modelo.TipoEvento));
+                cmd.Parameters.Add(new SqlParameter("@IdTemp", modelo.IdTemporada));
+                cmd.Parameters.Add(new SqlParameter("@Fecha", modelo.Fecha));
+                cmd.Parameters.Add(new SqlParameter("@Lugar", modelo.Lugar ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Resp", modelo.Responsable ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
+                cmd.Parameters.Add(new SqlParameter("@TipoLugar", modelo.TipoLugar ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Hora", modelo.Hora ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Cant", modelo.CantidadAsistentes));
 
                 cn.Open();
                 int idNuevoEvento = Convert.ToInt32(cmd.ExecuteScalar());
@@ -367,7 +367,7 @@ namespace SOR.Controllers
                     {
                         using (SqlCommand cmdFindAlm = new SqlCommand("SELECT TOP 1 IdAlmacen FROM dbo.Almacenes WHERE NombreAlmacen = @Nom OR @Nom LIKE '%' + NombreAlmacen + '%';", cn))
                         {
-                            cmdFindAlm.Parameters.AddWithValue("@Nom", modelo.Lugar);
+                            cmdFindAlm.Parameters.Add(new SqlParameter("@Nom", modelo.Lugar));
                             object almObj = cmdFindAlm.ExecuteScalar();
                             if (almObj != null && almObj != DBNull.Value)
                             {
@@ -384,15 +384,15 @@ namespace SOR.Controllers
                         END";
                     using (SqlCommand cmdED = new SqlCommand(sqlED, cn))
                     {
-                        cmdED.Parameters.AddWithValue("@IdEv", idNuevoEvento);
-                        cmdED.Parameters.AddWithValue("@IdEq", idEq);
-                        cmdED.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value);
+                        cmdED.Parameters.Add(new SqlParameter("@IdEv", idNuevoEvento));
+                        cmdED.Parameters.Add(new SqlParameter("@IdEq", idEq));
+                        cmdED.Parameters.Add(new SqlParameter("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value));
                         cmdED.ExecuteNonQuery();
                     }
                 }
             }
 
-            TempData["MensajeExito"] = "Evento creado con éxito.";
+            TempData["MensajeExito"] = "Evento creado con Ã©xito.";
             return RedirectToAction("Index");
         }
 
@@ -413,7 +413,7 @@ namespace SOR.Controllers
                     WHERE e.IdEvento = @Id;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.Add(new SqlParameter("@Id", id));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -447,7 +447,7 @@ namespace SOR.Controllers
                 return HttpNotFound();
             }
 
-            // Si es un evento de Despacho, cargar datos logísticos
+            // Si es un evento de Despacho, cargar datos logÃ­sticos
             if (evento.TipoEvento == "Despacho")
             {
                 var logisticaSvc = new SOR.Services.LogisticaService();
@@ -473,7 +473,7 @@ namespace SOR.Controllers
             List<string> listaRolesEvento = ObtenerRolesEventoActivos();
 
             bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+            bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("LogÃ­stica", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
             bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 
             ViewBag.Evento = evento;
@@ -492,7 +492,7 @@ namespace SOR.Controllers
         }
 
         // =====================================================================
-        // MÉTODOS DE DESPACHO PRESENCIAL (EVENTOS DE DESPACHO)
+        // MÃ‰TODOS DE DESPACHO PRESENCIAL (EVENTOS DE DESPACHO)
         // =====================================================================
 
         [HttpPost]
@@ -510,7 +510,7 @@ namespace SOR.Controllers
                     cn.Open();
                     using (var cmd = new SqlCommand("SELECT IdTemporada FROM dbo.Eventos WHERE IdEvento=@Id;", cn))
                     {
-                        cmd.Parameters.AddWithValue("@Id", idEvento);
+                        cmd.Parameters.Add(new SqlParameter("@Id", idEvento));
                         idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
@@ -519,7 +519,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idEvento });
         }
@@ -532,12 +532,12 @@ namespace SOR.Controllers
             try
             {
                 bool esAdmin = u != null && (u.IdRolSeguridad == 1 || u.IdRolSeguridad == 2);
-                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
+                bool esCL = u != null && (u.IdPosicion == 6 || (u.NombrePosicion != null && (u.NombrePosicion.IndexOf("LogÃ­stica", StringComparison.OrdinalIgnoreCase) >= 0 || u.NombrePosicion.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0)));
                 bool esCE = u != null && (u.IdPosicion == 1 || (u.NombrePosicion != null && u.NombrePosicion.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0));
 
                 if (!esAdmin && !esCL && !esCE)
                 {
-                    TempData["MensajeError"] = "Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) tienen autorización para confirmar y ejecutar el despacho de materiales.";
+                    TempData["MensajeError"] = "Acceso denegado: Ãšnicamente el Coordinador de LogÃ­stica (CL) o el Coordinador de Equipo (CE) tienen autorizaciÃ³n para confirmar y ejecutar el despacho de materiales.";
                     return RedirectToAction("Detalle", new { id = idEvento });
                 }
 
@@ -549,17 +549,17 @@ namespace SOR.Controllers
                     cn.Open();
                     using (var cmd = new SqlCommand("SELECT IdTemporada FROM dbo.Eventos WHERE IdEvento=@Id;", cn))
                     {
-                        cmd.Parameters.AddWithValue("@Id", idEvento);
+                        cmd.Parameters.Add(new SqlParameter("@Id", idEvento));
                         idTemporada = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
-                string nombre = !string.IsNullOrEmpty(u.PrimerNombre) ? $"{u.PrimerNombre} {u.PrimerApellido}".Trim() : (u.Correo ?? "Coordinador de Logística");
+                string nombre = !string.IsNullOrEmpty(u.PrimerNombre) ? $"{u.PrimerNombre} {u.PrimerApellido}".Trim() : (u.Correo ?? "Coordinador de LogÃ­stica");
                 logisticaSvc.ConfirmarDespacho(vm, idEquipo, idTemporada, u.IdUsuario, nombre, u.IdRolSeguridad, u.IdPosicion);
-                TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
+                TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cÃ©dula validada.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al confirmar despacho: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idEvento });
         }
@@ -573,11 +573,11 @@ namespace SOR.Controllers
             {
                 var logisticaSvc = new SOR.Services.LogisticaService();
                 logisticaSvc.MarcarNoDespacho(vm, u.IdUsuario);
-                TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. No se descontó inventario y queda disponible para reprogramación.";
+                TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. No se descontÃ³ inventario y queda disponible para reprogramaciÃ³n.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
             return RedirectToAction("Detalle", new { id = idEvento });
         }
@@ -637,7 +637,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de un evento fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de un evento fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -647,30 +647,30 @@ namespace SOR.Controllers
                 // Verificar si existe registro
                 string sqlCheck = "SELECT COUNT(1) FROM dbo.EventosParticipacionIglesia WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                 SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn);
-                cmdCheck.Parameters.AddWithValue("@IdEvento", idEvento);
-                cmdCheck.Parameters.AddWithValue("@IdPart", idParticipacion);
+                cmdCheck.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                cmdCheck.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                 int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
 
                 if (count > 0)
                 {
                     string sqlUpdate = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                     SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn);
-                    cmdUp.Parameters.AddWithValue("@Asistio", asistio);
-                    cmdUp.Parameters.AddWithValue("@IdEvento", idEvento);
-                    cmdUp.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdUp.Parameters.Add(new SqlParameter("@Asistio", asistio));
+                    cmdUp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                    cmdUp.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     cmdUp.ExecuteNonQuery();
                 }
                 else
                 {
                     string sqlIns = "INSERT INTO dbo.EventosParticipacionIglesia (IdEvento, IdParticipacion, Asistio) VALUES (@IdEvento, @IdPart, @Asistio);";
                     SqlCommand cmdIns = new SqlCommand(sqlIns, cn);
-                    cmdIns.Parameters.AddWithValue("@Asistio", asistio);
-                    cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                    cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdIns.Parameters.Add(new SqlParameter("@Asistio", asistio));
+                    cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                    cmdIns.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     cmdIns.ExecuteNonQuery();
                 }
 
-                // Sincronizar el estado de asistencia y resultado de Visión en dbo.ParticipacionesIglesia
+                // Sincronizar el estado de asistencia y resultado de VisiÃ³n en dbo.ParticipacionesIglesia
                 string sqlSync = @"
                     UPDATE p
                     SET p.VisionAsistio = @Asistio,
@@ -685,9 +685,9 @@ namespace SOR.Controllers
                     WHERE ep.IdEvento = @IdEvento AND ep.IdParticipacion = @IdPart AND e.TipoEvento = 'Vision';";
                 using (SqlCommand cmdSync = new SqlCommand(sqlSync, cn))
                 {
-                    cmdSync.Parameters.AddWithValue("@Asistio", asistio);
-                    cmdSync.Parameters.AddWithValue("@IdEvento", idEvento);
-                    cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmdSync.Parameters.Add(new SqlParameter("@Asistio", asistio));
+                    cmdSync.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                    cmdSync.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     cmdSync.ExecuteNonQuery();
                 }
             }
@@ -703,7 +703,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de maestros en un evento fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para modificar la asistencia de maestros en un evento fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -720,7 +720,7 @@ namespace SOR.Controllers
                         string sqlDel = "DELETE FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento;";
                         using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
                         {
-                            cmdDel.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdDel.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                             cmdDel.ExecuteNonQuery();
                         }
 
@@ -733,9 +733,9 @@ namespace SOR.Controllers
                         {
                             using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                             {
-                                cmdIns.Parameters.AddWithValue("@IdMaestro", idMaestro);
-                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                cmdIns.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                                cmdIns.Parameters.Add(new SqlParameter("@IdMaestro", idMaestro));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
                                 cmdIns.ExecuteNonQuery();
                             }
                         }
@@ -746,7 +746,7 @@ namespace SOR.Controllers
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al guardar asistencia de maestros: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -769,8 +769,8 @@ namespace SOR.Controllers
                     WHERE ep.IdEvento = @IdEvento AND p.IdTemporada = @IdTemporada;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEvento", idEvento);
-                cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", idTemporada));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -794,12 +794,12 @@ namespace SOR.Controllers
             var idsIglesias = lista.Select(x => x.IdIglesia).Distinct().ToList();
             var idsParticipaciones = lista.Select(x => x.IdParticipacion).Distinct().ToList();
 
-            // Optimización de Alto Rendimiento: Cargar pastores, líderes, maestros y asistentes en consultas por lote
+            // OptimizaciÃ³n de Alto Rendimiento: Cargar pastores, lÃ­deres, maestros y asistentes en consultas por lote
             using (SqlConnection cnBatch = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cnBatch.Open();
 
-                // 1. Cargar Pastores y Líderes en una sola consulta
+                // 1. Cargar Pastores y LÃ­deres en una sola consulta
                 string sqlPersonas = $@"
                     SELECT IdPersonaIglesia, IdIglesia, TipoPersona, Nombres, Apellidos, DocumentoIdentidad, Celular, Correo
                     FROM dbo.PersonasIglesia
@@ -870,7 +870,7 @@ namespace SOR.Controllers
 
                 using (SqlCommand cmdA = new SqlCommand(sqlAsist, cnBatch))
                 {
-                    cmdA.Parameters.AddWithValue("@IdEvento", idEvento);
+                    cmdA.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                     using (SqlDataReader drA = cmdA.ExecuteReader())
                     {
                         while (drA.Read())
@@ -917,8 +917,8 @@ namespace SOR.Controllers
                     WHERE p.IdTemporada = @IdTemporada AND p.EstadoEvaluacion = 'Aprobado' AND m.Activo = 1;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEvento", idEvento);
-                cmd.Parameters.AddWithValue("@IdTemporada", idTemporada);
+                cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                cmd.Parameters.Add(new SqlParameter("@IdTemporada", idTemporada));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -962,10 +962,10 @@ namespace SOR.Controllers
 
             ViewBag.ListaTipos = new List<SelectListItem>
             {
-                new SelectListItem { Value = "Vision", Text = "Presentación de la Visión" },
+                new SelectListItem { Value = "Vision", Text = "PresentaciÃ³n de la VisiÃ³n" },
                 new SelectListItem { Value = "Taller", Text = "Taller OCC" },
                 new SelectListItem { Value = "Despacho", Text = "Despacho de Materiales" },
-                new SelectListItem { Value = "Evangelistico", Text = "Evento Evangelístico" },
+                new SelectListItem { Value = "Evangelistico", Text = "Evento EvangelÃ­stico" },
                 new SelectListItem { Value = "GranAventura", Text = "La Gran Aventura" }
             };
 
@@ -981,7 +981,7 @@ namespace SOR.Controllers
                         LEFT JOIN dbo.PerfilesCoordinador p ON u.IdUsuario = p.IdUsuario
                         WHERE a.IdEquipo = @IdEquipo AND u.IdEstado = 4;";
                     SqlCommand cmdInt = new SqlCommand(sqlInt, cn);
-                    cmdInt.Parameters.AddWithValue("@IdEquipo", u.IdEquipo.Value);
+                    cmdInt.Parameters.Add(new SqlParameter("@IdEquipo", u.IdEquipo.Value));
                     cn.Open();
                     using (SqlDataReader drInt = cmdInt.ExecuteReader())
                     {
@@ -1028,13 +1028,13 @@ namespace SOR.Controllers
             AsegurarEsquemaEventos();
             if (modelo == null || modelo.IdEvento <= 0)
             {
-                TempData["MensajeError"] = "Datos de evento inválidos.";
+                TempData["MensajeError"] = "Datos de evento invÃ¡lidos.";
                 return RedirectToAction("Index");
             }
 
             if (!PuedeEditarEvento(u, modelo.IdEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar eventos pertenecientes a otro equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para modificar eventos pertenecientes a otro equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Index");
             }
 
@@ -1044,7 +1044,7 @@ namespace SOR.Controllers
                 cn.Open();
                 string sqlCheck = @"SELECT t.Activa FROM dbo.Eventos e INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada WHERE e.IdEvento = @IdEvento;";
                 SqlCommand cmdC = new SqlCommand(sqlCheck, cn);
-                cmdC.Parameters.AddWithValue("@IdEvento", modelo.IdEvento);
+                cmdC.Parameters.Add(new SqlParameter("@IdEvento", modelo.IdEvento));
                 object activa = cmdC.ExecuteScalar();
                 if (activa == null || !Convert.ToBoolean(activa))
                 {
@@ -1068,29 +1068,29 @@ namespace SOR.Controllers
                       AND (@RowVersion IS NULL OR RowVersion = @RowVersion);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Nombre", modelo.NombreEvento);
-                cmd.Parameters.AddWithValue("@Tipo", modelo.TipoEvento);
-                cmd.Parameters.AddWithValue("@Fecha", modelo.Fecha);
-                cmd.Parameters.AddWithValue("@Lugar", modelo.Lugar ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Resp", modelo.Responsable ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@TipoLugar", modelo.TipoLugar ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Hora", modelo.Hora ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Cant", modelo.CantidadAsistentes);
-                cmd.Parameters.AddWithValue("@IdUsuario", u.IdUsuario);
+                cmd.Parameters.Add(new SqlParameter("@Nombre", modelo.NombreEvento));
+                cmd.Parameters.Add(new SqlParameter("@Tipo", modelo.TipoEvento));
+                cmd.Parameters.Add(new SqlParameter("@Fecha", modelo.Fecha));
+                cmd.Parameters.Add(new SqlParameter("@Lugar", modelo.Lugar ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Resp", modelo.Responsable ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@TipoLugar", modelo.TipoLugar ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Hora", modelo.Hora ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Cant", modelo.CantidadAsistentes));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", u.IdUsuario));
                 var pRowVer = new SqlParameter("@RowVersion", SqlDbType.Timestamp);
                 pRowVer.Value = (modelo.RowVersion != null && modelo.RowVersion.Length > 0) ? (object)modelo.RowVersion : DBNull.Value;
                 cmd.Parameters.Add(pRowVer);
-                cmd.Parameters.AddWithValue("@IdEvento", modelo.IdEvento);
+                cmd.Parameters.Add(new SqlParameter("@IdEvento", modelo.IdEvento));
 
                 int rowsAffected = cmd.ExecuteNonQuery();
                 if (rowsAffected == 0)
                 {
-                    TempData["MensajeError"] = "Conflicto de concurrencia: El evento fue modificado concurrentemente por otro usuario. Actualice la información antes de continuar.";
+                    TempData["MensajeError"] = "Conflicto de concurrencia: El evento fue modificado concurrentemente por otro usuario. Actualice la informaciÃ³n antes de continuar.";
                     return RedirectToAction("Index");
                 }
             }
 
-            SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Evento", modelo.IdEvento.ToString(), "Edición de evento: " + modelo.NombreEvento);
+            SOR.Helpers.AuditoriaHelper.Registrar(u.IdUsuario, u.Correo, "UPDATE", "Evento", modelo.IdEvento.ToString(), "EdiciÃ³n de evento: " + modelo.NombreEvento);
             TempData["MensajeExito"] = "Evento actualizado correctamente.";
             return RedirectToAction("Index");
         }
@@ -1103,7 +1103,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para eliminar eventos pertenecientes a otro equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para eliminar eventos pertenecientes a otro equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Index");
             }
 
@@ -1114,7 +1114,7 @@ namespace SOR.Controllers
                 // Verificar que el evento pertenece a temporada activa
                 string sqlCheck = @"SELECT t.Activa FROM dbo.Eventos e INNER JOIN dbo.Temporadas t ON e.IdTemporada = t.IdTemporada WHERE e.IdEvento = @IdEvento;";
                 SqlCommand cmdC = new SqlCommand(sqlCheck, cn);
-                cmdC.Parameters.AddWithValue("@IdEvento", idEvento);
+                cmdC.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                 object activa = cmdC.ExecuteScalar();
                 if (activa == null || !Convert.ToBoolean(activa))
                 {
@@ -1127,13 +1127,13 @@ namespace SOR.Controllers
                     using (SqlCommand cmdSp = new SqlCommand("dbo.SpEliminarEvento", cn))
                     {
                         cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
-                        cmdSp.Parameters.AddWithValue("@IdEvento", idEvento);
+                        cmdSp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                         cmdSp.ExecuteNonQuery();
                     }
                 }
                 catch (SqlException ex)
                 {
-                    TempData["MensajeError"] = ex.Message;
+                    TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     return RedirectToAction("Index");
                 }
             }
@@ -1165,7 +1165,7 @@ namespace SOR.Controllers
                             ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "Pastor", pastor);
                         }
 
-                        // 2. Actualizar Líder Ministerial
+                        // 2. Actualizar LÃ­der Ministerial
                         if (lider != null && !string.IsNullOrWhiteSpace(lider.Nombres))
                         {
                             ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
@@ -1175,8 +1175,8 @@ namespace SOR.Controllers
                         string sqlDel = "DELETE FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
                         {
-                            cmdDel.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdDel.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdDel.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdDel.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdDel.ExecuteNonQuery();
                         }
 
@@ -1190,18 +1190,18 @@ namespace SOR.Controllers
                                 VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
                             using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                             {
-                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                cmdIns.Parameters.AddWithValue("@Nombre", $"{pastor.Nombres} {pastor.Apellidos}".Trim());
-                                cmdIns.Parameters.AddWithValue("@Doc", pastor.DocumentoIdentidad ?? (object)DBNull.Value);
-                                cmdIns.Parameters.AddWithValue("@Tel", pastor.Celular ?? (object)DBNull.Value);
-                                cmdIns.Parameters.AddWithValue("@Correo", pastor.Correo ?? (object)DBNull.Value);
+                                cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                                cmdIns.Parameters.Add(new SqlParameter("@Nombre", $"{pastor.Nombres} {pastor.Apellidos}".Trim()));
+                                cmdIns.Parameters.Add(new SqlParameter("@Doc", pastor.DocumentoIdentidad ?? (object)DBNull.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@Tel", pastor.Celular ?? (object)DBNull.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@Correo", pastor.Correo ?? (object)DBNull.Value));
                                 cmdIns.ExecuteNonQuery();
                             }
                             asistieronCount++;
                         }
 
-                        // 5. Registrar Líder como asistente si aplica
+                        // 5. Registrar LÃ­der como asistente si aplica
                         if (liderAsistio == true)
                         {
                             string sqlIns = @"
@@ -1209,12 +1209,12 @@ namespace SOR.Controllers
                                 VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
                             using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                             {
-                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                cmdIns.Parameters.AddWithValue("@Nombre", $"{lider.Nombres} {lider.Apellidos}".Trim());
-                                cmdIns.Parameters.AddWithValue("@Doc", lider.DocumentoIdentidad ?? (object)DBNull.Value);
-                                cmdIns.Parameters.AddWithValue("@Tel", lider.Celular ?? (object)DBNull.Value);
-                                cmdIns.Parameters.AddWithValue("@Correo", lider.Correo ?? (object)DBNull.Value);
+                                cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                                cmdIns.Parameters.Add(new SqlParameter("@Nombre", $"{lider.Nombres} {lider.Apellidos}".Trim()));
+                                cmdIns.Parameters.Add(new SqlParameter("@Doc", lider.DocumentoIdentidad ?? (object)DBNull.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@Tel", lider.Celular ?? (object)DBNull.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@Correo", lider.Correo ?? (object)DBNull.Value));
                                 cmdIns.ExecuteNonQuery();
                             }
                             asistieronCount++;
@@ -1225,9 +1225,9 @@ namespace SOR.Controllers
                         string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdUp = new SqlCommand(sqlUpPart, cn, tran))
                         {
-                            cmdUp.Parameters.AddWithValue("@Asistio", asistioCualquiera ? 1 : 0);
-                            cmdUp.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdUp.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdUp.Parameters.Add(new SqlParameter("@Asistio", asistioCualquiera ? 1 : 0));
+                            cmdUp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdUp.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdUp.ExecuteNonQuery();
                         }
 
@@ -1239,8 +1239,8 @@ namespace SOR.Controllers
                             WHERE IdParticipacion = @IdPart;";
                         using (SqlCommand cmdSync = new SqlCommand(sqlSync, cn, tran))
                         {
-                            cmdSync.Parameters.AddWithValue("@Asistio", asistioCualquiera ? 1 : 0);
-                            cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdSync.Parameters.Add(new SqlParameter("@Asistio", asistioCualquiera ? 1 : 0));
+                            cmdSync.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdSync.ExecuteNonQuery();
                         }
 
@@ -1248,17 +1248,17 @@ namespace SOR.Controllers
                         string sqlUpCant = "UPDATE dbo.Eventos SET CantidadAsistentes = (SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento) WHERE IdEvento = @IdEvento;";
                         using (SqlCommand cmdUpCant = new SqlCommand(sqlUpCant, cn, tran))
                         {
-                            cmdUpCant.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdUpCant.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                             cmdUpCant.ExecuteNonQuery();
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Asistencia y datos del Pastor/Líder actualizados correctamente.";
+                        TempData["MensajeExito"] = "Asistencia y datos del Pastor/LÃ­der actualizados correctamente.";
                     }
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al registrar asistencia: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -1283,7 +1283,7 @@ namespace SOR.Controllers
                 {
                     try
                     {
-                        // 1. Actualizar Líder
+                        // 1. Actualizar LÃ­der
                         if (lider != null && !string.IsNullOrWhiteSpace(lider.Nombres))
                         {
                             ActualizarOInsertarPersonaInterno(cn, tran, idIglesia, "LiderMinisterial", lider);
@@ -1312,12 +1312,12 @@ namespace SOR.Controllers
                                         WHERE IdMaestro = @IdM;";
                                     using (SqlCommand cmdUpM = new SqlCommand(sqlUpM, cn, tran))
                                     {
-                                        cmdUpM.Parameters.AddWithValue("@Nombres", m.Nombres.Trim());
-                                        cmdUpM.Parameters.AddWithValue("@Apellidos", m.Apellidos ?? "");
-                                        cmdUpM.Parameters.AddWithValue("@Doc", m.DocumentoIdentidad ?? (object)DBNull.Value);
-                                        cmdUpM.Parameters.AddWithValue("@Cel", m.Celular ?? (object)DBNull.Value);
-                                        cmdUpM.Parameters.AddWithValue("@Correo", m.Correo ?? (object)DBNull.Value);
-                                        cmdUpM.Parameters.AddWithValue("@IdM", m.IdMaestro);
+                                        cmdUpM.Parameters.Add(new SqlParameter("@Nombres", m.Nombres.Trim()));
+                                        cmdUpM.Parameters.Add(new SqlParameter("@Apellidos", m.Apellidos ?? ""));
+                                        cmdUpM.Parameters.Add(new SqlParameter("@Doc", m.DocumentoIdentidad ?? (object)DBNull.Value));
+                                        cmdUpM.Parameters.Add(new SqlParameter("@Cel", m.Celular ?? (object)DBNull.Value));
+                                        cmdUpM.Parameters.Add(new SqlParameter("@Correo", m.Correo ?? (object)DBNull.Value));
+                                        cmdUpM.Parameters.Add(new SqlParameter("@IdM", m.IdMaestro));
                                         cmdUpM.ExecuteNonQuery();
                                     }
                                 }
@@ -1330,15 +1330,15 @@ namespace SOR.Controllers
                                         SELECT SCOPE_IDENTITY();";
                                     using (SqlCommand cmdInsM = new SqlCommand(sqlInsM, cn, tran))
                                     {
-                                        cmdInsM.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                                        cmdInsM.Parameters.AddWithValue("@Nombres", m.Nombres.Trim());
-                                        cmdInsM.Parameters.AddWithValue("@Apellidos", m.Apellidos ?? "");
-                                        cmdInsM.Parameters.AddWithValue("@Doc", m.DocumentoIdentidad ?? (object)DBNull.Value);
-                                        cmdInsM.Parameters.AddWithValue("@Cel", m.Celular ?? (object)DBNull.Value);
-                                        cmdInsM.Parameters.AddWithValue("@Correo", m.Correo ?? (object)DBNull.Value);
+                                        cmdInsM.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                                        cmdInsM.Parameters.Add(new SqlParameter("@Nombres", m.Nombres.Trim()));
+                                        cmdInsM.Parameters.Add(new SqlParameter("@Apellidos", m.Apellidos ?? ""));
+                                        cmdInsM.Parameters.Add(new SqlParameter("@Doc", m.DocumentoIdentidad ?? (object)DBNull.Value));
+                                        cmdInsM.Parameters.Add(new SqlParameter("@Cel", m.Celular ?? (object)DBNull.Value));
+                                        cmdInsM.Parameters.Add(new SqlParameter("@Correo", m.Correo ?? (object)DBNull.Value));
                                         int newMId = Convert.ToInt32(cmdInsM.ExecuteScalar());
 
-                                        // Si venía marcado como asistido en el checkbox correspondiente
+                                        // Si venÃ­a marcado como asistido en el checkbox correspondiente
                                         // lo agregamos a la lista
                                         string asistKey = Request.Form["maestroNuevoAsistio_" + i];
                                         if (asistKey == "true")
@@ -1354,14 +1354,14 @@ namespace SOR.Controllers
                         string sqlDel = "DELETE FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
                         {
-                            cmdDel.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdDel.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdDel.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdDel.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdDel.ExecuteNonQuery();
                         }
 
                         int asistieronCount = 0;
 
-                        // 4. Registrar Líder como asistente si aplica
+                        // 4. Registrar LÃ­der como asistente si aplica
                         if (liderAsistio == true)
                         {
                             string sqlIns = @"
@@ -1369,12 +1369,12 @@ namespace SOR.Controllers
                                 VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
                             using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                             {
-                                cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                cmdIns.Parameters.AddWithValue("@Nombre", $"{lider.Nombres} {lider.Apellidos}".Trim());
-                                cmdIns.Parameters.AddWithValue("@Doc", lider.DocumentoIdentidad ?? (object)DBNull.Value);
-                                cmdIns.Parameters.AddWithValue("@Tel", lider.Celular ?? (object)DBNull.Value);
-                                cmdIns.Parameters.AddWithValue("@Correo", lider.Correo ?? (object)DBNull.Value);
+                                cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                                cmdIns.Parameters.Add(new SqlParameter("@Nombre", $"{lider.Nombres} {lider.Apellidos}".Trim()));
+                                cmdIns.Parameters.Add(new SqlParameter("@Doc", lider.DocumentoIdentidad ?? (object)DBNull.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@Tel", lider.Celular ?? (object)DBNull.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@Correo", lider.Correo ?? (object)DBNull.Value));
                                 cmdIns.ExecuteNonQuery();
                             }
                             asistieronCount++;
@@ -1393,7 +1393,7 @@ namespace SOR.Controllers
                             string sqlGetM = "SELECT Nombres, Apellidos, DocumentoIdentidad, Celular, Correo FROM dbo.Maestros WHERE IdMaestro = @IdM;";
                             using (SqlCommand cmdGetM = new SqlCommand(sqlGetM, cn, tran))
                             {
-                                cmdGetM.Parameters.AddWithValue("@IdM", mId);
+                                cmdGetM.Parameters.Add(new SqlParameter("@IdM", mId));
                                 using (SqlDataReader dr = cmdGetM.ExecuteReader())
                                 {
                                     if (dr.Read())
@@ -1415,12 +1415,12 @@ namespace SOR.Controllers
                                     VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
                                 using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                                 {
-                                    cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                    cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                    cmdIns.Parameters.AddWithValue("@Nombre", nomComp);
-                                    cmdIns.Parameters.AddWithValue("@Doc", string.IsNullOrWhiteSpace(doc) ? (object)DBNull.Value : doc);
-                                    cmdIns.Parameters.AddWithValue("@Tel", string.IsNullOrWhiteSpace(tel) ? (object)DBNull.Value : tel);
-                                    cmdIns.Parameters.AddWithValue("@Correo", string.IsNullOrWhiteSpace(mail) ? (object)DBNull.Value : mail);
+                                    cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                    cmdIns.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                                    cmdIns.Parameters.Add(new SqlParameter("@Nombre", nomComp));
+                                    cmdIns.Parameters.Add(new SqlParameter("@Doc", string.IsNullOrWhiteSpace(doc) ? (object)DBNull.Value : doc));
+                                    cmdIns.Parameters.Add(new SqlParameter("@Tel", string.IsNullOrWhiteSpace(tel) ? (object)DBNull.Value : tel));
+                                    cmdIns.Parameters.Add(new SqlParameter("@Correo", string.IsNullOrWhiteSpace(mail) ? (object)DBNull.Value : mail));
                                     cmdIns.ExecuteNonQuery();
                                 }
                                 asistieronCount++;
@@ -1432,9 +1432,9 @@ namespace SOR.Controllers
                         string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdUp = new SqlCommand(sqlUpPart, cn, tran))
                         {
-                            cmdUp.Parameters.AddWithValue("@Asistio", asistioCualquiera ? 1 : 0);
-                            cmdUp.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdUp.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdUp.Parameters.Add(new SqlParameter("@Asistio", asistioCualquiera ? 1 : 0));
+                            cmdUp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdUp.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdUp.ExecuteNonQuery();
                         }
 
@@ -1442,10 +1442,10 @@ namespace SOR.Controllers
                         using (SqlCommand cmdSp = new SqlCommand("dbo.SpAvanzarEtapaTaller", cn, tran))
                         {
                             cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
-                            cmdSp.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
-                            cmdSp.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdSp.Parameters.AddWithValue("@Asistio", asistioCualquiera);
-                            cmdSp.Parameters.AddWithValue("@IdUsuarioResponsable", u.IdUsuario);
+                            cmdSp.Parameters.Add(new SqlParameter("@IdParticipacion", idParticipacion));
+                            cmdSp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdSp.Parameters.Add(new SqlParameter("@Asistio", asistioCualquiera));
+                            cmdSp.Parameters.Add(new SqlParameter("@IdUsuarioResponsable", u.IdUsuario));
                             cmdSp.ExecuteNonQuery();
                         }
 
@@ -1453,17 +1453,17 @@ namespace SOR.Controllers
                         string sqlUpCant = "UPDATE dbo.Eventos SET CantidadAsistentes = (SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento) WHERE IdEvento = @IdEvento;";
                         using (SqlCommand cmdUpCant = new SqlCommand(sqlUpCant, cn, tran))
                         {
-                            cmdUpCant.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdUpCant.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                             cmdUpCant.ExecuteNonQuery();
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Asistencia y datos del Líder/Maestros actualizados correctamente.";
+                        TempData["MensajeExito"] = "Asistencia y datos del LÃ­der/Maestros actualizados correctamente.";
                     }
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al registrar asistencia: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -1478,7 +1478,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (u == null)
             {
-                return Json(new { success = false, message = "Sesión inválida o expirada." });
+                return Json(new { success = false, message = "SesiÃ³n invÃ¡lida o expirada." });
             }
 
             if (!PuedeEditarEvento(u, idEvento))
@@ -1488,7 +1488,7 @@ namespace SOR.Controllers
 
             if (idEvento <= 0 || idAsistente <= 0)
             {
-                return Json(new { success = false, message = "Parámetros inválidos para la eliminación." });
+                return Json(new { success = false, message = "ParÃ¡metros invÃ¡lidos para la eliminaciÃ³n." });
             }
 
             try
@@ -1500,12 +1500,12 @@ namespace SOR.Controllers
                     {
                         try
                         {
-                            // 0. Validar si el evento ya pasó
+                            // 0. Validar si el evento ya pasÃ³
                             DateTime fechaEvento = DateTime.MinValue;
                             string sqlFecha = "SELECT Fecha FROM dbo.Eventos WHERE IdEvento = @IdEvento;";
                             using (SqlCommand cmdF = new SqlCommand(sqlFecha, cn, tran))
                             {
-                                cmdF.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdF.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                                 object valF = cmdF.ExecuteScalar();
                                 if (valF != null && valF != DBNull.Value)
                                 {
@@ -1516,7 +1516,7 @@ namespace SOR.Controllers
                             if (fechaEvento != DateTime.MinValue && fechaEvento.Date < DateTime.Today && u.IdRolSeguridad != 1 && u.IdRolSeguridad != 2)
                             {
                                 tran.Rollback();
-                                return Json(new { success = false, message = "El evento ya se llevó a cabo el " + fechaEvento.ToString("dd/MM/yyyy") + ". No se pueden retirar participantes de un evento que ya pasó." });
+                                return Json(new { success = false, message = "El evento ya se llevÃ³ a cabo el " + fechaEvento.ToString("dd/MM/yyyy") + ". No se pueden retirar participantes de un evento que ya pasÃ³." });
                             }
 
                             // 1. Obtener datos del asistente en EventosAsistentes
@@ -1530,8 +1530,8 @@ namespace SOR.Controllers
                                 WHERE IdAsistente = @IdAsistente AND IdEvento = @IdEvento;";
                             using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn, tran))
                             {
-                                cmdGet.Parameters.AddWithValue("@IdAsistente", idAsistente);
-                                cmdGet.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdGet.Parameters.Add(new SqlParameter("@IdAsistente", idAsistente));
+                                cmdGet.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                                 using (SqlDataReader dr = cmdGet.ExecuteReader())
                                 {
                                     if (dr.Read())
@@ -1554,7 +1554,7 @@ namespace SOR.Controllers
                             string sqlIg = "SELECT IdIglesia FROM dbo.ParticipacionesIglesia WHERE IdParticipacion = @IdPart;";
                             using (SqlCommand cmdIg = new SqlCommand(sqlIg, cn, tran))
                             {
-                                cmdIg.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmdIg.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                                 object valIg = cmdIg.ExecuteScalar();
                                 if (valIg != null) idIglesia = Convert.ToInt32(valIg);
                             }
@@ -1572,31 +1572,31 @@ namespace SOR.Controllers
                                       );";
                                 using (SqlCommand cmdM = new SqlCommand(sqlM, cn, tran))
                                 {
-                                    cmdM.Parameters.AddWithValue("@IdIg", idIglesia);
-                                    cmdM.Parameters.AddWithValue("@Doc", cleanDoc);
-                                    cmdM.Parameters.AddWithValue("@Nom", nombreCompleto.Trim());
+                                    cmdM.Parameters.Add(new SqlParameter("@IdIg", idIglesia));
+                                    cmdM.Parameters.Add(new SqlParameter("@Doc", cleanDoc));
+                                    cmdM.Parameters.Add(new SqlParameter("@Nom", nombreCompleto.Trim()));
                                     object valM = cmdM.ExecuteScalar();
                                     if (valM != null) idMaestro = Convert.ToInt32(valM);
                                 }
                             }
 
-                            // 3. Eliminar relación de dbo.EventosAsistentes
+                            // 3. Eliminar relaciÃ³n de dbo.EventosAsistentes
                             string sqlDelAsist = "DELETE FROM dbo.EventosAsistentes WHERE IdAsistente = @IdAsistente AND IdEvento = @IdEvento;";
                             using (SqlCommand cmdDelA = new SqlCommand(sqlDelAsist, cn, tran))
                             {
-                                cmdDelA.Parameters.AddWithValue("@IdAsistente", idAsistente);
-                                cmdDelA.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdDelA.Parameters.Add(new SqlParameter("@IdAsistente", idAsistente));
+                                cmdDelA.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                                 cmdDelA.ExecuteNonQuery();
                             }
 
-                            // 4. Si existe relación en dbo.AsistenciaMaestro, eliminar solo de este evento
+                            // 4. Si existe relaciÃ³n en dbo.AsistenciaMaestro, eliminar solo de este evento
                             if (idMaestro > 0)
                             {
                                 string sqlDelAm = "DELETE FROM dbo.AsistenciaMaestro WHERE IdEvento = @IdEvento AND IdMaestro = @IdMaestro;";
                                 using (SqlCommand cmdDelAm = new SqlCommand(sqlDelAm, cn, tran))
                                 {
-                                    cmdDelAm.Parameters.AddWithValue("@IdEvento", idEvento);
-                                    cmdDelAm.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                                    cmdDelAm.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                    cmdDelAm.Parameters.Add(new SqlParameter("@IdMaestro", idMaestro));
                                     cmdDelAm.ExecuteNonQuery();
                                 }
                             }
@@ -1608,17 +1608,17 @@ namespace SOR.Controllers
                                 WHERE IdEvento = @IdEvento;";
                             using (SqlCommand cmdUpCant = new SqlCommand(sqlUpCant, cn, tran))
                             {
-                                cmdUpCant.Parameters.AddWithValue("@IdEvento", idEvento);
+                                cmdUpCant.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                                 cmdUpCant.ExecuteNonQuery();
                             }
 
-                            // 6. Verificar si la iglesia aún tiene asistentes en este evento
+                            // 6. Verificar si la iglesia aÃºn tiene asistentes en este evento
                             string sqlCountRest = "SELECT COUNT(1) FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                             int restantes = 0;
                             using (SqlCommand cmdRest = new SqlCommand(sqlCountRest, cn, tran))
                             {
-                                cmdRest.Parameters.AddWithValue("@IdEvento", idEvento);
-                                cmdRest.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                cmdRest.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                cmdRest.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                                 restantes = Convert.ToInt32(cmdRest.ExecuteScalar());
                             }
 
@@ -1627,8 +1627,8 @@ namespace SOR.Controllers
                                 string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = 0 WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                                 using (SqlCommand cmdUpP = new SqlCommand(sqlUpPart, cn, tran))
                                 {
-                                    cmdUpP.Parameters.AddWithValue("@IdEvento", idEvento);
-                                    cmdUpP.Parameters.AddWithValue("@IdPart", idParticipacion);
+                                    cmdUpP.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                    cmdUpP.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                                     cmdUpP.ExecuteNonQuery();
                                 }
                             }
@@ -1646,7 +1646,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error de conexión o permisos: " + ex.Message });
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
         }
 
@@ -1656,8 +1656,8 @@ namespace SOR.Controllers
             int count = 0;
             using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
             {
-                cmdCheck.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                cmdCheck.Parameters.AddWithValue("@Tipo", tipoPersona);
+                cmdCheck.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                cmdCheck.Parameters.Add(new SqlParameter("@Tipo", tipoPersona));
                 count = Convert.ToInt32(cmdCheck.ExecuteScalar());
             }
 
@@ -1673,13 +1673,13 @@ namespace SOR.Controllers
                     WHERE IdIglesia = @IdIglesia AND TipoPersona = @Tipo;";
                 using (SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn, tran))
                 {
-                    cmdUp.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
-                    cmdUp.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
-                    cmdUp.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
-                    cmdUp.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
-                    cmdUp.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
-                    cmdUp.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmdUp.Parameters.AddWithValue("@Tipo", tipoPersona);
+                    cmdUp.Parameters.Add(new SqlParameter("@Nombres", persona.Nombres ?? ""));
+                    cmdUp.Parameters.Add(new SqlParameter("@Apellidos", persona.Apellidos ?? ""));
+                    cmdUp.Parameters.Add(new SqlParameter("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value));
+                    cmdUp.Parameters.Add(new SqlParameter("@Celular", persona.Celular ?? (object)DBNull.Value));
+                    cmdUp.Parameters.Add(new SqlParameter("@Correo", persona.Correo ?? (object)DBNull.Value));
+                    cmdUp.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmdUp.Parameters.Add(new SqlParameter("@Tipo", tipoPersona));
                     cmdUp.ExecuteNonQuery();
                 }
             }
@@ -1690,13 +1690,13 @@ namespace SOR.Controllers
                     VALUES (@IdIglesia, @Tipo, @Nombres, @Apellidos, @Doc, @Celular, @Correo);";
                 using (SqlCommand cmdIns = new SqlCommand(sqlInsert, cn, tran))
                 {
-                    cmdIns.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmdIns.Parameters.AddWithValue("@Tipo", tipoPersona);
-                    cmdIns.Parameters.AddWithValue("@Nombres", persona.Nombres ?? "");
-                    cmdIns.Parameters.AddWithValue("@Apellidos", persona.Apellidos ?? "");
-                    cmdIns.Parameters.AddWithValue("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value);
-                    cmdIns.Parameters.AddWithValue("@Celular", persona.Celular ?? (object)DBNull.Value);
-                    cmdIns.Parameters.AddWithValue("@Correo", persona.Correo ?? (object)DBNull.Value);
+                    cmdIns.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmdIns.Parameters.Add(new SqlParameter("@Tipo", tipoPersona));
+                    cmdIns.Parameters.Add(new SqlParameter("@Nombres", persona.Nombres ?? ""));
+                    cmdIns.Parameters.Add(new SqlParameter("@Apellidos", persona.Apellidos ?? ""));
+                    cmdIns.Parameters.Add(new SqlParameter("@Doc", persona.DocumentoIdentidad ?? (object)DBNull.Value));
+                    cmdIns.Parameters.Add(new SqlParameter("@Celular", persona.Celular ?? (object)DBNull.Value));
+                    cmdIns.Parameters.Add(new SqlParameter("@Correo", persona.Correo ?? (object)DBNull.Value));
                     cmdIns.ExecuteNonQuery();
                 }
             }
@@ -1709,7 +1709,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarEvento(u, idEvento))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar los asistentes de un evento fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para modificar los asistentes de un evento fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -1725,8 +1725,8 @@ namespace SOR.Controllers
                         string sqlDel = "DELETE FROM dbo.EventosAsistentes WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn, tran))
                         {
-                            cmdDel.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdDel.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdDel.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdDel.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdDel.ExecuteNonQuery();
                         }
 
@@ -1742,26 +1742,26 @@ namespace SOR.Controllers
                                         VALUES (@IdEvento, @IdPart, @Nombre, @Doc, @Tel, @Correo);";
                                     using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                                     {
-                                        cmdIns.Parameters.AddWithValue("@IdEvento", idEvento);
-                                        cmdIns.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                        cmdIns.Parameters.AddWithValue("@Nombre", a.NombreCompleto.Trim());
-                                        cmdIns.Parameters.AddWithValue("@Doc", a.Identificacion ?? (object)DBNull.Value);
-                                        cmdIns.Parameters.AddWithValue("@Tel", a.Telefono ?? (object)DBNull.Value);
-                                        cmdIns.Parameters.AddWithValue("@Correo", a.Correo ?? (object)DBNull.Value);
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                                        cmdIns.Parameters.Add(new SqlParameter("@Nombre", a.NombreCompleto.Trim()));
+                                        cmdIns.Parameters.Add(new SqlParameter("@Doc", a.Identificacion ?? (object)DBNull.Value));
+                                        cmdIns.Parameters.Add(new SqlParameter("@Tel", a.Telefono ?? (object)DBNull.Value));
+                                        cmdIns.Parameters.Add(new SqlParameter("@Correo", a.Correo ?? (object)DBNull.Value));
                                         cmdIns.ExecuteNonQuery();
                                     }
                                 }
                             }
                         }
 
-                        // Si hay al menos un asistente registrado, asegurar que la iglesia esté marcada como Asistió
+                        // Si hay al menos un asistente registrado, asegurar que la iglesia estÃ© marcada como AsistiÃ³
                         bool tieneAsistentes = asistentes != null && asistentes.Exists(x => !string.IsNullOrWhiteSpace(x.NombreCompleto));
                         string sqlUpPart = "UPDATE dbo.EventosParticipacionIglesia SET Asistio = @Asistio WHERE IdEvento = @IdEvento AND IdParticipacion = @IdPart;";
                         using (SqlCommand cmdUp = new SqlCommand(sqlUpPart, cn, tran))
                         {
-                            cmdUp.Parameters.AddWithValue("@Asistio", tieneAsistentes ? 1 : 0);
-                            cmdUp.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdUp.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdUp.Parameters.Add(new SqlParameter("@Asistio", tieneAsistentes ? 1 : 0));
+                            cmdUp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdUp.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdUp.ExecuteNonQuery();
                         }
 
@@ -1780,9 +1780,9 @@ namespace SOR.Controllers
                             WHERE ep.IdEvento = @IdEvento AND ep.IdParticipacion = @IdPart AND e.TipoEvento = 'Vision';";
                         using (SqlCommand cmdSync = new SqlCommand(sqlSync, cn, tran))
                         {
-                            cmdSync.Parameters.AddWithValue("@Asistio", tieneAsistentes ? 1 : 0);
-                            cmdSync.Parameters.AddWithValue("@IdEvento", idEvento);
-                            cmdSync.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmdSync.Parameters.Add(new SqlParameter("@Asistio", tieneAsistentes ? 1 : 0));
+                            cmdSync.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                            cmdSync.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmdSync.ExecuteNonQuery();
                         }
 
@@ -1790,7 +1790,7 @@ namespace SOR.Controllers
                         string tipoEvento = "";
                         using (SqlCommand cmdEv = new SqlCommand("SELECT TipoEvento FROM dbo.Eventos WHERE IdEvento = @IdEvento;", cn, tran))
                         {
-                            cmdEv.Parameters.AddWithValue("@IdEvento", idEvento);
+                            cmdEv.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                             object typeVal = cmdEv.ExecuteScalar();
                             if (typeVal != null) tipoEvento = typeVal.ToString();
                         }
@@ -1800,21 +1800,21 @@ namespace SOR.Controllers
                             using (SqlCommand cmdSp = new SqlCommand("dbo.SpAvanzarEtapaTaller", cn, tran))
                             {
                                 cmdSp.CommandType = System.Data.CommandType.StoredProcedure;
-                                cmdSp.Parameters.AddWithValue("@IdParticipacion", idParticipacion);
-                                cmdSp.Parameters.AddWithValue("@IdEvento", idEvento);
-                                cmdSp.Parameters.AddWithValue("@Asistio", tieneAsistentes);
-                                cmdSp.Parameters.AddWithValue("@IdUsuarioResponsable", u.IdUsuario);
+                                cmdSp.Parameters.Add(new SqlParameter("@IdParticipacion", idParticipacion));
+                                cmdSp.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                                cmdSp.Parameters.Add(new SqlParameter("@Asistio", tieneAsistentes));
+                                cmdSp.Parameters.Add(new SqlParameter("@IdUsuarioResponsable", u.IdUsuario));
                                 cmdSp.ExecuteNonQuery();
                             }
                         }
 
                         tran.Commit();
-                        TempData["MensajeExito"] = "Datos de asistentes guardados y asistencia actualizada con éxito.";
+                        TempData["MensajeExito"] = "Datos de asistentes guardados y asistencia actualizada con Ã©xito.";
                     }
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al guardar asistentes: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -1830,7 +1830,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT IdUsuarioCreacion FROM dbo.Eventos WHERE IdEvento = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idEvento);
+                cmd.Parameters.Add(new SqlParameter("@Id", idEvento));
                 cn.Open();
                 object val = cmd.ExecuteScalar();
                 if (val != null && val != DBNull.Value)
@@ -1855,7 +1855,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT TOP 1 IdEquipo FROM dbo.AsignacionesEquipo WHERE IdUsuario = @Id AND Activo = 1;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idUsuario);
+                cmd.Parameters.Add(new SqlParameter("@Id", idUsuario));
                 cn.Open();
                 object val = cmd.ExecuteScalar();
                 if (val != null && val != DBNull.Value) return Convert.ToInt32(val);
@@ -1869,8 +1869,8 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT COUNT(1) FROM dbo.Equipos WHERE IdEquipo = @IdHijo AND IdEquipoPadre = @IdPadre;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdHijo", idEquipoHijo);
-                cmd.Parameters.AddWithValue("@IdPadre", idEquipoPadre);
+                cmd.Parameters.Add(new SqlParameter("@IdHijo", idEquipoHijo));
+                cmd.Parameters.Add(new SqlParameter("@IdPadre", idEquipoPadre));
                 cn.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
             }
@@ -1882,7 +1882,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipoPadre = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idEquipoPadre);
+                cmd.Parameters.Add(new SqlParameter("@Id", idEquipoPadre));
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -1897,7 +1897,7 @@ namespace SOR.Controllers
         }
 
         // =====================================================================
-        // MÉTODOS DE ASISTENCIA DE COORDINADORES AL EVENTO
+        // MÃ‰TODOS DE ASISTENCIA DE COORDINADORES AL EVENTO
         // =====================================================================
 
         private List<CoordinadorEventoAsistenciaViewModel> ObtenerCoordinadoresAsistentesEvento(int idEvento)
@@ -1922,7 +1922,7 @@ namespace SOR.Controllers
                     ORDER BY ac.FechaRegistro ASC;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -1954,7 +1954,7 @@ namespace SOR.Controllers
             var lista = new List<CoordinadorDropdownItem>();
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
-                // Traer coordinadores activos que NO estén ya agregados en este evento
+                // Traer coordinadores activos que NO estÃ©n ya agregados en este evento
                 string sql = @"
                     SELECT u.IdUsuario,
                            ISNULL(NULLIF(LTRIM(RTRIM(CONCAT(p.PrimerNombre, ' ', p.PrimerApellido))), ''), u.Correo) AS NombreCompleto,
@@ -1970,7 +1970,7 @@ namespace SOR.Controllers
                     ORDER BY p.PrimerNombre, p.PrimerApellido, u.Correo;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -2002,7 +2002,7 @@ namespace SOR.Controllers
 
             if (idUsuario <= 0)
             {
-                TempData["MensajeError"] = "Debe seleccionar un coordinador válido de la lista desplegable.";
+                TempData["MensajeError"] = "Debe seleccionar un coordinador vÃ¡lido de la lista desplegable.";
                 return RedirectToAction("Detalle", new { id = idEvento });
             }
 
@@ -2031,21 +2031,21 @@ namespace SOR.Controllers
                         END;";
 
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@IdEvento", idEvento);
-                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                    cmd.Parameters.AddWithValue("@Rol", (object)rolEnEvento ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Obs", (object)observaciones ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdReg", u.IdUsuario);
+                    cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
+                    cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+                    cmd.Parameters.Add(new SqlParameter("@Rol", (object)rolEnEvento ?? DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Obs", (object)observaciones ?? DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdReg", u.IdUsuario));
 
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                TempData["MensajeExito"] = "Coordinador registrado en el evento con éxito.";
+                TempData["MensajeExito"] = "Coordinador registrado en el evento con Ã©xito.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar coordinador: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idEvento });
@@ -2068,9 +2068,9 @@ namespace SOR.Controllers
                 {
                     string sql = "UPDATE dbo.EventosAsistenciaCoordinadores SET Asistio = @Asistio WHERE IdAsistenciaCoordinador = @Id AND IdEvento = @IdEvento;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Asistio", asistio);
-                    cmd.Parameters.AddWithValue("@Id", idAsistenciaCoordinador);
-                    cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                    cmd.Parameters.Add(new SqlParameter("@Asistio", asistio));
+                    cmd.Parameters.Add(new SqlParameter("@Id", idAsistenciaCoordinador));
+                    cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
@@ -2078,7 +2078,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al actualizar estado: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idEvento });
@@ -2101,8 +2101,8 @@ namespace SOR.Controllers
                 {
                     string sql = "DELETE FROM dbo.EventosAsistenciaCoordinadores WHERE IdAsistenciaCoordinador = @Id AND IdEvento = @IdEvento;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Id", idAsistenciaCoordinador);
-                    cmd.Parameters.AddWithValue("@IdEvento", idEvento);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idAsistenciaCoordinador));
+                    cmd.Parameters.Add(new SqlParameter("@IdEvento", idEvento));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
@@ -2110,7 +2110,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al remover coordinador: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", new { id = idEvento });
@@ -2147,10 +2147,10 @@ namespace SOR.Controllers
                 {
                     "Coordinador Principal / Encargado",
                     "Facilitador / Expositor",
-                    "Logística y Despacho",
+                    "LogÃ­stica y Despacho",
                     "Registro y Asistencia",
-                    "Acompañamiento y Bienvenida",
-                    "Intercesión y Oración",
+                    "AcompaÃ±amiento y Bienvenida",
+                    "IntercesiÃ³n y OraciÃ³n",
                     "Apoyo General"
                 };
             }

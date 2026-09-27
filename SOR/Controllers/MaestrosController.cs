@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -70,7 +70,7 @@ namespace SOR.Controllers
                 {
                     string sqlIg = "SELECT i.NombreIglesia, i.IdEquipo, e.NombreEquipo FROM dbo.Iglesias i INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo WHERE i.IdIglesia = @Id;";
                     SqlCommand cmdIg = new SqlCommand(sqlIg, cn);
-                    cmdIg.Parameters.AddWithValue("@Id", idIglesia.Value);
+                    cmdIg.Parameters.Add(new SqlParameter("@Id", idIglesia.Value));
                     cn.Open();
                     using (SqlDataReader drIg = cmdIg.ExecuteReader())
                     {
@@ -99,7 +99,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesiaPorId(u, modelo.IdIglesia))
             {
-                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Index");
             }
 
@@ -110,18 +110,18 @@ namespace SOR.Controllers
                     VALUES (@IdIglesia, @Nombres, @Apellidos, @Doc, @Celular, @Correo, 1);";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
-                cmd.Parameters.AddWithValue("@Nombres", modelo.Nombres);
-                cmd.Parameters.AddWithValue("@Apellidos", modelo.Apellidos);
-                cmd.Parameters.AddWithValue("@Doc", modelo.DocumentoIdentidad ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Celular", modelo.Celular ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Correo", modelo.Correo ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", modelo.IdIglesia));
+                cmd.Parameters.Add(new SqlParameter("@Nombres", modelo.Nombres));
+                cmd.Parameters.Add(new SqlParameter("@Apellidos", modelo.Apellidos));
+                cmd.Parameters.Add(new SqlParameter("@Doc", modelo.DocumentoIdentidad ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Celular", modelo.Celular ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Correo", modelo.Correo ?? (object)DBNull.Value));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Maestro registrado con éxito.";
+            TempData["MensajeExito"] = "Maestro registrado con Ã©xito.";
             return RedirectToAction("Index");
         }
 
@@ -137,7 +137,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesiaPorId(u, idIglesia))
             {
-                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
             }
 
@@ -150,22 +150,22 @@ namespace SOR.Controllers
                         VALUES (@IdIglesia, @Nombres, @Apellidos, @Doc, @Celular, @Correo, 1);";
 
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmd.Parameters.AddWithValue("@Nombres", nombres.Trim());
-                    cmd.Parameters.AddWithValue("@Apellidos", apellidos.Trim());
-                    cmd.Parameters.AddWithValue("@Doc", documentoIdentidad ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Celular", celular ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Correo", correo ?? (object)DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmd.Parameters.Add(new SqlParameter("@Nombres", nombres.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Apellidos", apellidos.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Doc", documentoIdentidad ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Celular", celular ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Correo", correo ?? (object)DBNull.Value));
 
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                TempData["MensajeExito"] = "Maestro registrado con éxito.";
+                TempData["MensajeExito"] = "Maestro registrado con Ã©xito.";
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al registrar maestro: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
@@ -182,7 +182,7 @@ namespace SOR.Controllers
 
             if (!PuedeEditarIglesiaPorId(u, idIglesia))
             {
-                return Json(new { success = false, message = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicción." });
+                return Json(new { success = false, message = "No tiene permiso para agregar maestros a una iglesia fuera de su equipo o jurisdicciÃ³n." });
             }
 
             try
@@ -194,22 +194,22 @@ namespace SOR.Controllers
                         VALUES (@IdIglesia, @Nombres, @Apellidos, @Doc, @Celular, @Correo, 1);";
 
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@IdIglesia", idIglesia);
-                    cmd.Parameters.AddWithValue("@Nombres", nombres.Trim());
-                    cmd.Parameters.AddWithValue("@Apellidos", apellidos.Trim());
-                    cmd.Parameters.AddWithValue("@Doc", documentoIdentidad ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Celular", celular ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Correo", correo ?? (object)DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
+                    cmd.Parameters.Add(new SqlParameter("@Nombres", nombres.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Apellidos", apellidos.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Doc", documentoIdentidad ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Celular", celular ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Correo", correo ?? (object)DBNull.Value));
 
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                return Json(new { success = true, message = "Maestro registrado con éxito." });
+                return Json(new { success = true, message = "Maestro registrado con Ã©xito." });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error al registrar maestro: " + ex.Message });
+                return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
         }
 
@@ -226,13 +226,13 @@ namespace SOR.Controllers
 
             if (!PuedeEditarMaestro(u, modelo.IdMaestro))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para modificar este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Index");
             }
 
             if (!PuedeEditarIglesiaPorId(u, modelo.IdIglesia))
             {
-                TempData["MensajeError"] = "No tiene permiso para asignar este maestro a una iglesia fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para asignar este maestro a una iglesia fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Index");
             }
 
@@ -245,20 +245,20 @@ namespace SOR.Controllers
                     WHERE IdMaestro = @Id;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdIglesia", modelo.IdIglesia);
-                cmd.Parameters.AddWithValue("@Nombres", modelo.Nombres);
-                cmd.Parameters.AddWithValue("@Apellidos", modelo.Apellidos);
-                cmd.Parameters.AddWithValue("@Doc", modelo.DocumentoIdentidad ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Celular", modelo.Celular ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Correo", modelo.Correo ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Activo", modelo.Activo);
-                cmd.Parameters.AddWithValue("@Id", modelo.IdMaestro);
+                cmd.Parameters.Add(new SqlParameter("@IdIglesia", modelo.IdIglesia));
+                cmd.Parameters.Add(new SqlParameter("@Nombres", modelo.Nombres));
+                cmd.Parameters.Add(new SqlParameter("@Apellidos", modelo.Apellidos));
+                cmd.Parameters.Add(new SqlParameter("@Doc", modelo.DocumentoIdentidad ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Celular", modelo.Celular ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Correo", modelo.Correo ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Activo", modelo.Activo));
+                cmd.Parameters.Add(new SqlParameter("@Id", modelo.IdMaestro));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Datos del maestro actualizados con éxito.";
+            TempData["MensajeExito"] = "Datos del maestro actualizados con Ã©xito.";
             return RedirectToAction("Index");
         }
 
@@ -269,7 +269,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (!PuedeEditarMaestro(u, idMaestro))
             {
-                TempData["MensajeError"] = "No tiene permiso para modificar el estado de este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicción.";
+                TempData["MensajeError"] = "No tiene permiso para modificar el estado de este maestro porque pertenece a una iglesia fuera de su equipo o jurisdicciÃ³n.";
                 return RedirectToAction("Index");
             }
 
@@ -283,7 +283,7 @@ namespace SOR.Controllers
                 string sqlGet = "SELECT IdIglesia, Nombres, Apellidos FROM dbo.Maestros WHERE IdMaestro = @Id;";
                 using (SqlCommand cmdGet = new SqlCommand(sqlGet, cn))
                 {
-                    cmdGet.Parameters.AddWithValue("@Id", idMaestro);
+                    cmdGet.Parameters.Add(new SqlParameter("@Id", idMaestro));
                     using (SqlDataReader dr = cmdGet.ExecuteReader())
                     {
                         if (dr.Read())
@@ -298,36 +298,36 @@ namespace SOR.Controllers
                 string sql = "UPDATE dbo.Maestros SET Activo = @Activo WHERE IdMaestro = @Id;";
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Activo", activo);
-                    cmd.Parameters.AddWithValue("@Id", idMaestro);
+                    cmd.Parameters.Add(new SqlParameter("@Activo", activo));
+                    cmd.Parameters.Add(new SqlParameter("@Id", idMaestro));
                     cmd.ExecuteNonQuery();
                 }
 
-                // Registrar en el historial de la iglesia si tiene participación activa
+                // Registrar en el historial de la iglesia si tiene participaciÃ³n activa
                 if (idIglesia > 0)
                 {
                     string sqlPart = "SELECT TOP 1 IdParticipacion FROM dbo.ParticipacionesIglesia WHERE IdIglesia = @IdIglesia ORDER BY IdParticipacion DESC;";
                     using (SqlCommand cmdPart = new SqlCommand(sqlPart, cn))
                     {
-                        cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                        cmdPart.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
                         object valPart = cmdPart.ExecuteScalar();
                         if (valPart != null)
                         {
                             int idPart = Convert.ToInt32(valPart);
-                            string accion = activo ? "Reactivación de Maestro" : "Baja de Maestro";
+                            string accion = activo ? "ReactivaciÃ³n de Maestro" : "Baja de Maestro";
                             string com = activo ? $"El maestro '{nombreMaestro}' fue reactivado en el sistema." : $"El maestro '{nombreMaestro}' fue dado de baja.";
                             string sqlLog = @"
                                 INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, EstadoAnterior, EstadoNuevo, IdUsuarioResponsable, Comentario, Razon)
                                 VALUES (@IdPart, GETDATE(), @Accion, @Ant, @Nue, @IdUser, @Com, @Raz);";
                             using (SqlCommand cmdLog = new SqlCommand(sqlLog, cn))
                             {
-                                cmdLog.Parameters.AddWithValue("@IdPart", idPart);
-                                cmdLog.Parameters.AddWithValue("@Accion", accion);
-                                cmdLog.Parameters.AddWithValue("@Ant", activo ? "Inactivo" : "Activo");
-                                cmdLog.Parameters.AddWithValue("@Nue", activo ? "Activo" : "Inactivo");
-                                cmdLog.Parameters.AddWithValue("@IdUser", u.IdUsuario);
-                                cmdLog.Parameters.AddWithValue("@Com", com);
-                                cmdLog.Parameters.AddWithValue("@Raz", string.IsNullOrWhiteSpace(motivo) ? (object)DBNull.Value : motivo.Trim());
+                                cmdLog.Parameters.Add(new SqlParameter("@IdPart", idPart));
+                                cmdLog.Parameters.Add(new SqlParameter("@Accion", accion));
+                                cmdLog.Parameters.Add(new SqlParameter("@Ant", activo ? "Inactivo" : "Activo"));
+                                cmdLog.Parameters.Add(new SqlParameter("@Nue", activo ? "Activo" : "Inactivo"));
+                                cmdLog.Parameters.Add(new SqlParameter("@IdUser", u.IdUsuario));
+                                cmdLog.Parameters.Add(new SqlParameter("@Com", com));
+                                cmdLog.Parameters.Add(new SqlParameter("@Raz", string.IsNullOrWhiteSpace(motivo) ? (object)DBNull.Value : motivo.Trim()));
                                 cmdLog.ExecuteNonQuery();
                             }
                         }
@@ -352,7 +352,7 @@ namespace SOR.Controllers
                     INNER JOIN dbo.Iglesias i ON m.IdIglesia = i.IdIglesia 
                     WHERE m.IdMaestro = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idMaestro);
+                cmd.Parameters.Add(new SqlParameter("@Id", idMaestro));
                 cn.Open();
                 object val = cmd.ExecuteScalar();
                 if (val != null && val != DBNull.Value)
@@ -370,7 +370,7 @@ namespace SOR.Controllers
             Usuario u = (Usuario)Session["usuario"];
             if (u == null)
             {
-                return Json(new { success = false, message = "Sesión inválida." }, JsonRequestBehavior.AllowGet);
+                return Json(new { success = false, message = "SesiÃ³n invÃ¡lida." }, JsonRequestBehavior.AllowGet);
             }
 
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
@@ -381,7 +381,7 @@ namespace SOR.Controllers
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo 
                     WHERE i.IdIglesia = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idIglesia);
+                cmd.Parameters.Add(new SqlParameter("@Id", idIglesia));
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {
@@ -412,7 +412,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT IdEquipo FROM dbo.Iglesias WHERE IdIglesia = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idIglesia);
+                cmd.Parameters.Add(new SqlParameter("@Id", idIglesia));
                 cn.Open();
                 object val = cmd.ExecuteScalar();
                 if (val != null && val != DBNull.Value)
@@ -441,8 +441,8 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT COUNT(1) FROM dbo.Equipos WHERE IdEquipo = @IdHijo AND IdEquipoPadre = @IdPadre;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@IdHijo", idEquipoHijo);
-                cmd.Parameters.AddWithValue("@IdPadre", idEquipoPadre);
+                cmd.Parameters.Add(new SqlParameter("@IdHijo", idEquipoHijo));
+                cmd.Parameters.Add(new SqlParameter("@IdPadre", idEquipoPadre));
                 cn.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
             }
@@ -463,14 +463,14 @@ namespace SOR.Controllers
                 using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
                 {
                     cn.Open();
-                    // 1. Obtener información básica del maestro
+                    // 1. Obtener informaciÃ³n bÃ¡sica del maestro
                     string nombres = "";
                     string apellidos = "";
                     string documentoIdentidad = "";
                     string sqlDoc = "SELECT Nombres, Apellidos, DocumentoIdentidad FROM dbo.Maestros WHERE IdMaestro = @IdMaestro;";
                     using (SqlCommand cmdDoc = new SqlCommand(sqlDoc, cn))
                     {
-                        cmdDoc.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                        cmdDoc.Parameters.Add(new SqlParameter("@IdMaestro", idMaestro));
                         using (SqlDataReader drDoc = cmdDoc.ExecuteReader())
                         {
                             if (drDoc.Read())
@@ -482,7 +482,7 @@ namespace SOR.Controllers
                         }
                     }
 
-                    // 2. Obtener participación activa de la iglesia y si ya participó en Taller OCC
+                    // 2. Obtener participaciÃ³n activa de la iglesia y si ya participÃ³ en Taller OCC
                     int idParticipacion = 0;
                     bool tallerParticipo = false;
                     string sqlPart = @"
@@ -492,7 +492,7 @@ namespace SOR.Controllers
                           AND IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC);";
                     using (SqlCommand cmdPart = new SqlCommand(sqlPart, cn))
                     {
-                        cmdPart.Parameters.AddWithValue("@IdIglesia", idIglesia);
+                        cmdPart.Parameters.Add(new SqlParameter("@IdIglesia", idIglesia));
                         using (SqlDataReader drPart = cmdPart.ExecuteReader())
                         {
                             if (drPart.Read())
@@ -506,14 +506,14 @@ namespace SOR.Controllers
                     // 3. Evaluar asistencia por 3 condiciones
                     int asistencia = 0;
 
-                    // Condición C: Si la iglesia ya tiene confirmada la participación del Taller OCC
+                    // CondiciÃ³n C: Si la iglesia ya tiene confirmada la participaciÃ³n del Taller OCC
                     if (tallerParticipo)
                     {
                         asistencia = 1;
                     }
                     else
                     {
-                        // Condición A: Revisar AsistenciaMaestro (por IdMaestro)
+                        // CondiciÃ³n A: Revisar AsistenciaMaestro (por IdMaestro)
                         string sqlCheckA = @"
                             SELECT COUNT(1)
                             FROM dbo.AsistenciaMaestro am
@@ -525,11 +525,11 @@ namespace SOR.Controllers
                               AND t.IdTemporada = (SELECT TOP 1 IdTemporada FROM dbo.Temporadas ORDER BY FechaInicio DESC);";
                         using (SqlCommand cmdCheckA = new SqlCommand(sqlCheckA, cn))
                         {
-                            cmdCheckA.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                            cmdCheckA.Parameters.Add(new SqlParameter("@IdMaestro", idMaestro));
                             asistencia += Convert.ToInt32(cmdCheckA.ExecuteScalar());
                         }
 
-                        // Condición B: Revisar EventosAsistentes (por Cédula o Coincidencia de Nombre en la participación)
+                        // CondiciÃ³n B: Revisar EventosAsistentes (por CÃ©dula o Coincidencia de Nombre en la participaciÃ³n)
                         if (idParticipacion > 0)
                         {
                             string sqlCheckB = @"
@@ -547,10 +547,10 @@ namespace SOR.Controllers
                                   );";
                             using (SqlCommand cmdCheckB = new SqlCommand(sqlCheckB, cn))
                             {
-                                cmdCheckB.Parameters.AddWithValue("@IdPart", idParticipacion);
-                                cmdCheckB.Parameters.AddWithValue("@DocIdentidad", documentoIdentidad);
-                                cmdCheckB.Parameters.AddWithValue("@Nombres", string.IsNullOrWhiteSpace(nombres) ? (object)DBNull.Value : nombres.Trim());
-                                cmdCheckB.Parameters.AddWithValue("@Apellidos", string.IsNullOrWhiteSpace(apellidos) ? (object)DBNull.Value : apellidos.Trim());
+                                cmdCheckB.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                                cmdCheckB.Parameters.Add(new SqlParameter("@DocIdentidad", documentoIdentidad));
+                                cmdCheckB.Parameters.Add(new SqlParameter("@Nombres", string.IsNullOrWhiteSpace(nombres) ? (object)DBNull.Value : nombres.Trim()));
+                                cmdCheckB.Parameters.Add(new SqlParameter("@Apellidos", string.IsNullOrWhiteSpace(apellidos) ? (object)DBNull.Value : apellidos.Trim()));
                                 asistencia += Convert.ToInt32(cmdCheckB.ExecuteScalar());
                             }
                         }
@@ -565,7 +565,7 @@ namespace SOR.Controllers
                         string sqlUpdate = "UPDATE dbo.Maestros SET Activo = 0 WHERE IdMaestro = @IdMaestro;";
                         using (SqlCommand cmdUp = new SqlCommand(sqlUpdate, cn))
                         {
-                            cmdUp.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                            cmdUp.Parameters.Add(new SqlParameter("@IdMaestro", idMaestro));
                             cmdUp.ExecuteNonQuery();
                         }
                         accionRealizada = $"Maestro Inhabilitado: {nombres} {apellidos}";
@@ -578,7 +578,7 @@ namespace SOR.Controllers
                         string sqlDel = "DELETE FROM dbo.Maestros WHERE IdMaestro = @IdMaestro;";
                         using (SqlCommand cmdDel = new SqlCommand(sqlDel, cn))
                         {
-                            cmdDel.Parameters.AddWithValue("@IdMaestro", idMaestro);
+                            cmdDel.Parameters.Add(new SqlParameter("@IdMaestro", idMaestro));
                             cmdDel.ExecuteNonQuery();
                         }
                         accionRealizada = $"Maestro Eliminado: {nombres} {apellidos}";
@@ -589,13 +589,13 @@ namespace SOR.Controllers
                     // 4. Registrar Comentario si existe
                     if (!string.IsNullOrWhiteSpace(comentario))
                     {
-                        string cmtFinal = $"{accionRealizada}. Razón: {comentario}";
+                        string cmtFinal = $"{accionRealizada}. RazÃ³n: {comentario}";
                         string sqlCmt = "INSERT INTO dbo.ComentariosObservaciones (IdIglesia, IdUsuario, Comentario) VALUES (@IdIg, @IdUsu, @Cmt);";
                         using (SqlCommand cmdCmt = new SqlCommand(sqlCmt, cn))
                         {
-                            cmdCmt.Parameters.AddWithValue("@IdIg", idIglesia);
-                            cmdCmt.Parameters.AddWithValue("@IdUsu", u.IdUsuario);
-                            cmdCmt.Parameters.AddWithValue("@Cmt", cmtFinal);
+                            cmdCmt.Parameters.Add(new SqlParameter("@IdIg", idIglesia));
+                            cmdCmt.Parameters.Add(new SqlParameter("@IdUsu", u.IdUsuario));
+                            cmdCmt.Parameters.Add(new SqlParameter("@Cmt", cmtFinal));
                             cmdCmt.ExecuteNonQuery();
                         }
                     }
@@ -607,10 +607,10 @@ namespace SOR.Controllers
                         string sqlHist = "INSERT INTO dbo.HistorialParticipacion (IdParticipacion, FechaHora, AccionRealizada, IdUsuarioResponsable, Comentario) VALUES (@IdPart, GETDATE(), @Acc, @IdUsu, @Cmt);";
                         using (SqlCommand cmdHist = new SqlCommand(sqlHist, cn))
                         {
-                            cmdHist.Parameters.AddWithValue("@IdPart", idParticipacion);
-                            cmdHist.Parameters.AddWithValue("@Acc", accionRealizada);
-                            cmdHist.Parameters.AddWithValue("@IdUsu", u.IdUsuario);
-                            cmdHist.Parameters.AddWithValue("@Cmt", histMsg);
+                            cmdHist.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                            cmdHist.Parameters.Add(new SqlParameter("@Acc", accionRealizada));
+                            cmdHist.Parameters.Add(new SqlParameter("@IdUsu", u.IdUsuario));
+                            cmdHist.Parameters.Add(new SqlParameter("@Cmt", histMsg));
                             cmdHist.ExecuteNonQuery();
                         }
                     }
@@ -618,7 +618,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "Error al remover maestro: " + ex.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
 
             return RedirectToAction("Detalle", "Iglesia", new { id = idIglesia });
@@ -630,7 +630,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT IdEquipo FROM dbo.Equipos WHERE IdEquipoPadre = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Id", idEquipoPadre);
+                cmd.Parameters.Add(new SqlParameter("@Id", idEquipoPadre));
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
                 {

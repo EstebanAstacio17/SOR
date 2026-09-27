@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -10,8 +10,8 @@ using SOR.Helpers;
 namespace SOR.Repositories
 {
     /// <summary>
-    /// Repositorio de Logística — Inventario Central, Transferencias y Despacho.
-    /// Todas las operaciones críticas usan SqlTransaction con IsolationLevel.ReadCommitted.
+    /// Repositorio de LogÃ­stica â€” Inventario Central, Transferencias y Despacho.
+    /// Todas las operaciones crÃ­ticas usan SqlTransaction con IsolationLevel.ReadCommitted.
     /// </summary>
     public class LogisticaRepository
     {
@@ -39,7 +39,7 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@SoloActivos", soloActivos ? 1 : 0);
+                    cmd.Parameters.Add(new SqlParameter("@SoloActivos", soloActivos ? 1 : 0));
                     using (var dr = cmd.ExecuteReader())
                     {
                         var dict = new Dictionary<int, Material>();
@@ -94,8 +94,8 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@SoloActivas", soloActivas ? 1 : 0);
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@SoloActivas", soloActivas ? 1 : 0));
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -135,11 +135,11 @@ namespace SOR.Repositories
                             (@IdMat, @Tipo, @Uds, @IdTemp, GETDATE(), @Activo);";
                     using (var cmd = new SqlCommand(sql, cn))
                     {
-                        cmd.Parameters.AddWithValue("@IdMat", modelo.IdMaterial);
-                        cmd.Parameters.AddWithValue("@Tipo", modelo.TipoEmpaque ?? "Caja");
-                        cmd.Parameters.AddWithValue("@Uds", modelo.UnidadesPorEmpaque);
-                        cmd.Parameters.AddWithValue("@IdTemp", (object)modelo.IdTemporadaVigencia ?? DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Activo", modelo.Activo ? 1 : 0);
+                        cmd.Parameters.Add(new SqlParameter("@IdMat", modelo.IdMaterial));
+                        cmd.Parameters.Add(new SqlParameter("@Tipo", modelo.TipoEmpaque ?? "Caja"));
+                        cmd.Parameters.Add(new SqlParameter("@Uds", modelo.UnidadesPorEmpaque));
+                        cmd.Parameters.Add(new SqlParameter("@IdTemp", (object)modelo.IdTemporadaVigencia ?? DBNull.Value));
+                        cmd.Parameters.Add(new SqlParameter("@Activo", modelo.Activo ? 1 : 0));
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -155,12 +155,12 @@ namespace SOR.Repositories
                         WHERE IdPresentacion = @Id;";
                     using (var cmd = new SqlCommand(sql, cn))
                     {
-                        cmd.Parameters.AddWithValue("@IdMat", modelo.IdMaterial);
-                        cmd.Parameters.AddWithValue("@Tipo", modelo.TipoEmpaque ?? "Caja");
-                        cmd.Parameters.AddWithValue("@Uds", modelo.UnidadesPorEmpaque);
-                        cmd.Parameters.AddWithValue("@IdTemp", (object)modelo.IdTemporadaVigencia ?? DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Activo", modelo.Activo ? 1 : 0);
-                        cmd.Parameters.AddWithValue("@Id", modelo.IdPresentacion);
+                        cmd.Parameters.Add(new SqlParameter("@IdMat", modelo.IdMaterial));
+                        cmd.Parameters.Add(new SqlParameter("@Tipo", modelo.TipoEmpaque ?? "Caja"));
+                        cmd.Parameters.Add(new SqlParameter("@Uds", modelo.UnidadesPorEmpaque));
+                        cmd.Parameters.Add(new SqlParameter("@IdTemp", (object)modelo.IdTemporadaVigencia ?? DBNull.Value));
+                        cmd.Parameters.Add(new SqlParameter("@Activo", modelo.Activo ? 1 : 0));
+                        cmd.Parameters.Add(new SqlParameter("@Id", modelo.IdPresentacion));
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -175,8 +175,8 @@ namespace SOR.Repositories
                 string sql = "UPDATE dbo.PresentacionesMaterial SET Activo = @Activo WHERE IdPresentacion = @Id;";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Activo", activo ? 1 : 0);
-                    cmd.Parameters.AddWithValue("@Id", idPresentacion);
+                    cmd.Parameters.Add(new SqlParameter("@Activo", activo ? 1 : 0));
+                    cmd.Parameters.Add(new SqlParameter("@Id", idPresentacion));
                     cmd.ExecuteNonQuery();
                 }
             }
@@ -202,7 +202,7 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@SoloActivos", soloActivos ? 1 : 0);
+                    cmd.Parameters.Add(new SqlParameter("@SoloActivos", soloActivos ? 1 : 0));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -240,7 +240,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Cargar equipos asignados a cada almacén
+                // Cargar equipos asignados a cada almacÃ©n
                 if (lista.Any())
                 {
                     string sqlEq = @"
@@ -292,7 +292,7 @@ namespace SOR.Repositories
                             string sqlU = "SELECT PrimerNombre, PrimerApellido, TelefonoCelularWhatsApp FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdU;";
                             using (var cmdU = new SqlCommand(sqlU, cn, tx))
                             {
-                                cmdU.Parameters.AddWithValue("@IdU", modelo.IdUsuarioResponsable.Value);
+                                cmdU.Parameters.Add(new SqlParameter("@IdU", modelo.IdUsuarioResponsable.Value));
                                 using (var dr = cmdU.ExecuteReader())
                                 {
                                     if (dr.Read())
@@ -318,12 +318,12 @@ namespace SOR.Repositories
                                 SELECT SCOPE_IDENTITY();";
                             using (var cmd = new SqlCommand(sql, cn, tx))
                             {
-                                cmd.Parameters.AddWithValue("@Nombre", modelo.NombreAlmacen);
-                                cmd.Parameters.AddWithValue("@Dir", modelo.Direccion ?? (object)DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Resp", (object)nombreResp ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@IdUResp", modelo.IdUsuarioResponsable.HasValue && modelo.IdUsuarioResponsable.Value > 0 ? (object)modelo.IdUsuarioResponsable.Value : DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Tel", (object)telResp ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@EsCentral", modelo.EsCentral ? 1 : 0);
+                                cmd.Parameters.Add(new SqlParameter("@Nombre", modelo.NombreAlmacen));
+                                cmd.Parameters.Add(new SqlParameter("@Dir", modelo.Direccion ?? (object)DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@Resp", (object)nombreResp ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@IdUResp", modelo.IdUsuarioResponsable.HasValue && modelo.IdUsuarioResponsable.Value > 0 ? (object)modelo.IdUsuarioResponsable.Value : DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@Tel", (object)telResp ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@EsCentral", modelo.EsCentral ? 1 : 0));
                                 idAlm = Convert.ToInt32(cmd.ExecuteScalar());
                             }
                         }
@@ -341,14 +341,14 @@ namespace SOR.Repositories
                                 WHERE IdAlmacen = @Id;";
                             using (var cmd = new SqlCommand(sql, cn, tx))
                             {
-                                cmd.Parameters.AddWithValue("@Nombre", modelo.NombreAlmacen);
-                                cmd.Parameters.AddWithValue("@Dir", modelo.Direccion ?? (object)DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Resp", (object)nombreResp ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@IdUResp", modelo.IdUsuarioResponsable.HasValue && modelo.IdUsuarioResponsable.Value > 0 ? (object)modelo.IdUsuarioResponsable.Value : DBNull.Value);
-                                cmd.Parameters.AddWithValue("@Tel", (object)telResp ?? DBNull.Value);
-                                cmd.Parameters.AddWithValue("@EsCentral", modelo.EsCentral ? 1 : 0);
-                                cmd.Parameters.AddWithValue("@Activo", modelo.Activo ? 1 : 0);
-                                cmd.Parameters.AddWithValue("@Id", idAlm);
+                                cmd.Parameters.Add(new SqlParameter("@Nombre", modelo.NombreAlmacen));
+                                cmd.Parameters.Add(new SqlParameter("@Dir", modelo.Direccion ?? (object)DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@Resp", (object)nombreResp ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@IdUResp", modelo.IdUsuarioResponsable.HasValue && modelo.IdUsuarioResponsable.Value > 0 ? (object)modelo.IdUsuarioResponsable.Value : DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@Tel", (object)telResp ?? DBNull.Value));
+                                cmd.Parameters.Add(new SqlParameter("@EsCentral", modelo.EsCentral ? 1 : 0));
+                                cmd.Parameters.Add(new SqlParameter("@Activo", modelo.Activo ? 1 : 0));
+                                cmd.Parameters.Add(new SqlParameter("@Id", idAlm));
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -357,7 +357,7 @@ namespace SOR.Repositories
                         string sqlDelEq = "DELETE FROM dbo.AlmacenesEquipos WHERE IdAlmacen = @IdAlm;";
                         using (var cmdDel = new SqlCommand(sqlDelEq, cn, tx))
                         {
-                            cmdDel.Parameters.AddWithValue("@IdAlm", idAlm);
+                            cmdDel.Parameters.Add(new SqlParameter("@IdAlm", idAlm));
                             cmdDel.ExecuteNonQuery();
                         }
 
@@ -370,8 +370,8 @@ namespace SOR.Repositories
                                 {
                                     using (var cmdIns = new SqlCommand(sqlInsEq, cn, tx))
                                     {
-                                        cmdIns.Parameters.AddWithValue("@IdAlm", idAlm);
-                                        cmdIns.Parameters.AddWithValue("@IdEq", idEq);
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdAlm", idAlm));
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdEq", idEq));
                                         cmdIns.ExecuteNonQuery();
                                     }
                                 }
@@ -390,7 +390,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // RECEPCIÓN DE CONTENEDORES (TRANSACCIÓN ACID Y CONTROL DE DUPLICIDAD)
+        // RECEPCIÃ“N DE CONTENEDORES (TRANSACCIÃ“N ACID Y CONTROL DE DUPLICIDAD)
         // =====================================================================
 
         public int RegistrarRecepcion(RecepcionContenedor modelo, int idUsuario)
@@ -414,28 +414,28 @@ namespace SOR.Repositories
                             }
                         }
 
-                        // 1b. Validar que el almacén exista y esté activo
+                        // 1b. Validar que el almacÃ©n exista y estÃ© activo
                         using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.Almacenes WHERE IdAlmacen = @IdAlm AND Activo = 1;", cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
+                            cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
                             if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
-                                throw new InvalidOperationException("El almacén seleccionado no es válido o está inactivo.");
+                                throw new InvalidOperationException("El almacÃ©n seleccionado no es vÃ¡lido o estÃ¡ inactivo.");
                         }
 
-                        // 1c. Control de concurrencia e Idempotencia (Evitar doble recepción)
+                        // 1c. Control de concurrencia e Idempotencia (Evitar doble recepciÃ³n)
                         using (var cmd = new SqlCommand(
                             "SELECT COUNT(1) FROM dbo.RecepcionesContenedor WITH (UPDLOCK, HOLDLOCK) WHERE IdTemporada = @IdTemp AND LOWER(LTRIM(RTRIM(NumeroContenedor))) = LOWER(LTRIM(RTRIM(@Num))) AND IdAlmacen = @IdAlm AND EstadoRecepcion != 'ANULADA';", cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                            cmd.Parameters.AddWithValue("@Num", modelo.NumeroContenedor ?? "");
-                            cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
+                            cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                            cmd.Parameters.Add(new SqlParameter("@Num", modelo.NumeroContenedor ?? ""));
+                            cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
                             if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
                             {
-                                throw new InvalidOperationException($"El contenedor '{modelo.NumeroContenedor}' ya fue recibido y confirmado previamente en este almacén para la temporada actual.");
+                                throw new InvalidOperationException($"El contenedor '{modelo.NumeroContenedor}' ya fue recibido y confirmado previamente en este almacÃ©n para la temporada actual.");
                             }
                         }
 
-                        // 2. Insertar encabezado de recepción
+                        // 2. Insertar encabezado de recepciÃ³n
                         int idRecepcion = 0;
                         string sqlRecep = @"
                             INSERT INTO dbo.RecepcionesContenedor 
@@ -448,15 +448,15 @@ namespace SOR.Repositories
 
                         using (var cmd = new SqlCommand(sqlRecep, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Num", modelo.NumeroContenedor.Trim());
-                            cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                            cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
-                            cmd.Parameters.AddWithValue("@Fecha", modelo.FechaRecepcion != DateTime.MinValue ? modelo.FechaRecepcion : DateTime.Now.Date);
-                            cmd.Parameters.AddWithValue("@Hora", !string.IsNullOrWhiteSpace(modelo.HoraRecepcion) ? (object)modelo.HoraRecepcion.Trim() : DateTime.Now.ToString("hh:mm tt"));
-                            cmd.Parameters.AddWithValue("@IdEq", modelo.IdEquipoReceptor.HasValue && modelo.IdEquipoReceptor.Value > 0 ? (object)modelo.IdEquipoReceptor.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Resp", modelo.ResponsableRecepcion ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Obs", modelo.Observaciones ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmd.Parameters.Add(new SqlParameter("@Num", modelo.NumeroContenedor.Trim()));
+                            cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                            cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
+                            cmd.Parameters.Add(new SqlParameter("@Fecha", modelo.FechaRecepcion != DateTime.MinValue ? modelo.FechaRecepcion : DateTime.Now.Date));
+                            cmd.Parameters.Add(new SqlParameter("@Hora", !string.IsNullOrWhiteSpace(modelo.HoraRecepcion) ? (object)modelo.HoraRecepcion.Trim() : DateTime.Now.ToString("hh:mm tt")));
+                            cmd.Parameters.Add(new SqlParameter("@IdEq", modelo.IdEquipoReceptor.HasValue && modelo.IdEquipoReceptor.Value > 0 ? (object)modelo.IdEquipoReceptor.Value : DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Resp", modelo.ResponsableRecepcion ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Obs", modelo.Observaciones ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
                             idRecepcion = Convert.ToInt32(cmd.ExecuteScalar());
                         }
 
@@ -474,11 +474,11 @@ namespace SOR.Repositories
                                 VALUES (@IdRec, @IdMat, @IdPres, @Empaques, @Uds);";
                             using (var cmd = new SqlCommand(sqlDet, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdRec", idRecepcion);
-                                cmd.Parameters.AddWithValue("@IdMat", det.IdMaterial);
-                                cmd.Parameters.AddWithValue("@IdPres", det.IdPresentacion);
-                                cmd.Parameters.AddWithValue("@Empaques", det.CantidadEmpaques);
-                                cmd.Parameters.AddWithValue("@Uds", det.UnidadesPorEmpaque);
+                                cmd.Parameters.Add(new SqlParameter("@IdRec", idRecepcion));
+                                cmd.Parameters.Add(new SqlParameter("@IdMat", det.IdMaterial));
+                                cmd.Parameters.Add(new SqlParameter("@IdPres", det.IdPresentacion));
+                                cmd.Parameters.Add(new SqlParameter("@Empaques", det.CantidadEmpaques));
+                                cmd.Parameters.Add(new SqlParameter("@Uds", det.UnidadesPorEmpaque));
                                 cmd.ExecuteNonQuery();
                             }
 
@@ -497,20 +497,20 @@ namespace SOR.Repositories
                                     VALUES (@IdTemp, @IdAlm, @IdMat, @Total, 0, @Total);";
                             using (var cmd = new SqlCommand(sqlInv, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
-                                cmd.Parameters.AddWithValue("@IdMat", det.IdMaterial);
-                                cmd.Parameters.AddWithValue("@Total", totalUnidades);
+                                cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
+                                cmd.Parameters.Add(new SqlParameter("@IdMat", det.IdMaterial));
+                                cmd.Parameters.Add(new SqlParameter("@Total", totalUnidades));
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 3c. Si la recepción está asignada a un equipo o almacén de equipo, acreditar en InventarioEquipo
+                            // 3c. Si la recepciÃ³n estÃ¡ asignada a un equipo o almacÃ©n de equipo, acreditar en InventarioEquipo
                             int? idEquipoReceptorFinal = (modelo.IdEquipoReceptor.HasValue && modelo.IdEquipoReceptor.Value > 0) ? modelo.IdEquipoReceptor : null;
                             if (!idEquipoReceptorFinal.HasValue)
                             {
                                 using (var cmdAlmEq = new SqlCommand("SELECT TOP 1 IdEquipo FROM dbo.AlmacenesEquipos WHERE IdAlmacen = @IdAlm;", cn, tran))
                                 {
-                                    cmdAlmEq.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacen);
+                                    cmdAlmEq.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacen));
                                     object valEq = cmdAlmEq.ExecuteScalar();
                                     if (valEq != null && valEq != DBNull.Value)
                                     {
@@ -533,18 +533,18 @@ namespace SOR.Repositories
                                         VALUES (@IdTemp, @IdEq, @IdMat, @Total, 0, 0, @Total);";
                                 using (var cmdEquipo = new SqlCommand(sqlEquipo, cn, tran))
                                 {
-                                    cmdEquipo.Parameters.AddWithValue("@IdTemp", idTemporada);
-                                    cmdEquipo.Parameters.AddWithValue("@IdEq", idEquipoReceptorFinal.Value);
-                                    cmdEquipo.Parameters.AddWithValue("@IdMat", det.IdMaterial);
-                                    cmdEquipo.Parameters.AddWithValue("@Total", totalUnidades);
+                                    cmdEquipo.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                                    cmdEquipo.Parameters.Add(new SqlParameter("@IdEq", idEquipoReceptorFinal.Value));
+                                    cmdEquipo.Parameters.Add(new SqlParameter("@IdMat", det.IdMaterial));
+                                    cmdEquipo.Parameters.Add(new SqlParameter("@Total", totalUnidades));
                                     cmdEquipo.ExecuteNonQuery();
                                 }
                             }
 
-                            // 3d. Kárdex de entrada
+                            // 3d. KÃ¡rdex de entrada
                             RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_CONTENEDOR", det.IdMaterial,
                                 totalUnidades, null, modelo.IdAlmacen, idEquipoReceptorFinal, null,
-                                "REC-" + idRecepcion, idUsuario, $"Recepción de contenedor #{modelo.NumeroContenedor} en almacén ID {modelo.IdAlmacen}");
+                                "REC-" + idRecepcion, idUsuario, $"RecepciÃ³n de contenedor #{modelo.NumeroContenedor} en almacÃ©n ID {modelo.IdAlmacen}");
                         }
 
                         // 4. Guardar evidencias adjuntas (si existen)
@@ -559,20 +559,20 @@ namespace SOR.Repositories
                             {
                                 using (var cmdEv = new SqlCommand(sqlEv, cn, tran))
                                 {
-                                    cmdEv.Parameters.AddWithValue("@IdRec", idRecepcion);
-                                    cmdEv.Parameters.AddWithValue("@Nom", ev.NombreArchivo ?? "Evidencia");
-                                    cmdEv.Parameters.AddWithValue("@Ruta", ev.RutaArchivo ?? "");
-                                    cmdEv.Parameters.AddWithValue("@Tipo", ev.TipoContenido ?? (object)DBNull.Value);
-                                    cmdEv.Parameters.AddWithValue("@Size", ev.TamanoBytes.HasValue ? (object)ev.TamanoBytes.Value : DBNull.Value);
-                                    cmdEv.Parameters.AddWithValue("@IdUser", idUsuario);
+                                    cmdEv.Parameters.Add(new SqlParameter("@IdRec", idRecepcion));
+                                    cmdEv.Parameters.Add(new SqlParameter("@Nom", ev.NombreArchivo ?? "Evidencia"));
+                                    cmdEv.Parameters.Add(new SqlParameter("@Ruta", ev.RutaArchivo ?? ""));
+                                    cmdEv.Parameters.Add(new SqlParameter("@Tipo", ev.TipoContenido ?? (object)DBNull.Value));
+                                    cmdEv.Parameters.Add(new SqlParameter("@Size", ev.TamanoBytes.HasValue ? (object)ev.TamanoBytes.Value : DBNull.Value));
+                                    cmdEv.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
                                     cmdEv.ExecuteNonQuery();
                                 }
                             }
                         }
 
                         tran.Commit();
-                        AuditoriaHelper.Registrar("Recepción Contenedor", "Logistica", idRecepcion.ToString(), idUsuario,
-                            $"Contenedor {modelo.NumeroContenedor} recibido y confirmado exitosamente en almacén ID {modelo.IdAlmacen}. Total materiales: {modelo.Detalles.Count}.");
+                        AuditoriaHelper.Registrar("RecepciÃ³n Contenedor", "Logistica", idRecepcion.ToString(), idUsuario,
+                            $"Contenedor {modelo.NumeroContenedor} recibido y confirmado exitosamente en almacÃ©n ID {modelo.IdAlmacen}. Total materiales: {modelo.Detalles.Count}.");
                         return idRecepcion;
                     }
                     catch
@@ -605,8 +605,8 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -653,7 +653,7 @@ namespace SOR.Repositories
 
                 using (var cmdTemp = new SqlCommand(sqlTemp, cn))
                 {
-                    cmdTemp.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
+                    cmdTemp.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value));
                     using (var dr = cmdTemp.ExecuteReader())
                     {
                         if (dr.Read())
@@ -718,7 +718,7 @@ namespace SOR.Repositories
 
                 using (var cmdGlobal = new SqlCommand(sqlGlobal, cn))
                 {
-                    cmdGlobal.Parameters.AddWithValue("@IdTemp", vm.IdTemporada);
+                    cmdGlobal.Parameters.Add(new SqlParameter("@IdTemp", vm.IdTemporada));
                     using (var dr = cmdGlobal.ExecuteReader())
                     {
                         while (dr.Read())
@@ -739,7 +739,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // 3. Obtener inventario por equipos para el filtro rápido
+                // 3. Obtener inventario por equipos para el filtro rÃ¡pido
                 string sqlEquipos = @"
                     SELECT e.IdEquipo, e.NombreEquipo, n.NombreNivel
                     FROM dbo.Equipos e
@@ -765,7 +765,7 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Cargar ítems de equipos
+                // Cargar Ã­tems de equipos
                 var itemsEquipos = ObtenerInventarioEquipo(vm.IdTemporada, null);
                 var lookup = System.Linq.Enumerable.ToDictionary(
                     System.Linq.Enumerable.GroupBy(itemsEquipos, x => x.IdEquipo),
@@ -799,7 +799,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // TRANSFERENCIA A EQUIPOS (TRANSACCIÓN ACID Y TRAZABILIDAD COMPLETA)
+        // TRANSFERENCIA A EQUIPOS (TRANSACCIÃ“N ACID Y TRAZABILIDAD COMPLETA)
         // =====================================================================
 
         public int RegistrarTransferencia(TransferenciaEquipo modelo, int idUsuario)
@@ -824,19 +824,19 @@ namespace SOR.Repositories
                             }
                         }
 
-                        // 2. Fechas de Emisión y Recepción
+                        // 2. Fechas de EmisiÃ³n y RecepciÃ³n
                         DateTime fechaEmision = modelo.FechaEmision ?? (modelo.FechaTransferencia != DateTime.MinValue ? modelo.FechaTransferencia : DateTime.Now);
                         modelo.FechaTransferencia = fechaEmision;
 
                         bool esRecibidaInmediata = modelo.FechaRecepcion.HasValue && !string.IsNullOrWhiteSpace(modelo.PersonaReceptoraEquipo);
                         if (modelo.FechaRecepcion.HasValue && modelo.FechaRecepcion.Value < fechaEmision)
                         {
-                            throw new InvalidOperationException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
+                            throw new InvalidOperationException("La fecha de recepciÃ³n no puede ser anterior a la fecha de emisiÃ³n.");
                         }
 
                         string estado = esRecibidaInmediata ? "RECIBIDA" : "EMITIDA";
 
-                        // 3. Número de constancia único
+                        // 3. NÃºmero de constancia Ãºnico
                         string constancia = "TRF-" + fechaEmision.ToString("yyyyMMdd") + "-" + new Random().Next(1000, 9999);
 
                         // 4. Insertar encabezado con trazabilidad
@@ -856,21 +856,21 @@ namespace SOR.Repositories
 
                         using (var cmd = new SqlCommand(sqlTransf, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Const", constancia);
-                            cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                            cmd.Parameters.AddWithValue("@IdEqReceptor", modelo.IdEquipo);
-                            cmd.Parameters.AddWithValue("@IdEqEmisor", modelo.IdEquipoEmisor.HasValue ? (object)modelo.IdEquipoEmisor.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdAlm", modelo.IdAlmacenOrigen);
-                            cmd.Parameters.AddWithValue("@Fecha", fechaEmision);
-                            cmd.Parameters.AddWithValue("@FechaEmision", fechaEmision);
-                            cmd.Parameters.AddWithValue("@FechaRecepcion", modelo.FechaRecepcion.HasValue ? (object)modelo.FechaRecepcion.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUserEmisor", modelo.IdUsuarioEmisor.HasValue ? (object)modelo.IdUsuarioEmisor.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Emisor", modelo.CoordinadorEmisor ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUserReceptor", modelo.IdUsuarioReceptor.HasValue ? (object)modelo.IdUsuarioReceptor.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Receptor", modelo.PersonaReceptoraEquipo ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Obs", modelo.Observaciones ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Estado", estado);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
+                            cmd.Parameters.Add(new SqlParameter("@Const", constancia));
+                            cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                            cmd.Parameters.Add(new SqlParameter("@IdEqReceptor", modelo.IdEquipo));
+                            cmd.Parameters.Add(new SqlParameter("@IdEqEmisor", modelo.IdEquipoEmisor.HasValue ? (object)modelo.IdEquipoEmisor.Value : DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdAlm", modelo.IdAlmacenOrigen));
+                            cmd.Parameters.Add(new SqlParameter("@Fecha", fechaEmision));
+                            cmd.Parameters.Add(new SqlParameter("@FechaEmision", fechaEmision));
+                            cmd.Parameters.Add(new SqlParameter("@FechaRecepcion", modelo.FechaRecepcion.HasValue ? (object)modelo.FechaRecepcion.Value : DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUserEmisor", modelo.IdUsuarioEmisor.HasValue ? (object)modelo.IdUsuarioEmisor.Value : DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Emisor", modelo.CoordinadorEmisor ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUserReceptor", modelo.IdUsuarioReceptor.HasValue ? (object)modelo.IdUsuarioReceptor.Value : DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Receptor", modelo.PersonaReceptoraEquipo ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Obs", modelo.Observaciones ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Estado", estado));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
                             idTransf = Convert.ToInt32(cmd.ExecuteScalar());
                         }
 
@@ -879,31 +879,31 @@ namespace SOR.Repositories
                         {
                             if (det.CantidadUnidades <= 0) continue;
 
-                            // 5a. Verificar stock suficiente en almacén origen con bloqueo de lectura
+                            // 5a. Verificar stock suficiente en almacÃ©n origen con bloqueo de lectura
                             int disp = 0;
                             using (var cmd = new SqlCommand(
                                 "SELECT ISNULL(CantidadDisponible,0) FROM dbo.InventarioCentral WITH (UPDLOCK, ROWLOCK) WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;", cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdT", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdA", modelo.IdAlmacenOrigen);
-                                cmd.Parameters.AddWithValue("@IdM", det.IdMaterial);
+                                cmd.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@IdA", modelo.IdAlmacenOrigen));
+                                cmd.Parameters.Add(new SqlParameter("@IdM", det.IdMaterial));
                                 object val = cmd.ExecuteScalar();
                                 disp = val != null && val != DBNull.Value ? Convert.ToInt32(val) : 0;
                             }
                             if (disp < det.CantidadUnidades)
-                                throw new InvalidOperationException($"Stock insuficiente en el almacén emisor para el material ID {det.IdMaterial}. Disponible: {disp}, Solicitado: {det.CantidadUnidades}.");
+                                throw new InvalidOperationException($"Stock insuficiente en el almacÃ©n emisor para el material ID {det.IdMaterial}. Disponible: {disp}, Solicitado: {det.CantidadUnidades}.");
 
                             // 5b. Detalle de transferencia
                             string sqlDet = @"INSERT INTO dbo.TransferenciasEquipoDetalle (IdTransferencia, IdMaterial, CantidadUnidades) VALUES (@IdT, @IdM, @Cant);";
                             using (var cmd = new SqlCommand(sqlDet, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdT", idTransf);
-                                cmd.Parameters.AddWithValue("@IdM", det.IdMaterial);
-                                cmd.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
+                                cmd.Parameters.Add(new SqlParameter("@IdT", idTransf));
+                                cmd.Parameters.Add(new SqlParameter("@IdM", det.IdMaterial));
+                                cmd.Parameters.Add(new SqlParameter("@Cant", det.CantidadUnidades));
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // 5c. Descontar del inventario central del almacén origen
+                            // 5c. Descontar del inventario central del almacÃ©n origen
                             string sqlCentral = @"
                                 UPDATE dbo.InventarioCentral
                                 SET CantidadTransferida = CantidadTransferida + @Cant,
@@ -911,10 +911,10 @@ namespace SOR.Repositories
                                 WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;";
                             using (var cmd = new SqlCommand(sqlCentral, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
-                                cmd.Parameters.AddWithValue("@IdT", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdA", modelo.IdAlmacenOrigen);
-                                cmd.Parameters.AddWithValue("@IdM", det.IdMaterial);
+                                cmd.Parameters.Add(new SqlParameter("@Cant", det.CantidadUnidades));
+                                cmd.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@IdA", modelo.IdAlmacenOrigen));
+                                cmd.Parameters.Add(new SqlParameter("@IdM", det.IdMaterial));
                                 cmd.ExecuteNonQuery();
                             }
 
@@ -928,15 +928,15 @@ namespace SOR.Repositories
                                     WHERE IdTemporada=@IdT AND IdEquipo=@IdEq AND IdMaterial=@IdM;";
                                 using (var cmdEmisor = new SqlCommand(sqlDescEmisor, cn, tran))
                                 {
-                                    cmdEmisor.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
-                                    cmdEmisor.Parameters.AddWithValue("@IdT", idTemporada);
-                                    cmdEmisor.Parameters.AddWithValue("@IdEq", modelo.IdEquipoEmisor.Value);
-                                    cmdEmisor.Parameters.AddWithValue("@IdM", det.IdMaterial);
+                                    cmdEmisor.Parameters.Add(new SqlParameter("@Cant", det.CantidadUnidades));
+                                    cmdEmisor.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                    cmdEmisor.Parameters.Add(new SqlParameter("@IdEq", modelo.IdEquipoEmisor.Value));
+                                    cmdEmisor.Parameters.Add(new SqlParameter("@IdM", det.IdMaterial));
                                     cmdEmisor.ExecuteNonQuery();
                                 }
                             }
 
-                            // 5d. Si la recepción es inmediata, acreditar en inventario del equipo receptor
+                            // 5d. Si la recepciÃ³n es inmediata, acreditar en inventario del equipo receptor
                             if (esRecibidaInmediata)
                             {
                                 string sqlEquipo = @"
@@ -951,15 +951,15 @@ namespace SOR.Repositories
                                         VALUES (@IdT, @IdEq, @IdM, @Cant, 0, 0, @Cant);";
                                 using (var cmd = new SqlCommand(sqlEquipo, cn, tran))
                                 {
-                                    cmd.Parameters.AddWithValue("@IdT", idTemporada);
-                                    cmd.Parameters.AddWithValue("@IdEq", modelo.IdEquipo);
-                                    cmd.Parameters.AddWithValue("@IdM", det.IdMaterial);
-                                    cmd.Parameters.AddWithValue("@Cant", det.CantidadUnidades);
+                                    cmd.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                    cmd.Parameters.Add(new SqlParameter("@IdEq", modelo.IdEquipo));
+                                    cmd.Parameters.Add(new SqlParameter("@IdM", det.IdMaterial));
+                                    cmd.Parameters.Add(new SqlParameter("@Cant", det.CantidadUnidades));
                                     cmd.ExecuteNonQuery();
                                 }
                             }
 
-                            // 5e. Registrar movimiento en Kárdex
+                            // 5e. Registrar movimiento en KÃ¡rdex
                             RegistrarMovimiento(cn, tran, idTemporada, "TRANSFERENCIA_EQUIPO", det.IdMaterial,
                                 det.CantidadUnidades, modelo.IdAlmacenOrigen, null, modelo.IdEquipo, null,
                                 constancia, idUsuario, $"Transferencia {constancia} de material ID {det.IdMaterial} al equipo ID {modelo.IdEquipo}");
@@ -967,7 +967,7 @@ namespace SOR.Repositories
 
                         tran.Commit();
                         AuditoriaHelper.Registrar("Transferencia Equipo", "Logistica", idTransf.ToString(), idUsuario,
-                            $"Transferencia {constancia} registrada con éxito. Estado: {estado}.");
+                            $"Transferencia {constancia} registrada con Ã©xito. Estado: {estado}.");
                         return idTransf;
                     }
                     catch
@@ -1000,7 +1000,7 @@ namespace SOR.Repositories
                             WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlHead, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
                             using (var dr = cmd.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -1021,10 +1021,10 @@ namespace SOR.Repositories
                         if (estadoActual == "RECIBIDA" || estadoActual == "COMPLETADA")
                             throw new InvalidOperationException("La transferencia ya se encuentra confirmada como RECIBIDA.");
                         if (estadoActual == "CANCELADA")
-                            throw new InvalidOperationException("No se puede confirmar la recepción de una transferencia cancelada.");
+                            throw new InvalidOperationException("No se puede confirmar la recepciÃ³n de una transferencia cancelada.");
 
                         if (fechaRecepcion < fechaEmision)
-                            throw new InvalidOperationException("La fecha de recepción no puede ser anterior a la fecha de emisión.");
+                            throw new InvalidOperationException("La fecha de recepciÃ³n no puede ser anterior a la fecha de emisiÃ³n.");
 
                         // 1. Actualizar estado y fecha en encabezado
                         string sqlUpd = @"
@@ -1036,10 +1036,10 @@ namespace SOR.Repositories
                             WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlUpd, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
-                            cmd.Parameters.AddWithValue("@FechaRec", fechaRecepcion);
-                            cmd.Parameters.AddWithValue("@PersonaRec", personaReceptora ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@IdUserRec", idUsuarioReceptor.HasValue ? (object)idUsuarioReceptor.Value : DBNull.Value);
+                            cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
+                            cmd.Parameters.Add(new SqlParameter("@FechaRec", fechaRecepcion));
+                            cmd.Parameters.Add(new SqlParameter("@PersonaRec", personaReceptora ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@IdUserRec", idUsuarioReceptor.HasValue ? (object)idUsuarioReceptor.Value : DBNull.Value));
                             cmd.ExecuteNonQuery();
                         }
 
@@ -1048,7 +1048,7 @@ namespace SOR.Repositories
                         string sqlDet = "SELECT IdMaterial, CantidadUnidades FROM dbo.TransferenciasEquipoDetalle WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlDet, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
                             using (var dr = cmd.ExecuteReader())
                             {
                                 while (dr.Read())
@@ -1075,20 +1075,20 @@ namespace SOR.Repositories
                                     VALUES (@IdT, @IdEq, @IdM, @Cant, 0, 0, @Cant);";
                             using (var cmd = new SqlCommand(sqlEquipo, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@IdT", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdEq", idEquipoReceptor);
-                                cmd.Parameters.AddWithValue("@IdM", idMat);
-                                cmd.Parameters.AddWithValue("@Cant", cant);
+                                cmd.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipoReceptor));
+                                cmd.Parameters.Add(new SqlParameter("@IdM", idMat));
+                                cmd.Parameters.Add(new SqlParameter("@Cant", cant));
                                 cmd.ExecuteNonQuery();
                             }
 
                             RegistrarMovimiento(cn, tran, idTemporada, "RECEPCION_TRANSFERENCIA", idMat,
                                 cant, null, null, idEquipoReceptor, null,
-                                constancia, idUsuario, $"Confirmación de recepción física de transferencia {constancia} por el equipo receptor ID {idEquipoReceptor}");
+                                constancia, idUsuario, $"ConfirmaciÃ³n de recepciÃ³n fÃ­sica de transferencia {constancia} por el equipo receptor ID {idEquipoReceptor}");
                         }
 
                         tran.Commit();
-                        AuditoriaHelper.Registrar("Confirmar Recepción", "Logistica", idTransferencia.ToString(), idUsuario,
+                        AuditoriaHelper.Registrar("Confirmar RecepciÃ³n", "Logistica", idTransferencia.ToString(), idUsuario,
                             $"Transferencia {constancia} confirmada como RECIBIDA por {personaReceptora}.");
                     }
                     catch
@@ -1121,7 +1121,7 @@ namespace SOR.Repositories
                             WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlHead, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
                             using (var dr = cmd.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -1140,7 +1140,7 @@ namespace SOR.Repositories
                         }
 
                         if (estadoActual == "RECIBIDA" || estadoActual == "COMPLETADA")
-                            throw new InvalidOperationException("No se puede cancelar una transferencia que ya fue recibida físicamente por el equipo receptor.");
+                            throw new InvalidOperationException("No se puede cancelar una transferencia que ya fue recibida fÃ­sicamente por el equipo receptor.");
                         if (estadoActual == "CANCELADA")
                             throw new InvalidOperationException("La transferencia ya se encuentra cancelada.");
 
@@ -1149,7 +1149,7 @@ namespace SOR.Repositories
                         string sqlDet = "SELECT IdMaterial, CantidadUnidades FROM dbo.TransferenciasEquipoDetalle WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlDet, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                            cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
                             using (var dr = cmd.ExecuteReader())
                             {
                                 while (dr.Read())
@@ -1171,14 +1171,14 @@ namespace SOR.Repositories
                                 WHERE IdTemporada=@IdT AND IdAlmacen=@IdA AND IdMaterial=@IdM;";
                             using (var cmd = new SqlCommand(sqlRev, cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@Cant", cant);
-                                cmd.Parameters.AddWithValue("@IdT", idTemporada);
-                                cmd.Parameters.AddWithValue("@IdA", idAlmacenOrigen);
-                                cmd.Parameters.AddWithValue("@IdM", idMat);
+                                cmd.Parameters.Add(new SqlParameter("@Cant", cant));
+                                cmd.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@IdA", idAlmacenOrigen));
+                                cmd.Parameters.Add(new SqlParameter("@IdM", idMat));
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // Revertir inventario del equipo emisor si correspondía
+                            // Revertir inventario del equipo emisor si correspondÃ­a
                             if (idEquipoEmisor.HasValue && idEquipoEmisor.Value > 0)
                             {
                                 string sqlRevEq = @"
@@ -1188,17 +1188,17 @@ namespace SOR.Repositories
                                     WHERE IdTemporada=@IdT AND IdEquipo=@IdEq AND IdMaterial=@IdM;";
                                 using (var cmdRevEq = new SqlCommand(sqlRevEq, cn, tran))
                                 {
-                                    cmdRevEq.Parameters.AddWithValue("@Cant", cant);
-                                    cmdRevEq.Parameters.AddWithValue("@IdT", idTemporada);
-                                    cmdRevEq.Parameters.AddWithValue("@IdEq", idEquipoEmisor.Value);
-                                    cmdRevEq.Parameters.AddWithValue("@IdM", idMat);
+                                    cmdRevEq.Parameters.Add(new SqlParameter("@Cant", cant));
+                                    cmdRevEq.Parameters.Add(new SqlParameter("@IdT", idTemporada));
+                                    cmdRevEq.Parameters.Add(new SqlParameter("@IdEq", idEquipoEmisor.Value));
+                                    cmdRevEq.Parameters.Add(new SqlParameter("@IdM", idMat));
                                     cmdRevEq.ExecuteNonQuery();
                                 }
                             }
 
                             RegistrarMovimiento(cn, tran, idTemporada, "CANCELACION_TRANSFERENCIA", idMat,
                                 cant, idAlmacenOrigen, null, null, null,
-                                constancia, idUsuario, $"Cancelación de transferencia {constancia}. Motivo: {motivo}");
+                                constancia, idUsuario, $"CancelaciÃ³n de transferencia {constancia}. Motivo: {motivo}");
                         }
 
                         // 2. Marcar como CANCELADA
@@ -1209,8 +1209,8 @@ namespace SOR.Repositories
                             WHERE IdTransferencia = @Id;";
                         using (var cmd = new SqlCommand(sqlCancel, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", idTransferencia);
-                            cmd.Parameters.AddWithValue("@Motivo", string.IsNullOrWhiteSpace(motivo) ? "Cancelado por el usuario" : motivo);
+                            cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
+                            cmd.Parameters.Add(new SqlParameter("@Motivo", string.IsNullOrWhiteSpace(motivo) ? "Cancelado por el usuario" : motivo));
                             cmd.ExecuteNonQuery();
                         }
 
@@ -1246,7 +1246,7 @@ namespace SOR.Repositories
                     WHERE tr.IdTransferencia = @Id;";
                 using (var cmd = new SqlCommand(sqlHead, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -1258,7 +1258,7 @@ namespace SOR.Repositories
                                 IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
                                 NombreTemporada = dr["NombreTemporada"].ToString(),
                                 IdEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null,
-                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "Almacén Central / Nacional",
+                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "AlmacÃ©n Central / Nacional",
                                 IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
                                 NombreEquipo = dr["NombreEquipoReceptor"].ToString(),
                                 IdAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]),
@@ -1285,7 +1285,7 @@ namespace SOR.Repositories
                     WHERE d.IdTransferencia = @Id;";
                 using (var cmd = new SqlCommand(sqlDet, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idTransferencia);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idTransferencia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1328,8 +1328,8 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1341,7 +1341,7 @@ namespace SOR.Repositories
                                 IdTemporada = Convert.ToInt32(dr["IdTemporada"]),
                                 NombreTemporada = dr["NombreTemporada"].ToString(),
                                 IdEquipoEmisor = dr["IdEquipoEmisor"] != DBNull.Value ? (int?)Convert.ToInt32(dr["IdEquipoEmisor"]) : null,
-                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "Almacén Central / Nacional",
+                                NombreEquipoEmisor = dr["NombreEquipoEmisor"] != DBNull.Value ? dr["NombreEquipoEmisor"].ToString() : "AlmacÃ©n Central / Nacional",
                                 IdEquipo = Convert.ToInt32(dr["IdEquipo"]),
                                 NombreEquipo = dr["NombreEquipoReceptor"].ToString(),
                                 IdAlmacenOrigen = Convert.ToInt32(dr["IdAlmacenOrigen"]),
@@ -1374,7 +1374,7 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // Asegurar columna e índices si faltaran
+                // Asegurar columna e Ã­ndices si faltaran
                 using (var cmdCol = new SqlCommand("IF COL_LENGTH('dbo.RecepcionesContenedor', 'IdEquipoReceptor') IS NULL ALTER TABLE dbo.RecepcionesContenedor ADD IdEquipoReceptor INT NULL;", cn))
                 {
                     cmdCol.ExecuteNonQuery();
@@ -1498,8 +1498,8 @@ namespace SOR.Repositories
                     ORDER BY eq.NombreEquipo, m.IdMaterial, ISNULL(p.UnidadesPorEmpaque, 0);";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1536,14 +1536,14 @@ namespace SOR.Repositories
             {
                 cn.Open();
 
-                // 1. Obtener lista de equipos con su almacén asignado y coordinador responsable
+                // 1. Obtener lista de equipos con su almacÃ©n asignado y coordinador responsable
                 string sqlEquipos = @"
                     SELECT 
                         e.IdEquipo,
                         e.NombreEquipo,
                         n.NombreNivel,
                         alm.IdAlmacen,
-                        ISNULL(alm.NombreAlmacen, 'Sin Almacén Asignado') AS NombreAlmacen,
+                        ISNULL(alm.NombreAlmacen, 'Sin AlmacÃ©n Asignado') AS NombreAlmacen,
                         coord.IdUsuario AS IdUsuarioCoordinador,
                         ISNULL(coord.NombreCompleto, ISNULL(alm.Responsable, 'Sin Coordinador')) AS NombreCoordinador,
                         ISNULL(coord.Telefono, ISNULL(alm.Telefono, '')) AS TelefonoCoordinador,
@@ -1572,8 +1572,8 @@ namespace SOR.Repositories
                         WHERE asig.IdEquipo = e.IdEquipo AND asig.Activo = 1
                         ORDER BY 
                             CASE 
-                                WHEN pos.NombrePosicion LIKE '%Logística%' OR pos.NombrePosicion LIKE '%Logistica%' THEN 1
-                                WHEN pos.NombrePosicion LIKE '%Equipo%' OR pos.NombrePosicion LIKE '%Líder%' OR pos.NombrePosicion LIKE '%Lider%' THEN 2
+                                WHEN pos.NombrePosicion LIKE '%LogÃ­stica%' OR pos.NombrePosicion LIKE '%Logistica%' THEN 1
+                                WHEN pos.NombrePosicion LIKE '%Equipo%' OR pos.NombrePosicion LIKE '%LÃ­der%' OR pos.NombrePosicion LIKE '%Lider%' THEN 2
                                 ELSE 3 
                             END,
                             asig.IdAsignacion ASC
@@ -1584,7 +1584,7 @@ namespace SOR.Repositories
 
                 using (var cmd = new SqlCommand(sqlEquipos, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1630,7 +1630,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // RECEPCIONES — CONSULTA
+        // RECEPCIONES â€” CONSULTA
         // =====================================================================
 
         public List<RecepcionContenedor> ObtenerRecepciones(int? idTemporada = null, int? idAlmacen = null, int? idEquipo = null)
@@ -1651,9 +1651,9 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue && idAlmacen.Value > 0 ? (object)idAlmacen.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue && idEquipo.Value > 0 ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue && idTemporada.Value > 0 ? (object)idTemporada.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdAlm", idAlmacen.HasValue && idAlmacen.Value > 0 ? (object)idAlmacen.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo.HasValue && idEquipo.Value > 0 ? (object)idEquipo.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1697,7 +1697,7 @@ namespace SOR.Repositories
                     WHERE rc.IdRecepcion = @Id;";
                 using (var cmd = new SqlCommand(sqlHead, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idRecepcion);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idRecepcion));
                     using (var dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -1724,7 +1724,7 @@ namespace SOR.Repositories
                 }
                 if (recep == null) return null;
 
-                // Cargar equipos servidos por el almacén
+                // Cargar equipos servidos por el almacÃ©n
                 string sqlEq = @"
                     SELECT e.NombreEquipo 
                     FROM dbo.AlmacenesEquipos ae
@@ -1733,7 +1733,7 @@ namespace SOR.Repositories
                     ORDER BY e.NombreEquipo;";
                 using (var cmdEq = new SqlCommand(sqlEq, cn))
                 {
-                    cmdEq.Parameters.AddWithValue("@IdAlm", recep.IdAlmacen);
+                    cmdEq.Parameters.Add(new SqlParameter("@IdAlm", recep.IdAlmacen));
                     using (var drEq = cmdEq.ExecuteReader())
                     {
                         while (drEq.Read())
@@ -1752,7 +1752,7 @@ namespace SOR.Repositories
                     WHERE d.IdRecepcion = @Id;";
                 using (var cmd = new SqlCommand(sqlDet, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idRecepcion);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idRecepcion));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1781,7 +1781,7 @@ namespace SOR.Repositories
                     ORDER BY FechaRegistro;";
                 using (var cmd = new SqlCommand(sqlEv, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idRecepcion);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idRecepcion));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1816,16 +1816,16 @@ namespace SOR.Repositories
                 int cnt = 0;
                 using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.Eventos WHERE IdEvento=@Id AND TipoEvento='Despacho';", cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idEvento);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idEvento));
                     cnt = Convert.ToInt32(cmd.ExecuteScalar());
                 }
                 if (cnt == 0) throw new InvalidOperationException("El evento no existe o no es de tipo Despacho.");
 
-                // Verificar que no esté ya registrado
+                // Verificar que no estÃ© ya registrado
                 using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.EventosDespacho WHERE IdEvento=@Id;", cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idEvento);
-                    if (Convert.ToInt32(cmd.ExecuteScalar()) > 0) throw new InvalidOperationException("El evento ya está registrado como evento de despacho.");
+                    cmd.Parameters.Add(new SqlParameter("@Id", idEvento));
+                    if (Convert.ToInt32(cmd.ExecuteScalar()) > 0) throw new InvalidOperationException("El evento ya estÃ¡ registrado como evento de despacho.");
                 }
 
                 string sql = @"INSERT INTO dbo.EventosDespacho (IdEvento, IdAlmacen, IdEquipo, EstadoDespachoEvento)
@@ -1833,11 +1833,11 @@ namespace SOR.Repositories
                                VALUES (@IdEv, @IdAlm, @IdEq, 'PROGRAMADO');";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdEv", idEvento);
-                    cmd.Parameters.AddWithValue("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo);
+                    cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
+                    cmd.Parameters.Add(new SqlParameter("@IdAlm", idAlmacen.HasValue ? (object)idAlmacen.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo));
                     int idCreado = Convert.ToInt32(cmd.ExecuteScalar());
-                    AuditoriaHelper.Registrar("Evento Despacho", "Logistica", idEvento.ToString(), idUsuario, "Creación de evento de despacho");
+                    AuditoriaHelper.Registrar("Evento Despacho", "Logistica", idEvento.ToString(), idUsuario, "CreaciÃ³n de evento de despacho");
                     return idCreado;
                 }
             }
@@ -1865,8 +1865,8 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1917,7 +1917,7 @@ namespace SOR.Repositories
                     WHERE c.IdEvento = @IdEv;";
                 using (var cmd = new SqlCommand(sqlCoord, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdEv", idEvento);
+                    cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1946,7 +1946,7 @@ namespace SOR.Repositories
                     ORDER BY di.EstadoDespacho, ig.NombreIglesia;";
                 using (var cmd = new SqlCommand(sqlIg, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdEv", idEvento);
+                    cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -1989,22 +1989,22 @@ namespace SOR.Repositories
                 // Verificar no duplicado
                 using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.DespachosIglesia WHERE IdEvento=@IdEv AND IdParticipacion=@IdPart;", cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdEv", idEvento);
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
-                        throw new InvalidOperationException("Esta iglesia ya está programada en este evento de despacho.");
+                        throw new InvalidOperationException("Esta iglesia ya estÃ¡ programada en este evento de despacho.");
                 }
 
                 // Verificar que la iglesia tenga recursos disponibles para despacho
                 using (var cmd = new SqlCommand(
                     "SELECT COUNT(1) FROM dbo.AsignacionesRecursos WHERE IdParticipacion=@IdPart AND (EstadoAsignacion IS NULL OR EstadoAsignacion IN ('ASIGNADO','DISPONIBLE_PARA_DESPACHO'));", cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
                         throw new InvalidOperationException("La iglesia no tiene recursos asignados disponibles para despacho.");
                 }
 
-                // Obtener datos del Pastor y Líder para precarga
+                // Obtener datos del Pastor y LÃ­der para precarga
                 string nomPastor = "", cedPastor = "", telPastor = "";
                 string nomLider = "", cedLider = "", telLider = "";
                 string sqlPersonas = @"
@@ -2013,7 +2013,7 @@ namespace SOR.Repositories
                     FROM dbo.PersonasIglesia WHERE IdIglesia=@IdIg AND TipoPersona IN ('Pastor','LiderMinisterial');";
                 using (var cmd = new SqlCommand(sqlPersonas, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdIg", idIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@IdIg", idIglesia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -2035,12 +2035,12 @@ namespace SOR.Repositories
                     VALUES (@Comp, @IdEv, @IdPart, @IdIg, @IdTemp, @IdEq, 'PROGRAMADA', GETDATE());";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Comp", comprobante);
-                    cmd.Parameters.AddWithValue("@IdEv", idEvento);
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
-                    cmd.Parameters.AddWithValue("@IdIg", idIglesia);
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo);
+                    cmd.Parameters.Add(new SqlParameter("@Comp", comprobante));
+                    cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
+                    cmd.Parameters.Add(new SqlParameter("@IdIg", idIglesia));
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo));
                     idDespacho = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
@@ -2057,7 +2057,7 @@ namespace SOR.Repositories
                     FROM dbo.AsignacionesRecursos ar WHERE ar.IdParticipacion = @IdPart;";
                 using (var cmd = new SqlCommand(sqlMats, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     using (var dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -2078,9 +2078,9 @@ namespace SOR.Repositories
                                 if (idMat == 0 || cant < 0) continue;
                                 using (var cmdIns = new SqlCommand(sqlDetIns, cn))
                                 {
-                                    cmdIns.Parameters.AddWithValue("@IdD", idDespacho);
-                                    cmdIns.Parameters.AddWithValue("@IdM", idMat);
-                                    cmdIns.Parameters.AddWithValue("@Cant", cant);
+                                    cmdIns.Parameters.Add(new SqlParameter("@IdD", idDespacho));
+                                    cmdIns.Parameters.Add(new SqlParameter("@IdM", idMat));
+                                    cmdIns.Parameters.Add(new SqlParameter("@Cant", cant));
                                     cmdIns.ExecuteNonQuery();
                                 }
                             }
@@ -2088,27 +2088,27 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Actualizar estado de asignación
+                // Actualizar estado de asignaciÃ³n
                 using (var cmd = new SqlCommand(
                     "UPDATE dbo.AsignacionesRecursos SET EstadoAsignacion='PROGRAMADA_DESPACHO', IdEventoDespachoActual=@IdEv WHERE IdParticipacion=@IdPart;", cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdEv", idEvento);
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@IdEv", idEvento));
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     cmd.ExecuteNonQuery();
                 }
 
-                AuditoriaHelper.Registrar("Programar Despacho", "Logistica", idDespacho.ToString(), idUsuario, $"Programación de despacho {comprobante} para la iglesia ID {idIglesia}");
+                AuditoriaHelper.Registrar("Programar Despacho", "Logistica", idDespacho.ToString(), idUsuario, $"ProgramaciÃ³n de despacho {comprobante} para la iglesia ID {idIglesia}");
                 return idDespacho;
             }
         }
 
         // =====================================================================
-        // CONFIRMAR DESPACHO CON CÉDULA EN MANO (TRANSACCIÓN ACID Y CONTROL DE ROL CL)
+        // CONFIRMAR DESPACHO CON CÃ‰DULA EN MANO (TRANSACCIÃ“N ACID Y CONTROL DE ROL CL)
         // =====================================================================
 
         public void ConfirmarDespacho(ConfirmarDespachoViewModel vm, int idEquipo, int idTemporada, int idUsuario, string nombreCoordinador, int? idRolSeguridad = null, int? idPosicion = null)
         {
-            // Validar autorización: Solo CL (IdPosicion == 6), CE (IdPosicion == 1) o Admin (IdRolSeguridad in (1, 2))
+            // Validar autorizaciÃ³n: Solo CL (IdPosicion == 6), CE (IdPosicion == 1) o Admin (IdRolSeguridad in (1, 2))
             using (var cnAuth = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cnAuth.Open();
@@ -2131,7 +2131,7 @@ namespace SOR.Repositories
                         WHERE u.IdUsuario = @IdU;";
                     using (var cmdAuth = new SqlCommand(sqlCheckCL, cnAuth))
                     {
-                        cmdAuth.Parameters.AddWithValue("@IdU", idUsuario);
+                        cmdAuth.Parameters.Add(new SqlParameter("@IdU", idUsuario));
                         using (var drAuth = cmdAuth.ExecuteReader())
                         {
                             if (drAuth.Read())
@@ -2140,7 +2140,7 @@ namespace SOR.Repositories
                                 int? pos = drAuth["IdPosicion"] != DBNull.Value ? (int?)Convert.ToInt32(drAuth["IdPosicion"]) : null;
                                 string nomPos = drAuth["NombrePosicion"] != DBNull.Value ? drAuth["NombrePosicion"].ToString() : "";
                                 if (rol == 1 || rol == 2 || pos == 6 || pos == 1 ||
-                                    nomPos.IndexOf("Logística", StringComparison.OrdinalIgnoreCase) >= 0 || 
+                                    nomPos.IndexOf("LogÃ­stica", StringComparison.OrdinalIgnoreCase) >= 0 || 
                                     nomPos.IndexOf("Logistica", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                     nomPos.IndexOf("Equipo", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
@@ -2153,7 +2153,7 @@ namespace SOR.Repositories
 
                 if (!esAutorizado)
                 {
-                    throw new UnauthorizedAccessException("Acceso denegado: Únicamente el Coordinador de Logística (CL) o el Coordinador de Equipo (CE) tienen autorización para confirmar y ejecutar el despacho de materiales.");
+                    throw new UnauthorizedAccessException("Acceso denegado: Ãšnicamente el Coordinador de LogÃ­stica (CL) o el Coordinador de Equipo (CE) tienen autorizaciÃ³n para confirmar y ejecutar el despacho de materiales.");
                 }
             }
 
@@ -2184,10 +2184,10 @@ namespace SOR.Repositories
 
                         using (var cmd = new SqlCommand(sqlLoad, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", vm.IdDespachoIglesia);
+                            cmd.Parameters.Add(new SqlParameter("@Id", vm.IdDespachoIglesia));
                             using (var dr = cmd.ExecuteReader())
                             {
-                                if (!dr.Read()) throw new InvalidOperationException("No se encontró el despacho de la iglesia indicada.");
+                                if (!dr.Read()) throw new InvalidOperationException("No se encontrÃ³ el despacho de la iglesia indicada.");
                                 estadoActual = dr["EstadoDespacho"].ToString();
                                 idParticipacion = Convert.ToInt32(dr["IdParticipacion"]);
                                 idIglesia = Convert.ToInt32(dr["IdIglesia"]);
@@ -2251,7 +2251,7 @@ namespace SOR.Repositories
                         var detalles = new List<(int IdDet, int IdMat, int CantAsig)>();
                         using (var cmd = new SqlCommand(sqlDetSel, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Id", vm.IdDespachoIglesia);
+                            cmd.Parameters.Add(new SqlParameter("@Id", vm.IdDespachoIglesia));
                             using (var dr = cmd.ExecuteReader())
                             {
                                 while (dr.Read())
@@ -2263,15 +2263,15 @@ namespace SOR.Repositories
                         {
                             cantidades.TryGetValue(idMat.ToString(), out int cantDesp);
                             if (cantDesp < 0) cantDesp = 0;
-                            if (cantDesp > cantAsig) cantDesp = cantAsig; // No puede despachar más de lo asignado
+                            if (cantDesp > cantAsig) cantDesp = cantAsig; // No puede despachar mÃ¡s de lo asignado
 
                             // Verificar stock disponible en el equipo
                             int dispEq = 0;
                             using (var cmd = new SqlCommand("SELECT ISNULL(CantidadDisponible,0) FROM dbo.InventarioEquipo WHERE IdTemporada=@T AND IdEquipo=@Eq AND IdMaterial=@M;", cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@T", idTemporada);
-                                cmd.Parameters.AddWithValue("@Eq", idEquipo);
-                                cmd.Parameters.AddWithValue("@M", idMat);
+                                cmd.Parameters.Add(new SqlParameter("@T", idTemporada));
+                                cmd.Parameters.Add(new SqlParameter("@Eq", idEquipo));
+                                cmd.Parameters.Add(new SqlParameter("@M", idMat));
                                 object vl = cmd.ExecuteScalar();
                                 dispEq = vl != null && vl != DBNull.Value ? Convert.ToInt32(vl) : 0;
                             }
@@ -2281,8 +2281,8 @@ namespace SOR.Repositories
                             // Actualizar detalle
                             using (var cmd = new SqlCommand("UPDATE dbo.DespachosIglesiaDetalle SET CantidadDespachada=@Cant WHERE IdDespachoDetalle=@Id;", cn, tran))
                             {
-                                cmd.Parameters.AddWithValue("@Cant", cantDesp);
-                                cmd.Parameters.AddWithValue("@Id", idDet);
+                                cmd.Parameters.Add(new SqlParameter("@Cant", cantDesp));
+                                cmd.Parameters.Add(new SqlParameter("@Id", idDet));
                                 cmd.ExecuteNonQuery();
                             }
 
@@ -2296,14 +2296,14 @@ namespace SOR.Repositories
                                         CantidadDisponible = CantidadDisponible - @Cant
                                     WHERE IdTemporada=@T AND IdEquipo=@Eq AND IdMaterial=@M;", cn, tran))
                                 {
-                                    cmd.Parameters.AddWithValue("@Cant", cantDesp);
-                                    cmd.Parameters.AddWithValue("@T", idTemporada);
-                                    cmd.Parameters.AddWithValue("@Eq", idEquipo);
-                                    cmd.Parameters.AddWithValue("@M", idMat);
+                                    cmd.Parameters.Add(new SqlParameter("@Cant", cantDesp));
+                                    cmd.Parameters.Add(new SqlParameter("@T", idTemporada));
+                                    cmd.Parameters.Add(new SqlParameter("@Eq", idEquipo));
+                                    cmd.Parameters.Add(new SqlParameter("@M", idMat));
                                     cmd.ExecuteNonQuery();
                                 }
 
-                                // Kárdex de salida
+                                // KÃ¡rdex de salida
                                 RegistrarMovimiento(cn, tran, idTemporada, "DESPACHO_IGLESIA", idMat,
                                     cantDesp, null, null, idEquipo, idIglesia,
                                     "DSP-" + vm.IdDespachoIglesia, idUsuario, "Despacho a iglesia ID " + idIglesia);
@@ -2325,22 +2325,22 @@ namespace SOR.Repositories
                             WHERE IdDespachoIglesia = @Id;";
                         using (var cmd = new SqlCommand(sqlUpd, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@TipoR", vm.TipoReceptor);
-                            cmd.Parameters.AddWithValue("@NomR", (object)nombreReceptor ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@CedR", (object)cedulaFinal ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@TelR", (object)telefonoReceptor ?? DBNull.Value);
-                            cmd.Parameters.AddWithValue("@CoorD", vm.CoordinadorDespachador ?? nombreCoordinador);
-                            cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                            cmd.Parameters.AddWithValue("@Obs", vm.Observaciones ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Id", vm.IdDespachoIglesia);
+                            cmd.Parameters.Add(new SqlParameter("@TipoR", vm.TipoReceptor));
+                            cmd.Parameters.Add(new SqlParameter("@NomR", (object)nombreReceptor ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@CedR", (object)cedulaFinal ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@TelR", (object)telefonoReceptor ?? DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@CoorD", vm.CoordinadorDespachador ?? nombreCoordinador));
+                            cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                            cmd.Parameters.Add(new SqlParameter("@Obs", vm.Observaciones ?? (object)DBNull.Value));
+                            cmd.Parameters.Add(new SqlParameter("@Id", vm.IdDespachoIglesia));
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 6. Actualizar estado de asignación de recursos → DESPACHADA
+                        // 6. Actualizar estado de asignaciÃ³n de recursos â†’ DESPACHADA
                         using (var cmd = new SqlCommand(
                             "UPDATE dbo.AsignacionesRecursos SET EstadoAsignacion='DESPACHADA', FechaDisponibleDespacho=GETDATE() WHERE IdParticipacion=@IdPart;", cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                            cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                             cmd.ExecuteNonQuery();
                         }
 
@@ -2371,7 +2371,7 @@ namespace SOR.Repositories
                 int idParticipacion = 0;
                 using (var cmd = new SqlCommand("SELECT EstadoDespacho, IdParticipacion FROM dbo.DespachosIglesia WHERE IdDespachoIglesia=@Id;", cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", vm.IdDespachoIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@Id", vm.IdDespachoIglesia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         if (!dr.Read()) throw new InvalidOperationException("Despacho no encontrado.");
@@ -2392,18 +2392,18 @@ namespace SOR.Repositories
                     WHERE IdDespachoIglesia = @Id;";
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Motivo", vm.MotivoNoDespacho);
-                    cmd.Parameters.AddWithValue("@Coord", vm.CoordinadorDespachador ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                    cmd.Parameters.AddWithValue("@Id", vm.IdDespachoIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@Motivo", vm.MotivoNoDespacho));
+                    cmd.Parameters.Add(new SqlParameter("@Coord", vm.CoordinadorDespachador ?? (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                    cmd.Parameters.Add(new SqlParameter("@Id", vm.IdDespachoIglesia));
                     cmd.ExecuteNonQuery();
                 }
 
-                // Restaurar a DISPONIBLE_PARA_DESPACHO para reprogramación
+                // Restaurar a DISPONIBLE_PARA_DESPACHO para reprogramaciÃ³n
                 using (var cmd = new SqlCommand(
                     "UPDATE dbo.AsignacionesRecursos SET EstadoAsignacion='DISPONIBLE_PARA_DESPACHO', IdEventoDespachoActual=NULL WHERE IdParticipacion=@IdPart;", cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdPart", idParticipacion);
+                    cmd.Parameters.Add(new SqlParameter("@IdPart", idParticipacion));
                     cmd.ExecuteNonQuery();
                 }
 
@@ -2443,9 +2443,9 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdMat", idMaterial.HasValue ? (object)idMaterial.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada.HasValue ? (object)idTemporada.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdMat", idMaterial.HasValue ? (object)idMaterial.Value : DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -2500,8 +2500,8 @@ namespace SOR.Repositories
                 cn.Open();
                 using (var cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                    cmd.Parameters.AddWithValue("@IdEq", idEquipo);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                    cmd.Parameters.Add(new SqlParameter("@IdEq", idEquipo));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -2522,7 +2522,7 @@ namespace SOR.Repositories
         }
 
         // =====================================================================
-        // HELPER PRIVADO: REGISTRO EN KÁRDEX
+        // HELPER PRIVADO: REGISTRO EN KÃRDEX
         // =====================================================================
 
         private void RegistrarMovimiento(SqlConnection cn, SqlTransaction tran, int idTemporada,
@@ -2536,17 +2536,17 @@ namespace SOR.Repositories
                 VALUES (@IdTemp, @Tipo, @IdMat, @Cant, @IdAO, @IdAD, @IdEqD, @IdIg, @IdDoc, @IdUser, @Just);";
             using (var cmd = new SqlCommand(sql, cn, tran))
             {
-                cmd.Parameters.AddWithValue("@IdTemp", idTemporada);
-                cmd.Parameters.AddWithValue("@Tipo", tipo);
-                cmd.Parameters.AddWithValue("@IdMat", idMaterial);
-                cmd.Parameters.AddWithValue("@Cant", cantidad);
-                cmd.Parameters.AddWithValue("@IdAO", idAlmacenOrigen.HasValue ? (object)idAlmacenOrigen.Value : DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdAD", idAlmacenDestino.HasValue ? (object)idAlmacenDestino.Value : DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdEqD", idEquipoDestino.HasValue ? (object)idEquipoDestino.Value : DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdIg", idIglesia.HasValue ? (object)idIglesia.Value : DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdDoc", idDocRef ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdUser", idUsuario);
-                cmd.Parameters.AddWithValue("@Just", justificacion ?? (object)DBNull.Value);
+                cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporada));
+                cmd.Parameters.Add(new SqlParameter("@Tipo", tipo));
+                cmd.Parameters.Add(new SqlParameter("@IdMat", idMaterial));
+                cmd.Parameters.Add(new SqlParameter("@Cant", cantidad));
+                cmd.Parameters.Add(new SqlParameter("@IdAO", idAlmacenOrigen.HasValue ? (object)idAlmacenOrigen.Value : DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdAD", idAlmacenDestino.HasValue ? (object)idAlmacenDestino.Value : DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdEqD", idEquipoDestino.HasValue ? (object)idEquipoDestino.Value : DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdIg", idIglesia.HasValue ? (object)idIglesia.Value : DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdDoc", idDocRef ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdUser", idUsuario));
+                cmd.Parameters.Add(new SqlParameter("@Just", justificacion ?? (object)DBNull.Value));
                 cmd.ExecuteNonQuery();
             }
         }
@@ -2581,7 +2581,7 @@ namespace SOR.Repositories
                     WHERE di.IdDespachoIglesia = @Id;";
                 using (var cmd = new SqlCommand(sqlHead, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idDespachoIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idDespachoIglesia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         if (dr.Read())
@@ -2642,11 +2642,11 @@ namespace SOR.Repositories
                       );";
                 using (var cmdSync = new SqlCommand(sqlSync, cn))
                 {
-                    cmdSync.Parameters.AddWithValue("@Id", idDespachoIglesia);
+                    cmdSync.Parameters.Add(new SqlParameter("@Id", idDespachoIglesia));
                     cmdSync.ExecuteNonQuery();
                 }
 
-                // Cargar materiales ordenados según flujo oficial
+                // Cargar materiales ordenados segÃºn flujo oficial
                 string sqlDet = @"
                     SELECT d.*, m.Codigo, m.NombreMaterial, m.UnidadEntrega
                     FROM dbo.DespachosIglesiaDetalle d
@@ -2662,7 +2662,7 @@ namespace SOR.Repositories
                         ELSE 7 END;";
                 using (var cmd = new SqlCommand(sqlDet, cn))
                 {
-                    cmd.Parameters.AddWithValue("@Id", idDespachoIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@Id", idDespachoIglesia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
@@ -2682,13 +2682,13 @@ namespace SOR.Repositories
                     }
                 }
 
-                // Cargar datos de Pastor y Líder
+                // Cargar datos de Pastor y LÃ­der
                 string sqlPersonas = @"
                     SELECT TipoPersona, CONCAT(Nombres,' ',Apellidos) AS NombreCompleto, DocumentoIdentidad, Celular
                     FROM dbo.PersonasIglesia WHERE IdIglesia=@IdIg AND TipoPersona IN ('Pastor','LiderMinisterial');";
                 using (var cmd = new SqlCommand(sqlPersonas, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdIg", item.IdIglesia);
+                    cmd.Parameters.Add(new SqlParameter("@IdIg", item.IdIglesia));
                     using (var dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())

@@ -1,4 +1,4 @@
-using SOR.Models;
+﻿using SOR.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Configuration;
@@ -12,7 +12,7 @@ namespace SOR.Controllers
 {
     public class AccesoController : Controller
     {
-        // Control de Sesión Única Activa por Usuario
+        // Control de SesiÃ³n Ãšnica Activa por Usuario
         public static readonly ConcurrentDictionary<int, string> SesionesActivas = new ConcurrentDictionary<int, string>();
 
         private static string ObtenerCadenaConexion()
@@ -29,22 +29,22 @@ namespace SOR.Controllers
             {
                 if (mensaje == "SesionExpirada")
                 {
-                    ViewData["Mensaje"] = "Su sesión ha expirado por inactividad (5 minutos). Por favor inicie sesión nuevamente.";
+                    ViewData["Mensaje"] = "Su sesiÃ³n ha expirado por inactividad (5 minutos). Por favor inicie sesiÃ³n nuevamente.";
                     ViewData["TipoAlert"] = "alert-warning";
                 }
                 else if (mensaje == "PermisosModificados")
                 {
-                    ViewData["Mensaje"] = "Tus permisos, rol o estado de cuenta fueron actualizados por un administrador. Por favor inicia sesión nuevamente.";
+                    ViewData["Mensaje"] = "Tus permisos, rol o estado de cuenta fueron actualizados por un administrador. Por favor inicia sesiÃ³n nuevamente.";
                     ViewData["TipoAlert"] = "alert-warning";
                 }
                 else if (mensaje == "SesionDuplicada")
                 {
-                    ViewData["Mensaje"] = "Se ha detectado un inicio de sesión en otra ventana o navegador. Por seguridad, solo se permite una sesión activa a la vez por usuario.";
+                    ViewData["Mensaje"] = "Se ha detectado un inicio de sesiÃ³n en otra ventana o navegador. Por seguridad, solo se permite una sesiÃ³n activa a la vez por usuario.";
                     ViewData["TipoAlert"] = "alert-danger";
                 }
                 else if (mensaje == "RegistroPendiente")
                 {
-                    ViewData["Mensaje"] = "Su solicitud de registro se envió a aprobación. Debe estar en espera de que un administrador la apruebe.";
+                    ViewData["Mensaje"] = "Su solicitud de registro se enviÃ³ a aprobaciÃ³n. Debe estar en espera de que un administrador la apruebe.";
                     ViewData["TipoAlert"] = "alert-info";
                 }
             }
@@ -63,14 +63,14 @@ namespace SOR.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Registrar(Usuario oUsuario, string website_trap, string form_time_token)
         {
-            // 1. Detección Anti-Bot: Campo Honeypot Trampa (debe llegar vacío)
+            // 1. DetecciÃ³n Anti-Bot: Campo Honeypot Trampa (debe llegar vacÃ­o)
             if (!string.IsNullOrEmpty(website_trap))
             {
-                // Silenciosamente simular éxito para no alertar al atacante
+                // Silenciosamente simular Ã©xito para no alertar al atacante
                 return RedirectToAction("Login", "Acceso", new { mensaje = "RegistroPendiente" });
             }
 
-            // 2. Detección Anti-Bot: Envío instantáneo inhumano (< 1.2 segundos)
+            // 2. DetecciÃ³n Anti-Bot: EnvÃ­o instantÃ¡neo inhumano (< 1.2 segundos)
             if (long.TryParse(form_time_token, out long ticksFormulario))
             {
                 var tiempoTranscurrido = DateTime.UtcNow - new DateTime(ticksFormulario, DateTimeKind.Utc);
@@ -81,19 +81,19 @@ namespace SOR.Controllers
                 }
             }
 
-            // 3. Validación obligatoria de contraseñas en el servidor
+            // 3. ValidaciÃ³n obligatoria de contraseÃ±as en el servidor
             if (string.IsNullOrWhiteSpace(oUsuario.Clave) || oUsuario.Clave != oUsuario.ConfirmarClave)
             {
-                ViewData["Mensaje"] = "Las contraseñas no coinciden o están vacías.";
+                ViewData["Mensaje"] = "Las contraseÃ±as no coinciden o estÃ¡n vacÃ­as.";
                 ViewData["TipoAlert"] = "alert-danger";
                 ViewBag.FormTimeToken = DateTime.UtcNow.Ticks.ToString();
                 return View();
             }
 
-            // 4. Validación de longitud mínima de contraseña
+            // 4. ValidaciÃ³n de longitud mÃ­nima de contraseÃ±a
             if (oUsuario.Clave.Length < 6)
             {
-                ViewData["Mensaje"] = "La contraseña debe contener al menos 6 caracteres.";
+                ViewData["Mensaje"] = "La contraseÃ±a debe contener al menos 6 caracteres.";
                 ViewData["TipoAlert"] = "alert-danger";
                 ViewBag.FormTimeToken = DateTime.UtcNow.Ticks.ToString();
                 return View();
@@ -128,7 +128,7 @@ namespace SOR.Controllers
             {
                 string sql = "SELECT IntentosFallidosLogin, FechaUltimoIntentoFallido, FechaBloqueo, Clave, IdEstado FROM dbo.Usuarios WHERE Correo = @Correo;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Correo", correo);
+                cmd.Parameters.Add(new SqlParameter("@Correo", correo));
 
                 cn.Open();
                 using (SqlDataReader dr = cmd.ExecuteReader())
@@ -151,10 +151,10 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.Usuarios SET IntentosFallidosLogin = @Intentos, FechaUltimoIntentoFallido = @UltimoIntento, FechaBloqueo = @Bloqueo WHERE Correo = @Correo;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Intentos", intentos);
-                cmd.Parameters.AddWithValue("@UltimoIntento", (object)ultimoIntento ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Bloqueo", (object)bloqueo ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Correo", correo);
+                cmd.Parameters.Add(new SqlParameter("@Intentos", intentos));
+                cmd.Parameters.Add(new SqlParameter("@UltimoIntento", (object)ultimoIntento ?? DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Bloqueo", (object)bloqueo ?? DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@Correo", correo));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
@@ -184,7 +184,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                ViewData["Mensaje"] = "Error de conexión BD: " + ex.Message + (ex.InnerException != null ? " | " + ex.InnerException.Message : "");
+                ViewData["Mensaje"] = "Error de conexiÃ³n BD: " + ex.Message + (ex.InnerException != null ? " | " + ex.InnerException.Message : "");
                 ViewData["TipoAlert"] = "alert-danger";
                 return View();
             }
@@ -192,37 +192,37 @@ namespace SOR.Controllers
             // Si el usuario no existe en la base de datos
             if (claveGuardada == null)
             {
-                ViewData["Mensaje"] = "Usuario o contraseña incorrectos.";
+                ViewData["Mensaje"] = "Usuario o contraseÃ±a incorrectos.";
                 return View();
             }
 
-            // Si el usuario está en estado Aprobado Restablecimiento (8), redirigir directamente
+            // Si el usuario estÃ¡ en estado Aprobado Restablecimiento (8), redirigir directamente
             if (idEstado == 8)
             {
                 TempData["CorreoValido"] = oUsuario.Correo;
                 return RedirectToAction("CambiarClave");
             }
 
-            // Validar contraseña para el resto de los estados
+            // Validar contraseÃ±a para el resto de los estados
             if (string.IsNullOrWhiteSpace(oUsuario.Clave))
             {
-                ViewData["Mensaje"] = "Debe ingresar la contraseña.";
+                ViewData["Mensaje"] = "Debe ingresar la contraseÃ±a.";
                 return View();
             }
 
-            // Validar si la cuenta está bloqueada por 1 hora
+            // Validar si la cuenta estÃ¡ bloqueada por 1 hora
             if (bloqueo.HasValue)
             {
                 double minutosBloqueados = (DateTime.Now - bloqueo.Value).TotalMinutes;
                 if (minutosBloqueados < 60)
                 {
                     int minutosRestantes = 60 - (int)minutosBloqueados;
-                    ViewData["Mensaje"] = $"Su cuenta está bloqueada temporalmente debido a múltiples intentos fallidos. Intente nuevamente en {minutosRestantes} minutos.";
+                    ViewData["Mensaje"] = $"Su cuenta estÃ¡ bloqueada temporalmente debido a mÃºltiples intentos fallidos. Intente nuevamente en {minutosRestantes} minutos.";
                     return View();
                 }
                 else
                 {
-                    // Ha pasado más de 1 hora, desbloquear en base de datos
+                    // Ha pasado mÃ¡s de 1 hora, desbloquear en base de datos
                     intentos = 0;
                     ultimoIntento = null;
                     bloqueo = null;
@@ -230,10 +230,10 @@ namespace SOR.Controllers
                 }
             }
 
-            // Validar contraseña
+            // Validar contraseÃ±a
             if (Helpers.Criptografia.VerificarClave(oUsuario.Clave, claveGuardada))
             {
-                // Limpiar intentos fallidos al iniciar sesión con éxito
+                // Limpiar intentos fallidos al iniciar sesiÃ³n con Ã©xito
                 ActualizarDatosSeguridad(oUsuario.Correo, 0, null, null);
 
                 Usuario usuarioValidador = _usuarioService.ValidarUsuario(oUsuario.Correo, oUsuario.Clave);
@@ -242,12 +242,12 @@ namespace SOR.Controllers
                 {
                     if (usuarioValidador.IdEstado == 1) // PendienteAprobacionCorreo
                     {
-                        ViewData["Mensaje"] = "Su solicitud de registro fue enviada y está pendiente de aprobación por un administrador.";
+                        ViewData["Mensaje"] = "Su solicitud de registro fue enviada y estÃ¡ pendiente de aprobaciÃ³n por un administrador.";
                         return View();
                     }
                     else if (usuarioValidador.IdEstado == 5) // Rechazado
                     {
-                        ViewData["Mensaje"] = "Su cuenta ha sido rechazada por la administración.";
+                        ViewData["Mensaje"] = "Su cuenta ha sido rechazada por la administraciÃ³n.";
                         return View();
                     }
                     else if (usuarioValidador.IdEstado == 6) // Suspendido
@@ -257,11 +257,11 @@ namespace SOR.Controllers
                     }
                     else if (usuarioValidador.IdEstado == 7) // Pendiente Restablecimiento
                     {
-                        ViewData["Mensaje"] = "Su solicitud de restablecimiento de contraseña fue enviada y está pendiente de aprobación por el administrador. Por favor espere.";
+                        ViewData["Mensaje"] = "Su solicitud de restablecimiento de contraseÃ±a fue enviada y estÃ¡ pendiente de aprobaciÃ³n por el administrador. Por favor espere.";
                         return View();
                     }
 
-                    // Generar token único de sesión para garantizar sesión única activa
+                    // Generar token Ãºnico de sesiÃ³n para garantizar sesiÃ³n Ãºnica activa
                     string tokenSesion = Guid.NewGuid().ToString();
                     Session["SesionToken"] = tokenSesion;
                     SesionesActivas[usuarioValidador.IdUsuario] = tokenSesion;
@@ -274,7 +274,7 @@ namespace SOR.Controllers
             }
             else
             {
-                // Contraseña incorrecta, manejar intentos fallidos
+                // ContraseÃ±a incorrecta, manejar intentos fallidos
                 int nuevosIntentos = 1;
                 DateTime ahora = DateTime.Now;
 
@@ -288,23 +288,23 @@ namespace SOR.Controllers
                     // Bloquear por 1 hora
                     ActualizarDatosSeguridad(oUsuario.Correo, nuevosIntentos, ahora, ahora);
                     
-                    // Registrar alerta de seguridad en auditoría
+                    // Registrar alerta de seguridad en auditorÃ­a
                     SOR.Helpers.AuditoriaHelper.Registrar(
                         null,
                         oUsuario.Correo,
                         "BLOQUEO_CUENTA_FUERZA_BRUTA",
                         "ACCESO_SEGURIDAD",
                         null,
-                        $"La cuenta '{oUsuario.Correo}' fue bloqueada temporalmente por 1 hora tras registrar múltiples intentos fallidos de inicio de sesión."
+                        $"La cuenta '{oUsuario.Correo}' fue bloqueada temporalmente por 1 hora tras registrar mÃºltiples intentos fallidos de inicio de sesiÃ³n."
                     );
 
-                    ViewData["Mensaje"] = "Su cuenta ha sido bloqueada por 1 hora debido a 3 intentos fallidos de inicio de sesión.";
+                    ViewData["Mensaje"] = "Su cuenta ha sido bloqueada por 1 hora debido a 3 intentos fallidos de inicio de sesiÃ³n.";
                 }
                 else
                 {
                     ActualizarDatosSeguridad(oUsuario.Correo, nuevosIntentos, ahora, null);
                     int restantes = 3 - nuevosIntentos;
-                    ViewData["Mensaje"] = $"Usuario o contraseña incorrectos. Le quedan {restantes} intentos antes de bloquear la cuenta.";
+                    ViewData["Mensaje"] = $"Usuario o contraseÃ±a incorrectos. Le quedan {restantes} intentos antes de bloquear la cuenta.";
                 }
             }
 
@@ -323,7 +323,7 @@ namespace SOR.Controllers
         {
             if (string.IsNullOrWhiteSpace(correo))
             {
-                ViewData["Mensaje"] = "Debe ingresar su correo electrónico.";
+                ViewData["Mensaje"] = "Debe ingresar su correo electrÃ³nico.";
                 return View();
             }
 
@@ -338,7 +338,7 @@ namespace SOR.Controllers
             // Si el correo no existe
             if (claveGuardada == null)
             {
-                ViewData["Mensaje"] = "El correo electrónico no se encuentra registrado en el sistema.";
+                ViewData["Mensaje"] = "El correo electrÃ³nico no se encuentra registrado en el sistema.";
                 return View();
             }
 
@@ -352,13 +352,13 @@ namespace SOR.Controllers
                         ExpiracionTokenRecuperacion = NULL 
                     WHERE Correo = @Correo;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Correo", correo);
+                cmd.Parameters.Add(new SqlParameter("@Correo", correo));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            TempData["MensajeExito"] = "Tu solicitud de restablecimiento ha sido enviada al administrador. Una vez aprobada, podrás ingresar para colocar tu nueva contraseña.";
+            TempData["MensajeExito"] = "Tu solicitud de restablecimiento ha sido enviada al administrador. Una vez aprobada, podrÃ¡s ingresar para colocar tu nueva contraseÃ±a.";
             return RedirectToAction("Login");
         }
 
@@ -388,21 +388,21 @@ namespace SOR.Controllers
 
             if (string.IsNullOrWhiteSpace(nuevaClave) || string.IsNullOrWhiteSpace(confirmarClave))
             {
-                ViewData["Mensaje"] = "Todos los campos de contraseña son obligatorios.";
+                ViewData["Mensaje"] = "Todos los campos de contraseÃ±a son obligatorios.";
                 ViewBag.Correo = correo;
                 return View();
             }
 
             if (nuevaClave != confirmarClave)
             {
-                ViewData["Mensaje"] = "Las contraseñas no coinciden.";
+                ViewData["Mensaje"] = "Las contraseÃ±as no coinciden.";
                 ViewBag.Correo = correo;
                 return View();
             }
 
             if (nuevaClave.Length < 6)
             {
-                ViewData["Mensaje"] = "La contraseña debe tener al menos 6 caracteres.";
+                ViewData["Mensaje"] = "La contraseÃ±a debe tener al menos 6 caracteres.";
                 ViewBag.Correo = correo;
                 return View();
             }
@@ -412,22 +412,22 @@ namespace SOR.Controllers
             {
                 string sqlCheck = "SELECT IdEstado FROM dbo.Usuarios WHERE Correo = @Correo;";
                 SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn);
-                cmdCheck.Parameters.AddWithValue("@Correo", correo);
+                cmdCheck.Parameters.Add(new SqlParameter("@Correo", correo));
 
                 cn.Open();
                 object stateObj = cmdCheck.ExecuteScalar();
                 if (stateObj == null || Convert.ToInt32(stateObj) != 8)
                 {
-                    ViewData["Mensaje"] = "Esta solicitud de cambio de contraseña ya no es válida o no ha sido aprobada.";
+                    ViewData["Mensaje"] = "Esta solicitud de cambio de contraseÃ±a ya no es vÃ¡lida o no ha sido aprobada.";
                     return View();
                 }
             }
 
-            // Hashear nueva contraseña con Salt único
+            // Hashear nueva contraseÃ±a con Salt Ãºnico
             string nuevaClaveFormateada = Helpers.Criptografia.CrearClaveFormateada(nuevaClave);
 
             // Guardar nueva clave, restablecer cuenta a Activo (4), limpiar intentos fallidos
-            // y auto-restaurar la asignación de equipo si fue desactivada durante el proceso
+            // y auto-restaurar la asignaciÃ³n de equipo si fue desactivada durante el proceso
             using (SqlConnection cn = new SqlConnection(ObtenerCadenaConexion()))
             {
                 cn.Open();
@@ -448,13 +448,13 @@ namespace SOR.Controllers
                             WHERE Correo = @Correo;";
                         using (SqlCommand cmd = new SqlCommand(sqlUpdate, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@Clave", nuevaClaveFormateada);
-                            cmd.Parameters.AddWithValue("@Correo", correo);
+                            cmd.Parameters.Add(new SqlParameter("@Clave", nuevaClaveFormateada));
+                            cmd.Parameters.Add(new SqlParameter("@Correo", correo));
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 2. Auto-restaurar asignación de equipo si el perfil tiene equipo/posición
-                        //    pero no existe asignación activa en AsignacionesEquipo
+                        // 2. Auto-restaurar asignaciÃ³n de equipo si el perfil tiene equipo/posiciÃ³n
+                        //    pero no existe asignaciÃ³n activa en AsignacionesEquipo
                         string sqlRestoreCheck = @"
                             SELECT u.IdUsuario, p.IdEquipo, p.IdPosicion
                             FROM dbo.Usuarios u
@@ -468,7 +468,7 @@ namespace SOR.Controllers
                               );";
                         using (SqlCommand cmdRestore = new SqlCommand(sqlRestoreCheck, cn, tran))
                         {
-                            cmdRestore.Parameters.AddWithValue("@Correo", correo);
+                            cmdRestore.Parameters.Add(new SqlParameter("@Correo", correo));
                             using (SqlDataReader dr = cmdRestore.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -478,13 +478,13 @@ namespace SOR.Controllers
                                     int idPosicion = Convert.ToInt32(dr["IdPosicion"]);
                                     dr.Close();
 
-                                    // Insertar nueva asignación activa
+                                    // Insertar nueva asignaciÃ³n activa
                                     string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
                                     using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                                     {
-                                        cmdIns.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                                        cmdIns.Parameters.AddWithValue("@IdEquipo", idEquipo);
-                                        cmdIns.Parameters.AddWithValue("@IdPosicion", idPosicion);
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo));
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion));
                                         cmdIns.ExecuteNonQuery();
                                     }
                                 }
@@ -496,14 +496,14 @@ namespace SOR.Controllers
                     catch (Exception)
                     {
                         tran.Rollback();
-                        ViewData["Mensaje"] = "Ocurrió un error al restablecer la contraseña. Por favor intente nuevamente.";
+                        ViewData["Mensaje"] = "OcurriÃ³ un error al restablecer la contraseÃ±a. Por favor intente nuevamente.";
                         ViewBag.Correo = correo;
                         return View();
                     }
                 }
             }
 
-            TempData["MensajeExito"] = "Contraseña restablecida con éxito. Inicie sesión ahora con su nueva clave.";
+            TempData["MensajeExito"] = "ContraseÃ±a restablecida con Ã©xito. Inicie sesiÃ³n ahora con su nueva clave.";
             return RedirectToAction("Login");
         }
 

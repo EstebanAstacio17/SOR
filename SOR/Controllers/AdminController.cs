@@ -1,4 +1,4 @@
-using SOR.Helpers;
+﻿using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -35,8 +35,8 @@ namespace SOR.Controllers
             {
                 cn.Open();
 
-                // Saneamiento preventivo: inactivar registros de asignación cuyos usuarios estén inactivos o suspendidos
-                // Estados válidos que conservan su asignación: 3 (Perfil Pendiente), 4 (Activo), 7 (Pend. Restablecimiento), 8 (Apro. Restablecimiento)
+                // Saneamiento preventivo: inactivar registros de asignaciÃ³n cuyos usuarios estÃ©n inactivos o suspendidos
+                // Estados vÃ¡lidos que conservan su asignaciÃ³n: 3 (Perfil Pendiente), 4 (Activo), 7 (Pend. Restablecimiento), 8 (Apro. Restablecimiento)
                 string sqlSaneamiento = @"
                     UPDATE a
                     SET a.Activo = 0
@@ -91,7 +91,7 @@ namespace SOR.Controllers
                                 Sector = dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
                                 Ciudad = dr["Ciudad"] != DBNull.Value ? dr["Ciudad"].ToString() : "",
                                 Provincia = dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
-                                Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
+                                Pais = dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "RepÃºblica Dominicana",
                                 Nacionalidad = dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
                                 Talla = dr["Talla"] != DBNull.Value ? dr["Talla"].ToString() : "",
                                 NumeroDocumento = dr["NumeroDocumento"] != DBNull.Value ? dr["NumeroDocumento"].ToString() : "",
@@ -165,7 +165,7 @@ namespace SOR.Controllers
 
                     using (SqlCommand cmd = new SqlCommand(sql, cn))
                     {
-                        cmd.Parameters.AddWithValue("@IdUsuario", id);
+                        cmd.Parameters.Add(new SqlParameter("@IdUsuario", id));
                         using (SqlDataReader dr = cmd.ExecuteReader())
                         {
                             if (dr.Read())
@@ -205,7 +205,7 @@ namespace SOR.Controllers
                                         Sector = hasPerfil && dr["Sector"] != DBNull.Value ? dr["Sector"].ToString() : "",
                                         Ciudad = hasPerfil && dr["Ciudad"] != DBNull.Value ? dr["Ciudad"].ToString() : "",
                                         Provincia = hasPerfil && dr["Provincia"] != DBNull.Value ? dr["Provincia"].ToString() : "",
-                                        Pais = hasPerfil && dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "República Dominicana",
+                                        Pais = hasPerfil && dr["Pais"] != DBNull.Value ? dr["Pais"].ToString() : "RepÃºblica Dominicana",
                                         Nacionalidad = hasPerfil && dr["Nacionalidad"] != DBNull.Value ? dr["Nacionalidad"].ToString() : "Dominicana",
                                         Talla = hasPerfil && dr["Talla"] != DBNull.Value ? dr["Talla"].ToString() : "",
                                         NumeroDocumento = hasPerfil && dr["NumeroDocumento"] != DBNull.Value ? dr["NumeroDocumento"].ToString() : "",
@@ -253,7 +253,7 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                return Content($"<div style='font-family:sans-serif;padding:20px;color:#721c24;background-color:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;'><h4>Error al generar el perfil de impresión</h4><p>{ex.Message}</p></div>", "text/html");
+                return Content($"<div style='font-family:sans-serif;padding:20px;color:#721c24;background-color:#f8d7da;border:1px solid #f5c6cb;border-radius:4px;'><h4>Error al generar el perfil de impresiÃ³n</h4><p>{ex.Message}</p></div>", "text/html");
             }
         }
 
@@ -281,7 +281,7 @@ namespace SOR.Controllers
                     string sql = "SELECT DocumentoAdjuntoRuta, PasaporteAdjuntoRuta, FotoRuta FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                     using (SqlCommand cmd = new SqlCommand(sql, cn))
                     {
-                        cmd.Parameters.AddWithValue("@IdUsuario", id);
+                        cmd.Parameters.Add(new SqlParameter("@IdUsuario", id));
                         using (SqlDataReader dr = cmd.ExecuteReader())
                         {
                             if (dr.Read())
@@ -306,15 +306,15 @@ namespace SOR.Controllers
 
                 if (string.IsNullOrWhiteSpace(rutaRelativa))
                 {
-                    return Content("<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;'><h3>Documento no registrado</h3><p style='color:#666;'>El usuario no tiene ningún archivo adjunto registrado en esta casilla.</p></div>", "text/html");
+                    return Content("<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;'><h3>Documento no registrado</h3><p style='color:#666;'>El usuario no tiene ningÃºn archivo adjunto registrado en esta casilla.</p></div>", "text/html");
                 }
 
                 string nombreArchivo = System.IO.Path.GetFileName(rutaRelativa);
                 return Content($"<div style='font-family:Segoe UI,sans-serif;padding:40px;text-align:center;max-width:600px;margin:40px auto;border:1px solid #dee2e6;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);background:#fff;'>" +
-                               $"<div style='font-size:48px;margin-bottom:12px;'>📄⚠️</div>" +
+                               $"<div style='font-size:48px;margin-bottom:12px;'>ðŸ“„âš ï¸</div>" +
                                $"<h3 style='color:#c0392b;margin-bottom:8px;'>Documento no disponible</h3>" +
-                               $"<p style='color:#444;font-size:14px;line-height:1.5;'>Este documento (<strong>{nombreArchivo}</strong>) fue registrado con el esquema anterior antes de la activación del almacenamiento persistente en la base de datos.</p>" +
-                               $"<p style='color:#2c3e50;font-size:13px;background:#eef6ff;padding:12px;border-radius:8px;border-left:4px solid #0d6efd;'><strong>Almacenamiento permanente activado:</strong> A partir de este momento, todos los documentos subidos se almacenan de forma permanente e indestructible dentro de la base de datos Azure SQL. Por favor solicite al coordinador volver a adjuntar su archivo en su perfil una única vez para que quede almacenado de por vida.</p>" +
+                               $"<p style='color:#444;font-size:14px;line-height:1.5;'>Este documento (<strong>{nombreArchivo}</strong>) fue registrado con el esquema anterior antes de la activaciÃ³n del almacenamiento persistente en la base de datos.</p>" +
+                               $"<p style='color:#2c3e50;font-size:13px;background:#eef6ff;padding:12px;border-radius:8px;border-left:4px solid #0d6efd;'><strong>Almacenamiento permanente activado:</strong> A partir de este momento, todos los documentos subidos se almacenan de forma permanente e indestructible dentro de la base de datos Azure SQL. Por favor solicite al coordinador volver a adjuntar su archivo en su perfil una Ãºnica vez para que quede almacenado de por vida.</p>" +
                                $"<button onclick='window.close()' style='padding:10px 24px;background:#0d6efd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;margin-top:10px;'>Cerrar Ventana</button>" +
                                $"</div>", "text/html");
             }
@@ -325,7 +325,7 @@ namespace SOR.Controllers
         }
 
         // ============================================================================
-        // MÉTODOS AUXILIARES DE SEGURIDAD Y PROTECCIÓN DE SUPERADMIN
+        // MÃ‰TODOS AUXILIARES DE SEGURIDAD Y PROTECCIÃ“N DE SUPERADMIN
         // ============================================================================
 
         private bool PuedeModificarUsuarioObjetivo(Usuario usuarioActual, int idUsuarioObjetivo, out string mensajeError)
@@ -333,7 +333,7 @@ namespace SOR.Controllers
             mensajeError = null;
             if (usuarioActual == null)
             {
-                mensajeError = "No hay sesión de usuario activa.";
+                mensajeError = "No hay sesiÃ³n de usuario activa.";
                 return false;
             }
 
@@ -351,7 +351,7 @@ namespace SOR.Controllers
                 string sql = "SELECT IdRolSeguridad, Correo FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;";
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuarioObjetivo);
+                    cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuarioObjetivo));
                     cn.Open();
                     using (SqlDataReader dr = cmd.ExecuteReader())
                     {
@@ -367,14 +367,14 @@ namespace SOR.Controllers
             // Regla 1: Si el usuario objetivo es Superadmin (1), solo otro Superadmin puede modificarlo
             if (rolObjetivo == 1)
             {
-                mensajeError = $"Acceso denegado: El usuario Superadmin ({correoObjetivo}) únicamente puede ser modificado o administrado por otro Superadmin.";
+                mensajeError = $"Acceso denegado: El usuario Superadmin ({correoObjetivo}) Ãºnicamente puede ser modificado o administrado por otro Superadmin.";
                 SOR.Helpers.AuditoriaHelper.Registrar(
                     usuarioActual.IdUsuario,
                     usuarioActual.Correo,
                     "INTENTO_NO_AUTORIZADO_SUPERADMIN",
                     "ADMINISTRACION_USUARIOS",
                     idUsuarioObjetivo.ToString(),
-                    $"El usuario '{usuarioActual.Correo}' (Rol: {usuarioActual.IdRolSeguridad}) intentó realizar una operación administrativa no autorizada sobre el Superadmin #{idUsuarioObjetivo} ({correoObjetivo})."
+                    $"El usuario '{usuarioActual.Correo}' (Rol: {usuarioActual.IdRolSeguridad}) intentÃ³ realizar una operaciÃ³n administrativa no autorizada sobre el Superadmin #{idUsuarioObjetivo} ({correoObjetivo})."
                 );
                 return false;
             }
@@ -396,7 +396,7 @@ namespace SOR.Controllers
                     WHERE u.IdUsuario = @IdUsuario;";
                 using (SqlCommand cmd = new SqlCommand(sql, cn))
                 {
-                    cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                    cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                     object val = cmd.ExecuteScalar();
                     return val != null && Convert.ToInt32(val) == 1;
                 }
@@ -424,14 +424,14 @@ namespace SOR.Controllers
                 // Actualizar estado a CorreoAprobado (2) y corregir correo si hubo errata
                 string sql = "UPDATE dbo.Usuarios SET IdEstado = 2, Correo = ISNULL(NULLIF(@Correo, ''), Correo) WHERE IdUsuario = @IdUsuario;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Correo", correoCorregido ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                cmd.Parameters.Add(new SqlParameter("@Correo", correoCorregido ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
 
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            // Notificación por correo al usuario informándole la aprobación y botón para completar perfil
+            // NotificaciÃ³n por correo al usuario informÃ¡ndole la aprobaciÃ³n y botÃ³n para completar perfil
             try
             {
                 var repoU = new Repositories.UsuarioRepository();
@@ -446,10 +446,10 @@ namespace SOR.Controllers
             }
             catch (Exception ex)
             {
-                TempData["MensajeError"] = "El correo no se pudo enviar: " + ex.Message + " | Inner: " + ex.InnerException?.Message;
+                TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador." + " | Inner: " + ex.InnerException?.Message;
             }
 
-            TempData["MensajeExito"] = "Correo aprobado con éxito. Se notificó al usuario por correo y se habilitó el enlace para completar el Perfil de Coordinador.";
+            TempData["MensajeExito"] = "Correo aprobado con Ã©xito. Se notificÃ³ al usuario por correo y se habilitÃ³ el enlace para completar el Perfil de Coordinador.";
             return RedirectToAction("Usuarios");
         }
 
@@ -471,7 +471,7 @@ namespace SOR.Controllers
 
             if (EsUnicoSuperadminActivo(idUsuario))
             {
-                TempData["MensajeError"] = "Operación denegada: No se puede rechazar ni suspender al único Superadmin activo del sistema.";
+                TempData["MensajeError"] = "OperaciÃ³n denegada: No se puede rechazar ni suspender al Ãºnico Superadmin activo del sistema.";
                 return RedirectToAction("Usuarios");
             }
 
@@ -485,14 +485,14 @@ namespace SOR.Controllers
                         string sql = "UPDATE dbo.Usuarios SET IdEstado = 5 WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmd.ExecuteNonQuery();
                         }
 
                         string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
                         {
-                            cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdDis.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmdDis.ExecuteNonQuery();
                         }
 
@@ -504,7 +504,7 @@ namespace SOR.Controllers
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al rechazar usuario: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                         return RedirectToAction("Usuarios");
                     }
                 }
@@ -543,7 +543,7 @@ namespace SOR.Controllers
                         string sqlGetPerfil = "SELECT IdEquipo, IdPosicion FROM dbo.PerfilesCoordinador WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdGet = new SqlCommand(sqlGetPerfil, cn, tran))
                         {
-                            cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdGet.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             using (SqlDataReader dr = cmdGet.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -554,7 +554,7 @@ namespace SOR.Controllers
                             }
                         }
 
-                        // Verificar unicidad de posición si fue seleccionada
+                        // Verificar unicidad de posiciÃ³n si fue seleccionada
                         if (idEquipo.HasValue && idPosicion.HasValue)
                         {
                             string sqlCheck = @"
@@ -564,15 +564,15 @@ namespace SOR.Controllers
                                 WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
                             using (SqlCommand cmdCheck = new SqlCommand(sqlCheck, cn, tran))
                             {
-                                cmdCheck.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdCheck.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                                cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdCheck.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdCheck.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
+                                cmdCheck.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 int ocupado = Convert.ToInt32(cmdCheck.ExecuteScalar());
 
                                 if (ocupado > 0)
                                 {
                                     tran.Rollback();
-                                    TempData["MensajeError"] = "La posición seleccionada ya está ocupada por otro usuario activo en ese equipo.";
+                                    TempData["MensajeError"] = "La posiciÃ³n seleccionada ya estÃ¡ ocupada por otro usuario activo en ese equipo.";
                                     return RedirectToAction("Usuarios");
                                 }
                             }
@@ -581,11 +581,11 @@ namespace SOR.Controllers
                             string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
                             using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
                             {
-                                cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdDis.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 cmdDis.ExecuteNonQuery();
                             }
 
-                            // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
+                            // Desactivar preventivamente asignaciones activas de esta posiciÃ³n si el dueÃ±o anterior estÃ¡ inactivo
                             string sqlDisableInactive = @"
                                 UPDATE a
                                 SET a.Activo = 0
@@ -594,17 +594,17 @@ namespace SOR.Controllers
                                 WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
                             using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
                             {
-                                cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdDisInactive.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdDisInactive.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
                                 cmdDisInactive.ExecuteNonQuery();
                             }
 
                             string sqlInsAsig = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
                             using (SqlCommand cmdIns = new SqlCommand(sqlInsAsig, cn, tran))
                             {
-                                cmdIns.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                                cmdIns.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdIns.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdIns.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdIns.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
                                 cmdIns.ExecuteNonQuery();
                             }
                         }
@@ -613,7 +613,7 @@ namespace SOR.Controllers
                         string sqlUpdateUser = "UPDATE dbo.Usuarios SET IdEstado = 4 WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdUpd = new SqlCommand(sqlUpdateUser, cn, tran))
                         {
-                            cmdUpd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdUpd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmdUpd.ExecuteNonQuery();
                         }
 
@@ -642,15 +642,15 @@ namespace SOR.Controllers
                         }
                         catch (Exception ex)
                         {
-                            TempData["MensajeError"] = "El perfil fue aprobado pero el correo no se pudo enviar: " + ex.Message + " | Inner: " + ex.InnerException?.Message;
+                            TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador." + " | Inner: " + ex.InnerException?.Message;
                         }
 
-                        TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario fue notificado por correo y está plenamente activo.";
+                        TempData["MensajeExito"] = "Perfil de Coordinador aprobado con Ã©xito. El usuario fue notificado por correo y estÃ¡ plenamente activo.";
                     }
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al aprobar perfil: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -678,7 +678,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Usuarios");
             }
 
-            // Prevención de Escalamiento de Privilegios: Solo Superadmin (1) puede asignar o quitar roles de Admin / SuperAdmin
+            // PrevenciÃ³n de Escalamiento de Privilegios: Solo Superadmin (1) puede asignar o quitar roles de Admin / SuperAdmin
             if (idRolSeguridad != 3 && usuarioActual.IdRolSeguridad != 1)
             {
                 TempData["MensajeError"] = "Acceso denegado: Solo un Superadmin puede asignar roles de Administrador o Superadmin.";
@@ -701,7 +701,7 @@ namespace SOR.Controllers
                         string correoUsuario = "";
                         using (SqlCommand cmdGet = new SqlCommand("SELECT IdRolSeguridad, IdEstado, Correo FROM dbo.Usuarios WHERE IdUsuario = @IdUsuario;", cn, tran))
                         {
-                            cmdGet.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdGet.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             using (SqlDataReader dr = cmdGet.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -719,39 +719,39 @@ namespace SOR.Controllers
                             }
                         }
 
-                        // Regla de Prevención de Orfandad: Si el usuario es el único Superadmin activo, no permitir quitarle el rol ni suspenderlo
+                        // Regla de PrevenciÃ³n de Orfandad: Si el usuario es el Ãºnico Superadmin activo, no permitir quitarle el rol ni suspenderlo
                         if (rolAnterior == 1 && estadoAnterior == 4 && (idRolSeguridad != 1 || idEstado != 4))
                         {
                             int otrosSuperadminsActivos = 0;
                             using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
                             {
-                                cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdCheck.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 otrosSuperadminsActivos = Convert.ToInt32(cmdCheck.ExecuteScalar());
                             }
 
                             if (otrosSuperadminsActivos == 0)
                             {
                                 tran.Rollback();
-                                TempData["MensajeError"] = "Operación denegada: No se puede revocar el rol ni suspender al único Superadmin activo del sistema. La plataforma requiere obligatoriamente un Superadmin activo. Para cambiar de titular, utilice la opción de Reemplazo / Transferencia de Superadmin.";
+                                TempData["MensajeError"] = "OperaciÃ³n denegada: No se puede revocar el rol ni suspender al Ãºnico Superadmin activo del sistema. La plataforma requiere obligatoriamente un Superadmin activo. Para cambiar de titular, utilice la opciÃ³n de Reemplazo / Transferencia de Superadmin.";
                                 return RedirectToAction("Usuarios");
                             }
                         }
 
-                        // Regla 2: Máximo 1 Superadmin activo simultáneamente
+                        // Regla 2: MÃ¡ximo 1 Superadmin activo simultÃ¡neamente
                         // Si se intenta activar un Superadmin cuando ya existe uno activo diferente
                         if (idRolSeguridad == 1 && idEstado == 4 && !(rolAnterior == 1 && estadoAnterior == 4))
                         {
                             int superadminsActivosActuales = 0;
                             using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(1) FROM dbo.Usuarios WHERE IdRolSeguridad = 1 AND IdEstado = 4 AND IdUsuario <> @IdUsuario;", cn, tran))
                             {
-                                cmdCheck.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdCheck.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 superadminsActivosActuales = Convert.ToInt32(cmdCheck.ExecuteScalar());
                             }
 
                             if (superadminsActivosActuales > 0)
                             {
                                 tran.Rollback();
-                                TempData["MensajeError"] = "Operación denegada: Ya existe un Superadmin activo en la plataforma. Debe transferir o reemplazar al Superadmin actual antes de activar uno nuevo.";
+                                TempData["MensajeError"] = "OperaciÃ³n denegada: Ya existe un Superadmin activo en la plataforma. Debe transferir o reemplazar al Superadmin actual antes de activar uno nuevo.";
                                 return RedirectToAction("Usuarios");
                             }
                         }
@@ -760,9 +760,9 @@ namespace SOR.Controllers
                         string sqlUser = "UPDATE dbo.Usuarios SET IdRolSeguridad = @IdRolSeguridad, IdEstado = @IdEstado WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdU = new SqlCommand(sqlUser, cn, tran))
                         {
-                            cmdU.Parameters.AddWithValue("@IdRolSeguridad", idRolSeguridad);
-                            cmdU.Parameters.AddWithValue("@IdEstado", idEstado);
-                            cmdU.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdU.Parameters.Add(new SqlParameter("@IdRolSeguridad", idRolSeguridad));
+                            cmdU.Parameters.Add(new SqlParameter("@IdEstado", idEstado));
+                            cmdU.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmdU.ExecuteNonQuery();
                         }
 
@@ -772,12 +772,12 @@ namespace SOR.Controllers
                             string sqlDisable = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
                             using (SqlCommand cmdDis = new SqlCommand(sqlDisable, cn, tran))
                             {
-                                cmdDis.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdDis.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 cmdDis.ExecuteNonQuery();
                             }
                         }
 
-                        // 2. Si se especificó equipo y posición, validar y actualizar
+                        // 2. Si se especificÃ³ equipo y posiciÃ³n, validar y actualizar
                         if (idEquipo.HasValue && idPosicion.HasValue)
                         {
                             string sqlCheck = @"
@@ -787,15 +787,15 @@ namespace SOR.Controllers
                                 WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado IN (3, 4, 7, 8) AND a.IdUsuario <> @IdUsuario;";
                             using (SqlCommand cmdC = new SqlCommand(sqlCheck, cn, tran))
                             {
-                                cmdC.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdC.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                                cmdC.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdC.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdC.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
+                                cmdC.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 int cnt = Convert.ToInt32(cmdC.ExecuteScalar());
 
                                 if (cnt > 0)
                                 {
                                     tran.Rollback();
-                                    TempData["MensajeError"] = "La posición seleccionada ya está ocupada en ese equipo.";
+                                    TempData["MensajeError"] = "La posiciÃ³n seleccionada ya estÃ¡ ocupada en ese equipo.";
                                     return RedirectToAction("Usuarios");
                                 }
                             }
@@ -804,21 +804,21 @@ namespace SOR.Controllers
                             string sqlPerf = "UPDATE dbo.PerfilesCoordinador SET IdEquipo = @IdEquipo, IdPosicion = @IdPosicion WHERE IdUsuario = @IdUsuario;";
                             using (SqlCommand cmdP = new SqlCommand(sqlPerf, cn, tran))
                             {
-                                cmdP.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdP.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
-                                cmdP.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdP.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdP.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
+                                cmdP.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 cmdP.ExecuteNonQuery();
                             }
 
-                            // Actualizar asignación activa
+                            // Actualizar asignaciÃ³n activa
                             string sqlDis = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario;";
                             using (SqlCommand cmdD = new SqlCommand(sqlDis, cn, tran))
                             {
-                                cmdD.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                                cmdD.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                                 cmdD.ExecuteNonQuery();
                             }
 
-                            // Desactivar preventivamente asignaciones activas de esta posición si el dueño anterior está inactivo
+                            // Desactivar preventivamente asignaciones activas de esta posiciÃ³n si el dueÃ±o anterior estÃ¡ inactivo
                             string sqlDisableInactive = @"
                                 UPDATE a
                                 SET a.Activo = 0
@@ -827,30 +827,30 @@ namespace SOR.Controllers
                                 WHERE a.IdEquipo = @IdEquipo AND a.IdPosicion = @IdPosicion AND a.Activo = 1 AND u.IdEstado NOT IN (3, 4, 7, 8);";
                             using (SqlCommand cmdDisInactive = new SqlCommand(sqlDisableInactive, cn, tran))
                             {
-                                cmdDisInactive.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdDisInactive.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdDisInactive.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdDisInactive.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
                                 cmdDisInactive.ExecuteNonQuery();
                             }
 
                             string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
                             using (SqlCommand cmdI = new SqlCommand(sqlIns, cn, tran))
                             {
-                                cmdI.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                                cmdI.Parameters.AddWithValue("@IdEquipo", idEquipo.Value);
-                                cmdI.Parameters.AddWithValue("@IdPosicion", idPosicion.Value);
+                                cmdI.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+                                cmdI.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.Value));
+                                cmdI.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion.Value));
                                 cmdI.ExecuteNonQuery();
                             }
                         }
 
-                        // 3. Registrar auditoría exhaustiva
+                        // 3. Registrar auditorÃ­a exhaustiva
                         string operacionAuditoria = (rolAnterior == 1 || idRolSeguridad == 1) ? "EDITAR_SUPERADMIN" : "EDITAR_USUARIO";
-                        string detalleAuditoria = $"Edición de usuario #{idUsuario} ({correoUsuario}): Rol anterior: {rolAnterior} -> Rol nuevo: {idRolSeguridad}, Estado anterior: {estadoAnterior} -> Estado nuevo: {idEstado}.";
+                        string detalleAuditoria = $"EdiciÃ³n de usuario #{idUsuario} ({correoUsuario}): Rol anterior: {rolAnterior} -> Rol nuevo: {idRolSeguridad}, Estado anterior: {estadoAnterior} -> Estado nuevo: {idEstado}.";
                         SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
                             operacionAuditoria, "ADMINISTRACION_USUARIOS", idUsuario.ToString(), detalleAuditoria);
 
                         tran.Commit();
 
-                        // Si el usuario modificó su propia cuenta, refrescar la sesión
+                        // Si el usuario modificÃ³ su propia cuenta, refrescar la sesiÃ³n
                         if (usuarioActual.IdUsuario == idUsuario)
                         {
                             usuarioActual.IdRolSeguridad = idRolSeguridad;
@@ -863,12 +863,12 @@ namespace SOR.Controllers
                     catch (SqlException sqlEx) when (sqlEx.Number == 2601 || sqlEx.Number == 2627)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
+                        TempData["MensajeError"] = "RestricciÃ³n de integridad en base de datos: Solamente puede existir un Superadmin activo simultÃ¡neamente en la plataforma.";
                     }
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al actualizar usuario: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -877,7 +877,7 @@ namespace SOR.Controllers
         }
 
         // ============================================================================
-        // REEMPLAZO / TRANSFERENCIA ATÓMICA DE TITULARIDAD DE SUPERADMIN
+        // REEMPLAZO / TRANSFERENCIA ATÃ“MICA DE TITULARIDAD DE SUPERADMIN
         // ============================================================================
 
         [HttpPost]
@@ -905,7 +905,7 @@ namespace SOR.Controllers
                 return RedirectToAction("Usuarios");
             }
 
-            // El rol al que pasará el Superadmin anterior debe ser Administrador (2) o Coordinador (3)
+            // El rol al que pasarÃ¡ el Superadmin anterior debe ser Administrador (2) o Coordinador (3)
             if (idRolAnteriorSuperadmin != 2 && idRolAnteriorSuperadmin != 3)
             {
                 idRolAnteriorSuperadmin = 2; // Default a Administrador
@@ -923,7 +923,7 @@ namespace SOR.Controllers
                         int estadoNuevo = 0;
                         using (SqlCommand cmdGet = new SqlCommand("SELECT Correo, IdEstado FROM dbo.Usuarios WHERE IdUsuario = @IdNuevo;", cn, tran))
                         {
-                            cmdGet.Parameters.AddWithValue("@IdNuevo", idNuevoSuperadmin);
+                            cmdGet.Parameters.Add(new SqlParameter("@IdNuevo", idNuevoSuperadmin));
                             using (SqlDataReader dr = cmdGet.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -940,12 +940,12 @@ namespace SOR.Controllers
                             }
                         }
 
-                        // 2. Degradar al Superadmin anterior en la misma transacción atómica
+                        // 2. Degradar al Superadmin anterior en la misma transacciÃ³n atÃ³mica
                         string sqlAnterior = "UPDATE dbo.Usuarios SET IdRolSeguridad = @IdRolAnterior WHERE IdUsuario = @IdActual;";
                         using (SqlCommand cmdAnt = new SqlCommand(sqlAnterior, cn, tran))
                         {
-                            cmdAnt.Parameters.AddWithValue("@IdRolAnterior", idRolAnteriorSuperadmin);
-                            cmdAnt.Parameters.AddWithValue("@IdActual", usuarioActual.IdUsuario);
+                            cmdAnt.Parameters.Add(new SqlParameter("@IdRolAnterior", idRolAnteriorSuperadmin));
+                            cmdAnt.Parameters.Add(new SqlParameter("@IdActual", usuarioActual.IdUsuario));
                             cmdAnt.ExecuteNonQuery();
                         }
 
@@ -953,18 +953,18 @@ namespace SOR.Controllers
                         string sqlNuevo = "UPDATE dbo.Usuarios SET IdRolSeguridad = 1, IdEstado = 4 WHERE IdUsuario = @IdNuevo;";
                         using (SqlCommand cmdNue = new SqlCommand(sqlNuevo, cn, tran))
                         {
-                            cmdNue.Parameters.AddWithValue("@IdNuevo", idNuevoSuperadmin);
+                            cmdNue.Parameters.Add(new SqlParameter("@IdNuevo", idNuevoSuperadmin));
                             cmdNue.ExecuteNonQuery();
                         }
 
-                        // 4. Registrar auditoría atómica
+                        // 4. Registrar auditorÃ­a atÃ³mica
                         string detalleAuditoria = $"Transferencia formal de titularidad de Superadmin. Titular anterior: #{usuarioActual.IdUsuario} ({usuarioActual.Correo}) pasa a rol {idRolAnteriorSuperadmin}. Nuevo titular: #{idNuevoSuperadmin} ({correoNuevo}) pasa a SuperAdmin Activo. Motivo: {motivoTransferencia.Trim()}.";
                         SOR.Helpers.AuditoriaHelper.Registrar(cn, tran, usuarioActual.IdUsuario, usuarioActual.Correo,
                             "TRANSFERENCIA_SUPERADMIN", "ADMINISTRACION_USUARIOS", idNuevoSuperadmin.ToString(), detalleAuditoria);
 
                         tran.Commit();
 
-                        // Actualizar la sesión del usuario actual que cedió el rol
+                        // Actualizar la sesiÃ³n del usuario actual que cediÃ³ el rol
                         usuarioActual.IdRolSeguridad = idRolAnteriorSuperadmin;
                         Session["usuario"] = usuarioActual;
 
@@ -973,12 +973,12 @@ namespace SOR.Controllers
                     catch (SqlException sqlEx) when (sqlEx.Number == 2601 || sqlEx.Number == 2627)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
+                        TempData["MensajeError"] = "RestricciÃ³n de integridad en base de datos: Solamente puede existir un Superadmin activo simultÃ¡neamente en la plataforma.";
                     }
                     catch (Exception ex)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Error al transferir la titularidad de Superadmin: " + ex.Message;
+                        TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     }
                 }
             }
@@ -1002,7 +1002,7 @@ namespace SOR.Controllers
                     while (dr.Read())
                     {
                         int idRol = Convert.ToInt32(dr["IdRolSeguridad"]);
-                        // Si el usuario actual no es Superadmin, no mostrar la opción de Superadmin para asignar
+                        // Si el usuario actual no es Superadmin, no mostrar la opciÃ³n de Superadmin para asignar
                         if (idRol == 1 && (usuarioActual == null || usuarioActual.IdRolSeguridad != 1))
                         {
                             continue;
@@ -1066,11 +1066,11 @@ namespace SOR.Controllers
                         string sql = "UPDATE dbo.Usuarios SET IdEstado = 8 WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmd = new SqlCommand(sql, cn, tran))
                         {
-                            cmd.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmd.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 2. Auto-restaurar asignación de equipo si fue desactivada durante el proceso
+                        // 2. Auto-restaurar asignaciÃ³n de equipo si fue desactivada durante el proceso
                         string sqlRestoreCheck = @"
                             SELECT p.IdEquipo, p.IdPosicion
                             FROM dbo.PerfilesCoordinador p
@@ -1083,7 +1083,7 @@ namespace SOR.Controllers
                               );";
                         using (SqlCommand cmdRestore = new SqlCommand(sqlRestoreCheck, cn, tran))
                         {
-                            cmdRestore.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdRestore.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             using (SqlDataReader dr = cmdRestore.ExecuteReader())
                             {
                                 if (dr.Read())
@@ -1095,9 +1095,9 @@ namespace SOR.Controllers
                                     string sqlIns = "INSERT INTO dbo.AsignacionesEquipo (IdUsuario, IdEquipo, IdPosicion, Activo) VALUES (@IdUsuario, @IdEquipo, @IdPosicion, 1);";
                                     using (SqlCommand cmdIns = new SqlCommand(sqlIns, cn, tran))
                                     {
-                                        cmdIns.Parameters.AddWithValue("@IdUsuario", idUsuario);
-                                        cmdIns.Parameters.AddWithValue("@IdEquipo", idEquipo);
-                                        cmdIns.Parameters.AddWithValue("@IdPosicion", idPosicion);
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo));
+                                        cmdIns.Parameters.Add(new SqlParameter("@IdPosicion", idPosicion));
                                         cmdIns.ExecuteNonQuery();
                                     }
                                 }
@@ -1112,13 +1112,13 @@ namespace SOR.Controllers
                     catch (Exception)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Ocurrió un error al aprobar el restablecimiento.";
+                        TempData["MensajeError"] = "OcurriÃ³ un error al aprobar el restablecimiento.";
                         return RedirectToAction("Usuarios");
                     }
                 }
             }
 
-            TempData["MensajeExito"] = "La solicitud de restablecimiento ha sido aprobada. El usuario podrá colocar su nueva clave al ingresar su correo.";
+            TempData["MensajeExito"] = "La solicitud de restablecimiento ha sido aprobada. El usuario podrÃ¡ colocar su nueva clave al ingresar su correo.";
             return RedirectToAction("Usuarios");
         }
 
@@ -1140,7 +1140,7 @@ namespace SOR.Controllers
 
             if (EsUnicoSuperadminActivo(idUsuario))
             {
-                TempData["MensajeError"] = "Operación denegada: No se puede suspender al único Superadmin activo del sistema mediante rechazo de restablecimiento.";
+                TempData["MensajeError"] = "OperaciÃ³n denegada: No se puede suspender al Ãºnico Superadmin activo del sistema mediante rechazo de restablecimiento.";
                 return RedirectToAction("Usuarios");
             }
 
@@ -1155,15 +1155,15 @@ namespace SOR.Controllers
                         string sqlUser = "UPDATE dbo.Usuarios SET IdEstado = 6 WHERE IdUsuario = @IdUsuario;";
                         using (SqlCommand cmdUser = new SqlCommand(sqlUser, cn, tran))
                         {
-                            cmdUser.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdUser.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmdUser.ExecuteNonQuery();
                         }
 
-                        // 2. Liberar su posición/rol en el equipo (Activo = 0 en AsignacionesEquipo)
+                        // 2. Liberar su posiciÃ³n/rol en el equipo (Activo = 0 en AsignacionesEquipo)
                         string sqlAsig = "UPDATE dbo.AsignacionesEquipo SET Activo = 0 WHERE IdUsuario = @IdUsuario AND Activo = 1;";
                         using (SqlCommand cmdAsig = new SqlCommand(sqlAsig, cn, tran))
                         {
-                            cmdAsig.Parameters.AddWithValue("@IdUsuario", idUsuario);
+                            cmdAsig.Parameters.Add(new SqlParameter("@IdUsuario", idUsuario));
                             cmdAsig.ExecuteNonQuery();
                         }
 
@@ -1175,7 +1175,7 @@ namespace SOR.Controllers
                     catch (Exception)
                     {
                         tran.Rollback();
-                        TempData["MensajeError"] = "Ocurrió un error al procesar el rechazo de restablecimiento.";
+                        TempData["MensajeError"] = "OcurriÃ³ un error al procesar el rechazo de restablecimiento.";
                         return RedirectToAction("Usuarios");
                     }
                 }
@@ -1186,7 +1186,7 @@ namespace SOR.Controllers
         }
 
         // ============================================================================
-        // MANTENEDOR DE CATÁLOGOS: DENOMINACIONES Y TIPOS DE ORGANIZACIÓN
+        // MANTENEDOR DE CATÃLOGOS: DENOMINACIONES Y TIPOS DE ORGANIZACIÃ“N
         // ============================================================================
 
         private void AsegurarTablasCatalogos()
@@ -1220,9 +1220,9 @@ namespace SOR.Controllers
                         );
                         INSERT INTO dbo.TiposOrganizacion (Nombre, Activo) VALUES 
                         ('Iglesia Local', 1),
-                        ('Misión / Extensión', 1),
-                        ('Ministerio Paraeclesiástico', 1),
-                        ('Fundación / ONG', 1),
+                        ('MisiÃ³n / ExtensiÃ³n', 1),
+                        ('Ministerio ParaeclesiÃ¡stico', 1),
+                        ('FundaciÃ³n / ONG', 1),
                         ('Colegio Cristiano', 1);
                     END
                     
@@ -1236,13 +1236,13 @@ namespace SOR.Controllers
                             FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
                         );
                         INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo, FechaCreacion) VALUES 
-                        ('Coordinador Principal / Encargado', 'Responsable general de la conducción del evento', 1, GETDATE()),
-                        ('Facilitador / Expositor', 'Imparte el contenido, dinámicas o presentaciones del evento', 1, GETDATE()),
-                        ('Logística y Despacho', 'Coordinación de paquetes, materiales y suministros', 1, GETDATE()),
-                        ('Registro y Asistencia', 'Mesa de recepción, validación de cédulas y asistencia', 1, GETDATE()),
-                        ('Acompañamiento y Bienvenida', 'Atención personalizada a pastores y líderes asistentes', 1, GETDATE()),
-                        ('Intercesión y Oración', 'Cobertura espiritual y oración durante el desarrollo del evento', 1, GETDATE()),
-                        ('Apoyo General', 'Soporte y asistencia operativa en diversas áreas', 1, GETDATE());
+                        ('Coordinador Principal / Encargado', 'Responsable general de la conducciÃ³n del evento', 1, GETDATE()),
+                        ('Facilitador / Expositor', 'Imparte el contenido, dinÃ¡micas o presentaciones del evento', 1, GETDATE()),
+                        ('LogÃ­stica y Despacho', 'CoordinaciÃ³n de paquetes, materiales y suministros', 1, GETDATE()),
+                        ('Registro y Asistencia', 'Mesa de recepciÃ³n, validaciÃ³n de cÃ©dulas y asistencia', 1, GETDATE()),
+                        ('AcompaÃ±amiento y Bienvenida', 'AtenciÃ³n personalizada a pastores y lÃ­deres asistentes', 1, GETDATE()),
+                        ('IntercesiÃ³n y OraciÃ³n', 'Cobertura espiritual y oraciÃ³n durante el desarrollo del evento', 1, GETDATE()),
+                        ('Apoyo General', 'Soporte y asistencia operativa en diversas Ã¡reas', 1, GETDATE());
                     END
                     ELSE
                     BEGIN
@@ -1274,8 +1274,8 @@ namespace SOR.Controllers
                             INSERT INTO dbo.Materiales (Codigo, NombreMaterial, UnidadEntrega, MomentoEntrega, Activo) VALUES 
                             ('MAT-CJA', 'Cajas de Regalo (Shoeboxes)', 'Caja', 'Despacho', 1),
                             ('MAT-FGV', 'Folletos El Gran Viaje (Discipulado)', 'Folleto', 'Taller', 1),
-                            ('MAT-GL', 'Guías del Líder / Maestro', 'Guía', 'Taller', 1),
-                            ('MAT-DIP', 'Diplomas de Graduación', 'Diploma', 'Taller', 1),
+                            ('MAT-GL', 'GuÃ­as del LÃ­der / Maestro', 'GuÃ­a', 'Taller', 1),
+                            ('MAT-DIP', 'Diplomas de GraduaciÃ³n', 'Diploma', 'Taller', 1),
                             ('MAT-EMV', 'El Mejor Viaje / Evangelismo', 'Folleto', 'Despacho', 1);
                         END
                     END
@@ -1290,15 +1290,15 @@ namespace SOR.Controllers
                             FechaCreacion DATETIME NOT NULL DEFAULT GETDATE()
                         );
                         INSERT INTO dbo.TiposEmpaque (Nombre, Descripcion, Activo, FechaCreacion) VALUES 
-                        ('Caja', 'Caja de cartón estándar o de distribución', 1, GETDATE()),
+                        ('Caja', 'Caja de cartÃ³n estÃ¡ndar o de distribuciÃ³n', 1, GETDATE()),
                         ('Paquete', 'Paquete o bulto retractilado / termoencogido', 1, GETDATE()),
-                        ('Bolsa', 'Bolsa plástica o tela sellada', 1, GETDATE()),
+                        ('Bolsa', 'Bolsa plÃ¡stica o tela sellada', 1, GETDATE()),
                         ('Rollo', 'Material continuo en formato de bobina o rollo', 1, GETDATE()),
-                        ('Resma', 'Paquete de hojas impresas o papelería', 1, GETDATE()),
+                        ('Resma', 'Paquete de hojas impresas o papelerÃ­a', 1, GETDATE()),
                         ('Atado', 'Conjunto atado con fleje o cuerda', 1, GETDATE()),
                         ('Fardo / Palet', 'Estiba, tarima o fardo consolidado', 1, GETDATE()),
-                        ('Unidad Suelta', 'Piezas o artículos individuales sin contenedor secundario', 1, GETDATE()),
-                        ('Otro', 'Presentación o embalaje especial', 1, GETDATE());
+                        ('Unidad Suelta', 'Piezas o artÃ­culos individuales sin contenedor secundario', 1, GETDATE()),
+                        ('Otro', 'PresentaciÃ³n o embalaje especial', 1, GETDATE());
                     END";
                 SqlCommand cmd = new SqlCommand(sql, cn);
                 cn.Open();
@@ -1426,11 +1426,11 @@ namespace SOR.Controllers
                 {
                     string sql = "INSERT INTO dbo.Denominaciones (Nombre, Activo) VALUES (@Nombre, 1);";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
-                TempData["MensajeExito"] = "Denominación agregada correctamente.";
+                TempData["MensajeExito"] = "DenominaciÃ³n agregada correctamente.";
             }
             return RedirectToAction("Catalogos");
         }
@@ -1443,12 +1443,12 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.Denominaciones SET Activo = @Activo WHERE IdDenominacion = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Activo", activo);
-                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.Add(new SqlParameter("@Activo", activo));
+                cmd.Parameters.Add(new SqlParameter("@Id", id));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
-            TempData["MensajeExito"] = "Estado de denominación actualizado.";
+            TempData["MensajeExito"] = "Estado de denominaciÃ³n actualizado.";
             return RedirectToAction("Catalogos");
         }
 
@@ -1463,11 +1463,11 @@ namespace SOR.Controllers
                 {
                     string sql = "INSERT INTO dbo.TiposOrganizacion (Nombre, Activo) VALUES (@Nombre, 1);";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
-                TempData["MensajeExito"] = "Tipo de organización agregado correctamente.";
+                TempData["MensajeExito"] = "Tipo de organizaciÃ³n agregado correctamente.";
             }
             return RedirectToAction("Catalogos");
         }
@@ -1480,12 +1480,12 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.TiposOrganizacion SET Activo = @Activo WHERE IdTipoOrg = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Activo", activo);
-                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.Add(new SqlParameter("@Activo", activo));
+                cmd.Parameters.Add(new SqlParameter("@Id", id));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
-            TempData["MensajeExito"] = "Estado de tipo de organización actualizado.";
+            TempData["MensajeExito"] = "Estado de tipo de organizaciÃ³n actualizado.";
             return RedirectToAction("Catalogos");
         }
 
@@ -1500,12 +1500,12 @@ namespace SOR.Controllers
                 {
                     string sql = "INSERT INTO dbo.RolesEvento (Nombre, Descripcion, Activo, FechaCreacion) VALUES (@Nombre, @Descripcion, 1, GETDATE());";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
-                TempData["MensajeExito"] = "Rol/Función de evento agregado correctamente.";
+                TempData["MensajeExito"] = "Rol/FunciÃ³n de evento agregado correctamente.";
             }
             return RedirectToAction("Catalogos");
         }
@@ -1520,13 +1520,13 @@ namespace SOR.Controllers
                 {
                     string sql = "UPDATE dbo.RolesEvento SET Nombre = @Nombre, Descripcion = @Descripcion WHERE IdRolEvento = @Id;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Id", id));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
-                TempData["MensajeExito"] = "Rol/Función de evento modificado correctamente.";
+                TempData["MensajeExito"] = "Rol/FunciÃ³n de evento modificado correctamente.";
             }
             return RedirectToAction("Catalogos");
         }
@@ -1539,12 +1539,12 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.RolesEvento SET Activo = @Activo WHERE IdRolEvento = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Activo", activo);
-                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.Add(new SqlParameter("@Activo", activo));
+                cmd.Parameters.Add(new SqlParameter("@Id", id));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
-            TempData["MensajeExito"] = "Estado de rol/función de evento actualizado.";
+            TempData["MensajeExito"] = "Estado de rol/funciÃ³n de evento actualizado.";
             return RedirectToAction("Catalogos");
         }
 
@@ -1559,14 +1559,14 @@ namespace SOR.Controllers
                 {
                     string sql = "INSERT INTO dbo.Materiales (Codigo, NombreMaterial, UnidadEntrega, MomentoEntrega, Activo) VALUES (@Codigo, @Nombre, @Unidad, @Momento, 1);";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Codigo", codigo.Trim().ToUpper());
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-                    cmd.Parameters.AddWithValue("@Unidad", string.IsNullOrWhiteSpace(unidadEntrega) ? "Unidad" : unidadEntrega.Trim());
-                    cmd.Parameters.AddWithValue("@Momento", string.IsNullOrWhiteSpace(momentoEntrega) ? "Taller" : momentoEntrega.Trim());
+                    cmd.Parameters.Add(new SqlParameter("@Codigo", codigo.Trim().ToUpper()));
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Unidad", string.IsNullOrWhiteSpace(unidadEntrega) ? "Unidad" : unidadEntrega.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Momento", string.IsNullOrWhiteSpace(momentoEntrega) ? "Taller" : momentoEntrega.Trim()));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
-                TempData["MensajeExito"] = "Material agregado correctamente al catálogo.";
+                TempData["MensajeExito"] = "Material agregado correctamente al catÃ¡logo.";
             }
             return RedirectToAction("Catalogos");
         }
@@ -1581,11 +1581,11 @@ namespace SOR.Controllers
                 {
                     string sql = "UPDATE dbo.Materiales SET Codigo = @Codigo, NombreMaterial = @Nombre, UnidadEntrega = @Unidad, MomentoEntrega = @Momento WHERE IdMaterial = @Id;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Codigo", codigo.Trim().ToUpper());
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-                    cmd.Parameters.AddWithValue("@Unidad", string.IsNullOrWhiteSpace(unidadEntrega) ? "Unidad" : unidadEntrega.Trim());
-                    cmd.Parameters.AddWithValue("@Momento", string.IsNullOrWhiteSpace(momentoEntrega) ? "Taller" : momentoEntrega.Trim());
-                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.Parameters.Add(new SqlParameter("@Codigo", codigo.Trim().ToUpper()));
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Unidad", string.IsNullOrWhiteSpace(unidadEntrega) ? "Unidad" : unidadEntrega.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Momento", string.IsNullOrWhiteSpace(momentoEntrega) ? "Taller" : momentoEntrega.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Id", id));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
@@ -1602,8 +1602,8 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.Materiales SET Activo = @Activo WHERE IdMaterial = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Activo", activo);
-                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.Add(new SqlParameter("@Activo", activo));
+                cmd.Parameters.Add(new SqlParameter("@Id", id));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }
@@ -1622,12 +1622,12 @@ namespace SOR.Controllers
                 {
                     string sql = "INSERT INTO dbo.TiposEmpaque (Nombre, Descripcion, Activo, FechaCreacion) VALUES (@Nombre, @Descripcion, 1, GETDATE());";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
-                TempData["MensajeExito"] = "Tipo de empaque agregado correctamente al catálogo.";
+                TempData["MensajeExito"] = "Tipo de empaque agregado correctamente al catÃ¡logo.";
             }
             return RedirectToAction("Catalogos");
         }
@@ -1642,9 +1642,9 @@ namespace SOR.Controllers
                 {
                     string sql = "UPDATE dbo.TiposEmpaque SET Nombre = @Nombre, Descripcion = @Descripcion WHERE IdTipoEmpaque = @Id;";
                     SqlCommand cmd = new SqlCommand(sql, cn);
-                    cmd.Parameters.AddWithValue("@Nombre", nombre.Trim());
-                    cmd.Parameters.AddWithValue("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.Parameters.Add(new SqlParameter("@Nombre", nombre.Trim()));
+                    cmd.Parameters.Add(new SqlParameter("@Descripcion", (object)descripcion?.Trim() ?? DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@Id", id));
                     cn.Open();
                     cmd.ExecuteNonQuery();
                 }
@@ -1661,8 +1661,8 @@ namespace SOR.Controllers
             {
                 string sql = "UPDATE dbo.TiposEmpaque SET Activo = @Activo WHERE IdTipoEmpaque = @Id;";
                 SqlCommand cmd = new SqlCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@Activo", activo);
-                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.Add(new SqlParameter("@Activo", activo));
+                cmd.Parameters.Add(new SqlParameter("@Id", id));
                 cn.Open();
                 cmd.ExecuteNonQuery();
             }

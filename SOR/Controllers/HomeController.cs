@@ -1,4 +1,4 @@
-using SOR.Models;
+﻿using SOR.Models;
 using SOR.Permisos;
 using System;
 using System.Web.Mvc;
@@ -7,7 +7,7 @@ namespace SOR.Controllers
 {
     public class HomeController : Controller
     {
-        // Acción pública: Pantalla de Bienvenida / Landing Page para Voluntarios
+        // AcciÃ³n pÃºblica: Pantalla de Bienvenida / Landing Page para Voluntarios
         public ActionResult Landing()
         {
             if (Session["usuario"] != null)
@@ -78,8 +78,8 @@ namespace SOR.Controllers
 
                 using (System.Data.SqlClient.SqlCommand cmd = new System.Data.SqlClient.SqlCommand(queryIglesias, conn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
-                    cmd.Parameters.AddWithValue("@IdEquipo", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporadaActiva));
+                    cmd.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     object res = await cmd.ExecuteScalarAsync();
                     if (res != null && res != DBNull.Value)
                     {
@@ -98,8 +98,8 @@ namespace SOR.Controllers
 
                 using (System.Data.SqlClient.SqlCommand cmd = new System.Data.SqlClient.SqlCommand(queryPendientes, conn))
                 {
-                    cmd.Parameters.AddWithValue("@IdTemp", idTemporadaActiva);
-                    cmd.Parameters.AddWithValue("@IdEquipo", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value);
+                    cmd.Parameters.Add(new SqlParameter("@IdTemp", idTemporadaActiva));
+                    cmd.Parameters.Add(new SqlParameter("@IdEquipo", idEquipo.HasValue ? (object)idEquipo.Value : DBNull.Value));
                     object res = await cmd.ExecuteScalarAsync();
                     if (res != null && res != DBNull.Value)
                     {
@@ -118,7 +118,7 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult About()
         {
-            ViewBag.Message = "Sistema de Gestión Interna OCC Rep Dom (SOR)";
+            ViewBag.Message = "Sistema de GestiÃ³n Interna OCC Rep Dom (SOR)";
             return View();
         }
 
@@ -147,7 +147,7 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Contact()
         {
-            ViewBag.Message = "Contacto OCC República Dominicana";
+            ViewBag.Message = "Contacto OCC RepÃºblica Dominicana";
             return View();
         }
 
@@ -156,12 +156,12 @@ namespace SOR.Controllers
             return View();
         }
 
-        // GET: Home/NotFound (Página 404 personalizada)
+        // GET: Home/NotFound (PÃ¡gina 404 personalizada)
         public ActionResult NotFound()
         {
             Response.StatusCode = 404;
             Response.TrySkipIisCustomErrors = true;
-            ViewBag.Title = "Página no encontrada";
+            ViewBag.Title = "PÃ¡gina no encontrada";
             return View();
         }
 
@@ -169,7 +169,7 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Privacidad()
         {
-            ViewBag.Title = "Política de Privacidad";
+            ViewBag.Title = "PolÃ­tica de Privacidad";
             return View();
         }
 
@@ -177,14 +177,14 @@ namespace SOR.Controllers
         [OutputCache(Duration = 86400, VaryByParam = "none")]
         public ActionResult Terminos()
         {
-            ViewBag.Title = "Términos y Condiciones";
+            ViewBag.Title = "TÃ©rminos y Condiciones";
             return View();
         }
 
         // GET: Home/Gracias
         public ActionResult Gracias(string tipo)
         {
-            ViewBag.Title = "Operación Exitosa";
+            ViewBag.Title = "OperaciÃ³n Exitosa";
             ViewBag.Tipo = tipo ?? "General";
             return View();
         }
