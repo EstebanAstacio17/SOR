@@ -8,6 +8,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using System.Text;
 using System.Xml.Linq;
 using SOR.Helpers;
 using SOR.Models;
@@ -1288,6 +1289,12 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
         // IMPORTACIÓN MASIVA DESDE EXCEL / CSV
         // ============================================================================
 
+        [HttpGet]
+        public ActionResult ImportarMasivo()
+        {
+            return RedirectToAction("Index");
+        }
+
         [HttpPost]
         public ActionResult ImportarMasivo(HttpPostedFileBase archivoExcel, int? idTemporadaImportar)
         {
@@ -1343,7 +1350,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 return RedirectToAction("Index");
             }
 
-            string ext = Path.GetExtension(archivoExcel.FileName).ToLower();
+            string ext = Path.GetExtension(archivoExcel.FileName != null ? archivoExcel.FileName : "").ToLowerInvariant();
             if (ext != ".xlsx" && ext != ".csv")
             {
                 TempData["MensajeError"] = "Formato de archivo no soportado. Debe ser .xlsx o .csv.";
@@ -1362,16 +1369,33 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
                     if (ext == ".csv")
                     {
-                        // Lector nativo CSV desde MemoryStream
-                        using (StreamReader reader = new StreamReader(ms, System.Text.Encoding.UTF8))
+                        // Lector nativo CSV desde MemoryStream con detección inteligente de delimitador
+                        using (StreamReader reader = new StreamReader(ms, System.Text.Encoding.UTF8, true))
                         {
                             string line;
                             int filaNum = 0;
+                            char delimitador = ',';
+                            bool delimitadorDetectado = false;
+
                             while ((line = reader.ReadLine()) != null)
                             {
                                 filaNum++;
                                 if (string.IsNullOrWhiteSpace(line)) continue;
-                                string[] cols = line.Split(',');
+
+                                if (!delimitadorDetectado)
+                                {
+                                    int countSemicolon = line.Count(c => c == ';');
+                                    int countComma = line.Count(c => c == ',');
+                                    int countTab = line.Count(c => c == '\t');
+
+                                    if (countSemicolon > countComma && countSemicolon > countTab) delimitador = ';';
+                                    else if (countTab > countComma && countTab > countSemicolon) delimitador = '\t';
+                                    else delimitador = ',';
+
+                                    delimitadorDetectado = true;
+                                }
+
+                                string[] cols = ParsearLineaCsv(line, delimitador);
 
                                 string col0 = cols.Length > 0 ? cols[0].Trim() : "";
                                 string col1 = cols.Length > 1 ? cols[1].Trim() : "";
@@ -1513,6 +1537,42 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
             return RedirectToAction("Index");
         }
 
+        private static string[] ParsearLineaCsv(string linea, char delimitador)
+        {
+            if (string.IsNullOrEmpty(linea)) return new string[0];
+            List<string> tokens = new List<string>();
+            bool dentroComillas = false;
+            StringBuilder sb = new StringBuilder();
+
+            for (int i = 0; i < linea.Length; i++)
+            {
+                char c = linea[i];
+                if (c == '"')
+                {
+                    if (dentroComillas && i + 1 < linea.Length && linea[i + 1] == '"')
+                    {
+                        sb.Append('"');
+                        i++; // Escapar comilla doble
+                    }
+                    else
+                    {
+                        dentroComillas = !dentroComillas;
+                    }
+                }
+                else if (c == delimitador && !dentroComillas)
+                {
+                    tokens.Add(sb.ToString().Trim());
+                    sb.Clear();
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+            tokens.Add(sb.ToString().Trim());
+            return tokens.ToArray();
+        }
+
         private void SepararNombresApellidos(string nombreCompleto, out string nombres, out string apellidos)
         {
             if (string.IsNullOrWhiteSpace(nombreCompleto))
@@ -1584,8 +1644,32 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
             string col20 = ObtenerCol(cols, 20);
             string col21 = ObtenerCol(cols, 21);
-            ig.CantidadMaestros = int.TryParse(col20, out int m) ? (int?)m : null;
-            ig.CantidadNinos = int.TryParse(col21, out int n) ? (int?)n : null;
+            
+            if (double.TryParse(col20, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double dMaestros))
+            {
+                ig.CantidadMaestros = (int)Math.Round(dMaestros);
+            }
+            else if (int.TryParse(col20, out int m))
+            {
+                ig.CantidadMaestros = m;
+            }
+            else
+            {
+                ig.CantidadMaestros = null;
+            }
+
+            if (double.TryParse(col21, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double dNinos))
+            {
+                ig.CantidadNinos = (int)Math.Round(dNinos);
+            }
+            else if (int.TryParse(col21, out int n))
+            {
+                ig.CantidadNinos = n;
+            }
+            else
+            {
+                ig.CantidadNinos = null;
+            }
 
             string reportoVal = ObtenerCol(cols, 22).ToUpper();
             ig.ParticipacionActual = new ParticipacionIglesia
@@ -1664,11 +1748,13 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
                             int maxCol = 0;
                             Dictionary<int, string> rowValues = new Dictionary<int, string>();
+                            int sequentialCol = 0;
 
                             foreach (XElement c in cElements)
                             {
                                 string rAttr = (string)c.Attribute("r");
-                                int colIndex = !string.IsNullOrEmpty(rAttr) ? LetrasColumnaAIndice(rAttr) : maxCol;
+                                int colIndex = !string.IsNullOrEmpty(rAttr) ? LetrasColumnaAIndice(rAttr) : sequentialCol;
+                                sequentialCol = colIndex + 1;
                                 if (colIndex > maxCol) maxCol = colIndex;
 
                                 string tAttr = (string)c.Attribute("t");
@@ -1690,7 +1776,12 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                                         cellValue = string.Concat(isElem.Descendants(ns + "t").Select(t => t.Value));
                                     }
                                 }
-                                else // Número, fecha o string directo
+                                else if (tAttr == "b") // Boolean
+                                {
+                                    XElement vElem = c.Element(ns + "v");
+                                    if (vElem != null) cellValue = (vElem.Value == "1" ? "SI" : "NO");
+                                }
+                                else // Número, fórmula (str), fecha o string directo
                                 {
                                     XElement vElem = c.Element(ns + "v");
                                     if (vElem != null) cellValue = vElem.Value;
