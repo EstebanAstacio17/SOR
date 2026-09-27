@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -189,7 +189,7 @@ namespace SOR.Controllers
 
                 TempData["MensajeExito"] = "Maestro registrado con éxito.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -233,7 +233,7 @@ namespace SOR.Controllers
 
                 return Json(new { success = true, message = "Maestro registrado con éxito." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -642,7 +642,7 @@ namespace SOR.Controllers
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }

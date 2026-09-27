@@ -1,4 +1,4 @@
-﻿using SOR.Helpers;
+using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -488,7 +488,7 @@ namespace SOR.Controllers
 
                         tran.Commit();
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -634,7 +634,7 @@ namespace SOR.Controllers
 
                         TempData["MensajeExito"] = "Perfil de Coordinador aprobado con éxito. El usuario fue notificado por correo y está plenamente activo.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -852,7 +852,7 @@ namespace SOR.Controllers
                         tran.Rollback();
                         TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -962,7 +962,7 @@ namespace SOR.Controllers
                         tran.Rollback();
                         TempData["MensajeError"] = "Restricción de integridad en base de datos: Solamente puede existir un Superadmin activo simultáneamente en la plataforma.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";

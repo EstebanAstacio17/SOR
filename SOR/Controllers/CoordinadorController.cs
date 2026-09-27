@@ -1,4 +1,4 @@
-﻿﻿using SOR.Helpers;
+﻿﻿﻿using SOR.Helpers;
 using SOR.Models;
 using SOR.Permisos;
 using System;
@@ -389,7 +389,7 @@ namespace SOR.Controllers
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                 }

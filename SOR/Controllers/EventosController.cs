@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -304,7 +304,7 @@ namespace SOR.Controllers
                 logisticaSvc.ProgramarIglesiaEnDespacho(idEvento, idParticipacion, idIglesia, idEquipo, idTemporada, u.IdUsuario);
                 TempData["MensajeExito"] = "Iglesia agregada exitosamente al evento de despacho.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -344,7 +344,7 @@ namespace SOR.Controllers
                 logisticaSvc.ConfirmarDespacho(vm, idEquipo, idTemporada, u.IdUsuario, nombre, u.IdRolSeguridad, u.IdPosicion);
                 TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -362,7 +362,7 @@ namespace SOR.Controllers
                 logisticaSvc.MarcarNoDespacho(vm, u.IdUsuario);
                 TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. No se descontó inventario y queda disponible para reprogramación.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -530,7 +530,7 @@ namespace SOR.Controllers
                         tran.Commit();
                         TempData["MensajeExito"] = "Asistencia de maestros guardada correctamente.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -917,7 +917,7 @@ namespace SOR.Controllers
                         cmdSp.ExecuteNonQuery();
                     }
                 }
-                catch (SqlException ex)
+                catch (SqlException)
                 {
                     TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                     return RedirectToAction("Index");
@@ -1041,7 +1041,7 @@ namespace SOR.Controllers
                         tran.Commit();
                         TempData["MensajeExito"] = "Asistencia y datos del Pastor/Líder actualizados correctamente.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -1246,7 +1246,7 @@ namespace SOR.Controllers
                         tran.Commit();
                         TempData["MensajeExito"] = "Asistencia y datos del Líder/Maestros actualizados correctamente.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -1430,7 +1430,7 @@ namespace SOR.Controllers
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -1596,7 +1596,7 @@ namespace SOR.Controllers
                         tran.Commit();
                         TempData["MensajeExito"] = "Datos de asistentes guardados y asistencia actualizada con éxito.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
@@ -1828,7 +1828,7 @@ namespace SOR.Controllers
 
                 TempData["MensajeExito"] = "Coordinador registrado en el evento con éxito.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -1861,7 +1861,7 @@ namespace SOR.Controllers
                 }
                 TempData["MensajeExito"] = asistio ? "Asistencia del coordinador confirmada." : "Coordinador marcado como no asistente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -1893,7 +1893,7 @@ namespace SOR.Controllers
                 }
                 TempData["MensajeExito"] = "Coordinador removido de la lista de asistencia del evento.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }

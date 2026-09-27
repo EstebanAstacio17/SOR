@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -436,7 +436,7 @@ namespace SOR.Controllers
                 long nuevoId = _repo.GuardarTransaccion(model);
                 return Json(new { success = true, message = "Movimiento registrado y comprobante guardado exitosamente.", transaccionId = nuevoId, rutaComprobante = model.RutaComprobante, nombreComprobante = model.NombreComprobante });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -477,7 +477,7 @@ namespace SOR.Controllers
                 bool ok = _repo.EliminarTransaccion(transaccionId);
                 return Json(new { success = ok, message = ok ? "Transacción eliminada con éxito." : "Registro no encontrado." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -512,7 +512,7 @@ namespace SOR.Controllers
                 bool ok = _repo.GuardarPresupuestoAprobado(request.IdTemporada, request.IdEquipo, request.Items);
                 return Json(new { success = ok, message = ok ? "Presupuesto aprobado guardado correctamente." : "Error al guardar presupuesto." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }

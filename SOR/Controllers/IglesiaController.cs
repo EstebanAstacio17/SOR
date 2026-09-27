@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -497,7 +497,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.GuardarContactoLGA(vm, u.IdUsuario);
                 TempData["MensajeExito"] = $"Contacto #{vm.NumeroContacto} ({vm.NombreFase}) actualizado correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -533,7 +533,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.RegistrarLlamadaAcompanamiento(vm, u.IdUsuario, nombreCoord);
                 TempData["MensajeExito"] = "Llamada de acompañamiento de 5 minutos registrada con éxito. Semáforo actualizado.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -581,7 +581,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.SolicitarExcepcion(excepcion, u.IdUsuario);
                 TempData["MensajeExito"] = "Solicitud de excepción registrada exitosamente. Queda pendiente de evaluación independiente por el Coordinador de Equipo (CE) y el Coordinador de Movilización (CMI).";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -612,11 +612,11 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.AprobarExcepcionCE(idExcepcion, u.IdUsuario, comentarioCE, rowVersion);
                 TempData["MensajeExito"] = "Aprobación de CE registrada correctamente.";
             }
-            catch (DBConcurrencyException ex)
+            catch (DBConcurrencyException)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -648,11 +648,11 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.AprobarExcepcionCMI(idExcepcion, u.IdUsuario, comentarioCMI, rowVersion);
                 TempData["MensajeExito"] = "Aprobación de CMI registrada correctamente.";
             }
-            catch (DBConcurrencyException ex)
+            catch (DBConcurrencyException)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -690,11 +690,11 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.RechazarExcepcion(idExcepcion, u.IdUsuario, motivoRechazo, rowVersion);
                 TempData["MensajeExito"] = "La solicitud de excepción fue rechazada.";
             }
-            catch (DBConcurrencyException ex)
+            catch (DBConcurrencyException)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -729,7 +729,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
 
                 TempData["MensajeExito"] = "Evaluación inicial procesada correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -753,7 +753,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.AsignarEventoVision(idParticipacion, idIglesia, idEventoVision, pastor, lider, u.IdUsuario);
                 TempData["MensajeExito"] = "Evento de Presentación de la Visión asignado correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -824,7 +824,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 }
                 TempData["MensajeExito"] = "Iglesia aprobada como elegible para el Taller OCC.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -1058,7 +1058,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.AvanzarEtapa3(idParticipacion, invitada, fecha, lugar, asistio, resultado, u.IdUsuario, idEventoTaller);
                 TempData["MensajeExito"] = "Datos de Presentación de la Visión guardados.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -1082,7 +1082,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.AvanzarEtapa4(idParticipacion, idIglesia, estado, motivo, comentario, u.IdUsuario, idEventoTaller, cantidadAsistentes, maestrosNuevos);
                 TempData["MensajeExito"] = "Evaluación de elegibilidad para Taller OCC guardada.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -1258,7 +1258,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -1277,7 +1277,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.AgregarComentario(idIglesia, u.IdUsuario, comentario);
                 TempData["MensajeExito"] = "Observación guardada correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2265,7 +2265,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 TempData["MensajeError"] = exConc.Message;
                 return RedirectToAction("Detalle", new { id = modelo.IdIglesia });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
                 CargarEquiposDisponibles();
@@ -2491,7 +2491,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.ConfirmarEntregaDirecta(idParticipacion, idIglesia, tipoReceptor ?? "Pastor / Líder", nombreReceptor.Trim(), cedula?.Trim(), telefono?.Trim(), observaciones?.Trim(), u.IdUsuario);
                 TempData["MensajeExito"] = "¡Entrega de materiales confirmada exitosamente! La iglesia ahora figura como Despachada / Entregada y puede proceder con los reportes ministeriales.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2526,7 +2526,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.MarcarNoEntregaDirecta(idParticipacion, idIglesia, motivoNoEntrega.Trim(), observaciones?.Trim(), u.IdUsuario);
                 TempData["MensajeExito"] = "Se ha registrado el estado de NO ENTREGA con el motivo especificado.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2555,7 +2555,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.ReprogramarEntregaDirecta(idParticipacion, idIglesia, u.IdUsuario);
                 TempData["MensajeExito"] = "La asignación ha sido restablecida a 'Disponible / Pendiente de Despacho'.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2601,7 +2601,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.GuardarEventoEvangelistico(item, u.IdUsuario);
                 TempData["MensajeExito"] = "Evento evangelístico guardado correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2630,7 +2630,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.EliminarEventoEvangelistico(idEventoDetalle, idParticipacion, idIglesia, u.IdUsuario);
                 TempData["MensajeExito"] = "Evento evangelístico eliminado exitosamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2659,7 +2659,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.GuardarAnotacionesEventosEvangelisticos(idParticipacion, idIglesia, anotaciones?.Trim(), u.IdUsuario);
                 TempData["MensajeExito"] = "Anotaciones de eventos evangelísticos guardadas correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -2720,7 +2720,7 @@ Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vací
                 _iglesiaService.GuardarReporteGraduacionLGA(vm, u.IdUsuario);
                 TempData["MensajeExito"] = "¡Reporte Oficial de Discipulado / Graduación de La Gran Aventura guardado con éxito! Estatus actualizado a 'Reportó'.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }

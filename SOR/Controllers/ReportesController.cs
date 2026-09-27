@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
@@ -138,7 +138,7 @@ namespace SOR.Controllers
                 bool ok = _repo.GuardarIglesiaPlantada(dto);
                 return Json(new { success = ok, message = ok ? "Iglesia plantada registrada exitosamente." : "Error al registrar." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -155,7 +155,7 @@ namespace SOR.Controllers
                 bool ok = _repo.EliminarIglesiaPlantada(id);
                 return Json(new { success = ok, message = ok ? "Registro eliminado." : "No se encontró el registro." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -175,7 +175,7 @@ namespace SOR.Controllers
                 bool ok = _repo.GuardarGNA(dto);
                 return Json(new { success = ok, message = ok ? "Grupo No Alcanzado registrado exitosamente." : "Error al registrar." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }
@@ -192,7 +192,7 @@ namespace SOR.Controllers
                 bool ok = _repo.EliminarGNA(id);
                 return Json(new { success = ok, message = ok ? "Registro eliminado." : "No se encontró el registro." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." });
             }

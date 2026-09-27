@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Web.Mvc;
 using SOR.Models;
@@ -51,7 +51,7 @@ namespace SOR.Controllers
                 }
                 return Json(new { success = true, data = equipo }, JsonRequestBehavior.AllowGet);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Json(new { success = false, message = "Ocurrió un error de sistema al procesar la solicitud." }, JsonRequestBehavior.AllowGet);
             }
@@ -67,7 +67,7 @@ namespace SOR.Controllers
                 _equipoService.RegistrarEquipo(modelo);
                 TempData["MensajeExito"] = "Equipo creado exitosamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -89,7 +89,7 @@ namespace SOR.Controllers
             {
                 TempData["MensajeError"] = "Conflicto de concurrencia: " + exConc.Message;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -107,7 +107,7 @@ namespace SOR.Controllers
                 string msg = _equipoService.EliminarEquipo(idEquipo);
                 TempData["MensajeExito"] = msg;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }

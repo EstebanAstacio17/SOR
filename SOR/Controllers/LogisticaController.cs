@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -219,7 +219,7 @@ namespace SOR.Controllers
                 _svc.GuardarAlmacen(modelo);
                 TempData["MensajeExito"] = modelo.IdAlmacen == 0 ? "Almacén registrado exitosamente." : "Almacén actualizado correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -315,7 +315,7 @@ namespace SOR.Controllers
                 _svc.GuardarPresentacion(modelo);
                 TempData["MensajeExito"] = modelo.IdPresentacion == 0 ? "Presentación registrada correctamente." : "Presentación actualizada correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -337,7 +337,7 @@ namespace SOR.Controllers
                 _svc.AlternarEstadoPresentacion(idPresentacion, activo);
                 TempData["MensajeExito"] = activo ? "Presentación habilitada exitosamente." : "Presentación inhabilitada exitosamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -451,7 +451,7 @@ namespace SOR.Controllers
                 int idRec = _svc.RegistrarRecepcion(modelo, u.IdUsuario);
                 TempData["MensajeExito"] = $"Contenedor '{numeroContenedor}' registrado y confirmado exitosamente (Recepción #{idRec}).";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -606,7 +606,7 @@ namespace SOR.Controllers
                 int idTransf = _svc.RegistrarTransferencia(modelo, u.IdUsuario);
                 TempData["MensajeExito"] = $"Transferencia #{idTransf} registrada exitosamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -629,7 +629,7 @@ namespace SOR.Controllers
                 _svc.ConfirmarRecepcionTransferencia(idTransferencia, fRec, personaReceptora, idUsuarioReceptor, u.IdUsuario);
                 TempData["MensajeExito"] = "Recepción de materiales confirmada exitosamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -651,7 +651,7 @@ namespace SOR.Controllers
                 _svc.CancelarTransferencia(idTransferencia, motivo, u.IdUsuario);
                 TempData["MensajeExito"] = "Transferencia cancelada exitosamente y el inventario fue reincorporado.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -744,7 +744,7 @@ namespace SOR.Controllers
                 _svc.CrearEventoDespacho(idEvento, u.IdEquipo.Value, idAlmacen, u.IdUsuario);
                 TempData["MensajeExito"] = "Evento de despacho configurado correctamente.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -765,7 +765,7 @@ namespace SOR.Controllers
                 _svc.ProgramarIglesiaEnDespacho(idEvento, idParticipacion, idIglesia, u.IdEquipo.Value, idTemp, u.IdUsuario);
                 TempData["MensajeExito"] = "Iglesia agregada al evento de despacho.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -799,7 +799,7 @@ namespace SOR.Controllers
                 _svc.ConfirmarDespacho(vm, u.IdEquipo.Value, idTemp, u.IdUsuario, nombre, u.IdRolSeguridad, u.IdPosicion);
                 TempData["MensajeExito"] = "Despacho presencial confirmado exitosamente con cédula validada.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -816,7 +816,7 @@ namespace SOR.Controllers
                 _svc.MarcarNoDespacho(vm, u.IdUsuario);
                 TempData["MensajeExito"] = "Iglesia registrada como NO DESPACHADA. Queda disponible para reprogramación.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }
@@ -880,7 +880,7 @@ namespace SOR.Controllers
                 }
                 TempData["MensajeExito"] = "Coordinador registrado en el evento.";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
             }

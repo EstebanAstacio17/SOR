@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -222,7 +222,7 @@ namespace SOR.Controllers
                         tran.Commit();
                         TempData["MensajeExito"] = "La temporada seleccionada ahora es la activa en el sistema.";
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         tran.Rollback();
                         TempData["MensajeError"] = "Ocurrió un error de sistema al procesar la solicitud. Contacte al administrador.";
