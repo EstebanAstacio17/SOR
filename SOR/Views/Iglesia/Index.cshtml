@@ -145,10 +145,9 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-4">Nombre de la Iglesia</th>
-                                <th>Ubicación / Contacto</th>
-                                <th>Denominación</th>
-                                <th>Etapa en Temporada</th>
-                                <th>Evaluación</th>
+                                <th>Pastor / Líder</th>
+                                <th>Temporada</th>
+                                <th>¿Reportó?</th>
                                 <th class="text-end pe-4">Acciones</th>
                             </tr>
                         </thead>
@@ -156,7 +155,7 @@
                             @if (!Model.Any())
                             {
                                 <tr id="rowVacioServidor">
-                                    <td colspan="6" class="text-center py-5 text-muted">
+                                    <td colspan="5" class="text-center py-5 text-muted">
                                         <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-400"></i>
                                         No se encontraron iglesias con los filtros aplicados.
                                     </td>
@@ -166,85 +165,59 @@
                             {
                                 foreach (var item in Model)
                                 {
+                                    var pastorNombre = item.Pastor != null && !string.IsNullOrWhiteSpace(item.Pastor.Nombres)
+                                        ? $"{item.Pastor.Nombres} {item.Pastor.Apellidos}".Trim()
+                                        : "N/D";
+                                    var pastorTel = item.Pastor != null && !string.IsNullOrWhiteSpace(item.Pastor.Celular)
+                                        ? item.Pastor.Celular
+                                        : (!string.IsNullOrWhiteSpace(item.Telefono) ? item.Telefono : "N/D");
+
+                                    var liderNombre = item.LiderMinisterial != null && !string.IsNullOrWhiteSpace(item.LiderMinisterial.Nombres)
+                                        ? $"{item.LiderMinisterial.Nombres} {item.LiderMinisterial.Apellidos}".Trim()
+                                        : "N/D";
+                                    var liderTel = item.LiderMinisterial != null && !string.IsNullOrWhiteSpace(item.LiderMinisterial.Celular)
+                                        ? item.LiderMinisterial.Celular
+                                        : "N/D";
+
+                                    var temporadaNombre = item.ParticipacionActual != null && !string.IsNullOrWhiteSpace(item.ParticipacionActual.NombreTemporada)
+                                        ? item.ParticipacionActual.NombreTemporada
+                                        : "Sin Temporada";
+
+                                    var reporto = item.ParticipacionActual != null && !string.IsNullOrWhiteSpace(item.ParticipacionActual.EstatusEvaluacionReporte)
+                                        && (item.ParticipacionActual.EstatusEvaluacionReporte.Equals("Reportó", StringComparison.OrdinalIgnoreCase) 
+                                            || item.ParticipacionActual.EstatusEvaluacionReporte.Equals("SI", StringComparison.OrdinalIgnoreCase)
+                                            || item.ParticipacionActual.EstatusEvaluacionReporte.Equals("Reporto", StringComparison.OrdinalIgnoreCase));
+
                                     <tr class="fila-iglesia" data-equipo="@(item.NombreEquipo ?? "")">
                                         <td class="ps-4">
                                             <div class="fw-bold fs-6" style="color: #1e293b;">@item.NombreIglesia</div>
                                             <span class="badge" style="color: #475569; background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.25rem 0.5rem; font-size: 0.75rem;">@item.NombreEquipo</span>
                                         </td>
                                         <td>
-                                            <div>@item.Ciudad</div>
-                                            <small class="text-muted"><i class="bi bi-telephone text-xxs me-1"></i>@(string.IsNullOrEmpty(item.Telefono) ? "N/D" : item.Telefono)</small>
+                                            <div class="small text-slate-800 fw-semibold mb-1">
+                                                <span class="text-primary fw-bold">Pastor:</span> @pastorNombre - @pastorTel
+                                            </div>
+                                            <div class="small text-slate-600">
+                                                <span class="text-secondary fw-bold">Líder:</span> @liderNombre - @liderTel
+                                            </div>
                                         </td>
                                         <td>
-                                            <span class="badge" style="color: #1e293b; background-color: #e2e8f0; border: 1px solid #cbd5e1; padding: 0.25rem 0.5rem; font-size: 0.75rem;">@(string.IsNullOrEmpty(item.Denominacion) ? "N/D" : item.Denominacion)</span>
+                                            <span class="badge bg-light text-dark border px-2 py-1">
+                                                <i class="bi bi-calendar-check me-1 text-primary"></i>@temporadaNombre
+                                            </span>
                                         </td>
                                         <td>
-                                            @if (item.ParticipacionActual != null)
+                                            @if (reporto)
                                             {
-                                                if (item.ParticipacionActual.EtapaActual == 1)
-                                                {
-                                                    <span class="badge bg-secondary-soft text-secondary rounded-pill"><i class="bi bi-1-circle me-1"></i>Inscrita</span>
-                                                }
-                                                else if (item.ParticipacionActual.EtapaActual == 2)
-                                                {
-                                                    <span class="badge bg-warning-soft text-warning rounded-pill"><i class="bi bi-2-circle me-1"></i>Evaluada Inicial</span>
-                                                }
-                                                else if (item.ParticipacionActual.EtapaActual == 3)
-                                                {
-                                                    <span class="badge bg-purple-soft text-purple rounded-pill"><i class="bi bi-3-circle me-1"></i>Visión</span>
-                                                }
-                                                else if (item.ParticipacionActual.EtapaActual == 4)
-                                                {
-                                                    <span class="badge bg-info-soft text-info rounded-pill"><i class="bi bi-4-circle me-1"></i>Elegible Taller</span>
-                                                }
-                                                else if (item.ParticipacionActual.EtapaActual == 5)
-                                                {
-                                                    <span class="badge bg-success-soft text-success rounded-pill"><i class="bi bi-5-circle-fill me-1"></i>Taller OCC</span>
-                                                }
-                                                else if (item.ParticipacionActual.EtapaActual == 6)
-                                                {
-                                                    <span class="badge bg-primary-soft text-primary rounded-pill"><i class="bi bi-6-circle me-1"></i>Asignación</span>
-                                                }
-                                                else if (item.ParticipacionActual.EtapaActual >= 7)
-                                                {
-                                                    if (item.ParticipacionActual.EstatusDespacho == "DESPACHADA")
-                                                    {
-                                                        <span class="badge bg-success text-white rounded-pill"><i class="bi bi-truck me-1"></i>Despachada / Entregada</span>
-                                                    }
-                                                    else if (item.ParticipacionActual.EstatusDespacho == "NO_DESPACHADA")
-                                                    {
-                                                        <span class="badge bg-danger text-white rounded-pill" title="@item.ParticipacionActual.MotivoNoEntrega"><i class="bi bi-x-circle-fill me-1"></i>No Entregada</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-primary-soft text-primary rounded-pill"><i class="bi bi-box-seam me-1"></i>Entrega / Despacho</span>
-                                                    }
-                                                }
+                                                <span class="badge bg-success-soft text-success rounded-pill px-2 py-1 fw-bold">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>SÍ
+                                                </span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-light text-dark rounded-pill">Sin participación activa</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (item.ParticipacionActual != null)
-                                            {
-                                                if (item.ParticipacionActual.EstadoEvaluacion == "Pendiente")
-                                                {
-                                                    <span class="badge bg-warning-soft text-warning">Pendiente</span>
-                                                }
-                                                else if (item.ParticipacionActual.EstadoEvaluacion == "Aprobado")
-                                                {
-                                                    <span class="badge bg-success-soft text-success">Aprobada</span>
-                                                }
-                                                else if (item.ParticipacionActual.EstadoEvaluacion == "Rechazado")
-                                                {
-                                                    <span class="badge bg-danger-soft text-danger">Rechazada</span>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted small">N/D</span>
+                                                <span class="badge bg-secondary-soft text-muted rounded-pill px-2 py-1">
+                                                    <i class="bi bi-dash-circle me-1"></i>NO
+                                                </span>
                                             }
                                         </td>
                                         <td class="text-end pe-4">
@@ -442,7 +415,7 @@
                 if (!rowNoCoincidencias && tbody) {
                     rowNoCoincidencias = document.createElement('tr');
                     rowNoCoincidencias.id = 'rowNoCoincidenciasBusqueda';
-                    rowNoCoincidencias.innerHTML = '<td colspan="6" class="text-center py-5 text-muted"><i class="bi bi-search fs-2 d-block mb-2 text-slate-400"></i>No se encontraron iglesias que coincidan con la búsqueda o equipo seleccionado.</td>';
+                    rowNoCoincidencias.innerHTML = '<td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-search fs-2 d-block mb-2 text-slate-400"></i>No se encontraron iglesias que coincidan con la búsqueda o equipo seleccionado.</td>';
                     tbody.appendChild(rowNoCoincidencias);
                 } else if (rowNoCoincidencias) {
                     rowNoCoincidencias.style.display = '';

@@ -23,7 +23,9 @@ namespace SOR.Repositories
                            i.Ref1Nombre, i.Ref1Contacto, i.Ref2Nombre, i.Ref2Contacto,
                            e.NombreEquipo,
                            p.IdParticipacion, p.IdTemporada, p.EstadoEvaluacion, p.EstatusEvaluacionReporte, p.EtapaActual, t.NombreTemporada,
-                           ar.EstadoAsignacion, ar.MotivoNoEntrega
+                           ar.EstadoAsignacion, ar.MotivoNoEntrega,
+                           pastor.Nombres AS PastorNombres, pastor.Apellidos AS PastorApellidos, pastor.Celular AS PastorCelular,
+                           lider.Nombres AS LiderNombres, lider.Apellidos AS LiderApellidos, lider.Celular AS LiderCelular
                     FROM dbo.Iglesias i
                     INNER JOIN dbo.Equipos e ON i.IdEquipo = e.IdEquipo
                     LEFT JOIN dbo.ParticipacionesIglesia p ON p.IdParticipacion = (
@@ -41,6 +43,16 @@ namespace SOR.Repositories
                     )
                     LEFT JOIN dbo.Temporadas t ON p.IdTemporada = t.IdTemporada
                     LEFT JOIN dbo.AsignacionesRecursos ar ON p.IdParticipacion = ar.IdParticipacion
+                    LEFT JOIN (
+                        SELECT IdIglesia, Nombres, Apellidos, Celular,
+                               ROW_NUMBER() OVER(PARTITION BY IdIglesia ORDER BY IdPersonaIglesia DESC) as rn
+                        FROM dbo.PersonasIglesia WHERE TipoPersona = 'Pastor'
+                    ) pastor ON pastor.IdIglesia = i.IdIglesia AND pastor.rn = 1
+                    LEFT JOIN (
+                        SELECT IdIglesia, Nombres, Apellidos, Celular,
+                               ROW_NUMBER() OVER(PARTITION BY IdIglesia ORDER BY IdPersonaIglesia DESC) as rn
+                        FROM dbo.PersonasIglesia WHERE TipoPersona IN ('LiderMinisterial', 'Lider')
+                    ) lider ON lider.IdIglesia = i.IdIglesia AND lider.rn = 1
                     ORDER BY i.NombreIglesia;";
 
                 SqlCommand cmd = new SqlCommand(sql, cn);
@@ -78,6 +90,28 @@ namespace SOR.Repositories
                             Ref2Nombre = dr["Ref2Nombre"] != DBNull.Value ? dr["Ref2Nombre"].ToString() : "",
                             Ref2Contacto = dr["Ref2Contacto"] != DBNull.Value ? dr["Ref2Contacto"].ToString() : ""
                         };
+
+                        if (dr["PastorNombres"] != DBNull.Value || dr["PastorCelular"] != DBNull.Value)
+                        {
+                            ig.Pastor = new PersonaIglesia
+                            {
+                                TipoPersona = "Pastor",
+                                Nombres = dr["PastorNombres"] != DBNull.Value ? dr["PastorNombres"].ToString() : "",
+                                Apellidos = dr["PastorApellidos"] != DBNull.Value ? dr["PastorApellidos"].ToString() : "",
+                                Celular = dr["PastorCelular"] != DBNull.Value ? dr["PastorCelular"].ToString() : ""
+                            };
+                        }
+
+                        if (dr["LiderNombres"] != DBNull.Value || dr["LiderCelular"] != DBNull.Value)
+                        {
+                            ig.LiderMinisterial = new PersonaIglesia
+                            {
+                                TipoPersona = "LiderMinisterial",
+                                Nombres = dr["LiderNombres"] != DBNull.Value ? dr["LiderNombres"].ToString() : "",
+                                Apellidos = dr["LiderApellidos"] != DBNull.Value ? dr["LiderApellidos"].ToString() : "",
+                                Celular = dr["LiderCelular"] != DBNull.Value ? dr["LiderCelular"].ToString() : ""
+                            };
+                        }
 
                         if (dr["IdParticipacion"] != DBNull.Value)
                         {
