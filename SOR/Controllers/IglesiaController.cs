@@ -94,7 +94,17 @@ namespace SOR.Controllers
             {
                 return File(path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Plantilla_Carga_Masiva_Iglesias.xlsx");
             }
-            return HttpNotFound("Archivo de plantilla no encontrado.");
+
+            string fallbackPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documentos Descargables", "Plantilla_Carga_Masiva_Iglesias.xlsx");
+            if (System.IO.File.Exists(fallbackPath))
+            {
+                return File(fallbackPath, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Plantilla_Carga_Masiva_Iglesias.xlsx");
+            }
+
+            // Fallback garantizado en formato CSV compatible con Excel
+            string encabezadosCsv = "NO,NombredeIglesia_Organización,RNC_Cedula,Telefono,CorreoInstitucion,Provincia,Ciudad,Sector,Calle,Numero,Próxima a que esta la Iglesia?,Denominacion,PastorNombre,PastorIdentificacion,PastorCelular,PastorCorreo,LiderNombre,LiderIdentificacion,LiderCelular,LiderCorreo,CantMaestros,CantNinos,Reporto\r\n1,Iglesia Ejemplo Central,00100000000,8095551234,contacto@iglesiaejemplo.com,Santo Domingo,Santo Domingo Este,Ensanche Ozama,Calle Principal,10,Frente al Parque,Bautista,Juan Perez,00111111111,8095551111,juan@iglesiaejemplo.com,Maria Gomez,00122222222,8095552222,maria@iglesiaejemplo.com,5,50,SI\r\n";
+            byte[] csvBytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(encabezadosCsv)).ToArray();
+            return File(csvBytes, "text/csv; charset=utf-8", "Plantilla_Carga_Masiva_Iglesias.csv");
         }
 
         public ActionResult DescargarCondicionesImportacion()
@@ -102,9 +112,59 @@ namespace SOR.Controllers
             string path = Server.MapPath("~/Documentos Descargables/Condiciones_Importacion_Iglesias.txt");
             if (System.IO.File.Exists(path))
             {
-                return File(path, "text/plain", "Condiciones_Importacion_Iglesias.txt");
+                return File(path, "text/plain; charset=utf-8", "Condiciones_Importacion_Iglesias.txt");
             }
-            return HttpNotFound("Archivo de especificaciones no encontrado.");
+
+            string fallbackPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documentos Descargables", "Condiciones_Importacion_Iglesias.txt");
+            if (System.IO.File.Exists(fallbackPath))
+            {
+                return File(fallbackPath, "text/plain; charset=utf-8", "Condiciones_Importacion_Iglesias.txt");
+            }
+
+            string guiaTexto = @"GUÍA Y CONDICIONES PARA CARGA MASIVA DE IGLESIAS (NUEVA PLATAFORMA SOR)
+========================================================================
+
+Para procesar adecuadamente la carga masiva mediante la plantilla Excel, el archivo debe cumplir estrictamente con el siguiente orden de columnas (23 Columnas en total). 
+
+1. ESTRUCTURA Y ORDEN DE LAS COLUMNAS:
+------------------------------------------------------------
+Columna A (1): NO                           - [Se ignora. Puede venir vacío o con números].
+Columna B (2): NombredeIglesia_Organización - [Texto] Nombre completo de la iglesia. (Obligatorio).
+Columna C (3): RNC_Cedula                   - [Cédula o RNC] (Obligatorio).
+Columna D (4): Telefono                     - [Texto numérico, 10 dígitos] (Obligatorio).
+Columna E (5): CorreoInstitucion            - [Texto] Correo electrónico oficial de la iglesia.
+Columna F (6): Provincia                    - [Texto] Provincia donde se ubica la iglesia (Obligatorio).
+Columna G (7): Ciudad                       - [Texto] Ciudad o municipio (Obligatorio).
+Columna H (8): Sector                       - [Texto] Barrio o sector (Obligatorio).
+Columna I (9): Calle                        - [Texto] Dirección (Obligatorio).
+Columna J (10): Numero                      - [Texto/Número]
+Columna K (11): Próxima a que esta la Iglesia? - [Texto] Punto de referencia para ubicación.
+Columna L (12): Denominacion                - [Texto] Ej: Pentecostal, Bautista, etc.
+Columna M (13): PastorNombre                - [Texto] Nombre completo del Pastor. (Obligatorio).
+Columna N (14): PastorIdentificacion        - [Cédula del Pastor] (Opcional en la carga masiva).
+Columna O (15): PastorCelular               - [Texto numérico, 10 dígitos] (Obligatorio).
+Columna P (16): PastorCorreo                - [Texto] Correo del pastor.
+Columna Q (17): LiderNombre                 - [Texto] Nombre completo del Líder. (Obligatorio).
+Columna R (18): LiderIdentificacion         - [Cédula del Líder] (Opcional en la carga masiva).
+Columna S (19): LiderCelular                - [Texto numérico, 10 dígitos] (Obligatorio).
+Columna T (20): LiderCorreo                 - [Texto] Correo del líder.
+Columna U (21): CantMaestros                - [Número entero].
+Columna V (22): CantNinos                   - [Número entero].
+Columna W (23): Reporto                     - [Texto: SI o NO]. Si se deja vacío, el sistema asumirá que 'NO' reportó.
+
+2. PROCEDIMIENTO DE PREVISUALIZACIÓN Y CAMPOS VACÍOS:
+-----------------------------------------------------------
+- Los registros se cargan inicialmente en una pantalla temporal (Grid de Previsualización).
+- Si la plantilla trae campos vacíos en columnas obligatorias, se resaltarán en rojo en la pantalla de previsualización.
+- EL SISTEMA NO PERMITIRÁ GUARDAR LOS DATOS DEFINITIVAMENTE hasta que se llenen o corrijan manualmente todos los campos requeridos marcados en rojo.
+
+3. ASIGNACIÓN AUTOMÁTICA DE EQUIPOS:
+-----------------------------------------------------------
+- Las iglesias importadas serán asignadas automáticamente al Equipo OCC al cual pertenezca el usuario que esté realizando la carga masiva.
+- Se registrarán con el tipo de institución por defecto: 'Iglesia'.
+";
+            byte[] txtBytes = System.Text.Encoding.UTF8.GetBytes(guiaTexto);
+            return File(txtBytes, "text/plain; charset=utf-8", "Condiciones_Importacion_Iglesias.txt");
         }
 
         // GET: Iglesia/Crear

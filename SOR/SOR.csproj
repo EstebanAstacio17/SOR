@@ -202,6 +202,8 @@
     <Content Include="Views\Home\Terminos.cshtml" />
     <Content Include="Views\Home\Gracias.cshtml" />
     <Content Include="Documentos Descargables\Solicitud de Voluntario para Descargar.pdf" />
+    <Content Include="Documentos Descargables\Plantilla_Carga_Masiva_Iglesias.xlsx" />
+    <Content Include="Documentos Descargables\Condiciones_Importacion_Iglesias.txt" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
     <Content Include="Scripts\bootstrap.bundle.js" />
